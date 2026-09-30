@@ -1604,6 +1604,17 @@ public class VillagerGuardGoal extends Goal {
     /** La casilla de pie delante de esa diana: a dónde se camina de verdad para entrenar. */
     @Nullable
     private BlockPos puestoDeEntrenamiento;
+    /**
+     * Hasta qué tick vale un <b>RECHAZO</b> del puesto de entrenamiento (29-sep-2026). Un rechazo <b>no se puede
+     * cachear para siempre</b>: la razón más común es momentánea (la ruta está cortada un segundo, un animal en el
+     * hueco, el guardia dentro de un edificio), y la diana <b>nunca cambia</b>, así que un «no» guardado sin caducidad
+     * dejaba al guardia <b>sin entrenar jamás</b>. Medido: 4 corridas con el rechazo permanente → una de ellas con
+     * <b>267 censos y `entrenado` máximo 0</b> (no entrenó en toda la corrida). Con la caducidad, el rechazo se
+     * reintenta cada {@link #RECHAZO_TICKS}.
+     */
+    private long puestoDeEntrenamientoRechazadoHasta;
+    /** Cuánto vale un rechazo del puesto de entrenamiento (5 s) antes de volver a probar. */
+    private static final int RECHAZO_TICKS = 100;
 
     /**
      * <b>La casilla de pie delante de la diana</b> (a {@link #REACH} o menos), o {@code null} si no hay ninguna. Se
@@ -1617,8 +1628,15 @@ public class VillagerGuardGoal extends Goal {
      */
     @Nullable
     private BlockPos puestoDeEntrenamientoCacheado(ServerLevel level, BlockPos diana) {
-        if (diana.equals(puestoDeEntrenamientoDe)) {
+        if (diana.equals(puestoDeEntrenamientoDe) && puestoDeEntrenamiento != null) {
             return puestoDeEntrenamiento;
+        }
+        // UN RECHAZO CADUCA (ver `puestoDeEntrenamientoRechazadoHasta`): mientras esté vigente se contesta «no» sin
+        // recalcular (la búsqueda es cara), pero pasado el plazo se vuelve a probar.
+        long ahora = level.getGameTime();
+        if (puestoDeEntrenamiento == null && diana.equals(puestoDeEntrenamientoDe)
+                && ahora < puestoDeEntrenamientoRechazadoHasta) {
+            return null;
         }
         // NIVEL 3 (I152, 29-sep-2026) — LA CASILLA DEL ENTRENAMIENTO, CON CONTRATO Y CON RUTA VALIDADA.
         // Medido, y es el fallo que se comía los entrenamientos cuando el aldeano obedece de verdad:
@@ -1652,6 +1670,7 @@ public class VillagerGuardGoal extends Goal {
         if (candidatas.isEmpty()) {
             puestoDeEntrenamientoDe = diana;
             puestoDeEntrenamiento = null;
+            puestoDeEntrenamientoRechazadoHasta = level.getGameTime() + RECHAZO_TICKS; // el «no» caduca
             return null;
         }
         // CADA GUARDIA, SU CASILLA (I122): el puesto era UNA celda para los seis, así que se estorbaban entre ellos
@@ -1673,6 +1692,7 @@ public class VillagerGuardGoal extends Goal {
         }
         puestoDeEntrenamientoDe = diana;
         puestoDeEntrenamiento = null;
+        puestoDeEntrenamientoRechazadoHasta = level.getGameTime() + RECHAZO_TICKS; // el «no» caduca y se reintenta
         return null;
     }
 
