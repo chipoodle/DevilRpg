@@ -2633,17 +2633,15 @@ public final class VillageManager {
         // se pierde (lo pidió el jugador al ver uno dentro de una parcela). Es la red de seguridad del corte del
         // reparto de spawn, que lo hace `CommonForgeGolemEventSubscriber` en el momento de nacer.
         sacarLosGolemsDeLaHuerta(level, center);
-        // M1 · EL DESPACHADOR (I151): a CADA aldeano del pueblo se le pone el módulo que es el ÚNICO dueño del rumbo.
-        // Todos los goals del mod piden su destino con `caminarHacia`, que apunta el RECADO; el despachador lo escribe
-        // cada tick (y así el paseo del cerebro no se lo puede pisar) y lo abandona si el aldeano no avanza.
-        for (Villager villager : aldeanos) {
-            if (!villager.isBaby()) {
-                asegurarElDespachador(villager);
-            }
-        }
-        if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L) {
-            cantarLaMedidaDelDespachador();
-        }
+        // M1 (EL DESPACHADOR) SE PROBÓ AQUÍ Y SE RETIRÓ (29-sep-2026): ganaba la pelea del rumbo —el cerebro se lo
+        // pisaba en 33.000-45.000 de 50.000-65.000 recados por corrida— y eso **hundió el pueblo**: 110 · 238 · 150 ·
+        // 192 rendiciones (media 172,5) contra 13 · 72 · 19 · 40 de referencia (media 36). El motivo está medido: los
+        // goals **contaban con que el paseo se llevara al aldeano**, así que al llegar de verdad a sus destinos
+        // destaparon TODOS los que no son alcanzables: `Yendo a entrenar` (guardias), `Repuso un bloque`/`Repuso losa`
+        // (obrero), `A por lena al almacen`/`Yendo a la cocina` (cocinero), `Sembrando`/`Labro la huerta`/`Guardo lo
+        // suyo` (granjeros), `Yendo a la arboleda` (leñador). Y el supervisor no bastó: 65-117 abandonos de 50.000+
+        // recados, porque el goal **vuelve a pedir el mismo recado en el tick siguiente**. Ver `docs/aldea-cerebro.md`
+        // §5 (nivel 3) y el acta en `docs/PENDIENTE.md`.
         // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
         // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
@@ -4944,15 +4942,18 @@ public final class VillageManager {
      * tramos y cada tramo tiene su contador</b>.
      */
     /**
-     * Manda a un aldeano a un sitio por el cerebro y <b>apunta el recado</b> (M1, I151): a partir de aquí el
-     * {@link com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal} del aldeano es quien <b>sostiene y defiende</b>
-     * ese rumbo (el paseo del juego se lo pisaba en el 19 % de los recados, medido) y quien lo <b>abandona</b> si el
-     * aldeano no avanza. La escritura inmediata de aquí se queda porque hay aldeanos que usan esto sin tener todavía el
-     * despachador puesto (recién nacidos, de paso): sin ella, ese aldeano no se movería.
+     * Manda a un aldeano a un sitio <b>por el cerebro</b> ({@code WALK_TARGET}/{@code LOOK_TARGET}), que es como se
+     * mueven los aldeanos del juego (igual que hace su propio {@code HarvestFarmland}).
+     * <p>
+     * <b>OJO: AQUÍ NO SE DECIDE A DÓNDE SE VA</b> (ni la casilla de pie ni el tramo del tirón). Eso lo da
+     * {@link #elPuntoDeAhora} y lo llama <b>el goal</b>.
+     * <p>
+     * El <b>despachador (M1)</b> —el que apuntaba el recado aquí y lo defendía— <b>se probó y se retiró</b>: ver el
+     * acta en {@code docs/aldea-cerebro.md} §5. El módulo ({@link com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal}
+     * y {@link #apuntarElRecado}) se queda sin cablear como base del nivel 3.
      */
     public static void caminarHacia(Villager villager, BlockPos objetivo, float velocidad) {
         ponerRumbo(villager, objetivo, velocidad);
-        apuntarElRecado(villager, objetivo, velocidad);
     }
 
     /** Escribe el destino en el cerebro del aldeano ({@code WALK_TARGET}/{@code LOOK_TARGET}), sin más. */

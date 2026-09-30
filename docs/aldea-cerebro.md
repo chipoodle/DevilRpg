@@ -131,13 +131,29 @@ personalizado de los aldeanos para evitar fallos y bloqueos.»* Queda escrito el
 
 1. **Nivel 1 (hecho y retirado)**: M2 (autoridad de recados) y M3 (puertas). Medido: **no paga** —
    `Bajando lo del corral` 24 → 28 y `Yendo a la taberna` 14 → 32—, así que el cableado se quitó.
-2. **Nivel 2 (implementado, en medida)**: **M1**, el despachador. `VillageDispatcherGoal` corre **sin flags** a
-   prioridad 0 —con `MOVE` bloquearía a los oficios, que también lo usan, y el pueblo dejaría de trabajar— y en cada
-   tick **escribe y defiende** el rumbo del recado, con **supervisión** (si no consume nodos de la ruta en 200 ticks,
-   **abandona** el recado y aparca el punto: nunca ronda). **Criterio**: las etiquetas del ganadero
-   (`Bajando lo del corral` 24, `Recogiendo lo suyo` 28) y de la taberna (`Yendo a la taberna` 14) **por debajo** de la
-   referencia en 4 corridas, y el instrumento `DESPACHADOR: … rumbos defendidos` diciendo cuántas veces el cerebro
-   pisaba el rumbo.
+2. **Nivel 2 (implementado, medido y RETIRADO)**: **M1**, el despachador. `VillageDispatcherGoal` corría **sin flags**
+   a prioridad 0 —con `MOVE` habría bloqueado a los oficios, que también lo usan— y en cada tick **escribía y
+   defendía** el rumbo del recado, con **supervisión** (abandonar el recado si no consume nodos de su ruta).
+   **MEDIDO, 4 corridas contra 4** (rendiciones en la **corrida entera**):
+   **110 · 238 · 150 · 192 (media 172,5)** contra **13 · 72 · 19 · 40 (media 36)** → **4,8 veces peor**, y con
+   separación limpia (todas las de M1 ≥ 110, todas las de referencia ≤ 72), o sea **concluyente**.
+   **El mecanismo SÍ funcionó**: el instrumento dice que el cerebro le había pisado el rumbo en **33.000-45.000 de
+   50.000-65.000 recados por corrida** (y hasta 117 abandonos por la supervisión).
+   **Y por qué hundió el pueblo**: los goals **contaban con que el paseo se llevara al aldeano**. Al llegar de verdad a
+   sus destinos, quedaron **al descubierto todos los recados que no son alcanzables**:
+   - **guardias**: `Yendo a entrenar`
+   - **obrero**: `Repuso un bloque`, `Repuso losa`, `Repuso piedra labrada`
+   - **cocinero**: `A por leña al almacén`, `Yendo a la cocina`
+   - **granjeros**: `Sembrando`, `Labro la huerta`, `Guardo lo suyo`, `Trajo del almacén a la despensa`, `Buscando recambios`
+   - **leñador**: `Yendo a la arboleda`
+   - **recojo**: `Recogiendo lo suyo`
+   La supervisión **no bastó** (65-117 abandonos de 50.000+ recados) porque **el goal vuelve a pedir el mismo recado en
+   el tick siguiente**: el abandono se deshace solo. Cableado **retirado**; el módulo y la API del recado se quedan
+   como base del nivel 3.
+   > **Y ESTA ES LA LECCIÓN QUE ABRE EL NIVEL 3**: no se puede arreglar «que llegue» sin arreglar **«que elija bien a
+   > dónde»**. La lista de arriba es, por primera vez, la lista **real** de lo que está roto —la tenía escondida el
+   > robo del rumbo—, con nombres y oficios.
+
 3. **Nivel 3 — comportamiento 100 % propio** (solo si el nivel 2 no baja las etiquetas):
    - **entidad propia** para los aldeanos de la aldea (`VillageVillager extends Villager`) con **cerebro propio**: sin
      los `Behavior` de paseo (`SetWalkTargetFromLookTarget`) ni los de trabajo vanilla que compiten, y con **una sola**
