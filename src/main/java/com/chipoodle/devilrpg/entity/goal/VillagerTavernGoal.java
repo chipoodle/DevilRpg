@@ -153,7 +153,10 @@ public class VillagerTavernGoal extends Goal {
             // M2 (I151): si no hay dónde ponerse (el rincón está lleno de mesas y sillas), la mesa se aparca y el
             // aldeano se va a lo suyo: no se empuja el mueble hasta rendirse (clase A de docs/aldea-cerebro.md).
             if (casilla == null) {
-                VillageManager.marcarPuntoFallido(villager, mesa);
+                // SE CORTA EL GOAL, no se deja mirando: el que se queda con el objetivo puesto RONDA, y eso es lo que
+                // las medidas dicen que empeora (medido en el ganadero: media 23,0 con el objetivo puesto frente a
+                // 10,25 de referencia). `STUCK_LIMIT` es el mismo camino que su propio rendirse (I33).
+                stuckTicks = STUCK_LIMIT;
                 return;
             }
             VillageManager.caminarHacia(villager, casilla, VELOCIDAD);

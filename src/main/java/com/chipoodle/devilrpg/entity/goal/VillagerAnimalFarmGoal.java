@@ -737,7 +737,11 @@ public class VillagerAnimalFarmGoal extends Goal {
             // rendirse; y como se rendía y volvía a elegir el mismo (el destino fijo no se comprobaba), el bucle
             // subía: medido 2 → 5 → 7 rendiciones. Ver `docs/aldea-cerebro.md` (clases A y C).
             if (VillageErrands.casillaPosible(level, target) == null) {
-                VillageManager.marcarPuntoFallido(villager, target);
+                // Y SE PIDE EL RENDIRSE **DEL GOAL** (que aparca el punto y termina), no se deja el objetivo puesto:
+                // dejándolo, el goal seguía corriendo sin caminar y el ganadero se quedaba RONDANDO — que es lo que
+                // las medidas dicen que empeora. MEDIDO con el objetivo puesto: 12 · 16 · 33 · 31 (media 23,0) frente a
+                // 10,25 de referencia. `stuckTicks = STUCK_LIMIT` es el mismo camino que su propio rendirse (I33).
+                stuckTicks = STUCK_LIMIT;
                 return;
             }
             // M3 · LA ALDEA ABRE SU PORTÓN (I151). Medido: el ganadero se rendía con «Bajando lo del corral» desde
@@ -746,6 +750,11 @@ public class VillagerAnimalFarmGoal extends Goal {
             // si no hay ruta hasta el portón, no llega a pedirlo — círculo cerrado. Aquí la aldea le abre el suyo
             // antes de insistir, y solo si el recado CRUZA la cerca (si los dos están dentro, se queda cerrado para
             // que no se escapen las gallinas).
+            // OJO CON LA COTA: `nivel` vale Integer.MIN_VALUE hasta que lo calcula `destinoDelTramo` (que va después),
+            // así que aquí se resuelve antes — buscando el portón con una altura falsa no se abría nada.
+            if (nivel == Integer.MIN_VALUE) {
+                nivel = VillageGenerator.cotaDeLaPlaza(level, center);
+            }
             if (villager.getNavigation().getPath() == null && level.getGameTime() % 10L == 0L) {
                 VillageErrands.abrirLaPuertaSiHaceFalta(level, villager, center, nivel, target);
             }
