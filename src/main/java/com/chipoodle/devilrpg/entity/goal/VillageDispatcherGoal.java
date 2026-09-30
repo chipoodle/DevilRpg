@@ -1,0 +1,76 @@
+package com.chipoodle.devilrpg.entity.goal;
+
+import com.chipoodle.devilrpg.world.VillageManager;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.npc.Villager;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * <b>M1 · EL DESPACHADOR</b> (I151 — fase 2 del cerebro propio de la aldea; el plan está en
+ * {@code docs/aldea-cerebro.md}).
+ * <p>
+ * Es <b>el único dueño del rumbo</b> de un aldeano de la aldea. El problema medido que resuelve: el aldeano tiene dos
+ * voces que le dicen a dónde ir —el <b>goal del mod</b> (el trabajo, que pide el destino con {@code caminarHacia}) y el
+ * <b>cerebro del propio juego</b>, que con sus paseos y su «anda hacia donde miras» escribe <b>el mismo</b>
+ * {@code WALK_TARGET}— y cuando el paseo escribe después, el aldeano se va por ahí mientras su goal cree que va al
+ * trabajo: el goal ve que no se acerca, se impacienta y se rinde. Medido: <b>11.039 de 57.663</b> recados (**19 %**).
+ * <p>
+ * <b>Por qué NO coge el flag {@code MOVE}</b>: un goal con MOVE <b>excluye</b> a todos los demás goals con MOVE, y los
+ * oficios del pueblo (granjero, minero, herrero…) son goals con MOVE. Cogiéndolo, el despachador caminaría bien y
+ * <b>el pueblo dejaría de trabajar</b>. Sin flags, corre <b>en paralelo</b> con el oficio: el oficio hace su faena y
+ * pide el destino, y el despachador se encarga de que el aldeano <b>vaya de verdad</b> a donde le mandaron.
+ * <p>
+ * <b>Y NO ES UN «SOSTENEDOR» A CIEGAS</b> (eso se probó y se retiró: media 17,5 frente a 10,25, porque obligaba al
+ * aldeano a insistir en recados imposibles). Aquí hay <b>supervisión</b> (M4): si el aldeano <b>no consume nodos de su
+ * ruta</b> durante {@link VillageManager#RECADO_PRESUPUESTO} ticks, el recado se <b>abandona</b> —se aparca el punto y
+ * el goal que lo pidió elegirá otro—, así que <b>nunca se ronda</b>: siempre hay un paso siguiente.
+ */
+public class VillageDispatcherGoal extends Goal {
+
+    private final Villager villager;
+    /** Ticks seguidos sin consumir un nodo de la ruta (ver la supervisión de M4). */
+    private int ticksSinAvanzar;
+
+    public VillageDispatcherGoal(Villager villager) {
+        this.villager = villager;
+        // SIN setFlags: ver el javadoc (con MOVE bloquearía a los oficios).
+    }
+
+    @Override
+    public boolean canUse() {
+        return !villager.isBaby() && VillageManager.elRecadoDeAhora(villager) != null;
+    }
+
+    @Override
+    public boolean canContinueToUse() {
+        return canUse() && !VillageManager.estaDescansando(villager);
+    }
+
+    @Override
+    public void start() {
+        ticksSinAvanzar = 0;
+    }
+
+    @Override
+    public void tick() {
+        @Nullable
+        BlockPos recado = VillageManager.elRecadoDeAhora(villager);
+        if (recado == null) {
+            return;
+        }
+        // 1) EL RUMBO, ESCRITO AQUÍ Y EN CADA TICK: es lo que le quita el mando al paseo del cerebro.
+        VillageManager.escribirElRumboDelRecado(villager, recado);
+        // 2) LA SUPERVISIÓN (M4): ¿está avanzando por su ruta? Si no, se le da un presupuesto y, agotado, se ABANDONA
+        //    el recado (el punto queda aparcado y el oficio elegirá otro). Nunca se queda rondando.
+        if (VillageManager.avanzaPorLaRuta(villager)) {
+            ticksSinAvanzar = 0;
+        } else {
+            ticksSinAvanzar++;
+            if (ticksSinAvanzar > VillageManager.RECADO_PRESUPUESTO) {
+                VillageManager.abandonarElRecado(villager);
+                ticksSinAvanzar = 0;
+            }
+        }
+    }
+}

@@ -2633,6 +2633,17 @@ public final class VillageManager {
         // se pierde (lo pidió el jugador al ver uno dentro de una parcela). Es la red de seguridad del corte del
         // reparto de spawn, que lo hace `CommonForgeGolemEventSubscriber` en el momento de nacer.
         sacarLosGolemsDeLaHuerta(level, center);
+        // M1 · EL DESPACHADOR (I151): a CADA aldeano del pueblo se le pone el módulo que es el ÚNICO dueño del rumbo.
+        // Todos los goals del mod piden su destino con `caminarHacia`, que apunta el RECADO; el despachador lo escribe
+        // cada tick (y así el paseo del cerebro no se lo puede pisar) y lo abandona si el aldeano no avanza.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby()) {
+                asegurarElDespachador(villager);
+            }
+        }
+        if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L) {
+            cantarLaMedidaDelDespachador();
+        }
         // HERREROS: los DOS (armas y herramientas) trabajan en el taller del pueblo: cogen los materiales del almacén,
         // fabrican en su puesto (muelle de afilar / mesa de herrería) y dejan la pieza en el almacén, de donde se
         // equipará la futura guardia. Los goals no se guardan con la partida: se reponen al verlos.
@@ -4932,12 +4943,115 @@ public final class VillageManager {
      * «no me acerco» se medía contra el sitio equivocado—. La regla buena es la del leñador (I112): <b>se va por
      * tramos y cada tramo tiene su contador</b>.
      */
+    /**
+     * Manda a un aldeano a un sitio por el cerebro y <b>apunta el recado</b> (M1, I151): a partir de aquí el
+     * {@link com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal} del aldeano es quien <b>sostiene y defiende</b>
+     * ese rumbo (el paseo del juego se lo pisaba en el 19 % de los recados, medido) y quien lo <b>abandona</b> si el
+     * aldeano no avanza. La escritura inmediata de aquí se queda porque hay aldeanos que usan esto sin tener todavía el
+     * despachador puesto (recién nacidos, de paso): sin ella, ese aldeano no se movería.
+     */
     public static void caminarHacia(Villager villager, BlockPos objetivo, float velocidad) {
+        ponerRumbo(villager, objetivo, velocidad);
+        apuntarElRecado(villager, objetivo, velocidad);
+    }
+
+    /** Escribe el destino en el cerebro del aldeano ({@code WALK_TARGET}/{@code LOOK_TARGET}), sin más. */
+    private static void ponerRumbo(Villager villager, BlockPos objetivo, float velocidad) {
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
                 new net.minecraft.world.entity.ai.memory.WalkTarget(
                         new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo), velocidad, 1));
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET,
                 new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
+    }
+
+    // --- M1 · EL DESPACHADOR: el recado, su rumbo y su supervisión (I151) ---------------------------
+    /** A dónde se le mandó (el «recado»), en datos del propio aldeano. */
+    private static final String RECADO_POS = "DevilRpgRecadoPos";
+    /** Con qué velocidad. */
+    private static final String RECADO_VEL = "DevilRpgRecadoVel";
+    /** Hasta qué tick vale el recado si su goal deja de pedirlo. */
+    private static final String RECADO_HASTA = "DevilRpgRecadoHasta";
+    /** Cuántos ticks vale un recado sin que lo vuelvan a pedir (3 s): si el goal se rinde o cambia de tarea, caduca. */
+    public static final int RECADO_TICKS = 60;
+    /**
+     * Ticks seguidos SIN consumir un nodo de la ruta antes de ABANDONAR el recado (10 s). Es la supervisión de M4: el
+     * que no avanza, no insiste — se aparca el punto y se prueba otra cosa.
+     */
+    public static final int RECADO_PRESUPUESTO = 200;
+    /** Medida del despachador: recados apuntados, veces que el cerebro le había pisado el rumbo, y abandonos. */
+    private static long RECADOS_APUNTADOS = 0L;
+    private static long RUMBOS_DEFENDIDOS = 0L;
+    private static long RECADOS_ABANDONADOS = 0L;
+
+    /** Apunta (o renueva) el recado del aldeano. Ver {@link VillageDispatcherGoal}. */
+    private static void apuntarElRecado(Villager villager, BlockPos objetivo, float velocidad) {
+        if (villager.level() instanceof ServerLevel nivel) {
+            net.minecraft.nbt.CompoundTag datos = villager.getPersistentData();
+            datos.putLong(RECADO_POS, objetivo.asLong());
+            datos.putFloat(RECADO_VEL, velocidad);
+            datos.putLong(RECADO_HASTA, nivel.getGameTime() + RECADO_TICKS);
+            RECADOS_APUNTADOS++;
+        }
+    }
+
+    /** El recado vivo del aldeano (dentro de su plazo), o {@code null}. */
+    @Nullable
+    public static BlockPos elRecadoDeAhora(Villager villager) {
+        net.minecraft.nbt.CompoundTag datos = villager.getPersistentData();
+        if (!datos.contains(RECADO_POS) || !datos.contains(RECADO_HASTA)) {
+            return null;
+        }
+        long hasta = datos.getLong(RECADO_HASTA);
+        long ahora = villager.level() instanceof ServerLevel nivel ? nivel.getGameTime() : hasta;
+        if (hasta < ahora) {
+            return null; // caducado: el goal dejó de pedirlo
+        }
+        return BlockPos.of(datos.getLong(RECADO_POS));
+    }
+
+    /** Escribe el rumbo del recado (lo llama el despachador cada tick) y cuenta si se lo habían pisado. */
+    public static void escribirElRumboDelRecado(Villager villager, BlockPos destino) {
+        if (!elCerebroVaA(villager, destino)) {
+            RUMBOS_DEFENDIDOS++;
+        }
+        net.minecraft.nbt.CompoundTag datos = villager.getPersistentData();
+        float velocidad = datos.contains(RECADO_VEL) ? datos.getFloat(RECADO_VEL) : 0.6F;
+        ponerRumbo(villager, destino, velocidad);
+    }
+
+    /**
+     * ABANDONA el recado (supervisión de M4): se aparca el punto para no volver a elegirlo en un rato y se borra el
+     * recado, de modo que el oficio elija otro. Es lo contrario de «insistir»: medido, insistir empeora.
+     */
+    public static void abandonarElRecado(Villager villager) {
+        BlockPos recado = elRecadoDeAhora(villager);
+        if (recado != null) {
+            marcarPuntoFallido(villager, recado);
+        }
+        net.minecraft.nbt.CompoundTag datos = villager.getPersistentData();
+        datos.remove(RECADO_POS);
+        datos.remove(RECADO_HASTA);
+        RECADOS_ABANDONADOS++;
+    }
+
+    /** La medida del despachador, para el registro (una vez cada {@link #VILLAGE_POLL_TICKS}). */
+    public static void cantarLaMedidaDelDespachador() {
+        DevilRpg.LOGGER.info("[Village] DESPACHADOR: {} recados apuntados, {} rumbos defendidos (el cerebro se los "
+                + "habia pisado) y {} recados abandonados por no avanzar",
+                RECADOS_APUNTADOS, RUMBOS_DEFENDIDOS, RECADOS_ABANDONADOS);
+    }
+
+    /**
+     * Le pone a un aldeano de la aldea <b>el despachador</b> (M1), una sola vez. Sin flags (ver el javadoc de
+     * {@link com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal}), así que <b>no bloquea a los oficios</b>.
+     */
+    public static void asegurarElDespachador(Villager villager) {
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(0, new com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal(villager));
     }
 
     /**
