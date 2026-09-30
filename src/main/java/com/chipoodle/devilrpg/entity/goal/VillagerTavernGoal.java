@@ -148,7 +148,7 @@ public class VillagerTavernGoal extends Goal {
             // recolectora ya libre de los bancales (I130), "Filomena / Yendo a la taberna" se rindió **16 veces en una
             // corrida** —dos tercios del total de esa corrida— con `ruta=1 nodos … alcanza=NO` al destino `516,64,639`
             // desde `516,63,641` (dos bloques y un nivel de diferencia).
-            VillageManager.caminarHacia(villager, VillageManager.casillaDePieCercaDe(level, destino), VELOCIDAD);
+            VillageManager.caminarHaciaSostenido(villager, VillageManager.casillaDePieCercaDe(level, destino), VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a la taberna");
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;

@@ -159,6 +159,28 @@ public final class VillageManager {
     /** Cada cuánto se pasa revista a los aldeanos de una aldea (10 s). */
     private static final int VILLAGE_POLL_TICKS = 200;
 
+    // --- UN SOLO JEFE PARA EL RUMBO (I150, «Opción A») ----------------------------------------------
+    /** A dónde se le mandó al aldeano (el «recado»), en datos del propio aldeano. */
+    private static final String RECADO_DESTINO = "DevilRpgRecadoDestino";
+    /** Hasta qué tick de juego vale ese recado. */
+    private static final String RECADO_HASTA = "DevilRpgRecadoHasta";
+    /** Con qué velocidad se le mandó. */
+    private static final String RECADO_VELOCIDAD = "DevilRpgRecadoVelocidad";
+    /** Si ese recado se sostiene cuando el cerebro le pisa el rumbo (solo la taberna, ver caminarHaciaSostenido). */
+    private static final String RECADO_SOSTENER = "DevilRpgRecadoSostener";
+    /**
+     * Cuántos ticks se le sostiene el rumbo a un recado <b>sin que el goal lo vuelva a pedir</b> (3 s). Si el goal
+     * sigue trabajando vuelve a llamar a {@code caminarHacia} en cada tick y el plazo se renueva; si deja de
+     * llamarlo —porque se rindió, porque cambió de tarea, porque el aldeano se fue a dormir— el recado <b>caduca</b>
+     * y el aldeano recupera su libertad: aquí no se secuestra a nadie.
+     */
+    private static final int RECADO_TICKS = 60;
+    /** Medida (la pidió el jugador): recados pedidos y rumbos que hubo que devolver porque el cerebro los pisó. */
+    private static long RECADOS_PEDIDOS = 0L;
+    private static long RUMBOS_SOSTENIDOS = 0L;
+    /** Cada cuántos ticks se sostiene el rumbo (cada 5 ticks: 4 veces por segundo; el robo se corrige en el acto). */
+    private static final int SOSTENER_CADA = 5;
+    // ------------------------------------------------------------------------------------------------
     // --- Vida del asentamiento (Iteración 3, paso 4) ------------------------------------------------
 
     /**
@@ -934,6 +956,12 @@ public final class VillageManager {
                 preGenerate(level, i, target);
             }
             noticeIfNear(level, player, i, target);
+            // Y EL RUMBO, SOSTENIDO (I150): el cerebro del aldeano le pisa el destino al goal con sus paseos y eso es
+            // lo que hace que se rinda sin haber ido (medido). Se le devuelve el rumbo cada pocos ticks, SIN tocar su
+            // contador de atasco (ver `sostenerElRumbo`). Va aquí, con el pueblo cargado y el jugador cerca.
+            if (level.getGameTime() % SOSTENER_CADA == 0L && level.hasChunkAt(target)) {
+                sostenerElRumbo(level, target);
+            }
             if (distSqr <= (double) ARRIVE_RADIUS * ARRIVE_RADIUS) {
                 // REPARACIÓN DE UNA ALDEA APILADA (versión 75, una sola vez): va AQUÍ, y no dentro del latido del
                 // pueblo, a propósito. El latido está detrás de `isUnderAttack`, de `hayEnemigosDentro` y de
@@ -4933,11 +4961,105 @@ public final class VillageManager {
      * tramos y cada tramo tiene su contador</b>.
      */
     public static void caminarHacia(Villager villager, BlockPos objetivo, float velocidad) {
+        ponerRumbo(villager, objetivo, velocidad);
+        apuntarElRecado(villager, objetivo, velocidad, false);
+    }
+
+    /**
+     * Igual que {@link #caminarHacia}, pero el recado se <b>sostiene</b>: si el cerebro del aldeano le pisa el rumbo
+     * con sus paseos, se le devuelve ({@link #sostenerElRumbo}).
+     * <p>
+     * <b>SOLO LO USA LA TABERNA, y es a propósito</b> (medido el 29-sep-2026, tandas 24 y 25): sostener el rumbo de
+     * <b>todos</b> los recados lo empeoró —la ventana de la corrida pasó de 7 a 16 y luego a 22 rendiciones— porque
+     * devolverle el rumbo a un recado que <b>no tiene camino</b> es obligar al aldeano a reintentar lo que no puede,
+     * en vez de rendirse e irse: fue el <b>ganadero</b> el que se disparó (2+2 → 5+5 → 7+7). En la <b>taberna</b>, en
+     * cambio, sostenerlo bajó su etiqueta en las tres variantes (3 → 0/1): es un recado de ocio, corto y con camino,
+     * donde el que molesta es justo el paseo del cerebro.
+     */
+    public static void caminarHaciaSostenido(Villager villager, BlockPos objetivo, float velocidad) {
+        ponerRumbo(villager, objetivo, velocidad);
+        apuntarElRecado(villager, objetivo, velocidad, true);
+    }
+
+    /** Apunta el recado en los datos del aldeano (ver {@link #sostenerElRumbo}). */
+    private static void apuntarElRecado(Villager villager, BlockPos objetivo, float velocidad, boolean sostener) {
+        if (villager.level() instanceof ServerLevel nivel) {
+            net.minecraft.nbt.CompoundTag datos = villager.getPersistentData();
+            datos.putLong(RECADO_DESTINO, objetivo.asLong());
+            datos.putLong(RECADO_HASTA, nivel.getGameTime() + RECADO_TICKS);
+            datos.putFloat(RECADO_VELOCIDAD, velocidad);
+            datos.putBoolean(RECADO_SOSTENER, sostener);
+            if (sostener) {
+                RECADOS_PEDIDOS++;
+            }
+        }
+    }
+
+    /** Escribe el destino en el cerebro del aldeano ({@code WALK_TARGET}/{@code LOOK_TARGET}), sin más. */
+    private static void ponerRumbo(Villager villager, BlockPos objetivo, float velocidad) {
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
                 new net.minecraft.world.entity.ai.memory.WalkTarget(
                         new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo), velocidad, 1));
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET,
                 new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
+    }
+
+    /**
+     * <b>UN SOLO JEFE PARA EL RUMBO</b> (I150, la «Opción A», 29-sep-2026). El aldeano tiene dos voces que le dicen a
+     * dónde ir: <b>el goal del mod</b> (el trabajo: «ve a la mesa», «recoge lo tuyo», «baja esto al almacén») y <b>el
+     * cerebro del propio juego</b>, que tiene sus paseos y su «anda hacia donde miras» ({@code
+     * SetWalkTargetFromLookTarget}) y escribe <b>el mismo</b> {@code WALK_TARGET}. Cuando el paseo escribe después, le
+     * <b>roba el rumbo</b> al trabajo: el aldeano se va a la plaza mientras su goal cree que va a la taberna, el goal
+     * ve que no se acerca, se impacienta y se rinde. <b>Medido</b>: los avisos de la taberna traían
+     * {@code cerebro=566,64,566} (la plaza) o {@code cerebro=-}.
+     * <p>
+     * Esto se ejecuta cada pocos ticks y, si el rumbo que hay en el cerebro <b>no es el del recado</b>, se lo devuelve.
+     * <p>
+     * <b>Y NO TOCA NADA MÁS</b> — ni el contador de atasco del goal, ni su paciencia, ni su punto de ahora. Eso es
+     * justo lo que distingue este arreglo de los tres que se probaron y se retiraron el 29-sep-2026 (ver PENDIENTE
+     * §11): aquellos dejaban de contar el atasco o rendían antes, y el aldeano acababa <b>rondando en vez de
+     * trabajando</b> (la ventana pasó de 7 a 19, a 13 y a 35 rendiciones). Aquí el aldeano <b>anda de verdad</b> hacia
+     * donde le mandaron y, si de verdad no puede llegar, <b>se rinde exactamente igual que antes</b> y se va a lo suyo.
+     * <p>
+     * Y el recado <b>caduca solo</b> ({@link #RECADO_TICKS}): si el goal deja de pedirlo —porque se rindió, porque
+     * cambió de tarea, porque el aldeano se fue a dormir—, el rumbo deja de sostenerse y el aldeano recupera su
+     * libertad. Aquí no se secuestra a nadie.
+     */
+    public static void sostenerElRumbo(ServerLevel level, BlockPos center) {
+        long ahora = level.getGameTime();
+        for (Villager v : level.getEntitiesOfClass(Villager.class,
+                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 16))) {
+            net.minecraft.nbt.CompoundTag datos = v.getPersistentData();
+            if (!datos.contains(RECADO_HASTA) || !datos.contains(RECADO_DESTINO)
+                    || !datos.getBoolean(RECADO_SOSTENER)) {
+                continue; // recado de los que NO se sostienen (los del trabajo): se dejan como estaban
+            }
+            if (datos.getLong(RECADO_HASTA) < ahora) {
+                datos.remove(RECADO_DESTINO);
+                datos.remove(RECADO_HASTA);
+                continue; // el recado caducó: no se le sostiene más
+            }
+            BlockPos destino = BlockPos.of(datos.getLong(RECADO_DESTINO));
+            if (elCerebroVaA(v, destino)) {
+                continue; // el rumbo sigue donde se le puso: no hay nada que hacer
+            }
+            // SOLO SE SOSTIENE SI HAY CAMINO DE VERDAD (medido el 29-sep-2026, tanda 24). Sostener el rumbo a ciegas
+            // —el cerebro lo pisó en 11.039 de 57.663 recados, el 19 %— SÍ quitó las rendiciones de la taberna, pero
+            // DISPARÓ las del ganadero (2+2 → 5+5+1): devolverle el rumbo a un recado SIN camino es obligarle a
+            // reintentar lo que no puede, en vez de rendirse e irse. La regla buena es esta: si el caminante TIENE
+            // ruta y esa ruta ALCANZA, iba distraído y se le devuelve el rumbo; si no hay ruta o no alcanza, está
+            // BLOQUEADO de verdad y no se le insiste (se rinde como siempre y sigue con lo suyo).
+            var camino = v.getNavigation().getPath();
+            if (camino == null || !camino.canReach()) {
+                continue;
+            }
+            ponerRumbo(v, destino, datos.getFloat(RECADO_VELOCIDAD));
+            RUMBOS_SOSTENIDOS++;
+        }
+        if (ahora % VILLAGE_POLL_TICKS == 0L) {
+            DevilRpg.LOGGER.info("[Village] RUMBO: {} recados pedidos y {} rumbos sostenidos (el cerebro le habia "
+                    + "pisado el destino al goal)", RECADOS_PEDIDOS, RUMBOS_SOSTENIDOS);
+        }
     }
 
     /**
