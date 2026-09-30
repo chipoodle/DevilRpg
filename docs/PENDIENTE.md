@@ -204,16 +204,28 @@ puntual, no un bucle.
 >    (I119/I122). El «destino» que imprime el aviso (`dark_oak_fence` + `oak_pressure_plate`) es **el mobiliario de la
 >    mesa**, que por diseño no se pisa: el goal ya camina a `casillaDePieCercaDe` (I114/I131), así que ese dato no es
 >    el fallo.
-> 3. **Y EL ARREGLO OBVIO SE PROBÓ Y SE RETIRÓ** (disciplina: lo que no mejora, fuera). Se aplicó el guardián de I146
->    («si el cerebro va a otra parte, no cuentes el atasco») a la taberna, al recojo (`VillagerPickupGoal`, con el
->    filtro de celdas no pisables en `buscarObjeto`) y al ganadero. Medido (`build/medida-tanda21.log`, misma ventana):
->    las 3 de la taberna, las 2 del recojo y las 2 del ganadero **desaparecen**, pero la ventana **sube de 7 a 19
->    rendiciones** —aparecen **12 de granjeros** (`Abono la huerta` 5, `Labrando la huerta` 4, `Sembrando` 3…)—: el
->    aldeano que antes se rendía y se iba ahora se queda rondando y estorbando en la huerta. **Revertido entero**, y
->    queda aquí el número para no repetirlo.
+> 3. **Y LOS TRES ARREGLOS QUE SE PROBARON SE RETIRARON** (disciplina: lo que no mejora, fuera). Los tres, medidos en
+>    la **misma ventana** y sobre el mismo guardado, contra el baseline de `medida-tanda18.log` (**7** rendiciones,
+>    **0,70** por 1.000 ticks):
 >
-> **Lo que queda pendiente de verdad, pues**: que el `WALK_TARGET` del cerebro no le gane a `caminarHacia` **sin** que
-> el goal se quede pegado (el mismo problema de I119/I122, ahora con nombre y con su cifra: **3 en la ventana**).
+>    | intento | qué se hizo | ventana | total de la corrida | veredicto |
+>    |---|---|---|---|---|
+>    | **tanda 21** | guardián de I146 («si el cerebro va a otra parte, no cuentes el atasco») en taberna, recojo y ganadero + filtro de ítems en celdas no pisables | **19** (2,70) | 62 | las 7 de la taberna/recojo/ganadero se van a 0, pero aparecen **12 de granjeros** (`Abono la huerta` 5, `Labrando` 4, `Sembrando` 3) |
+>    | **tanda 22** | quitarle el rumbo al cerebro (`parar`) y volver a mandar al aldeano, en los tres | **13** (1,30) | 64 | la taberna baja **3 → 1**, el ganadero NO se mueve (2+2) y aparecen granjeros (`Sembrando` 5) |
+>    | **tanda 23** | **dejar de perseguir** (la dirección que arregló §12): la mesa cuya casilla de pie no existe se apunta como fallida; el ítem en celda no pisable no se elige | **35** (3,50) | 52 | peor: `Entrando a la huerta` **12**, `Labro la huerta` 7… y **vuelve** `Recogiendo el corral` |
+>
+>    **Las tres rutas —insistir, forzar el rumbo y rendirse antes— empeoran el pueblo.** El baseline (7, con **cada
+>    aldeano una o dos veces y ninguna etiqueta repetida más de 2**) es el mejor estado medido. Y encaja con lo que el
+>    propio doc tiene escrito en §8: **una corrida no distingue un tropiezo de un bucle**, y estos son **tropiezos
+>    sueltos** (el mecanismo «rendirse = dejarlo por un rato», I33, funcionando), no bucles: los bucles de verdad
+>    —`Saliendo de la huerta` (I146) y `Recogiendo el corral` (I147)— **están a cero** y así siguen.
+>
+> **CONCLUSIÓN: aquí se para.** El pendiente que queda NO es un bucle y no se arregla tocando estos goals: cada
+> intento mueve el problema a la huerta. Lo que haría falta es averiguar **por qué** esos aldeanos concretos se quedan
+> —el caso del ganadero es el más claro: `cerebro=-`, **sin destino ninguno en el cerebro**, con la etiqueta puesta— y
+> atacarlo **con la media de 2-4 corridas** (§8), no con una. Queda escrito con sus números para no repetir los tres
+> caminos que ya sabemos que van peor.
+
 
 **El caso, medido** (`build/medida-tasa-hoy.log`): la leñadora daba **dos avisos** de rendición con
 `nav=[sin ruta]`, **`cerebro=-`**, `suelo=dark_oak_planks` y su posición en **`511,68,667`** — y la ruta que tenía era
