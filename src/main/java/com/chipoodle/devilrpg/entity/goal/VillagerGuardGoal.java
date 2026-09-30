@@ -1620,6 +1620,17 @@ public class VillagerGuardGoal extends Goal {
         if (diana.equals(puestoDeEntrenamientoDe)) {
             return puestoDeEntrenamiento;
         }
+        // NIVEL 3 (I152, 29-sep-2026) — LA CASILLA DEL ENTRENAMIENTO, CON CONTRATO Y CON RUTA VALIDADA.
+        // Medido, y es el fallo que se comía los entrenamientos cuando el aldeano obedece de verdad:
+        //   `no consigue llegar a 545, 64, 589 desde 546, 62, 589 (ruta=1 nodos … alcanza=NO; destino=air encima=air)`
+        // —la casilla elegida estaba DOS bloques por encima de la cota (encima de la estructura de la diana)—. Pasa
+        // cualquier prueba local (`sePuedeEstar`: aire, aire encima, suelo firme) pero está **aislada**: no hay ruta
+        // hasta ella, así que el guardia se rinde siempre. Dos reglas nuevas:
+        //   1) **la casilla tiene que estar A LA COTA** del pueblo (el patio se anda a esa altura; una casilla en alto
+        //      solo se alcanza teniendo algo que suba, y eso no se comprueba a ojo);
+        //   2) **y tiene que haber RUTA que la alcance** (la validación de M2), preguntada **solo si el guardia está
+        //      cerca** (a más de la región de búsqueda del juego no hay ruta que valga y el tirón es el que lo lleva).
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         var candidatas = new java.util.ArrayList<BlockPos>();
         for (int dx = -3; dx <= 3; dx++) {
             for (int dz = -3; dz <= 3; dz++) {
@@ -1627,6 +1638,9 @@ public class VillagerGuardGoal extends Goal {
                     BlockPos p = diana.offset(dx, dy, dz);
                     if (!sePuedeEstar(level, p)) {
                         continue;
+                    }
+                    if (p.getY() != cota) {
+                        continue; // en alto y sin comprobar que se suba: no vale
                     }
                     double d = Math.sqrt(p.distSqr(diana));
                     if (d > 0.5D && d <= REACH - 0.5D) {
@@ -1642,13 +1656,24 @@ public class VillagerGuardGoal extends Goal {
         }
         // CADA GUARDIA, SU CASILLA (I122): el puesto era UNA celda para los seis, así que se estorbaban entre ellos
         // —y con los animales y los que pasan por el patio— con la ruta buena delante. Se ordenan por cercanía a la
-        // diana y cada uno toma la suya por su número (`indice`), como el pueblo reparte ya los puestos de la arboleda
-        // y los del corral (I4: geometría fija, no aleatoria).
+        // diana y cada uno toma la suya por su número (`indice`), como el pueblo reparte ya los puestos de la ronda.
         candidatas.sort(java.util.Comparator.comparingDouble(p -> p.distSqr(diana)));
-        BlockPos mia = candidatas.get(Math.floorMod(indice, candidatas.size()));
+        // Y AHORA, LA VALIDACIÓN: se recorre la lista desde SU casilla y se toma la primera A LA QUE SE PUEDE LLEGAR.
+        // Si ninguna se alcanza, NO SE ENTRENA (el guardia vuelve a la ronda): antes se caminaba igual a una casilla
+        // imposible y se rendía en bucle.
+        for (int i = 0; i < candidatas.size(); i++) {
+            BlockPos p = candidatas.get(Math.floorMod(indice + i, candidatas.size()));
+            double distancia = Math.sqrt(villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D));
+            if (distancia <= 48.0D && !VillageManager.hayRutaQueAlcanza(villager, p)) {
+                continue; // cerca y sin camino: esa casilla no sirve
+            }
+            puestoDeEntrenamientoDe = diana;
+            puestoDeEntrenamiento = p;
+            return p;
+        }
         puestoDeEntrenamientoDe = diana;
-        puestoDeEntrenamiento = mia;
-        return mia;
+        puestoDeEntrenamiento = null;
+        return null;
     }
 
     /**
