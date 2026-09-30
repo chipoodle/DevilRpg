@@ -165,28 +165,33 @@ public class VillagerRepairGoal extends Goal {
             // (`alcanza=NO`) y el obrero NO DA UN PASO: medido, Filomena se rindió en `560,64,587` y `552,63,585` sin
             // moverse de `521,63,612` y `519,63,609`.
             BlockPos sitio = sitioDeCamino(level, target);
-            if (sitio != null) {
-                // El atasco se mide contra la CASILLA a la que se va, no contra el hueco: el rodeo hasta ella puede
-                // empezar alejándose del hueco (la lección de I112). Y el progreso se reinicia cuando cambia el paso.
-                double hastaElSitio = Math.sqrt(villager.distanceToSqr(sitio.getX() + 0.5D, sitio.getY() + 0.5D,
-                        sitio.getZ() + 0.5D));
-                if (!sitio.equals(sitioDeCaminoDe)) {
-                    mejorDistancia = Double.MAX_VALUE;
-                    stuckTicks = 0;
-                }
-                VillageManager.caminarHacia(villager, sitio, 0.6F);
-                if (hastaElSitio < mejorDistancia - 0.5D) {
-                    mejorDistancia = hastaElSitio;
-                    stuckTicks = 0;
-                } else {
-                    stuckTicks++;
-                }
+            if (sitio == null) {
+                // NIVEL 3 (I153, 29-sep-2026): SIN CASILLA DESDE LA QUE REPARAR, NO SE PERSIGUE EL HUECO.
+                // Antes se caía a `caminarHacia(villager, target)`: al hueco —que es AIRE que hay que rellenar, o
+                // directamente un BLOQUE que ya está puesto— el planificador devuelve `ruta=1 nodos … alcanza=NO`, así
+                // que el obrero empujaba el muro hasta rendirse. Medido en las corridas con el despachador encendido:
+                // `no consigue llegar a 563, 68, 568 desde 563, 64, 568 … destino=stone_bricks encima=air`, y 30
+                // rendiciones de `Repuso losa` en una sola corrida. Ahora el hueco se APARCA (no se vuelve a elegir) y
+                // el obrero busca otro: no se pierde ni un tick empujando.
+                saltados.add(target.asLong());
+                VillageManager.liberarHueco(level, target);
+                target = null;
                 return;
             }
-            VillageManager.caminarHacia(villager, target, 0.6F);
-            // Solo cuenta como atasco NO ACERCARSE (contar cada tick lo mandaba a empezar de cero a los 5 s).
-            if (distancia < mejorDistancia - 0.5D) {
-                mejorDistancia = distancia;
+            // El atasco se mide contra la CASILLA a la que se va, no contra el hueco: el rodeo hasta ella puede
+            // empezar alejándose del hueco (la lección de I112). Y el progreso se reinicia cuando cambia el paso.
+            double hastaElSitio = Math.sqrt(villager.distanceToSqr(sitio.getX() + 0.5D, sitio.getY() + 0.5D,
+                    sitio.getZ() + 0.5D));
+            if (!sitio.equals(sitioDeCaminoDe)) {
+                mejorDistancia = Double.MAX_VALUE;
+                stuckTicks = 0;
+            }
+            VillageManager.caminarHacia(villager, sitio, 0.6F);
+            // Y EL AVANCE SE MIDE POR LA RUTA, no solo por la recta (I139; medido aquí el 29-sep-2026): el obrero se
+            // rendía con `ruta=2 nodos … alcanza=SI` y una diferencia de UN bloque de altura (`566, 63, 567` desde
+            // `566, 64, 567`) porque la distancia en línea recta no bajaba aunque estuviera andando su camino.
+            if (hastaElSitio < mejorDistancia - 0.5D || VillageManager.avanzaPorLaRuta(villager)) {
+                mejorDistancia = hastaElSitio;
                 stuckTicks = 0;
             } else {
                 stuckTicks++;
