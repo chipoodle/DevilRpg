@@ -4715,6 +4715,40 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I150 · UN SOLO JEFE PARA EL RUMBO — y **sostenerlo a ciegas empeora** (29-sep-2026)
+
+El aldeano tiene **dos voces** que le dicen a dónde ir: el **goal del mod** (el trabajo) y **el cerebro del propio
+juego**, que tiene sus paseos y su «anda hacia donde miras» (`SetWalkTargetFromLookTarget`) y escribe **el mismo**
+`WALK_TARGET`. Cuando el paseo escribe después, le **roba el rumbo** al trabajo: el aldeano se va a la plaza mientras su
+goal cree que va a la taberna, el goal ve que no se acerca y **se rinde**.
+
+**MEDIDO** (`build/medida-tanda24.log`): de **57.663 recados** pedidos, **11.039** tenían el rumbo pisado — **el 19 %**.
+El aviso de rendición lo decía ya desde antes: los de la taberna traían `cerebro=566,64,566` (la plaza) o `cerebro=-`.
+
+**EL MECANISMO** (`VillageManager`): `caminarHaciaSostenido` apunta el **recado** (destino, velocidad, plazo de 3 s y
+una marca de «sostener») en los datos del aldeano, y `sostenerElRumbo` (cada 5 ticks) le **devuelve el rumbo** si el
+cerebro se lo ha pisado. **SIN tocar su contador de atasco** y con el recado **caducando solo** si el goal deja de
+pedirlo.
+
+**Y LO QUE NO HAY QUE HACER, medido** (tres corridas, misma ventana 2.000–12.000, misma referencia de **7**):
+
+| variante | ventana |
+|---|---|
+| sostener **todos** los recados (a ciegas) | **16** |
+| sostener solo si **hay camino que alcanza** | **22** |
+| sostener **solo la taberna** (lo que queda) | **15** ← su etiqueta baja **3 → 0** y solo hubo **11 rumbos sostenidos** |
+
+**La lección**: devolverle el rumbo a un recado **sin camino** es obligar al aldeano a reintentar lo que **no puede**,
+en vez de rendirse e irse: el que se dispara es el **ganadero** (2+2 → 5+5 → 7+7). Es decir: **el ladrón del rumbo a
+veces es la cura**, y el problema real de esos recados no es la navegación sino **que se eligen destinos que no se
+pueden terminar**.
+
+**Y LA LECCIÓN DE MÉTODO, que costó la tarde entera**: la ventana **varía muchísimo entre corridas del mismo código**
+(**7** y **15** con comportamiento casi idéntico — 11 eventos no explican 8 rendiciones). Juzgar cada intento con **una**
+corrida, como hice, **no distingue un tropiezo de un bucle ni de ruido**: hace falta la **media de 3-4** corridas por
+configuración, que es lo que ya está escrito en `PENDIENTE` §8 y lo que la comparación de medias (tandas 27-32) está
+midiendo.
+
 ### I139 · EL ATASCO SE MIDE POR EL **AVANCE POR LA RUTA** (y el que va a por un objeto, por una CASILLA DE PIE)
 
 Los dos atascos sueltos que quedaban en el pueblo, **medidos con el desglose por etiquetas** y arreglados los dos.
