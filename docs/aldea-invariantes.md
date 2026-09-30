@@ -4715,6 +4715,60 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I153 · **A UN HUECO NO SE CAMINA**: el obrero no persigue lo que no tiene casilla de pie (29-sep-2026)
+
+**El fallo, medido** (corridas con el despachador encendido, `build/medida-tanda42.log`):
+
+```
+no consigue llegar a 563, 68, 568 desde 563, 64, 568
+   (ruta=1 nodos … alcanza=NO; destino=stone_bricks encima=air)  etiqueta="Hipolito (Recolector) / Repuso piedra labrada"
+```
+
+El obrero **caminaba al propio hueco** cuando no encontraba casilla de pie desde la que reparar: el código caía a
+`caminarHacia(villager, target)`. Y a un hueco —**aire que hay que rellenar**, o directamente **un bloque ya puesto**— el
+planificador le da **ruta de un nodo**: empujaba el muro hasta rendirse. Medido: **30 rendiciones de `Repuso losa`** en
+una sola corrida.
+Y el otro caso, también medido: `ruta=2 nodos … alcanza=SI` con **un bloque de diferencia de altura**
+(`566, 63, 567` desde `566, 64, 567`) se rendía igual, porque la distancia **en línea recta** no bajaba aunque fuera
+andando su camino.
+
+**EL ARREGLO (patrón del nivel 3)**:
+1. **Sin casilla desde la que reparar, NO SE PERSIGUE**: el hueco se **aparca** (`saltados`) y el obrero busca otro.
+   No se pierde ni un tick empujando.
+2. **El avance se mide también por la RUTA** (`avanzaPorLaRuta`, I139), no solo por la recta.
+
+**Juez**: `Repuso*` con `destino=<bloque>` a **0** y el total sin subir respecto al mismo modo de arnés.
+**Ojo con lo que NO se puede medir aquí**: en el mundo del arnés **no hay agujeros que reparar** (`El obrero repuso` = 0
+en las 4 corridas de referencia), así que su trabajo allí es perseguir celdas del plano inalcanzables; que siga
+reparando cuando de verdad hay un cráter queda **verificado por construcción** (solo se salta huecos sin casilla de pie
+a menos del alcance, que son irreparables andando: medido, ruta de un nodo).
+
+### I152 · LA CASILLA DEL ENTRENAMIENTO, **A LA COTA Y CON RUTA VALIDADA** (29-sep-2026)
+
+**El fallo, medido** (`build/medida-tanda41.log`): **todas** las rendiciones de los guardias eran la misma —
+
+```
+no consigue llegar a 545, 64, 589 desde 546, 62, 589
+   (ruta=1 nodos … alcanza=NO; destino=air encima=air)   cerebro=545, 64, 589
+```
+
+El guardia anda a **y=62** y le mandaban a **y=64**: la casilla estaba **dos bloques por encima** (encima de la
+estructura de la diana). Pasa cualquier prueba **local** (`sePuedeEstar`: aire, aire encima, suelo firme) y está
+**aislada**: no hay ruta hasta ella. El código cogía candidatas y se quedaba con una **por cercanía, sin comprobar
+nunca si se podía llegar** — y con el despachador encendido eso son **12 rendiciones por corrida**.
+
+**EL ARREGLO (patrón del nivel 3: candidatas + contrato + validación)**:
+1. **La casilla tiene que estar A LA COTA** del pueblo.
+2. **Y tiene que haber RUTA que la alcance** (`hayRutaQueAlcanza`), preguntada **solo si el guardia está a menos de 48
+   bloques** (más lejos, la región de búsqueda del juego no da ruta y el tirón es el que lo lleva — I145).
+3. **Si ninguna candidata se alcanza, NO SE ENTRENA**: el guardia vuelve a la ronda.
+
+**MEDIDO, con los DOS jueces** (4 corridas del modo del minero + 2 del **modo aldea**):
+- `Yendo a entrenar` **0 · 0 · 0 · 0** y `no llego a la diana` **0**, con el total en **22 · 41 · 33 · 36** (la
+  referencia: 13 · 72 · 19 · 40 → **sin regresión**);
+- **y siguen entrenando**: el censo `ENTRENO` del arnés da **392 y 278 muestras** con el contador subiendo de **0 a
+  1017-1241** (y 630 en la otra), entrenando en **y=62**, la cota ✓.
+
 ### I150 · UN SOLO JEFE PARA EL RUMBO — y **sostenerlo a ciegas empeora** (29-sep-2026)
 
 El aldeano tiene **dos voces** que le dicen a dónde ir: el **goal del mod** (el trabajo) y **el cerebro del propio
