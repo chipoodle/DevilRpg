@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.entity.goal;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
+import com.chipoodle.devilrpg.world.VillageErrands;
 import com.chipoodle.devilrpg.world.VillagePantry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -148,7 +149,14 @@ public class VillagerTavernGoal extends Goal {
             // recolectora ya libre de los bancales (I130), "Filomena / Yendo a la taberna" se rindió **16 veces en una
             // corrida** —dos tercios del total de esa corrida— con `ruta=1 nodos … alcanza=NO` al destino `516,64,639`
             // desde `516,63,641` (dos bloques y un nivel de diferencia).
-            VillageManager.caminarHacia(villager, VillageManager.casillaDePieCercaDe(level, destino), VELOCIDAD);
+            BlockPos casilla = VillageErrands.casillaPosible(level, destino);
+            // M2 (I151): si no hay dónde ponerse (el rincón está lleno de mesas y sillas), la mesa se aparca y el
+            // aldeano se va a lo suyo: no se empuja el mueble hasta rendirse (clase A de docs/aldea-cerebro.md).
+            if (casilla == null) {
+                VillageManager.marcarPuntoFallido(villager, mesa);
+                return;
+            }
+            VillageManager.caminarHacia(villager, casilla, VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a la taberna");
             if (distancia < mejorDistancia - 0.5D) {
                 mejorDistancia = distancia;

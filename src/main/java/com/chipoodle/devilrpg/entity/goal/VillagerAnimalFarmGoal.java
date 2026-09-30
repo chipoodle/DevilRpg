@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.entity.goal;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
+import com.chipoodle.devilrpg.world.VillageErrands;
 import com.chipoodle.devilrpg.world.VillagePantry;
 import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
@@ -729,6 +730,25 @@ public class VillagerAnimalFarmGoal extends Goal {
 
     private void irAlObjetivo() {
         if (target != null && villager.level() instanceof ServerLevel level) {
+            // M2 · LA AUTORIDAD DE RECADOS (I151, fase 1 del cerebro de la aldea): ANTES de andar, ¿hay dónde
+            // ponerse? Si la faena no se pisa y no hay ninguna casilla de pie alrededor (un animal sobre la valla, un
+            // huevo dentro del bloque, la paja), el recado NO se persigue: se aparca y el ganadero se va a otra cosa.
+            // Antes se caminaba igual —hacia la propia celda imposible— y el aldeano empujaba el obstáculo hasta
+            // rendirse; y como se rendía y volvía a elegir el mismo (el destino fijo no se comprobaba), el bucle
+            // subía: medido 2 → 5 → 7 rendiciones. Ver `docs/aldea-cerebro.md` (clases A y C).
+            if (VillageErrands.casillaPosible(level, target) == null) {
+                VillageManager.marcarPuntoFallido(villager, target);
+                return;
+            }
+            // M3 · LA ALDEA ABRE SU PORTÓN (I151). Medido: el ganadero se rendía con «Bajando lo del corral» desde
+            // `613, 62, 574` —DENTRO del corral— con `ruta=1 nodos … alcanza=NO` hacia el almacén. El planificador del
+            // juego no cruza un portón CERRADO, y el portón solo se abría con el aldeano ya pegado a él (2,6 bloques):
+            // si no hay ruta hasta el portón, no llega a pedirlo — círculo cerrado. Aquí la aldea le abre el suyo
+            // antes de insistir, y solo si el recado CRUZA la cerca (si los dos están dentro, se queda cerrado para
+            // que no se escapen las gallinas).
+            if (villager.getNavigation().getPath() == null && level.getGameTime() % 10L == 0L) {
+                VillageErrands.abrirLaPuertaSiHaceFalta(level, villager, center, nivel, target);
+            }
             VillageManager.caminarHacia(villager, destinoDelTramo(level), VELOCIDAD);
         } else if (target != null) {
             VillageManager.caminarHacia(villager, target, VELOCIDAD);
