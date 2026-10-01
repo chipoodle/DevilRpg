@@ -4739,6 +4739,13 @@ pie** y el planificador no puede meterlo ahí: el cocinero se rendía **con el a
 
 **Juez**: `Yendo a la cocina` a la baja y **el trabajo de la cocina igual** (`pieza(s) cocinadas` / `cogio N tronco(s)`).
 
+**MEDIDO (4 corridas, 69-72, contra las 4 de I154)**: el cocinero **trabaja el DOBLE** —
+`pieza(s) cocinadas` / `cogio N tronco(s)`: **8 · 3 · 13 · 2 = 26** frente a **12**— y sus etiquetas **bajan**:
+`Yendo a la cocina` **3 · 3 · 2 · 0 = 8** frente a **12**, y **`A por leña al almacén` 3 → 0**. El total (43 · 34 · 22 · 42,
+media **35,25**) se **solapa** con el de la referencia (25 · 29 · 31 · 36, media 30,25): la mejora está **en la etiqueta y
+en el trabajo**, que es donde tiene que estar. Y de paso: `Buscando recambios` de los granjeros **2 · 4 · 1 · 0** ✓
+(el fallo de rendimiento, cerrado) y los guardias entrenando (**963-1.777**).
+
 **Y UN AVISO DE RENDIMIENTO QUE VALE PARA TODO LO QUE VENGA (29-sep-2026)**: la **primera** versión de este arreglo
 preguntaba `hayVistaLibre` —**un raycast**— **por candidata y en cada `canUse`** (hasta 4 por tick, para siempre, porque
 `canUse` se evalúa cada tick mientras el goal no corre). Resultado medido, con el mundo restaurado idéntico en cada

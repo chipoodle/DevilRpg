@@ -153,14 +153,21 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
      abrirle el portón a **todos** mejore nada.
    - **Ruido del registro**: los `removeCurrentModifiers()/Add/createNewAttributeModifiers` y `Player Att armor|toughness`
      pasan a **DEBUG** (ensuciaban las medidas).
-4. **LO QUE QUEDA PENDIENTE, con nombre y número** (medido en el lote 59-62):
-   - `Yendo a la taberna` **29** en 4 corridas (la clase es «dos jefes»: el goal pide una mesa y el cerebro se lo lleva;
-     **M1 lo arreglaba y hundía el resto** → hay que hacerlo **por oficio**, no para todos a la vez);
-   - `Sacrificando un animal` **15** (el ganadero: **I155 en medida**);
-   - `A por leña al almacén` **3** y `Yendo a la cocina` **12** (cocinero: el segundo es **escalera en la cabeza**,
-     `encima=deepslate_tile_stairs`, y el primero la ruta de un nodo desde el interior de la taberna);
-   - `Sembrando` **13** (granjeros: `destino=farmland encima=wheat`, ya cubierto por I154; si sigue, mirar el conteo
-     del goal, que mide contra el bancal);
+4. **LO QUE QUEDA PENDIENTE, con nombre y número** (medido en el lote 59-62, **actualizado tras el cocinero**):
+   - **HECHO DESPUÉS (I156, cocinero)**: `Yendo a la cocina` **12 → 8** y `A por leña al almacén` **3 → 0**, con el
+     cocinero **trabajando el doble** (12 → **26** piezas). De paso se cazó y cerró un **fallo de rendimiento mío**:
+     4 `hayVistaLibre` (raycasts) **por tick** en un `canUse` dispararon `Buscando recambios` de los granjeros de
+     **0-2** (ocho corridas) a **39 y 17**; con el caché volvió a **0-4**.
+   - **LO QUE SIGUE PENDIENTE, con su número del lote 59-62**:
+     `Yendo a la taberna` **29** en 4 corridas (clase «dos jefes»: el goal pide una mesa y el cerebro se lo lleva;
+     **M1 lo arreglaba y hundía el resto** → hay que hacerlo **por oficio**, y aceptar la **casilla de al lado** como
+     llegada válida en vez de la mesa, que no se pisa: medido `ruta=3 nodos … alcanza=SI; destino=dark_oak_fence
+     encima=oak_pressure_plate`);
+     `Sacrificando un animal` **15** (el ganadero; **I155 medido y retirado** — el círculo del corral es real);
+     `Sembrando` **13** y `Cosechando` (**medido: `ruta=1 nodos … alcanza=NO; pies=air cabeza=air suelo=grass_block` con
+     destino de aire: **dos casillas normales sin camino entre ellas** — la clase «sin ruta», la más difícil: mirar si el
+     bancal queda cerrado por la valla o si el aldeano está dentro de un recinto);
+     `Guardo lo suyo` / `Trajo N del almacén a la despensa` (los recados del granjero, pocos y sueltos);
    - y los dos ruidos del §8 de siempre: el **aldeano fresco con hambre 0** y los avisos sueltos del arranque.
 
 ### 8. Lo que queda, con su nombre y su número (27-sep-2026)
