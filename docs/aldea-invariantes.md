@@ -4715,6 +4715,35 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I157 · EL BUCLE DEL PORTÓN: **al portón no se va; se pasa** (29-sep-2026, medido y PENDIENTE)
+
+**Lo que se midió** (dos corridas seguidas, `build/medida-tanda73.log` y `74`): `Entrando a la huerta` **34 y 50** avisos
+**de la misma granjera** (Ramona), cuando en las **catorce corridas anteriores** esa etiqueta salía **0**. La línea, una y
+otra vez, con el aldeano **DENTRO del bloque del portón**:
+
+```
+no consigue llegar a 584, 62, 574 desde 585, 62, 574
+   (ruta=2 nodos hasta 584, 62, 574 alcanza=SI; pies=oak_fence_gate cabeza=…)
+```
+
+**El mecanismo** (se ve en el espaciado: un aviso cada ~200 líneas de registro):
+1. El goal manda al aldeano **al portón** como primer tramo (I44/I96), así que el aldeano acaba **metido en el bloque del
+   portón abierto** (`pies=oak_fence_gate`);
+2. su medida de avance **no mejora** —el destino real es la casilla **siguiente**, no el portón— así que **se rinde**;
+3. el **desatasco central** (I154) lo saca de dentro del bloque… pero tiene un **freno de 200 ticks**, así que el ciclo
+   entero dura eso: **el goal lo vuelve a meter, el desatasco lo vuelve a sacar**. Es un bucle con el freno como período.
+
+**Y NO ERA COSTE** (queda dicho porque lo sospeché y lo medí): los ticks alcanzados en 20 minutos fueron **idénticos**
+(~34.000) en las seis corridas, con y sin el bucle. No era lentitud del servidor.
+
+**EL ARREGLO QUE TOCA (pendiente, patrón del nivel 3)**:
+- el tramo del portón debe ser **la casilla de pie AL LADO del portón** (o la de **más allá**, ya cruzado), **nunca el
+  bloque del portón**: a un bloque no se camina (I114) y el aldeano acaba dentro de él;
+- y el **freno del desatasco no puede ser el período del bucle**: si tras sacarlo vuelve a estar encajado en el mismo
+  sitio, hay que **aparcar ese destino** (con caducidad) en vez de repetir el ciclo.
+- **Juez**: `Entrando a la huerta` (y cualquier etiqueta de portón: `Saliendo de la huerta`, los portones del corral y
+  del gallinero) a **0**, con el trabajo del granjero igual.
+
 ### I156 · LA CASILLA DE LA COCINA SE **ELIGE**, NO SE SUPONE (29-sep-2026)
 
 **El fallo, medido** (lote de I154, `build/medida-tanda59.log` y siguientes):
