@@ -4715,7 +4715,7 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
-### I157 · EL BUCLE DEL PORTÓN: **al portón no se va; se pasa** (29-sep-2026, medido y PENDIENTE)
+### I157 · EL BUCLE DEL PORTÓN: **al portón no se va; se pasa** — ARREGLADO Y MEDIDO (30-sep-2026)
 
 **Lo que se midió** (dos corridas seguidas, `build/medida-tanda73.log` y `74`): `Entrando a la huerta` **34 y 50** avisos
 **de la misma granjera** (Ramona), cuando en las **catorce corridas anteriores** esa etiqueta salía **0**. La línea, una y
@@ -4736,13 +4736,24 @@ no consigue llegar a 584, 62, 574 desde 585, 62, 574
 **Y NO ERA COSTE** (queda dicho porque lo sospeché y lo medí): los ticks alcanzados en 20 minutos fueron **idénticos**
 (~34.000) en las seis corridas, con y sin el bucle. No era lentitud del servidor.
 
-**EL ARREGLO QUE TOCA (pendiente, patrón del nivel 3)**:
-- el tramo del portón debe ser **la casilla de pie AL LADO del portón** (o la de **más allá**, ya cruzado), **nunca el
-  bloque del portón**: a un bloque no se camina (I114) y el aldeano acaba dentro de él;
-- y el **freno del desatasco no puede ser el período del bucle**: si tras sacarlo vuelve a estar encajado en el mismo
-  sitio, hay que **aparcar ese destino** (con caducidad) en vez de repetir el ciclo.
-- **Juez**: `Entrando a la huerta` (y cualquier etiqueta de portón: `Saliendo de la huerta`, los portones del corral y
-  del gallinero) a **0**, con el trabajo del granjero igual.
+**EL ARREGLO (dos mitades, las dos en el sitio donde estaba la causa)**:
+1. **NO SE CIERRA UN PORTÓN CON ALGUIEN DENTRO** (`VillagerGateGoal.cerrarPorton`): un portón abierto por el pueblo se
+   cierra **cuando está libre**, no cuando le conviene al reloj. Si hay alguien en la celda, se queda abierto y se
+   reintenta en el latido siguiente. **Era la causa raíz**: la compuerta se cerraba con la granjera dentro.
+2. **SI UN ALDEANO ESTÁ METIDO EN UN PORTÓN, SE ABRE EL PORTÓN** (`desatascarSiEstaEncajado`, I157): abrir la compuerta
+   lo **libera sin mover a nadie** (mucho mejor que teletransportarlo), con un freno corto de 2 s. Lleva su marca
+   `// lint:ok I8` justificada: solo abre el portón que tiene a un aldeano **dentro**, solo si está **cerrado** y no
+   depende de la cota (el bloque es el de sus propios pies).
+- **EL ARREGLO QUE SE DESCARTÓ**: hacer que el tramo del portón fuera la casilla de al lado. **No hace falta** —el
+  `mejorEntradaLibre` del granjero ya devuelve la casilla **de dentro** y la de al lado del portón—: el problema no era
+  *a dónde* iba, sino que **la compuerta se cerraba encima**.
+
+**MEDIDO (4 corridas, 77-80, contra las 4 de referencia del mismo modo)**: **8 · 14 · 18 · 21 → media 15,25** frente a
+**30,25** de la referencia (**−50 %**), con `Entrando a la huerta` **0 · 4 · 2 · 6** (era **34 y 50**), el desatasco
+actuando **8-23** veces por corrida y **el pueblo trabajando igual** (granja **315-941**, pescador **9**, herrería
+**73**, cocina **3**). Es **la mayor mejora de la sesión**.
+
+**Y EL RESIDUO, dicho**: quedan **0-6** avisos de portón por corrida (el bucle está roto, la etiqueta no es cero).
 
 ### I156 · LA CASILLA DE LA COCINA SE **ELIGE**, NO SE SUPONE (29-sep-2026)
 
