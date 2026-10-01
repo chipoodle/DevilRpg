@@ -4715,6 +4715,43 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I160 · LA COTA LA DICE **EL PUEBLO**, NO EL OBJETIVO (30-sep-2026)
+
+En `VillagerFarmGoal` la geometría del bancal (la compuerta de entrada y la salida) se calculaba con **`target.getY()`
+como cota** — el único sitio del fichero que se la pedía al objetivo en vez de a `cotaDeLaPlaza`. Si el objetivo caía
+**un nivel por encima** (una celda bajo un techo, encima de una losa, una mata que el plano pone alta), **la salida y las
+cuatro compuertas se calculaban a esa altura** y el granjero se rendía con destinos inalcanzables.
+
+**MEDIDO (corrida 83, que dio 60 avisos cuando la media era 15)**: **42 de los 60 destinos** de esa corrida estaban en
+**y=63**, mientras **todos** los aldeanos andan a **y=62** y la cota del pueblo es **62** (lo dice el propio registro:
+`kiosco de la plaza colocado a la cota 62`). Los destinos eran de dos formas: `destino=air encima=oak_planks` (bajo un
+toldo) y aire a un nivel. **Ahora la cota es la del pueblo**, como en el resto del goal.
+**Juez**: el total de la corrida y el recuento de destinos en `y = cota + 1` (a **0**).
+
+### I159 · EL FRENO DEL DESATASCO ES CONTRA **LA MISMA CELDA**, NO CONTRA EL RELOJ (30-sep-2026)
+
+El desatasco por encajamiento (I154) tenía un freno **de reloj** (200 ticks) para no repetirse en bucle. El problema es
+que el freno también tapaba los encajamientos **nuevos**: un aldeano sacado de una celda y encajado en otra esperaba
+hasta **10 s** con el planificador roto.
+
+**Y por qué es grave estar encajado**: **el planificador NO PUEDE NI EMPEZAR**. Medido: un granjero metido en el bancal
+(`pies=farmland`) devolvía **`ruta=1 nodos … alcanza=NO` INCLUSO a 33 bloques**
+(`de 576, 62, 578 a 543, 62, 603`) — **ningún destino tiene ruta** mientras esté encajado, así que su goal se rinde con
+cualquier etiqueta (`Sembrando`, `Cosechando`, `Trajo N del almacén a la despensa`…).
+
+**EL ARREGLO**: se recuerda **la celda** de la que se le sacó (`DESATASCO_CELDA`) y el freno vale **solo para esa misma
+celda**; en una celda distinta se actúa **ya**. Sigue sin poder repetirse en bucle (la misma celda sigue frenada).
+**MEDIDO (lote 81-84)**: `Sembrando`/`Cosechando` **12 → 4** y el desatasco actuando **8-29** veces por corrida.
+
+### I158 · EN LA TABERNA, EL ATASCO SE MIDE CONTRA **EL PASO**, NO CONTRA LA MESA (30-sep-2026)
+
+La mesa es un mueble que **no se pisa** (`destino=dark_oak_fence encima=oak_pressure_plate`) y el goal medía su avance
+con la **recta hasta la mesa**: si el aldeano tenía que dar un rodeo (la casilla de pie buena está al otro lado), esa
+recta no bajaba nunca y **se rendía con la ruta viva** — medido: `ruta=3 nodos … alcanza=SI`. Es la misma lección de
+I112/I140/I153 (el obrero), aplicada a la taberna: se camina a la **casilla de pie** desde la que se come y el avance se
+mide contra **esa** casilla (y, si la recta no baja, contra el **avance de la ruta**).
+**MEDIDO (lote 81-84)**: `Yendo a la taberna` **5 → 3** (venía de **29** en el lote de I154).
+
 ### I157 · EL BUCLE DEL PORTÓN: **al portón no se va; se pasa** — ARREGLADO Y MEDIDO (30-sep-2026)
 
 **Lo que se midió** (dos corridas seguidas, `build/medida-tanda73.log` y `74`): `Entrando a la huerta` **34 y 50** avisos
