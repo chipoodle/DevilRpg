@@ -415,6 +415,18 @@ public class VillagerGateGoal extends Goal {
         if (!(estado.getBlock() instanceof FenceGateBlock) || !estado.getValue(FenceGateBlock.OPEN)) {
             return false; // ya estaba cerrado (lo cerró el jugador): no hay nada que hacer
         }
+        // I157 · NO SE CIERRA UN PORTÓN CON ALGUIEN DENTRO (30-sep-2026). Medido: una granjera se quedaba
+        // **ATRAPADA EN LA CELDA DEL PORTÓN** (`pies=oak_fence_gate`) con su faena al lado (`ruta=2 nodos
+        // alcanza=SI`), y el ciclo se repetía cada ~200 ticks (el freno del desatasco): el portón la pillaba dentro,
+        // se cerraba, y con la compuerta cerrada su forma de colisión la bloqueaba; el desatasco la sacaba y el goal
+        // la volvía a meter. `Entrando a la huerta` salió **34 y 50** en dos corridas, cuando en catorce anteriores era
+        // **0**. Un portón abierto por el pueblo se cierra cuando está **libre**, no cuando le conviene al reloj.
+        for (net.minecraft.world.entity.Entity dentro : level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,
+                new net.minecraft.world.phys.AABB(porton))) {
+            if (dentro instanceof net.minecraft.world.entity.LivingEntity) {
+                return false; // hay alguien en la celda: se queda abierto y se reintenta en el próximo latido
+            }
+        }
         level.setBlock(porton, estado.setValue(FenceGateBlock.OPEN, false), Block.UPDATE_ALL);
         level.playSound(null, porton, SoundEvents.FENCE_GATE_CLOSE, SoundSource.BLOCKS, 0.7F, 1.0F);
         return true;

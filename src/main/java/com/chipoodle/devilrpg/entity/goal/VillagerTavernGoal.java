@@ -139,18 +139,25 @@ public class VillagerTavernGoal extends Goal {
         }
         BlockPos destino = mesaDeEsteAldeano(level);
         villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
-        double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
-                destino.getZ() + 0.5D));
-        if (distancia > REACH && espera == 0) {
+        // I158 (30-sep-2026) · EL ATASCO SE MIDE CONTRA **EL PASO**, NO CONTRA LA MESA. La mesa es un mueble que NO SE
+        // PISA (`destino=dark_oak_fence encima=oak_pressure_plate`), así que la recta hasta ella puede no bajar nunca
+        // aunque el aldeano vaya andando su camino: medido, `Yendo a la taberna` se rendía **29 veces en 4 corridas**
+        // con `ruta=3 nodos … alcanza=SI` — la ruta SÍ llegaba. Es la lección de I112/I140/I153 (el del obrero, la
+        // misma tarde), aplicada aquí: se camina a la **casilla de pie** desde la que se come y el avance se mide
+        // contra ESA casilla (y, si no baja, contra el avance de la ruta, que es lo que de verdad dice si va).
+        BlockPos puesto = VillageManager.casillaDePieCercaDe(level, destino);
+        double distancia = Math.sqrt(villager.distanceToSqr(puesto.getX() + 0.5D, puesto.getY() + 0.5D,
+                puesto.getZ() + 0.5D));
+        if (distancia > 0.8D && espera == 0) {
             // SE CAMINA A UNA CASILLA DE PIE, no a la mesa (regla de I114, la que arregló al ganadero en I131): la
             // celda de la mesa puede no ser pisable —o estar un nivel más arriba— y entonces el planificador devuelve
             // una ruta de UN nodo que no alcanza y el aldeano empuja hasta rendirse. MEDIDO (26-sep-2026): con la
             // recolectora ya libre de los bancales (I130), "Filomena / Yendo a la taberna" se rindió **16 veces en una
             // corrida** —dos tercios del total de esa corrida— con `ruta=1 nodos … alcanza=NO` al destino `516,64,639`
             // desde `516,63,641` (dos bloques y un nivel de diferencia).
-            VillageManager.caminarHacia(villager, VillageManager.casillaDePieCercaDe(level, destino), VELOCIDAD);
+            VillageManager.caminarHacia(villager, puesto, VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a la taberna");
-            if (distancia < mejorDistancia - 0.5D) {
+            if (distancia < mejorDistancia - 0.5D || VillageManager.avanzaPorLaRuta(villager)) {
                 mejorDistancia = distancia;
                 stuckTicks = 0;
             } else {

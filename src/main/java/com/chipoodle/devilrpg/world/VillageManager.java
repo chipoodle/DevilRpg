@@ -5171,6 +5171,8 @@ public final class VillageManager {
     /**
     /** Hasta cuando no se le vuelve a intentar un desatasco a ese aldeano. */
     private static final String DESATASCO_TAG = "DevilRpgDesatascoHasta";
+    /** La celda de la que se le sacó la última vez (I159: el freno es contra la MISMA celda, no contra el reloj). */
+    private static final String DESATASCO_CELDA = "DevilRpgDesatascoCelda";
 
     /**
      * <b>Si el aldeano esta METIDO DENTRO de un bloque</b> (una valla, una losa, un poste: la forma de colision de la
@@ -5194,10 +5196,19 @@ public final class VillageManager {
         }
         long ahora = level.getGameTime();
         CompoundTag datos = villager.getPersistentData();
-        if (datos.getLong(DESATASCO_TAG) > ahora) {
-            return false; // acaba de salir de un desatasco: no se le vuelve a tocar
-        }
         BlockPos pies = villager.blockPosition();
+        // I159 (30-sep-2026) · EL FRENO ES CONTRA LA **MISMA** CELDA, NO CONTRA EL RELOJ. Medido: el granjero metido
+        // en el bancal (`pies=farmland`) tiene el planificador **roto de salida** — devuelve `ruta=1 nodos … alcanza=NO`
+        // **incluso a 33 bloques** (`de 576, 62, 578 a 543, 62, 603`)—, es decir: mientras esté encajado, NINGÚN
+        // destino tiene ruta, y su goal se rinde. Con el freno por reloj (200 ticks) se pasaba hasta **10 s** encajado
+        // en cada episodio, rindiéndose (`Sembrando`/`Cosechando`, 17 avisos en 4 corridas). Ahora: si está encajado en
+        // una celda **distinta** de la última de la que se le sacó, se actúa **ya**; el freno solo evita pelearse con
+        // la MISMA celda (que es lo que podría repetirse en bucle si el criterio estuviera equivocado).
+        long celdaAhora = pies.asLong();
+        boolean mismaCelda = datos.contains(DESATASCO_CELDA) && datos.getLong(DESATASCO_CELDA) == celdaAhora;
+        if (mismaCelda && datos.getLong(DESATASCO_TAG) > ahora) {
+            return false; // acaba de salir de ESTA misma celda: no se le vuelve a tocar
+        }
         net.minecraft.world.phys.shapes.VoxelShape forma = level.getBlockState(pies).getCollisionShape(level, pies);
         if (forma.isEmpty()) {
             return false; // la celda de los pies esta libre: no esta dentro de nada
@@ -5205,6 +5216,23 @@ public final class VillageManager {
         double sobreElSueloDeLaCelda = villager.getY() - pies.getY();
         if (forma.max(net.minecraft.core.Direction.Axis.Y) <= sobreElSueloDeLaCelda + 0.05D) {
             return false; // la forma se queda por debajo de sus pies: esta ENCIMA, no dentro
+        }
+        // I157 · SI ESTÁ METIDO EN UN PORTÓN, SE ABRE EL PORTÓN (30-sep-2026). Medido: una granjera atrapada DENTRO de
+        // la celda del portón (`pies=oak_fence_gate`) con su faena al lado (`ruta=2 nodos … alcanza=SI`) y el ciclo
+        // repitiéndose cada ~200 ticks (el freno de este mismo desatasco): la compuerta cerrada con ella dentro la
+        // bloquea, el desatasco la saca, y el goal la vuelve a meter. Abrir el portón la libera **sin mover a nadie**,
+        // que es lo que hace un aldeano: el portón es de la aldea y lo abre la aldea (ver el goal de los portones).
+        net.minecraft.world.level.block.state.BlockState enLosPies = level.getBlockState(pies);
+        if (enLosPies.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock
+                && !enLosPies.getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN)) {
+            level.setBlock(pies, enLosPies.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, true), // lint:ok I8 porque solo abre el porton que tiene a un aldeano DENTRO y solo si esta cerrado (idempotente y sin pelear con el jugador), y no depende de la cota: el bloque es el de sus propios pies
+                    net.minecraft.world.level.block.Block.UPDATE_ALL);
+            level.playSound(null, pies, net.minecraft.sounds.SoundEvents.FENCE_GATE_OPEN,
+                    net.minecraft.sounds.SoundSource.BLOCKS, 0.7F, 1.0F);
+            datos.putLong(DESATASCO_TAG, ahora + 40); // 2 s, no 200: si vuelve a pasar, se vuelve a mirar pronto
+            DevilRpg.LOGGER.info("[Village] {} estaba METIDO en el porton {}: se lo abro para que salga",
+                    villager.getUUID(), pies.toShortString());
+            return true;
         }
         BlockPos salida = casillaPisableCercaDe(level, pies);
         if (salida == null) {
@@ -5215,6 +5243,7 @@ public final class VillageManager {
         villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.PATH);
         villager.teleportTo(salida.getX() + 0.5D, salida.getY(), salida.getZ() + 0.5D);
         datos.putLong(DESATASCO_TAG, ahora + 200);
+        datos.putLong(DESATASCO_CELDA, celdaAhora); // I159: el freno vale para ESTA celda; en otra, se actúa ya
         DevilRpg.LOGGER.info("[Village] {} estaba METIDO en {} (dentro de {}): lo saco a {}", villager.getUUID(),
                 pies.toShortString(), nombreDelBloque(level, pies), salida.toShortString());
         return true;
