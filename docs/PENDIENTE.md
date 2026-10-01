@@ -153,26 +153,26 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
      abrirle el portón a **todos** mejore nada.
    - **Ruido del registro**: los `removeCurrentModifiers()/Add/createNewAttributeModifiers` y `Player Att armor|toughness`
      pasan a **DEBUG** (ensuciaban las medidas).
-4. **LO QUE QUEDA PENDIENTE, con nombre y número** (medido en el lote 59-62, **actualizado tras el cocinero**):
-   - **HECHO DESPUÉS (I156, cocinero)**: `Yendo a la cocina` **12 → 8** y `A por leña al almacén` **3 → 0**, con el
-     cocinero **trabajando el doble** (12 → **26** piezas); y las **dos corridas de verificación** de la versión final
-     dieron **31 y 16** (las mejores del día), con el trabajo en **9 y 7**. La variante que además preguntaba la **ruta**
-     se **retiró**: dejaba al cocinero perfecto (1 y 0) pero disparaba el **bucle del portón** de la granjera
-     (`Entrando a la huerta` 34 y 50) y el total se iba a 77 y 85 — ver **I157**.
-     De paso se cazó y cerró un **fallo de rendimiento mío**: 4 `hayVistaLibre` (raycasts) **por tick** en un `canUse`
-     dispararon `Buscando recambios` de los granjeros de **0-2** (ocho corridas) a **39 y 17**; con el caché volvió a
-     **0-4**.
-   - **LO QUE SIGUE PENDIENTE, con su número del lote 59-62**:
-     `Yendo a la taberna` **29** en 4 corridas (clase «dos jefes»: el goal pide una mesa y el cerebro se lo lleva;
-     **M1 lo arreglaba y hundía el resto** → hay que hacerlo **por oficio**, y aceptar la **casilla de al lado** como
-     llegada válida en vez de la mesa, que no se pisa: medido `ruta=3 nodos … alcanza=SI; destino=dark_oak_fence
-     encima=oak_pressure_plate`);
-     `Sacrificando un animal` **15** (el ganadero; **I155 medido y retirado** — el círculo del corral es real);
-     `Sembrando` **13** y `Cosechando` (**medido: `ruta=1 nodos … alcanza=NO; pies=air cabeza=air suelo=grass_block` con
-     destino de aire: **dos casillas normales sin camino entre ellas** — la clase «sin ruta», la más difícil: mirar si el
-     bancal queda cerrado por la valla o si el aldeano está dentro de un recinto);
-     `Guardo lo suyo` / `Trajo N del almacén a la despensa` (los recados del granjero, pocos y sueltos);
-   - y los dos ruidos del §8 de siempre: el **aldeano fresco con hambre 0** y los avisos sueltos del arranque.
+4. **LO QUE QUEDA PENDIENTE, con nombre y número** — **actualizado al final de la sesión del 30-sep-2026**:
+   **HECHO Y MEDIDO DESPUÉS** (cada pieza con su invariante y sus 4 corridas):
+   - **I152 guardias** (`Yendo a entrenar` 0, y `entrenado` 0 → 914-1.800), **I153 obrero** (`Repuso*` 0),
+   - **I156 cocinero** (el cocinero **trabaja el doble**: 12 → 26 piezas, `A por leña` 3 → 0),
+   - **I157 el bucle del portón** (la mayor mejora: **30,25 → 15,25** de media, `Entrando a la huerta` 34/50 → 0-6),
+   - **I158 taberna** (el atasco se mide contra el paso: `Yendo a la taberna` **29 → 3** en su lote),
+   - **I159 el freno del desatasco** (`Sembrando`/`Cosechando` **12 → 4**),
+   - **I160 la cota del bancal** (destinos a cota+1: **42 → 1-5** por corrida).
+   **El cuadro del lote final (85-88, 89 avisos en 4 corridas)**: `Bajando lo del corral` **35 → 10**,
+   `Recogiendo lo suyo` **40 → 10**, `Yendo a la taberna` **29 → 11**, `Sacrificando un animal` **15 → 5**,
+   `Sembrando` **11 → 9**; y el pueblo trabaja (pescador 7-10, herrería 60-74, cocina 2-8, mina 2-3).
+   **LO QUE SIGUE, con su número del lote final**:
+   - **`Yendo a la cocina` 17** (era 12): el cocinero sigue rindiéndose en la **clase «sin ruta»**. La validación de
+     ruta **en `canUse` NO vale** (se probó: dejaba al cocinero perfecto —1 y 0— pero disparaba el bucle de la granjera,
+     ver I157). **El camino que toca es el de I119**: preguntar la ruta **solo cuando ya hay atasco**, no antes.
+   - **`Labro la huerta` 14** (era 4): diagnosticar (es de los granjeros, y `Labrando la huerta` es su hermano).
+   - **`Yendo a la taberna` 11**: ruidoso entre lotes (29 → 5 → 3 → 11); mirar si le queda la clase «sin ruta».
+   - El **contador de trabajo de la granja** bajó en el lote final (197-465 frente a 274-1.111 de antes): comprobar si es
+     **varianza** o si alguna entrega dejó de hacerse.
+   - Y los dos ruidos de siempre: el **aldeano fresco con hambre 0** y los avisos sueltos del arranque.
 
 ### 8. Lo que queda, con su nombre y su número (27-sep-2026)
 
