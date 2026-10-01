@@ -105,6 +105,14 @@ public class VillagerCookGoal extends Goal {
     /** El ahumador del kiosco (el puesto de trabajo). Se mide en {@link #canUse}, no en cada tick. */
     @Nullable
     private BlockPos puesto;
+    /** Ahumador para el que se calculó {@link #vistaDeLaCocina} (I156: se elige UNA vez, no por tick). */
+    @Nullable
+    private BlockPos vistaDeLaCocinaDe;
+    /** La casilla de pie desde la que se cocina ({@code null} si ninguna de al lado sirve). */
+    @Nullable
+    private BlockPos vistaDeLaCocina;
+    /** Hasta qué tick vale el «no hay casilla de cocina» (el rechazo caduca; ver I156). */
+    private long vistaDeLaCocinaRechazadaHasta;
     private int workTicks;
     private int restTicks;
     private int stuckTicks;
@@ -169,7 +177,12 @@ public class VillagerCookGoal extends Goal {
             return true;
         }
         // Con leña: camina a la casilla de DELANTE del ahumador (la cocina de la taberna), donde puede estar de pie.
-        target = vistaDeLaCocina();
+        target = vistaDeLaCocina(level);
+        if (target == null) {
+            // NINGUNA casilla de al lado del ahumador sirve: no se cocina (mejor eso que empujar una pared).
+            restTicks = IDLE_REST_TICKS;
+            return false;
+        }
         if (VillageManager.esPuntoFallido(villager, target)) {
             // A esa casilla de la cocina no llegó hace poco (I33): no se queda plantado empujando, espera un rato.
             restTicks = IDLE_REST_TICKS;
@@ -276,8 +289,48 @@ public class VillagerCookGoal extends Goal {
     // --- el fuego: la leña del almacén ------------------------------------------------------------------
 
     /** La casilla de DELANTE del ahumador (la cocina de la taberna): donde el cocinero puede estar de pie. */
-    private BlockPos vistaDeLaCocina() {
-        return new BlockPos(puesto.getX(), puesto.getY(), puesto.getZ() - 1);
+    private BlockPos vistaDeLaCocina(ServerLevel level) {
+        // I156 · NIVEL 3 (29-sep-2026): LA CASILLA DE LA COCINA SE **ELIGE**, NO SE SUPONE. Y SE ELIGE **UNA VEZ**.
+        // Antes esto era `puesto + (0, 0, -1)`, A MANO, sin comprobar NADA. Medido: la celda fija estaba **DEBAJO DE
+        // LA ESCALERA** (`destino=air encima=deepslate_tile_stairs`), así que no es casilla de pie y el planificador
+        // no puede meterlo ahí: el cocinero se rendía con el ahumador al lado (12 rendiciones en 4 corridas).
+        // Ahora: se recorren las cuatro casillas de al lado del ahumador **A LA COTA**, se exige **casilla de pie**, se
+        // prefiere la de siempre (la de delante) si cumple, y si ninguna cumple se devuelve null -> no se cocina.
+        // OJO CON EL COSTE, que ya me mordió (29-sep-2026): la primera versión preguntaba `hayVistaLibre` (un raycast)
+        // por candidata **en cada `canUse`**, y eso **ralentizó el servidor**: `Buscando recambios` de los granjeros
+        // pasó de **0-2** en ocho corridas a **39 y 17**, y apareció un `Can't keep up`. La vista se comprueba donde ya
+        // se comprobaba —en el `tick`, con `enLaCocina`— y aquí **se cachea** el resultado, incluido el «no».
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        if (puesto.equals(vistaDeLaCocinaDe)) {
+            if (vistaDeLaCocina == null && level.getGameTime() < vistaDeLaCocinaRechazadaHasta) {
+                return null; // el «no» caduca (si no, un rechazo momentáneo dejaría al cocinero sin cocina para siempre)
+            }
+            if (vistaDeLaCocina != null && VillageManager.esCeldaDePie(level, vistaDeLaCocina)) {
+                return vistaDeLaCocina;
+            }
+        }
+        BlockPos preferida = new BlockPos(puesto.getX(), cota, puesto.getZ() - 1);
+        BlockPos elegida = null;
+        int[][] lados = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+        for (int[] lado : lados) {
+            BlockPos p = new BlockPos(puesto.getX() + lado[0], cota, puesto.getZ() + lado[1]);
+            if (!VillageManager.esCeldaDePie(level, p)) {
+                continue; // los pies o la cabeza tapados: ahí no se puede estar
+            }
+            if (p.equals(preferida)) {
+                elegida = p;
+                break; // la de siempre, si cumple el contrato
+            }
+            if (elegida == null) {
+                elegida = p;
+            }
+        }
+        vistaDeLaCocinaDe = puesto;
+        vistaDeLaCocina = elegida;
+        if (elegida == null) {
+            vistaDeLaCocinaRechazadaHasta = level.getGameTime() + 100; // 5 s de «no» y se vuelve a mirar
+        }
+        return elegida;
     }
 
     /**
@@ -360,7 +413,10 @@ public class VillagerCookGoal extends Goal {
         VillageManager.ponerSuceso(villager, "Cogi " + lena.getCount() + " tronco(s) para el ahumador");
         avisadoSinLena = false;
         yendoPorLena = false;
-        target = vistaDeLaCocina();
+        target = vistaDeLaCocina(level); // I156: la casilla se ELIGE (a la cota, de pie y viendo el ahumador); null = no hay
+        if (target == null) {
+            restTicks = IDLE_REST_TICKS; // sin casilla de cocina, el goal se apaga y espera (no empuja paredes)
+        }
         // La vuelta se mide de cero (el contador de la ida valía para el almacén, no para la cocina).
         mejorDistancia = Double.MAX_VALUE;
         stuckTicks = 0;
