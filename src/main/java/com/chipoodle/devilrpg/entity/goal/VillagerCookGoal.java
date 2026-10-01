@@ -72,13 +72,8 @@ public class VillagerCookGoal extends Goal {
     private static final int IDLE_REST_TICKS = 200;
     /** Si no logra acercarse en este tiempo, abandona (invariante I3: atascado = no acercarse). */
     private static final int STUCK_LIMIT = 200;
-    /**
-     * Ticks de atasco antes de <b>preguntar si hay ruta</b> hasta la casilla de la cocina (I161, el patrón de I119). La
-     * pregunta es <b>cara</b> (una búsqueda de ruta) y además <b>le toca la navegación</b> al aldeano, así que se hace
-     * <b>una vez por episodio de atasco</b>, nunca en `canUse` ni en cada tick: se midió que preguntarla en cada
-     * `canUse` dejaba al cocinero perfecto pero disparaba el bucle del portón de la granjera (I157).
-     */
-    private static final int TICKS_PARA_COMPROBAR_SI_HAY_RUTA = 40;
+    // (Aquí vivía TICKS_PARA_COMPROBAR_SI_HAY_RUTA, de la variante I161 —preguntar la ruta a los 40 ticks de atasco—,
+    //  que se midió y se retiró: `Yendo a la cocina` pasó de 17 a 26 avisos en 4 corridas.)
     /** Velocidad de paseo del cocinero (igual que los demás goals del pueblo). */
     private static final float VELOCIDAD = 0.6F;
     /**
@@ -252,20 +247,11 @@ public class VillagerCookGoal extends Goal {
             } else {
                 stuckTicks++;
             }
-            // I161 (30-sep-2026) · LA PREGUNTA CARA, **SOLO CUANDO YA HAY ATASCO** (el patrón de I119, que es el del
-            // guardia). El cocinero se rendía con `Yendo a la cocina` (17 avisos en el lote final) en la clase «sin
-            // ruta»: medido, `ruta=1 nodos hasta 593, 62, 579 alcanza=NO` a una casilla de pie **normal**. Se probó a
-            // preguntar la ruta **en cada `canUse`** y el cocinero quedaba perfecto (1 y 0 avisos) **pero disparaba el
-            // bucle del portón de la granjera** (I157): preguntarle la ruta al planificador con esa frecuencia le
-            // toca la navegación. Así que se pregunta **a los 40 ticks de atasco**, una vez por episodio: si de verdad
-            // no hay camino, el recado se APARCA (caduca solo) y el goal se apaga en vez de insistir.
-            if (stuckTicks == TICKS_PARA_COMPROBAR_SI_HAY_RUTA) {
-                if (!VillageManager.hayRutaQueAlcanza(villager, target)) {
-                    VillageManager.marcarPuntoFallido(villager, target);
-                    stuckTicks = STUCK_LIMIT; // el goal se apaga por su propio camino (I33): no se ronda
-                    return;
-                }
-            }
+            // I161 SE PROBÓ AQUÍ Y SE RETIRÓ (30-sep-2026): preguntar la ruta a los 40 ticks de atasco y aparcar la
+            // casilla si no la hay. El cocinero quedaba bien en una corrida (8 y 6 avisos) pero **en las cuatro salió
+            // peor que sin el cambio**: `Yendo a la cocina` **17 → 26** (4 corridas contra 4). Lo que NO se toca: la
+            // pregunta en `canUse` (disparaba el bucle del portón de la granjera, I157) ni cada tick (coste). La clase
+            // «sin ruta» del cocinero sigue **abierta** y su análisis está en `docs/PENDIENTE.md`.
             VillageManager.ponerActividad(villager, "Yendo a la cocina");
             return;
         }
