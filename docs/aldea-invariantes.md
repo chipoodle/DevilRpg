@@ -4715,7 +4715,54 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
-### I162 · EL ESTALLIDO DE DESTINOS A `cota + 1`: **el puesto del granjero no está a la misma altura** (30-sep-2026, MEDIDO, PENDIENTE de arreglo)
+### I163 · EL COMPOSTERO —el PUESTO del granjero— A LA COTA (30-sep-2026)
+
+**El fallo, medido en el mundo guardado** (corte de `build/slice_mina.py`):
+
+```
+(533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del bancal 0
+(534, 580)  y=61 grass  y=62 air           y=63 air         ← el bancal, un bloque MÁS BAJO
+```
+
+Al oeste del bancal 0 el **suelo natural está en `y=62`** — **un bloque por encima de la cota**, que es el nivel por el
+que se anda (`cota − 1` es el bloque del suelo) — y el compostero se colocó **encima**, así que queda en **`y=63`**. El
+granjero camina a su puesto y **no puede subir**: un aldeano no sube un bloque entero (el juego le da **0,6**). Y como el
+compostero es **su estación de trabajo**, **todos** sus recados acaban apuntando a esa altura: medido, **42 de 60
+destinos de una corrida en `y=63`** con **todos** los aldeanos en `y=62`, y el censo del arnés delatándolo —
+`puesto=533, 63, 580` en unos bancales y `puesto=573, 62, 570` en otros (por eso el bucle solo salía en algunas
+corridas).
+
+**Por qué no lo arreglaba la migración que ya existía**: `moverComposterosDelBancal` exige que la **celda nueva esté
+libre** y allí hay **césped**, así que se rendía y lo dejaba dicho en el registro.
+
+**EL ARREGLO**: `asentarLosComposterosALaCota` — si el compostero está un bloque por encima de la cota, **se baja a la
+cota** (poniéndole el suelo firme que le falte) y se quita el de arriba. **Conservador** (solo toca celdas que son
+compostero o el terreno justo encima, y solo si la celda de la cota está **libre**) e **idempotente**; devuelve los pares
+`{viejo, nuevo}` para que el latido **mude el `JOB_SITE`** del granjero con él (como ya hacía la migración 64).
+`CURRENT_LAYOUT` sube a **77** con su documentación, que es lo que hace que la pasada corra en un mundo ya construido.
+
+**JUECES (los tres directos)**: (1) los `puesto=` del censo del granjero, **todos a la cota**; (2) los **destinos a
+`y = cota + 1`**, a **0**; (3) la traza `compostero(s) ASENTADOS a la cota` en el registro. Y de fondo, el total y el
+trabajo del pueblo sin bajar.
+
+**MEDIDO, 4 corridas (93-96)**: total **5 · 23 · 6 · 47 → media 20,25** (frente a 22,25 del lote anterior), con
+**las dos mejores corridas de toda la sesión (5 y 6)**; los **destinos a `y = cota + 1`: 1 · 1 · 1 · 9** (eran **42** en
+la 83 y **31** en la 92); el censo del granjero dice **`puesto y=62` en 3.395 / 2.844 / 3.386 / 2.807 muestras** y
+**`y=63` en 2 / 410 / 2 / 448**; y el trabajo del pueblo en su rango (granja 889/786/607/369, pescador 8-9, herrería
+76-87, cocina 3-14, mina 2).
+
+**Y DOS VERDADES QUE HAY QUE DECIR**:
+1. **La pasada `ASENTADOS` no actuó en ninguna de las cuatro** (`ASENTADOS 0`), porque en esas corridas el pueblo pasó
+   por la **reparación** (`REPARADA` en el registro), que ya **quita el escalón** del terreno y deja el compostero a la
+   cota. Es decir: en el arnés el arreglo que actúa es la reparación, y **esta pasada queda como RED DE SEGURIDAD** —
+   la que arregla el mundo del jugador, donde el compostero **sí** está en `63` en el guardado y la reparación no corre
+   (su trazado ya está al día).
+2. **Queda un residuo**: en dos de las cuatro corridas el puesto de **algunos** granjeros vuelve a leerse en `y=63`
+   (410 y 448 muestras de ~3.250 = **~13 %**). Como los destinos a `cota+1` ya son 1-9, no es el bucle de antes, pero
+   **hay un POI de compostero en alto que se sigue cogiendo**: el siguiente paso es mirar **qué estación reclama** el
+   granjero (`JOB_SITE`) cuando sale en 63 — puede ser el compostero de **otro** bancal o un POI viejo que nadie limpió.
+
+### I162 · EL ESTALLIDO DE DESTINOS A `cota + 1`: **el puesto del granjero no está a la misma altura** (30-sep-2026, MEDIDO)
 
 **Lo que se midió, capa a capa, y en este orden** (todo con el mundo guardado, sin arnés):
 1. **Los bancales están BIEN**: corte del mundo en las dos parcelas (`build/slice_mina.py`) → la **tierra de cultivo en
