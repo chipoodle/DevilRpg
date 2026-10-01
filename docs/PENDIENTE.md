@@ -165,13 +165,24 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
    `Recogiendo lo suyo` **40 → 10**, `Yendo a la taberna` **29 → 11**, `Sacrificando un animal` **15 → 5**,
    `Sembrando` **11 → 9**; y el pueblo trabaja (pescador 7-10, herrería 60-74, cocina 2-8, mina 2-3).
    **LO QUE SIGUE, con su número del lote final**:
-   - **`Yendo a la cocina` 17** (era 12): el cocinero sigue rindiéndose en la **clase «sin ruta»**. La validación de
-     ruta **en `canUse` NO vale** (se probó: dejaba al cocinero perfecto —1 y 0— pero disparaba el bucle de la granjera,
-     ver I157). **El camino que toca es el de I119**: preguntar la ruta **solo cuando ya hay atasco**, no antes.
-   - **`Labro la huerta` 14** (era 4): diagnosticar (es de los granjeros, y `Labrando la huerta` es su hermano).
-   - **`Yendo a la taberna` 11**: ruidoso entre lotes (29 → 5 → 3 → 11); mirar si le queda la clase «sin ruta».
+   - **EL ESTALLIDO DE LOS DESTINOS A `y = cota + 1` — el pendiente más gordo que queda, y está caracterizado**:
+     en la corrida **83** salieron **42 de 60** destinos en **y=63** (la cota de la aldea es **62** y **todos** los
+     aldeanos andan a **62**), y en la **92** volvieron **31** (con 43 avisos en la corrida): **un solo granjero**
+     (Ramona) con las etiquetas **`Sembrando` (22)** y **`Recogiendo lo suyo` (6)**, y destinos como
+     `582, 63, 573` desde `586, 62, 573` con `ruta=1 nodos … alcanza=NO`. **Un nivel por encima del suelo por el que
+     anda el pueblo = inalcanzable a pie**. I160 (la cota del bancal, que ya se la pide al pueblo) **redujo** el
+     estallido en los caminos que toca, pero **no lo elimina**: hay **otro** sitio que calcula la casilla del bancal con
+     la cota + 1. **El siguiente paso es medir la Y que devuelven las funciones de bancal** (`esquinaDeLaParcela`,
+     `buscarTierraVacia`, `buscarCalva`, `buscarEnLasParcelas`) y compararla con la cota del pueblo, porque
+     `buscarTierraVacia` devuelve `tierra.above()`: si la `parcela` que recibe está un nivel por encima del suelo, el
+     destino sale en **cota + 1** exactamente como se mide.
+   - **`Yendo a la cocina` 17** (era 12): sigue **abierta**. Ya se sabe lo que **no** vale: preguntar la ruta en `canUse`
+     (dispara el bucle del portón, I157) y preguntarla a los 40 ticks de atasco (I161: **17 → 26**, retirada).
+   - **`Labro la huerta` / `Labrando la huerta`** (14 en el lote final): **misma clase** —`ruta=1 nodos … alcanza=NO`
+     entre **dos casillas normales** (`aire/aire/hierba`), o sea **un recinto cerrado de por medio** (el bancal y su
+     valla)—; el camino que toca es el mismo que el del estallido: mirar la Y y la valla del bancal.
    - El **contador de trabajo de la granja** bajó en el lote final (197-465 frente a 274-1.111 de antes): comprobar si es
-     **varianza** o si alguna entrega dejó de hacerse.
+     varianza o si alguna entrega dejó de hacerse.
    - Y los dos ruidos de siempre: el **aldeano fresco con hambre 0** y los avisos sueltos del arranque.
 
 ### 8. Lo que queda, con su nombre y su número (27-sep-2026)

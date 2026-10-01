@@ -4715,6 +4715,18 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I161 · PROBADA Y RETIRADA: la ruta del cocinero, **solo al atascarse** (30-sep-2026)
+
+**Lo que se probó**: a los **40 ticks** de atasco, preguntar **una vez** si hay ruta hasta la casilla de la cocina
+(`hayRutaQueAlcanza`) y, si no la hay, **aparcar** la casilla y apagar el goal por su propio camino (I33). Es el patrón
+de I119 (el del guardia) y **no** la variante que se había descartado (preguntar en cada `canUse`, que disparaba el
+**bucle del portón**, I157).
+
+**MEDIDO, 4 corridas contra 4**: `Yendo a la cocina` **17 → 26** ✗ (en una corrida parecía buena —8 y 6 avisos— pero
+**en las cuatro salió peor**). **RETIRADA**; el cocinero queda como estaba y su clase «sin ruta» sigue **abierta**.
+**Moraleja de método, otra vez la misma**: una corrida no distingue una mejora de una casualidad; hay que mirar **las
+cuatro**.
+
 ### I160 · LA COTA LA DICE **EL PUEBLO**, NO EL OBJETIVO (30-sep-2026)
 
 En `VillagerFarmGoal` la geometría del bancal (la compuerta de entrada y la salida) se calculaba con **`target.getY()`
