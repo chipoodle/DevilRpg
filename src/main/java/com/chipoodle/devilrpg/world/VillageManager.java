@@ -786,9 +786,16 @@ public final class VillageManager {
      *       pueblo. Ahora el generador <b>fija</b> la cota en cuanto la conoce ({@code fijarLaCotaDeLaAldea}) y esa es
      *       la única. Esta versión <b>repara también las aldeas partidas así</b>: pasan otra vez por
      *       {@code repararLaAldeaApilada}, que las deja enteras a su cota.</li>
+     *   <li><b>77:</b> <b>EL COMPOSTERO, A LA COTA</b> (I163). El compostero es el <b>puesto de trabajo</b> del granjero y
+     *       puede haber quedado <b>un bloque alto</b> si el suelo natural está un bloque por encima de la cota (medido
+     *       en el guardado del jugador, al oeste del bancal 0: suelo en 62, compostero en 63). El granjero camina a su
+     *       puesto y <b>no puede subir</b> (un aldeano no sube un bloque entero), y como la estación es suya, <b>todos
+     *       sus recados</b> acaban apuntando a esa altura —medido: <b>42 de 60 destinos en y=63</b> en una corrida, con
+     *       todos los aldeanos en y=62—. Esta versión lo <b>asienta</b> a la cota (y le pone el suelo que le falte) y
+     *       <b>muda el {@code JOB_SITE}</b> del granjero con él.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 76;
+    public static final int CURRENT_LAYOUT = 77;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2228,6 +2235,12 @@ public final class VillageManager {
             // (`COMPOSTERO_DX`, I40) y, de paso, el granjero ya lo ENCUENTRA: su búsqueda miraba en la columna de la
             // valla y no lo veía nunca (por eso no compostaba ni abonaba).
             List<BlockPos[]> composterosMovidos = VillageGenerator.moverComposterosDelBancal(level, center);
+            // I163 · Y SI EL COMPOSTERO QUEDÓ UN BLOQUE ALTO, SE ASIENTA A LA COTA (30-sep-2026). El compostero es el
+            // PUESTO del granjero: si está a `cota+1` (medido: sobre el escalón del terreno al oeste del bancal 0),
+            // el granjero camina a un puesto al que no puede subir y TODOS sus recados apuntan a esa altura
+            // (42 de 60 destinos en y=63 en una corrida). La migración de arriba no puede con ese caso —exige la celda
+            // libre y allí hay césped—, así que se baja el compostero a la cota y se le pone el suelo que le falte.
+            composterosMovidos.addAll(VillageGenerator.asentarLosComposterosALaCota(level, center));
             for (BlockPos[] par : composterosMovidos) {
                 BlockPos viejo = par[0];
                 BlockPos nuevo = par[1];

@@ -7768,6 +7768,64 @@ public final class VillageGenerator {
         return movidos;
     }
 
+    /**
+     * I163 · EL COMPOSTERO —el <b>PUESTO DE TRABAJO</b> del granjero— TIENE QUE ESTAR <b>A LA COTA</b> (30-sep-2026).
+     * <p>
+     * <b>El fallo, medido en el mundo guardado</b>:
+     * <pre>
+     * (533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del bancal 0
+     * (534, 580)  y=61 grass  y=62 air           y=63 air         ← el bancal, un bloque MÁS BAJO
+     * </pre>
+     * Al oeste del bancal 0 el <b>suelo natural está en y=62</b> (un bloque por encima de la cota, que es el nivel por
+     * el que se anda) y el compostero se colocó <b>encima</b>, así que queda en <b>y=63</b>. El granjero camina a su
+     * puesto y <b>no puede subir</b>: un aldeano no sube un bloque entero (el juego le da <b>0,6</b>). Y como el
+     * compostero es su estación, **todos** sus recados acaban apuntando a esa altura: medido, <b>42 de 60 destinos de
+     * una corrida en y=63</b> con todos los aldeanos en y=62 y la cota en 62, y el censo del arnés delatándolo:
+     * {@code puesto=533, 63, 580} en unos bancales y {@code puesto=573, 62, 570} en otros (por eso el bucle solo salía
+     * en algunas corridas).
+     * <p>
+     * La migración de {@link #moverComposterosDelBancal} no puede arreglarlo: exige que la celda nueva esté <b>libre</b>
+     * y allí hay césped. Aquí se <b>ASIENTA</b>: si el compostero está un bloque por encima de la cota, se baja a la
+     * cota (se le pone el suelo firme que le falte) y se quita el de arriba. <b>Conservador</b> (solo toca celdas que
+     * son compostero o el terreno justo encima, y solo si la celda de la cota está libre) e <b>idempotente</b>.
+     *
+     * @return los pares {@code {viejo, nuevo}} de los composteros asentados, para que el latido mueva el
+     *         {@code JOB_SITE} del granjero que apuntaba al viejo (ver {@code VillageManager}).
+     */
+    public static List<BlockPos[]> asentarLosComposterosALaCota(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        List<BlockPos[]> asentados = new ArrayList<>();
+        for (int i = 0; i < FARM_PLOTS.length; i++) {
+            BlockPos destino = composteroDeLaParcela(center, i, cota);
+            BlockPos actual = buscarComposteroEnLaColumna(level, destino);
+            if (actual == null || actual.getY() == cota) {
+                continue; // no hay compostero en esa columna, o ya está a la cota
+            }
+            if (actual.getY() != cota + 1) {
+                continue; // el caso medido es «uno por encima»; dos o más sería otra cosa y no se toca a ciegas
+            }
+            if (!level.getBlockState(destino).isAir() || !level.getBlockState(destino.above()).isAir()) {
+                DevilRpg.LOGGER.info("[Village] Bancal {} de {}: su compostero está un bloque alto en {} y la celda de"
+                        + " la cota ({}) no está libre: no se asienta (el granjero tendrá su puesto cuesta arriba)",
+                        i, center.toShortString(), actual.toShortString(), destino.toShortString());
+                continue;
+            }
+            BlockPos suelo = destino.below();
+            if (level.getBlockState(suelo).getCollisionShape(level, suelo).isEmpty()) {
+                colocar(level, suelo, Blocks.DIRT.defaultBlockState(), Block.UPDATE_ALL); // el asiento que le falta
+            }
+            colocar(level, destino, Blocks.COMPOSTER.defaultBlockState(), Block.UPDATE_ALL);
+            colocar(level, actual, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            asentados.add(new BlockPos[]{actual, destino});
+        }
+        if (!asentados.isEmpty()) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} compostero(s) ASENTADOS a la cota {} (estaban un bloque"
+                    + " alto sobre un escalón del terreno y el granjero no podía subir a su puesto, I163)",
+                    center.toShortString(), asentados.size(), cota);
+        }
+        return asentados;
+    }
+
     /** El compostero que haya en esa columna (un bloque por encima o por debajo de esa Y), o {@code null}. */
     @Nullable
     private static BlockPos buscarComposteroEnLaColumna(ServerLevel level, BlockPos pos) {
