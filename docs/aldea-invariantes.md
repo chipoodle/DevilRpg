@@ -4715,6 +4715,46 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I156 · LA CASILLA DE LA COCINA SE **ELIGE**, NO SE SUPONE (29-sep-2026)
+
+**El fallo, medido** (lote de I154, `build/medida-tanda59.log` y siguientes):
+
+```
+no consigue llegar a 594, 62, 581 desde 594, 62, 579
+   (ruta=1 nodos … alcanza=NO; destino=air encima=deepslate_tile_stairs)   etiqueta="Ximeno (Cocinero) / Yendo a la cocina"
+```
+
+La casilla de la cocina era **`puesto + (0, 0, -1)` a mano**, sin comprobar **nada**: ni que se pisara, ni la cota, ni que
+hubiera ruta. La celda fija estaba **debajo de la escalera** —`encima=deepslate_tile_stairs`—, así que **no es casilla de
+pie** y el planificador no puede meterlo ahí: el cocinero se rendía **con el ahumador al lado** (12 rendiciones de
+«Yendo a la cocina» en las 4 corridas de referencia).
+
+**EL ARREGLO (patrón del nivel 3: candidatas + contrato + validación)**:
+1. Se recorren las **cuatro casillas de al lado del ahumador**, **a la cota** del pueblo;
+2. se exige **casilla de pie** (`esCeldaDePie`: pies y cabeza libres, suelo firme) **y ver el ahumador**
+   (`hayVistaLibre` — es su contrato: se cocina desde donde se le ve, que era el otro fallo medido: cocinaba tras el
+   tabique);
+3. se **prefiere la de siempre** (la de delante) si cumple;
+4. **y si ninguna cumple, NO SE COCINA**: el goal se apaga y espera, en vez de empujar una pared.
+
+**Juez**: `Yendo a la cocina` a la baja y **el trabajo de la cocina igual** (`pieza(s) cocinadas` / `cogio N tronco(s)`).
+
+**Y UN AVISO DE RENDIMIENTO QUE VALE PARA TODO LO QUE VENGA (29-sep-2026)**: la **primera** versión de este arreglo
+preguntaba `hayVistaLibre` —**un raycast**— **por candidata y en cada `canUse`** (hasta 4 por tick, para siempre, porque
+`canUse` se evalúa cada tick mientras el goal no corre). Resultado medido, con el mundo restaurado idéntico en cada
+corrida (`build/tanda-tasa.ps1` copia `saves/New World` antes de cada una, así que la diferencia es del código):
+
+| `Buscando recambios` (granjeros) | corridas 51-54 y 59-62 (ocho) | corridas 65-66 (con los raycasts) |
+|---|---|---|
+| avisos por corrida | **0 · 0 · 0 · 0 · 1 · 1 · 2 · 2** | **39 · 17** |
+
+**El cocinero no tenía la culpa del aviso** (su etiqueta bajó y su trabajo subió: 9 y 4 piezas frente a 3 de media),
+pero **el pueblo entero se resintió**: un coste por tick en una comprobación de goal se paga **en todos los aldeanos**.
+→ **REGLA**: en `canUse` (que corre **cada tick**) nada caro; lo caro, **cacheado** y con el «no» **caducando**. La
+versión buena elige la casilla con `esCeldaDePie` (tres consultas de bloque), la **cachea por ahumador** y deja la vista
+donde ya estaba (en el `tick`, `enLaCocina`). `Can't keep up` sale **1 en todas** las corridas (es del arranque), así
+que **no sirve** como indicador de esto: el indicador fue **la etiqueta de otro oficio**.
+
 ### I155 · EL PORTÓN DEL CORRAL LO ABRE **LA ALDEA**, ANTES DE PEDIR LA RUTA (29-sep-2026)
 
 **El círculo cerrado, medido** (corridas del despachador): el ganadero se rendía **dentro** del corral —

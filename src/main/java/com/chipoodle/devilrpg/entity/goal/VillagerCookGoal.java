@@ -317,6 +317,15 @@ public class VillagerCookGoal extends Goal {
             if (!VillageManager.esCeldaDePie(level, p)) {
                 continue; // los pies o la cabeza tapados: ahí no se puede estar
             }
+            // Y HAY QUE PODER LLEGAR (I156, medido en la corrida 69): el cocinero seguía rindiéndose 3 veces por
+            // corrida con `ruta=1 nodos hasta 593, 62, 579 alcanza=NO` —una casilla de pie NORMAL, con aire y piedra
+            // debajo— porque desde donde estaba NO HABÍA CAMINO hasta la cocina. La ruta se pregunta UNA vez por
+            // ahumador (esto está cacheado) y solo si el cocinero está cerca: a más de la región de búsqueda del juego
+            // no hay ruta que valga y el tirón es el que lo lleva.
+            double distancia = Math.sqrt(villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D));
+            if (distancia <= 48.0D && !VillageManager.hayRutaQueAlcanza(villager, p)) {
+                continue; // cerca y sin camino: esa casilla no sirve AHORA (el «no» caduca y se reintenta)
+            }
             if (p.equals(preferida)) {
                 elegida = p;
                 break; // la de siempre, si cumple el contrato
