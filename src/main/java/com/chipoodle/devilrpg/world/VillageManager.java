@@ -793,9 +793,15 @@ public final class VillageManager {
      *       sus recados</b> acaban apuntando a esa altura —medido: <b>42 de 60 destinos en y=63</b> en una corrida, con
      *       todos los aldeanos en y=62—. Esta versión lo <b>asienta</b> a la cota (y le pone el suelo que le falte) y
      *       <b>muda el {@code JOB_SITE}</b> del granjero con él.</li>
+     *   <li><b>78:</b> <b>UNA SOLA ESTACIÓN POR BANCAL</b> (I164). Medido en el mundo del arnés: la columna del
+     *       compostero del bancal 1 tenía <b>DOS</b> composteros, el bueno a la cota y <b>otro un bloque por encima</b>
+     *       —resto de la migración 64, que colocó el nuevo y no se llevó el viejo—. Como el compostero es un
+     *       <b>POI</b>, el granjero reclamaba <b>el de arriba</b> en unas corridas y el de la cota en otras (censo:
+     *       {@code puesto=573, 63, 570} en <b>408-448 muestras</b> de ~3.250). Esta versión <b>quita los que sobran</b>
+     *       y manda el {@code JOB_SITE} al bueno.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 77;
+    public static final int CURRENT_LAYOUT = 78;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),

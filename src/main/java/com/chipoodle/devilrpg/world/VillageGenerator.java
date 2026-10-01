@@ -7798,6 +7798,26 @@ public final class VillageGenerator {
         for (int i = 0; i < FARM_PLOTS.length; i++) {
             BlockPos destino = composteroDeLaParcela(center, i, cota);
             BlockPos actual = buscarComposteroEnLaColumna(level, destino);
+            if (actual != null && actual.getY() == cota) {
+                // I164 · Y SI YA ESTÁ BIEN, SE QUITAN LOS DE MÁS. Medido en el mundo del arnés: la columna del bancal 1
+                // tenía **DOS** composteros, uno en la cota (el bueno) y **otro un bloque por encima** —resto de la
+                // migración, que colocó el nuevo y no se llevó el viejo—, y como el compostero es un **POI**, el
+                // granjero reclamaba **el de arriba** en unas corridas y el de la cota en otras: el censo salía con
+                // `puesto=573, 63, 570` en **408-448 muestras** de ~3.250. Un pueblo tiene **una** estación por bancal,
+                // y a la cota.
+                for (int dy = 1; dy <= 3; dy++) {
+                    BlockPos extra = destino.above(dy);
+                    if (level.getBlockState(extra).is(Blocks.COMPOSTER)) {
+                        colocar(level, extra, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                        asentados.add(new BlockPos[]{extra, destino}); // y el PUESTO del granjero, al bueno
+                        DevilRpg.LOGGER.info("[Village] Bancal {} de {}: quitado un compostero DE MÁS en {} (el puesto"
+                                + " bueno está a la cota, en {}): con dos, el granjero reclamaba el de arriba y no podía"
+                                + " subir (I164)", i, center.toShortString(), extra.toShortString(),
+                                destino.toShortString());
+                    }
+                }
+                continue;
+            }
             if (actual == null || actual.getY() == cota) {
                 continue; // no hay compostero en esa columna, o ya está a la cota
             }
