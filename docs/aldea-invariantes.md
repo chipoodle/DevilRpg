@@ -4715,6 +4715,19 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I164 · EL COMPOSTERO SE **VIGILA EN EL LATIDO** (30-sep-2026)
+
+La pasada de I163 corre **una vez** (dentro de `prepareRepairs`, cuando el trazado del pueblo se queda atrás), pero el
+compostero puede quedar —o **volver a quedar**— un bloque alto **después**. **Medido** (censo del granjero en 4 corridas):
+el compostero del **bancal 1** (`573, 63, 570`) salía en `y=63` en **la mitad de las corridas** y en `y=62` en la otra
+mitad **con el mismo mundo** —**408-446 muestras** de ~3.250 cuando salía alto, y **2** cuando no—, señal de que algo lo
+coloca o lo recupera más tarde (el propio latido repone testigos).
+
+**EL ARREGLO**: la comprobación (`asentarLosComposterosALaCota`) se hace **también en el latido**, cada
+`VILLAGE_POLL_TICKS` (**200 ticks = 10 s**): es barato (**tres columnas**) e idempotente, y cuando asienta uno **muda el
+`JOB_SITE`** del granjero que apuntaba al viejo.
+**Juez**: las muestras del censo con `puesto` en `y = cota + 1` → **0**, y la traza `compostero(s) ASENTADOS a la cota`.
+
 ### I163 · EL COMPOSTERO —el PUESTO del granjero— A LA COTA (30-sep-2026)
 
 **El fallo, medido en el mundo guardado** (corte de `build/slice_mina.py`):
