@@ -4737,10 +4737,28 @@ servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar e
    todos los aldeanos andan a 62. El `puesto` del granjero es su **estación de trabajo**, y de ahí salen los destinos:
    si el compostero está un bloque por encima del suelo, **el granjero camina a un sitio al que no puede subir** ✓✓.
 
-**EL SIGUIENTE PASO, concreto**: medir la **Y real del bloque del compostero** de cada bancal (el corte del mundo ya lo
-puede dar: `composteroDeLaParcela` la calcula a la cota, así que si el bloque está en 63 es que **el constructor lo pone
-en 63** o hay **otra estación** —el `puesto` puede leerse de un bloque distinto—) y **unificarla con la cota**; y hacerlo
-en **el plan y la migración**, para que un mundo ya construido se corrija igual que se corrigió la aldea apilada.
+**EL SIGUIENTE PASO, concreto**: medir la **Y real del bloque del compostero** de cada bancal y **unificarla con la
+cota**. **Y YA ESTÁ MEDIDO** (mismo día, mundo guardado, `build/slice_mina.py`):
+
+```
+(533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del bancal 0
+(534, 580)  y=61 grass  y=62 air           y=63 air         ← el bancal, un bloque MÁS BAJO
+```
+
+**La causa raíz es un ESCALÓN DE TERRENO**: al oeste del bancal 0 el suelo natural está en **y=62** (un bloque por
+encima de la cota) mientras el bancal y su alrededor están en **y=61**. El compostero —el **puesto de trabajo del
+granjero**— se colocó **encima** de ese escalón, así que queda en **y=63**, **un bloque por encima del suelo por el que
+anda todo el pueblo**, y el granjero camina a un puesto al que **no puede subir** (un aldeano no sube un bloque entero:
+el juego le da 0,6). En el otro bancal el compostero sí está a la cota (`puesto=573, 62, 570`) ✓: de ahí que el censo
+salga **inconsistente** y que el bucle solo aparezca en algunas corridas.
+
+**EL ARREGLO QUE TOCA (siguiente ronda, con la medida delante)**:
+1. **Nivelar ese escalón** con la maquinaria que ya existe (`nivelar` / `repararLaAldeaApilada`, que ya quita lo que
+   sobra por encima de la cota) **alrededor de los bancales**, no solo en el casco: el bancal 0 está **dentro** del
+   radio de la cerca (dx −30, dz +14), así que el escalón está **dentro** de lo que el pueblo considera suyo.
+2. **Y bajar el compostero a la cota** si sigue en alto (es un bloque, se mueve con la misma pasada idempotente).
+3. **Y endurecer el goal** (patrón de I156): el puesto y el objetivo deben pasar el contrato de **casilla de pie a la
+   cota** **al elegirse**, no al caminar; así un mundo torcido no se convierte en un bucle, sino en «no hay faena aquí».
 
 **Y el instrumento, de paso**: el censo del granjero llena el registro (**4.400-4.600 líneas por corrida**); conviene
 bajarlo a `debug` o espaciarlo, porque tapa lo que se busca.
