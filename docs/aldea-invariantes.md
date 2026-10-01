@@ -4715,6 +4715,36 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I162 · EL ESTALLIDO DE DESTINOS A `cota + 1`: **el puesto del granjero no está a la misma altura** (30-sep-2026, MEDIDO, PENDIENTE de arreglo)
+
+**Lo que se midió, capa a capa, y en este orden** (todo con el mundo guardado, sin arnés):
+1. **Los bancales están BIEN**: corte del mundo en las dos parcelas (`build/slice_mina.py`) → la **tierra de cultivo en
+   `y=61`** (la misma altura que el césped de alrededor), los **cultivos, la acequia y la valla en `y=62`**, y **nada en
+   `y=63`** salvo los postes de las esquinas. La hipótesis de «la huerta está un bloque más alta» era **FALSA** ✓.
+2. **Todos los aldeanos andan a `y=62`** (43 de 43 avisos de la corrida 92) y **los destinos del granjero salen a
+   `y=63`**: `destino 579, 63, 571 desde 579, 62, 568`, `destino 582, 63, 573 desde 586, 62, 573` — y en el mundo
+   `(579, 62, 571)` es una **remolacha** (cultivo), con la tierra en 61. O sea: **el goal apunta al aire por encima del
+   cultivo**.
+3. **Ni `buscarTierraVacia` ni `buscarCalva` ni `buscarCultivo` pueden dar 63**: los tres recorren la parcela a la cota
+   (`esquinaDeLaParcela(...)` → `y = cota`) y devuelven `tierra.above()` (que con el mundo real es **62**).
+4. **Y EL DATO QUE LO EXPLICA**: el censo del granjero que imprime el arnés trae **su puesto de trabajo** y sale
+   **inconsistente**:
+   ```
+   GRANJERO bancal=-1 valla=no puesto=533, 63, 580  pos=(604.58,62.00,595.51)  destino=533, 63, 580
+   GRANJERO bancal=-1 valla=no puesto=573, 62, 570  pos=(597.38,62.00,595.48)  destino=573, 62, 570
+   ```
+   **Un mismo pueblo con el puesto (el compostero de su bancal) a `y=63` en unos casos y a `y=62` en otros**, mientras
+   todos los aldeanos andan a 62. El `puesto` del granjero es su **estación de trabajo**, y de ahí salen los destinos:
+   si el compostero está un bloque por encima del suelo, **el granjero camina a un sitio al que no puede subir** ✓✓.
+
+**EL SIGUIENTE PASO, concreto**: medir la **Y real del bloque del compostero** de cada bancal (el corte del mundo ya lo
+puede dar: `composteroDeLaParcela` la calcula a la cota, así que si el bloque está en 63 es que **el constructor lo pone
+en 63** o hay **otra estación** —el `puesto` puede leerse de un bloque distinto—) y **unificarla con la cota**; y hacerlo
+en **el plan y la migración**, para que un mundo ya construido se corrija igual que se corrigió la aldea apilada.
+
+**Y el instrumento, de paso**: el censo del granjero llena el registro (**4.400-4.600 líneas por corrida**); conviene
+bajarlo a `debug` o espaciarlo, porque tapa lo que se busca.
+
 ### I161 · PROBADA Y RETIRADA: la ruta del cocinero, **solo al atascarse** (30-sep-2026)
 
 **Lo que se probó**: a los **40 ticks** de atasco, preguntar **una vez** si hay ruta hasta la casilla de la cocina
