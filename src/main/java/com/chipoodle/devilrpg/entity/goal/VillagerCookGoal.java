@@ -317,15 +317,12 @@ public class VillagerCookGoal extends Goal {
             if (!VillageManager.esCeldaDePie(level, p)) {
                 continue; // los pies o la cabeza tapados: ahí no se puede estar
             }
-            // Y HAY QUE PODER LLEGAR (I156, medido en la corrida 69): el cocinero seguía rindiéndose 3 veces por
-            // corrida con `ruta=1 nodos hasta 593, 62, 579 alcanza=NO` —una casilla de pie NORMAL, con aire y piedra
-            // debajo— porque desde donde estaba NO HABÍA CAMINO hasta la cocina. La ruta se pregunta UNA vez por
-            // ahumador (esto está cacheado) y solo si el cocinero está cerca: a más de la región de búsqueda del juego
-            // no hay ruta que valga y el tirón es el que lo lleva.
-            double distancia = Math.sqrt(villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D));
-            if (distancia <= 48.0D && !VillageManager.hayRutaQueAlcanza(villager, p)) {
-                continue; // cerca y sin camino: esa casilla no sirve AHORA (el «no» caduca y se reintenta)
-            }
+            // (La versión con `hayRutaQueAlcanza` AQUÍ —una búsqueda de ruta por candidata— se probó y se RETIRÓ el
+            // mismo día: el cocinero quedaba perfecto (`Yendo a la cocina` 1 y 0, y 23 piezas), pero el total de las
+            // dos corridas se fue a **77 y 85** frente a 22-43 de la versión sin ella, por un BUCLE de la granjera en
+            // el portón de la huerta (`Entrando a la huerta` 34 y 50, `pies=oak_fence_gate`, con `ruta=2 nodos
+            // alcanza=SI`), que en las catorce corridas anteriores salía **0**. Ojo: el servidor NO iba lento (los
+            // ticks alcanzados fueron idénticos, ~34.000), así que no era coste: era ese bucle. Ver I157.)
             if (p.equals(preferida)) {
                 elegida = p;
                 break; // la de siempre, si cumple el contrato
