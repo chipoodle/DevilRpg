@@ -2657,6 +2657,22 @@ public final class VillageManager {
                 new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 16))) {
             desatascarSiEstaEncajado(villager);
         }
+        // I164 · Y EL COMPOSTERO —el PUESTO del granjero— SE VIGILA EN EL LATIDO (30-sep-2026). La pasada de
+        // `prepareRepairs` (I163) corre **una vez**, pero el compostero puede quedar —o **volver a quedar**— un bloque
+        // alto DESPUÉS: medido, el del bancal 1 salía en `y=63` en **la mitad** de las corridas y en `y=62` en la otra
+        // mitad **con el mismo mundo** (408-446 muestras de ~3.250 en las que salía alto, y 2 en las que no), señal de
+        // que algo lo coloca o lo recupera más tarde. Así que se comprueba aquí, cada `VILLAGE_POLL_TICKS`: es barato
+        // (tres columnas) e idempotente, y si asienta alguno **muda el `JOB_SITE`** del granjero que apuntaba al viejo.
+        if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L) {
+            for (BlockPos[] par : VillageGenerator.asentarLosComposterosALaCota(level, center)) {
+                for (Villager granjero : aldeanos) {
+                    Optional<GlobalPos> suyo = granjero.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+                    if (suyo.isPresent() && suyo.get().pos().equals(par[0])) {
+                        moverPuestoDeTrabajo(level, granjero, par[0], par[1]);
+                    }
+                }
+            }
+        }
         // M1 (EL DESPACHADOR) SE PROBÓ AQUÍ Y SE RETIRÓ (29-sep-2026): ganaba la pelea del rumbo —el cerebro se lo
         // pisaba en 33.000-45.000 de 50.000-65.000 recados por corrida— y eso **hundió el pueblo**: 110 · 238 · 150 ·
         // 192 rendiciones (media 172,5) contra 13 · 72 · 19 · 40 de referencia (media 36). El motivo está medido: los
