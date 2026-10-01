@@ -4775,6 +4775,11 @@ media **35,25**) se **solapa** con el de la referencia (25 · 29 · 31 · 36, me
 en el trabajo**, que es donde tiene que estar. Y de paso: `Buscando recambios` de los granjeros **2 · 4 · 1 · 0** ✓
 (el fallo de rendimiento, cerrado) y los guardias entrenando (**963-1.777**).
 
+**LA VERSIÓN CON RUTA SE RETIRÓ, y la verificación fue la mejor medida del día**: al quitar la comprobación de ruta
+(quedándose las candidatas a la cota, la casilla de pie y el caché), las **dos corridas de verificación** dieron
+**31 y 16** —las dos mejores de toda la sesión, con la media de referencia en 30,25— con **`Entrando a la huerta` 0 y 0**
+(el bucle de I157 desapareció), `Yendo a la cocina` **3 y 1** y el cocinero trabajando **9 y 7** piezas (la media era 3).
+
 **Y UN AVISO DE RENDIMIENTO QUE VALE PARA TODO LO QUE VENGA (29-sep-2026)**: la **primera** versión de este arreglo
 preguntaba `hayVistaLibre` —**un raycast**— **por candidata y en cada `canUse`** (hasta 4 por tick, para siempre, porque
 `canUse` se evalúa cada tick mientras el goal no corre). Resultado medido, con el mundo restaurado idéntico en cada

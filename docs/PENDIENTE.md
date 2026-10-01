@@ -155,9 +155,13 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
      pasan a **DEBUG** (ensuciaban las medidas).
 4. **LO QUE QUEDA PENDIENTE, con nombre y número** (medido en el lote 59-62, **actualizado tras el cocinero**):
    - **HECHO DESPUÉS (I156, cocinero)**: `Yendo a la cocina` **12 → 8** y `A por leña al almacén` **3 → 0**, con el
-     cocinero **trabajando el doble** (12 → **26** piezas). De paso se cazó y cerró un **fallo de rendimiento mío**:
-     4 `hayVistaLibre` (raycasts) **por tick** en un `canUse` dispararon `Buscando recambios` de los granjeros de
-     **0-2** (ocho corridas) a **39 y 17**; con el caché volvió a **0-4**.
+     cocinero **trabajando el doble** (12 → **26** piezas); y las **dos corridas de verificación** de la versión final
+     dieron **31 y 16** (las mejores del día), con el trabajo en **9 y 7**. La variante que además preguntaba la **ruta**
+     se **retiró**: dejaba al cocinero perfecto (1 y 0) pero disparaba el **bucle del portón** de la granjera
+     (`Entrando a la huerta` 34 y 50) y el total se iba a 77 y 85 — ver **I157**.
+     De paso se cazó y cerró un **fallo de rendimiento mío**: 4 `hayVistaLibre` (raycasts) **por tick** en un `canUse`
+     dispararon `Buscando recambios` de los granjeros de **0-2** (ocho corridas) a **39 y 17**; con el caché volvió a
+     **0-4**.
    - **LO QUE SIGUE PENDIENTE, con su número del lote 59-62**:
      `Yendo a la taberna` **29** en 4 corridas (clase «dos jefes»: el goal pide una mesa y el cerebro se lo lleva;
      **M1 lo arreglaba y hundía el resto** → hay que hacerlo **por oficio**, y aceptar la **casilla de al lado** como
