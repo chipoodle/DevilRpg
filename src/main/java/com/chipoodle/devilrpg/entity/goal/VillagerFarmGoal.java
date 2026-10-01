@@ -504,10 +504,17 @@ public class VillagerFarmGoal extends Goal {
         // PUERTA más cercana: al ponerse a su lado, `VillagerGateGoal` se la abre (a 2,6) y entra.
         boolean faenaDeHuerta = tarea == Tarea.COSECHAR || tarea == Tarea.LABRAR
                 || tarea == Tarea.PLANTAR || tarea == Tarea.FERTILIZAR;
+        // I160 (30-sep-2026) · LA COTA LA DICE EL PUEBLO, NO EL OBJETIVO. Aquí se le pasaba `target.getY()` como cota a
+        // la geometría del bancal: si el objetivo caía en una celda **un nivel por encima** (bajo un techo, encima de
+        // una losa, o una mata que el plano pone alta), la salida y las compuertas del bancal se calculaban **a esa
+        // altura** y el granjero se rendía con destinos inalcanzables. Medido (corrida 83): **42 de 60 destinos** de esa
+        // corrida estaban en **y=63 mientras todos los aldeanos andan a y=62** y la cota del pueblo es 62. Y el resto
+        // del fichero ya usa `cotaDeLaPlaza` para lo mismo: esto era el único sitio que se la pedía al objetivo.
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         if (faenaDeHuerta && parcelaDelObjetivo >= 0
-                && !VillageGenerator.estaDentroDeLaParcela(center, parcelaDelObjetivo, target.getY(),
+                && !VillageGenerator.estaDentroDeLaParcela(center, parcelaDelObjetivo, cota,
                 villager.blockPosition())) {
-            BlockPos entrada = mejorEntradaLibre(level, parcelaDelObjetivo, target.getY());
+            BlockPos entrada = mejorEntradaLibre(level, parcelaDelObjetivo, cota);
             if (entrada == null) {
                 // LAS CUATRO COMPUERTAS APARCADAS (I33): no se puede entrar por ninguna. Se deja la mata por un rato
                 // y a otra cosa; volverá a intentarlo cuando se le pase el aparcado.
