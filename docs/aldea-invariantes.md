@@ -4786,7 +4786,7 @@ atasco** (contador a cero).
 Lo pidió el jugador: *«¿por qué tardas tanto en hacer mediciones?»*. **Tenía razón: el cuello de botella no era el código,
 era el instrumento** — cada pregunta costaba **4 corridas de 20 minutos**.
 
-`build/tanda-rapida.ps1` arranca el pueblo, lo deja **3 minutos** y devuelve el **recuento por etiqueta** (que es lo que
+`tools/arnes/tanda-rapida.ps1` arranca el pueblo, lo deja **3 minutos** y devuelve el **recuento por etiqueta** (que es lo que
 dice **qué** falla) más las trazas de la reparación. Deja el mundo en `run/world`, así que después se **corta el terreno**
 con `build/slice_mina.py` para comprobar lo que el registro dice. **Regla**: aquí se itera; las **4 corridas largas** son
 para **confirmar** lo que ya salió bien aquí.

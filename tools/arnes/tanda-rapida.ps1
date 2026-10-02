@@ -1,0 +1,77 @@
+# TANDA RÁPIDA (30-sep-2026) — el banco de pruebas de 3 minutos
+#
+# POR QUÉ EXISTE: medir con la tanda de 20 minutos cuesta 80 minutos por pregunta (4 corridas) y eso es lo que ha hecho
+# que dos semanas de trabajo parezcan eternas. Esta tanda arranca el pueblo, lo deja trabajar **3 minutos de reloj**
+# (~2 minutos de juego, que es donde ocurren los primeros recados de cada oficio) y devuelve, además del total de
+# avisos de rendición, **el recuento por etiqueta**: que es lo único que hace falta para saber si un arreglo sirve.
+#
+# Las 4 corridas largas se reservan para CONFIRMAR un arreglo que ya salió bien aquí (así lo pidió el jugador).
+#
+# Uso:  pwsh -NoProfile -File build\tanda-rapida.ps1 1 2      (dos corridas de 3 minutos = 6-7 minutos)
+$ErrorActionPreference = 'Continue'
+$env:GRADLE_USER_HOME = 'C:\Users\Christian\Documents\DevilRpg\.gradle-home'
+Set-Location 'C:\Users\Christian\Documents\DevilRpg'
+$MINUTOS = 3
+
+$arnes = 'src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java'
+if (-not (Test-Path $arnes)) { Write-Output 'ABORTADO: falta el arnes (copiar tools\arnes\GuardHarness.java)'; exit 1 }
+
+foreach ($i in $args) {
+    Write-Output "=== CORRIDA RAPIDA $i : $(Get-Date -Format 'HH:mm:ss') ==="
+    $vivos = (Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
+        Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' }).Count
+    if ($vivos -gt 0) { Write-Output "ABORTADO en la corrida ${i}: $vivos servidor(es) vivo(s)"; exit 1 }
+    Remove-Item run\world -Recurse -Force -ErrorAction SilentlyContinue
+    Copy-Item 'run\saves\New World' run\world -Recurse
+    Remove-Item run\logs\latest.log -Force -ErrorAction SilentlyContinue
+    $p = Start-Process -FilePath '.\gradlew.bat' -ArgumentList 'runServer','--console=plain' -PassThru -NoNewWindow `
+        -RedirectStandardOutput "build\runserver-rapida$i.txt" -RedirectStandardError "build\runserver-rapida$i.err"
+    Start-Sleep -Seconds ($MINUTOS * 60)
+    Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
+        Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+    Start-Sleep -Seconds 8
+    Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+    $log = "build\rapida-$i.log"
+    Copy-Item run\logs\latest.log $log -Force
+
+    $avisos = Get-Content $log | Select-String -Pattern 'no consigue llegar'
+    Write-Output "corrida rapida $i : $($avisos.Count) avisos de rendicion"
+    # EL RECUENTO POR ETIQUETA: es lo que dice si el arreglo ha servido.
+    $etiquetas = @{}
+    foreach ($a in $avisos) {
+        $m = [regex]::Match($a.Line, 'etiqueta="([^"]*)"')
+        $e = if ($m.Success) { $m.Groups[1].Value } else { '(sin etiqueta)' }
+        $e = $e -replace '^\w+ \(([^)]*)\) / ', ''
+        if ($etiquetas.ContainsKey($e)) { $etiquetas[$e]++ } else { $etiquetas[$e] = 1 }
+    }
+    if ($etiquetas.Count -eq 0) { Write-Output '   (ninguna etiqueta)' }
+    foreach ($k in ($etiquetas.Keys | Sort-Object { -$etiquetas[$_] })) {
+        Write-Output ("   {0,2}x  {1}" -f $etiquetas[$k], $k)
+    }
+    # Y LAS TRAZAS DE LA REPARACION QUE IMPORTAN (cimiento y huerta), que es lo que se esta midiendo ahora.
+    Get-Content $log | Select-String -Pattern 'CIMIENTO|huerta ASENTADA|REPARADA \(quitados' |
+        Select-Object -First 3 | ForEach-Object {
+            $t = ($_.Line -replace '.*\[devilrpg/\]: ', '')
+            if ($t.Length -gt 150) { $t = $t.Substring(0, 150) }
+            Write-Output "   traza: $t"
+        }
+
+    # EL TRABAJO DEL PUEBLO (30-sep-2026) — LA METRICA QUE SI DISTINGUE.
+    # Contar rendiciones en 3 minutos es demasiado ruidoso (salen de 0 a 4) y no sirve para saber si un arreglo mejora
+    # algo. Lo que SI es estable es cuanto TRABAJA el pueblo: si los aldeanos dejan de dar vueltas y de rendirse, los
+    # sucesos de cada oficio suben. Esto se mira ANTES y DESPUES de cada arreglo.
+    $trabajo = [ordered]@{
+        'granja'    = (Get-Content $log | Select-String -Pattern 'El granjero:').Count
+        'ganado'    = (Get-Content $log | Select-String -Pattern 'El ganadero:').Count
+        'pescador'  = (Get-Content $log | Select-String -Pattern 'El pescador:').Count
+        'herreria'  = (Get-Content $log | Select-String -Pattern 'El herrero|Forjo|Fundio').Count
+        'cocina'    = (Get-Content $log | Select-String -Pattern 'El cocinero|pieza\(s\) cocinadas').Count
+        'minero'    = (Get-Content $log | Select-String -Pattern 'El minero').Count
+        'guardia'   = (Get-Content $log | Select-String -Pattern 'ENTRENO|entrenado').Count
+        'lenador'   = (Get-Content $log | Select-String -Pattern 'El lenador|lenador').Count
+    }
+    $linea = ($trabajo.GetEnumerator() | ForEach-Object { "$($_.Key) $($_.Value)" }) -join '  '
+    Write-Output "   TRABAJO: $linea"
+}
+Write-Output "=== TANDA RAPIDA ACABADA $(Get-Date -Format 'HH:mm:ss') ==="
