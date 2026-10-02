@@ -393,7 +393,12 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 volcarObjetos(level);
                 volcarCamas(level);
             }
-            if (ticks % 20 == 0) {
+            // EL CENSO POR ALDEANO, CADA 10 S Y NO CADA 1 S (30-sep-2026). Estaba en `ticks % 20` y con ~20 aldeanos
+            // eso son **4.400-4.600 líneas por corrida**: el registro quedaba tapado por su propio instrumento y
+            // costaba encontrar lo que se busca. Este censo es de rondas antiguas (sus rutas de prueba apuntan a
+            // coordenadas fijas de la aldea 2), así que hoy solo sirve de contexto: con 10 s de separación se sigue
+            // viendo todo lo que importa y el registro vuelve a ser legible.
+            if (ticks % 200 == 0) {
                 volcar(level);
             }
             if (ticks % 40 == 0) {
