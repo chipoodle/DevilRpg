@@ -325,12 +325,13 @@ public class VillagerPickupGoal extends Goal {
                 if (distancia < mejorDistancia - 0.5D) {
                     mejorDistancia = distancia;
                     stuckTicks = 0;
-                } else if (VillageManager.laRutaAvanzoHacePoco(villager, STUCK_LIMIT)) {
-                    // I172 · «NO HA AVANZADO EN 140 TICKS», NO «UN TICK SIN AVANZAR». `avanzaPorLaRuta` devuelve true
-                    // solo en el tick en que cambia el nodo, así que usarlo como `if (avanza) … else stuck++` seguía
-                    // sumando atasco en todos los demás ticks y el aldeano se rendía MIENTRAS ANDABA (medido: la traza
-                    // de «sin camino» no saltó ni una vez, o sea que no estaba atascado). Aquí se pregunta por el
-                    // tiempo: si la ruta avanzó en los últimos 140 ticks, no hay atasco.
+                } else if (VillageManager.avanzaPorLaRuta(villager)) {
+                    // I170 · LA RUTA ES LA QUE MANDA (30-sep-2026). La clase B: `ruta=23 nodos hasta 615, 78, 587
+                    // alcanza=SI` y el aldeano rindiéndose igual (el minero yendo al almacén desde el corral: estaba
+                    // RODEANDO la valla sin acercarse en línea recta y el contador lo tomaba por atascado).
+                    // OJO · I172 SE PROBÓ AQUÍ Y SE RETIRÓ (30-sep-2026): se cambió a «no ha avanzado en 140 ticks»
+                    // (`laRutaAvanzoHacePoco`) pensando que el contador por tick era el fallo, y **empeoró** —banco
+                    // rápido 1 · 2 · 4, media 2,3, contra 1 · 1 · 0 de esta versión—, así que se volvió a ésta.
                     mejorDistancia = distancia;
                     stuckTicks = 0;
                 } else {
