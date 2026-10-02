@@ -5043,11 +5043,19 @@ public final class VillageManager {
         // SITIO, para todos los goals: si el destino no es una casilla de pie, se camina a la casilla de pie MÁS
         // CERCANA. El goal sigue midiendo contra SU destino (que es lo correcto: casi todos miden «dentro de alcance»,
         // y a la casilla de al lado se llega igual).
-        if (villager.level() instanceof ServerLevel nivel && !esCeldaDePie(nivel, objetivo)) {
-            BlockPos pie = com.chipoodle.devilrpg.world.VillageErrands.casillaPosible(nivel, objetivo);
-            if (pie != null) {
-                ponerRumbo(villager, pie, velocidad);
-                return;
+        if (villager.level() instanceof ServerLevel nivel) {
+            // I169 · Y SI PARA LLEGAR HAY QUE CRUZAR UNA PUERTA CERRADA, SE ABRE (30-sep-2026). Es la última familia del
+            // registro: destinos que SÍ son casilla de pie pero SIN RUTA (`ruta=1 nodos … alcanza=NO` entre dos casillas
+            // normales), con la valla de la parcela o la del corral en medio: `Guardando lo suyo`, `Recogiendo lo suyo`,
+            // `Labrando la huerta`, `Recogiendo el corral`… El planificador no cruza una compuerta cerrada y el aldeano
+            // se rendía teniendo el destino a un paso. Va aquí, en el punto por el que caminan TODOS los goals.
+            com.chipoodle.devilrpg.world.VillageErrands.abrirLoQueCierreElPaso(nivel, villager, objetivo);
+            if (!esCeldaDePie(nivel, objetivo)) {
+                BlockPos pie = com.chipoodle.devilrpg.world.VillageErrands.casillaPosible(nivel, objetivo);
+                if (pie != null) {
+                    ponerRumbo(villager, pie, velocidad);
+                    return;
+                }
             }
         }
         ponerRumbo(villager, objetivo, velocidad);

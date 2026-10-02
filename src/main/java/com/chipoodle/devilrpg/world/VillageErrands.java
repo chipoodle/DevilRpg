@@ -1,8 +1,13 @@
 package com.chipoodle.devilrpg.world;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import com.chipoodle.devilrpg.entity.goal.VillagerGateGoal;
 import org.jetbrains.annotations.Nullable;
 
@@ -103,5 +108,71 @@ public final class VillageErrands {
     /** ¿Ese punto cae dentro del recinto (cuadrado de radio {@code radio} alrededor de {@code base})? */
     private static boolean dentroDe(BlockPos base, int radio, @Nullable BlockPos p) {
         return p != null && Math.abs(p.getX() - base.getX()) <= radio && Math.abs(p.getZ() - base.getZ()) <= radio;
+    }
+
+    /**
+     * I169 · <b>SI PARA LLEGAR HAY QUE CRUZAR UNA PUERTA CERRADA, SE ABRE.</b> (30-sep-2026)
+     * <p>
+     * Es la última familia que quedaba en el registro: destinos que <b>sí son casillas de pie</b> pero
+     * <b>sin ruta</b> —`ruta=1 nodos … alcanza=NO` entre dos casillas normales—, con la <b>valla de la parcela</b> o la
+     * del <b>corral</b> en medio y su compuerta cerrada: `Guardando lo suyo`, `Recogiendo lo suyo`, `Labrando la
+     * huerta`, `Recogiendo el corral`… El planificador no cruza una compuerta cerrada, así que el aldeano se rinde
+     * teniendo el destino a un paso.
+     * <p>
+     * <b>CÓMO SE HACE SIN HACER ESTRAGOS</b>: se miran las puertas y compuertas <b>alrededor del aldeano</b> (radio 4) y
+     * solo se abre la que <b>de verdad lo separa de su recado</b>: la puerta está en una pared, así que se compara en qué
+     * lado de esa pared está el aldeano y en qué lado está el recado (por la dirección en la que la puerta separa). Si
+     * los dos están del mismo lado —o el recado está en la misma casilla—, <b>no se toca</b>: así <b>no se abren las del
+     * corral</b> para que no se escapen las gallinas. No hace falta saber de qué aldea es el aldeano: la puerta está a
+     * su lado, y con eso basta.
+     */
+    public static void abrirLoQueCierreElPaso(ServerLevel level, Villager villager, @Nullable BlockPos recado) {
+        if (recado == null) {
+            return;
+        }
+        BlockPos yo = villager.blockPosition();
+        int dx = Integer.signum(recado.getX() - yo.getX());
+        int dz = Integer.signum(recado.getZ() - yo.getZ());
+        if (dx == 0 && dz == 0) {
+            return; // ya está encima del recado
+        }
+        // SE SONDEA EL CAMINO, NO EL VECINDARIO: una L de 6 pasos hacia el recado (y la casilla de encima, que es
+        // donde está la hoja de la puerta). Un barrido de 9×9×5 por aldeano y por tick serían ~400 consultas cada
+        // tick; esto son 24, y la compuerta que estorba está justo ahí, en el camino.
+        for (int paso = 1; paso <= 6; paso++) {
+            for (int altura = 0; altura <= 1; altura++) {
+                if (!mirarYQuizáAbrir(level, yo.offset(dx * paso, altura, 0), yo, recado)
+                        && !mirarYQuizáAbrir(level, yo.offset(0, altura, dz * paso), yo, recado)) {
+                    continue;
+                }
+                return; // con una que se abra, ya se sigue caminando; si hace falta otra, se abrirá en el siguiente tramo
+            }
+        }
+    }
+
+    /** Mira esa casilla: si es una puerta/compuerta cerrada que <b>separa</b> al aldeano de su recado, la abre. */
+    private static boolean mirarYQuizáAbrir(ServerLevel level, BlockPos p, BlockPos yo, BlockPos recado) {
+        BlockState estado = level.getBlockState(p);
+        boolean esPuerta = estado.getBlock() instanceof DoorBlock;
+        boolean esCompuerta = estado.getBlock() instanceof FenceGateBlock;
+        if (!esPuerta && !esCompuerta) {
+            return false;
+        }
+        boolean abierta = esPuerta ? estado.getValue(DoorBlock.OPEN) : estado.getValue(FenceGateBlock.OPEN);
+        if (abierta) {
+            return false;
+        }
+        // LA DIRECCIÓN EN LA QUE LA PUERTA SEPARA: una puerta/compuerta de una valla orientada al norte separa el norte
+        // del sur, o sea por el eje ESTE-OESTE (su `getClockWise`).
+        Direction separa = estado.getValue(HorizontalDirectionalBlock.FACING).getClockWise();
+        int ladoYo = Integer.signum(separa.getStepX() * (yo.getX() - p.getX())
+                + separa.getStepZ() * (yo.getZ() - p.getZ()));
+        int ladoRecado = Integer.signum(separa.getStepX() * (recado.getX() - p.getX())
+                + separa.getStepZ() * (recado.getZ() - p.getZ()));
+        if (ladoYo == 0 || ladoRecado == 0 || ladoYo == ladoRecado) {
+            return false; // los dos del mismo lado (o el aldeano encima): esta puerta no es la que hay que abrir
+        }
+        VillagerGateGoal.abrirParaUnAldeano(level, p.immutable());
+        return true;
     }
 }
