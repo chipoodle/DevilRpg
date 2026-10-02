@@ -6317,7 +6317,11 @@ public final class VillageGenerator {
             int dx = pos.getX() - center.getX() - eje.getX();
             int dz = pos.getZ() - center.getZ() - eje.getZ();
             for (int[] celda : MINA_ANILLO) {
-                if (Math.abs(dx - celda[0]) <= 1 && Math.abs(dz - celda[1]) <= 1) {
+                // SIN HOLGURA (30-sep-2026, medido con el corte del mundo): el túnel es la celda del anillo y nada más.
+                // Con `<= 1` de margen el anillo de radio 4 se comía también el ±3, que es **justo el borde de la choza**
+                // del minero (7×7: de −3 a +3): el cimiento rellenaba el centro de la choza y dejaba su borde hueco, que
+                // es exactamente lo que se veía (`y=76..73` de aire a tres bloques del eje y piedra en el eje).
+                if (dx == celda[0] && dz == celda[1]) {
                     return true;
                 }
             }
@@ -6346,11 +6350,15 @@ public final class VillageGenerator {
      */
     public static int afianzarElSuelo(ServerLevel level, BlockPos center, int radio, int cota) {
         int puestos = 0;
+        int huecos = 0;
+        int saltados = 0;
+        int columnas = 0;
         for (int dx = -radio; dx <= radio; dx++) {
             for (int dz = -radio; dz <= radio; dz++) {
                 if (dx * dx + dz * dz > radio * radio) {
                     continue; // el disco, como el nivelado
                 }
+                columnas++;
                 int x = center.getX() + dx;
                 int z = center.getZ() + dz;
                 BlockPos arriba = new BlockPos(x, cota - 1, z);
@@ -6367,20 +6375,25 @@ public final class VillageGenerator {
                     // respetar son las celdas del anillo (`MINA_ANILLO`, radio 4, que baja un bloque por vuelta). Con
                     // esta regla, el interior se rellena y el caracol sigue abierto.
                     if (esElAnilloDeLaMina(center, p)) {
+                        saltados++;
                         continue;
                     }
                     BlockState s = level.getBlockState(p);
                     if (s.isAir() || s.is(Blocks.WATER) || s.is(Blocks.LAVA) || s.is(Blocks.CAVE_AIR)) {
+                        huecos++;
                         colocar(level, p, Blocks.STONE.defaultBlockState(), 3);
                         puestos++;
                     }
                 }
             }
         }
-        if (puestos > 0) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: CIMIENTO puesto: {} bloques solidos bajo el suelo (huecos"
-                    + " de cueva/barranca tapados de raiz; radio {}, profundidad {})", center, puestos, radio,
-                    PROFUNDIDAD_DEL_CIMIENTO);
+        if (puestos > 0 || huecos > 0 || saltados > 0) {
+            // LA TRAZA CON DETALLE (30-sep-2026): la primera versión no decía ni en qué nivel del pueblo estaba mirando
+            // ni cuántas celdas saltaba por el anillo, y sin eso no hubo manera de saber por qué el hueco de la choza del
+            // minero seguía abierto con 73.275 bloques puestos en el resto del disco.
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: CIMIENTO (nivel del pueblo {}, radio {}, profundidad {}):"
+                    + " puestos {} bloques solidos, huecos vistos {}, saltados por el anillo de la mina {}, columnas {}",
+                    center, cota, radio, PROFUNDIDAD_DEL_CIMIENTO, puestos, huecos, saltados, columnas);
         }
         return puestos;
     }

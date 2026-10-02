@@ -325,6 +325,16 @@ public class VillagerPickupGoal extends Goal {
                 if (distancia < mejorDistancia - 0.5D) {
                     mejorDistancia = distancia;
                     stuckTicks = 0;
+                } else if (VillageManager.avanzaPorLaRuta(villager)) {
+                    // I170 · LA RUTA ES LA QUE MANDA (30-sep-2026). Ésta era la última familia que sobrevivía en el
+                    // mejor registro: la de la CLASE B —`ruta=23 nodos hasta 615, 78, 587 alcanza=SI` y el aldeano
+                    // rindiéndose igual—, medida con el MINERO yendo al almacén desde dentro del corral
+                    // (`Ximeno (Minero) / Guardando lo suyo`). El aldeano estaba **rodeando** (la valla del corral, la
+                    // de la parcela) sin acercarse en línea recta, y el contador de atasco lo tomaba por un atascado
+                    // hasta rendirse. Aquí se mide lo que de verdad importa: **si la ruta avanza** (el índice del nodo
+                    // de la navegación, que es lo que ya usan la taberna y el obrero). Si avanza, no hay atasco.
+                    mejorDistancia = distancia;
+                    stuckTicks = 0;
                 } else {
                     stuckTicks++;
                 }
