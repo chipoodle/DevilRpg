@@ -4728,6 +4728,18 @@ coloca o lo recupera más tarde (el propio latido repone testigos).
 `JOB_SITE`** del granjero que apuntaba al viejo.
 **Juez**: las muestras del censo con `puesto` en `y = cota + 1` → **0**, y la traza `compostero(s) ASENTADOS a la cota`.
 
+**MEDIDO (4 corridas, 101-104) — y es EL MEJOR LOTE DE LA SESIÓN**: total **4 · 6 · 8 · 9 → media 6,75** (los lotes
+anteriores: 20,25 · 22,25 · 15,25 · 30,25), con el censo del granjero en **`puesto y=63`: 2 · 2 · 2 · 2** (antes
+**410-448** en las corridas malas y 2 en las buenas) y **la limpieza actuando 0 · 11 · 9 · 23 veces** por corrida. El
+trabajo del pueblo, en su rango o mejor: granja **746-798**, pescador **8-10**, herrería **70-83**, cocina **7-58**,
+mina **3**.
+
+**Y QUEDA UN DATO PARA LA SIGUIENTE RONDA**: la limpieza tiene que actuar **9-23 veces por corrida**, o sea que
+**algo vuelve a colocar** un compostero un bloque alto después de quitarlo (lo más probable: el latido reponiendo
+«testigos» de estructuras que faltan, y colocándolo sobre el escalón del terreno). El arreglo de raíz sería **que ese
+repositor no lo ponga en alto** (o que el asentado se haga **antes** de capturar el testigo), y así la vigilancia
+quedaría solo como red.
+
 ### I163 · EL COMPOSTERO —el PUESTO del granjero— A LA COTA (30-sep-2026)
 
 **El fallo, medido en el mundo guardado** (corte de `build/slice_mina.py`):

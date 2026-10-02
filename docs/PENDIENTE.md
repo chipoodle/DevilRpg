@@ -165,18 +165,18 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
    `Recogiendo lo suyo` **40 → 10**, `Yendo a la taberna` **29 → 11**, `Sacrificando un animal` **15 → 5**,
    `Sembrando` **11 → 9**; y el pueblo trabaja (pescador 7-10, herrería 60-74, cocina 2-8, mina 2-3).
    **LO QUE SIGUE, con su número del lote final**:
-   - **I163 · EL COMPOSTERO A LA COTA — HECHO Y MEDIDO (30-sep-2026)**: el compostero (el **puesto** del granjero)
-     estaba en **y=63** sobre un **escalón del terreno** (suelo natural en 62, un bloque sobre la cota) y el granjero
-     **no podía subir a su puesto**. Ahora `asentarLosComposterosALaCota` lo baja a la cota (y muda el `JOB_SITE`), con
-     `CURRENT_LAYOUT = 77`. **Medido (4 corridas)**: destinos a `cota+1` **42 → 1-9**, total **5 · 23 · 6 · 47**
-     (media 20,25, con **las dos mejores corridas de la sesión: 5 y 6**) y el censo del granjero con **`puesto y=62`
-     en el 87-99 %** de las muestras.
-     **Dos cosas dichas**: (1) en el arnés la pasada **no actuó** (`ASENTADOS 0`) porque la **reparación** del pueblo ya
-     quita el escalón; esta pasada es la **red de seguridad** para el mundo del jugador, donde el compostero sí está en
-     63 y la reparación no corre; (2) **queda un residuo**: en dos de las cuatro corridas el puesto de algunos
-     granjeros se vuelve a leer en `y=63` (**~13 %** de las muestras) — hay un **POI de compostero en alto que se sigue
-     cogiendo**: mirar qué estación reclama el granjero (`JOB_SITE`) cuando sale en 63.
-   - **EL ESTALLIDO DE LOS DESTINOS A `y = cota + 1` — RESUELTO Y MEDIDO** (era el pendiente más gordo): ver I162/I163.
+   - **I163+I164 · EL COMPOSTERO (el PUESTO del granjero) — HECHO Y MEDIDO (30-sep-2026)**: estaba en **y=63** sobre un
+     **escalón del terreno** (suelo natural en 62, un bloque sobre la cota) y el granjero **no podía subir a su
+     puesto**, así que **todos sus recados** apuntaban a esa altura (**42 de 60 destinos en y=63** en una corrida). Se
+     **asienta a la cota** (y se muda el `JOB_SITE`), **se vigila en el latido** cada 10 s y **se quitan los composteros
+     de más** —medido en el mundo del arnés: la columna del bancal 1 tenía **DOS**, el bueno a la cota y **otro encima**,
+     resto de la migración 64—. `CURRENT_LAYOUT = 78`.
+     **MEDIDO (4 corridas, 101-104): EL MEJOR LOTE DE LA SESIÓN** — total **4 · 6 · 8 · 9 (media 6,75)**, el censo con
+     `puesto y=63` en **2 · 2 · 2 · 2** (antes **410-448**), la limpieza actuando **0 · 11 · 9 · 23** veces, y el trabajo
+     igual o mejor (granja 746-798, pescador 8-10, herrería 70-83, cocina 7-58, mina 3).
+     **Y QUEDA**: como la limpieza tiene que actuar **9-23 veces por corrida**, **algo vuelve a colocar el compostero en
+     alto** (probablemente el latido reponiendo «testigos» de estructuras, sobre el escalón): el arreglo de raíz es que
+     **ese repositor no lo ponga en alto**.
    - **`Yendo a la cocina` 17** (era 12): sigue **abierta**. Ya se sabe lo que **no** vale: preguntar la ruta en `canUse`
      (dispara el bucle del portón, I157) y preguntarla a los 40 ticks de atasco (I161: **17 → 26**, retirada).
    - **`Labro la huerta` / `Labrando la huerta`** (14 en el lote del 30-sep): **misma clase** —`ruta=1 nodos … alcanza=NO`
