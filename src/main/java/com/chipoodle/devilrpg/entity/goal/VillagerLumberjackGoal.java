@@ -474,7 +474,10 @@ public class VillagerLumberjackGoal extends Goal {
         for (ItemStack drop : drops) {
             ItemStack resto = guardarEnInventario(drop);
             if (!resto.isEmpty()) {
-                level.addFreshEntity(new ItemEntity(level, p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D, resto));
+                // I166 · AL SUELO NO SE TIRA NADA. Antes soltaba un `ItemEntity` encima del tronco talado (y lo mismo
+                // con los plantones): así es como quedan ítems tirados por el pueblo que nadie recoge. El sobrante va
+                // al ALMACÉN de la aldea, que es donde el pueblo guarda y de donde reparte.
+                VillageStorage.guardar(level, center, resto);
             }
         }
     }
@@ -637,10 +640,9 @@ public class VillagerLumberjackGoal extends Goal {
                     for (ItemStack drop : drops) {
                         ItemStack resto = guardarEnInventario(drop);
                         if (!resto.isEmpty()) {
-                            // lint:ok I1 porque aqui `base` es el TRONCO de un arbol que existe (una posicion real
-                            // del mundo con su Y buena), no el centro ni la base de la aldea.
-                            level.addFreshEntity(new ItemEntity(level, base.getX() + 0.5D, base.getY() + 0.5D,
-                                    base.getZ() + 0.5D, resto));
+                            // I166 · AL SUELO NO SE TIRA NADA (aquí soltaba los palos y los plantones encima del
+                            // tronco base del árbol): el sobrante va al almacén de la aldea.
+                            VillageStorage.guardar(level, center, resto);
                         }
                     }
                     quitadas++;
@@ -1525,3 +1527,4 @@ public class VillagerLumberjackGoal extends Goal {
     @Nullable
     private BlockPos puntoDePaso;
 }
+

@@ -453,8 +453,7 @@ public class VillagerFarmGoal extends Goal {
                 && !VillageManager.estaDescansando(villager);
     }
 
-    /** El índice del bancal en el que está <b>metido</b> el granjero ahora mismo, o {@code -1} si está fuera de todos. */
-    private int parcelaDondeEsta(ServerLevel level) {
+    /** El índice del bancal en el que está <b>metido</b> el granjero ahora mismo, o {@code -1} si está fuera de todos. */    private int parcelaDondeEsta(ServerLevel level) {
         int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
             if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
@@ -590,14 +589,15 @@ public class VillagerFarmGoal extends Goal {
         workTicks = 0;
         switch (tarea) {
             case COSECHAR -> {
-                if (!despensaNoTraga && !leCabeLaCosecha(level, target)) {
-                    // NO SE COSECHA LO QUE NO LE CABE: lo que no entra en el zurrón se cae al suelo, y eso es justo lo
-                    // que el jugador veía ("los granjeros están dejando muchos vegetales en el suelo cuando cosechan").
-                    // Primero va a la despensa a descargar —viaje que además le trae recambios— y la cosecha se queda
-                    // en la planta, que no se pierde.
+                // I166 · SE COSECHA **SIEMPRE**, aunque al zurrón no le quepa: lo que sobra va al almacén de la aldea
+                // (ver `guardarEnElAlmacen`), no al suelo. Antes esta puerta frenaba la cosecha entera —«no se cosecha
+                // lo que no le cabe»— y era la razón de que la parcela se quedara a medias y de que quedaran vegetales
+                // por el suelo. `despensaNoTraga` se sigue respetando: si la despensa no acepta nada, el granjero para
+                // (es un aviso de que algo va mal en el pueblo, y así no da vueltas).
+                if (despensaNoTraga) {
                     tarea = Tarea.DESPENSA;
                     target = VillagePantry.puntoDeApoyo(level, center);
-                    VillageManager.ponerActividad(villager, "Zurron lleno: a la despensa");
+                    VillageManager.ponerActividad(villager, "La despensa no traga: a mirar");
                     return; // el goal sigue vivo con el viaje
                 }
                 despensaNoTraga = false;
@@ -612,8 +612,13 @@ public class VillagerFarmGoal extends Goal {
                 // no le cabe (entonces el zurrón está lleno: a la despensa) o cuando se le acaba el tiempo.
                 if (segada) {
                     cosechasSeguidas++;
+                    // I166 · LA BARRIDA NO SE CORTA POR CAPACIDAD: se cosecha **TODA** la parcela (lo pidió el jugador:
+                    // *"que el granjero coseche TODA su parcela, cada una de las tierras sembradas cuando ya esté
+                    // madura"*). Antes se paraba en cuanto la siguiente mata no le cabía en el zurrón y dejaba el
+                    // bancal a medias hasta el viaje siguiente; ahora el sobrante va al almacén (ver
+                    // `guardarEnElAlmacen`), así que la única razón para parar es que **no quede ninguna madura**.
                     BlockPos siguiente = buscarCultivoEnLaParcela(level, parcelaDelObjetivo);
-                    if (siguiente != null && leCabeLaCosecha(level, siguiente)) {
+                    if (siguiente != null) {
                         target = siguiente;
                         mejorDistancia = Double.MAX_VALUE;
                         stuckTicks = 0;
@@ -711,14 +716,12 @@ public class VillagerFarmGoal extends Goal {
             // con las 12 semillas iniciales y la aldea pasaba hambre). El tope incluye las que guarda para el
             // COMPOSTERO (`SEMILLAS_PARA_COMPOSTAR`): antes las soltaba al suelo y el compostero seguía vacío.
             if (esSemilla(drop) && semillasEnMano() >= SEMILLAS_MAX + SEMILLAS_PARA_COMPOSTAR) {
-                level.addFreshEntity(new ItemEntity(level, target.getX() + 0.5D, target.getY() + 0.5D,
-                        target.getZ() + 0.5D, drop));
+                guardarEnElAlmacen(level, drop);
                 continue;
             }
             ItemStack resto = guardarEnInventario(drop);
             if (!resto.isEmpty()) {
-                level.addFreshEntity(new ItemEntity(level, target.getX() + 0.5D, target.getY() + 0.5D,
-                        target.getZ() + 0.5D, resto));
+                guardarElSobrante(level, resto);
             }
         }
         level.playSound(null, target, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
@@ -1613,8 +1616,34 @@ public class VillagerFarmGoal extends Goal {
         return ItemStack.EMPTY;
     }
 
-    private ItemStack guardarEnInventario(ItemStack stack) {
-        ItemStack resto = stack.copy();
+    /**
+     * I166 · LO QUE LE SOBRA AL GRANJERO VA AL <b>ALMACÉN DE LA ALDEA</b> — al suelo, <b>jamás</b>.
+     * <p>
+     * Antes, el sobrante de una cosecha (semillas por encima del tope del compostero, o la parte que no le cabía en el
+     * zurrón) se soltaba como {@code ItemEntity} <b>en la celda de la mata</b>: eso es lo que el jugador veía como
+     * <b>ítems flotando sobre la superficie de la parcela</b>, y no se los llevaba nadie porque el recojo del pueblo no
+     * puede entrar al bancal (valla y compuerta). Un aldeano del pueblo <b>no tira la comida</b>: lo que le sobra va al
+     * almacén, que es donde el pueblo guarda y de donde reparte.
+     */
+    private void guardarEnElAlmacen(ServerLevel level, ItemStack stack) {
+        ItemStack sobra = VillageStorage.guardar(level, center, stack);
+        if (!sobra.isEmpty()) {
+            guardarElSobrante(level, sobra);
+        }
+    }
+
+    /** Y lo que no traga ni el almacén se lo queda <b>en la mano</b> hasta la próxima visita (al suelo, jamás). */
+    private void guardarElSobrante(ServerLevel level, ItemStack stack) {
+        ItemStack sobra = VillageStorage.guardar(level, center, stack);
+        if (sobra.isEmpty() || stack.isEmpty()) {
+            return;
+        }
+        villager.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, sobra);
+        DevilRpg.LOGGER.info("[Village] El granjero no tiene donde guardar {}: se lo queda en la mano (al suelo no se"
+                + " tira, I166)", sobra);
+    }
+
+    private ItemStack guardarEnInventario(ItemStack stack) {        ItemStack resto = stack.copy();
         for (int i = 0; i < villager.getInventory().getContainerSize() && !resto.isEmpty(); i++) {
             ItemStack dentro = villager.getInventory().getItem(i);
             if (!dentro.isEmpty() && ItemStack.isSameItemSameComponents(dentro, resto)) {

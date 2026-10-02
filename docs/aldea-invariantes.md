@@ -4715,6 +4715,59 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I166 · **A LA PARCELA NO SE TIRA NADA**, Y SE COSECHA ENTERA (30-sep-2026)
+
+Lo pidió el jugador, y con razón, tras ver **semillas y vegetales flotando sobre la superficie del bancal**:
+*«no quiero que la solución sea que el granjero las recoja… quiero que no suelte nada en la parcela y que el granjero
+coseche TODA su parcela, cada una de las tierras sembradas cuando ya esté madura»*.
+
+**LA CAUSA ERA DEL MOD, no del juego**: en `VillagerFarmGoal.cosechar` había **dos `addFreshEntity(new ItemEntity(…))`
+que soltaban el sobrante EN LA CELDA DE LA MATA** — las semillas que pasaban del tope del compostero, y lo que no le
+cabía en los 8 huecos del zurrón. Es decir: la respuesta del código a «me sobra» era **tirarlo al suelo**, y el recojo
+del pueblo no puede entrar al bancal (valla y compuerta), así que ahí se quedaba.
+
+**LOS TRES CORTES DE RAÍZ**:
+1. **No se tira nada, por construcción**: el sobrante va al **ALMACÉN DE LA ALDEA** (`VillageStorage.guardar`), y si el
+   almacén tampoco tragara, el aldeano **se lo queda en la mano** hasta la próxima visita. Se han quitado **todos** los
+   `addFreshEntity(new ItemEntity…)` de los goals del pueblo (el **leñador** hacía lo mismo con los troncos, los palos y
+   los plantones, y también se le ha quitado): **ningún goal de la aldea tira ya un solo ítem**.
+2. **La cosecha ya no se frena por capacidad**: se ha quitado la puerta «no se cosecha lo que no le cabe» (que dejaba el
+   bancal **a medias** y era la razón de que quedaran vegetales por el suelo) y el corte de la barrida por zurrón lleno.
+   La única razón para parar es que **no quede ninguna mata madura** en la parcela.
+3. **Y la parcela se barre de verdad**: el granjero ya tenía su tarea `RECOGER` (`buscarCaidoEnElBancal`, que va
+   recogiendo **objeto a objeto** hasta dejar el bancal limpio); ahora esa tarea **ya no puede ser deshecha** por el
+   propio aldeano, porque no hay nada nuevo que tirar.
+
+**Lo que NO se ha hecho, a propósito**: «regar» los ítems al entrar (recogerlos mágicamente al cargar la aldea) o
+convertir la recogida en la solución. La solución es que **no se caigan**: si no se tira, no hay nada que recoger.
+
+### I165 · LOS ASALTANTES: **CORREN**, VAN **A POR LOS ALDEANOS**, Y LOS ALDEANOS **HUYEN** (30-sep-2026)
+
+Los tres reportes del jugador, y sus tres causas exactas:
+
+1. **«Son muy lentos caminando inicialmente, aunque en niveles más avanzados son tan rápidos como el zombi normal»**:
+   el perfil tenía **`baseSpeed = 0.071`** y **el zombi del juego anda a 0.23** — un asaltante de la primera aldea iba
+   a **un 31 %** de la velocidad de vanilla, y solo parecía normal cuando el **×4** del escalado lo rescataba.
+   **ARREGLO**: base **0.23** y la velocidad escala **como mucho ×1.6** (el escalado se nota en vida y daño, no en
+   llegar tarde).
+2. **«No atacan a los aldeanos en su paso para llegar al centro»**: el aldeano estaba en el `targetSelector` en
+   **prioridad 4**, detrás del jugador, las invocaciones y los animales: con el Invocado en la aldea —lo normal, porque
+   la aldea se defiende— el asaltante **lo elegía a él y pasaba de largo por delante de los aldeanos**.
+   **ARREGLO**: el aldeano es la **prioridad 0** (una horda que marcha al pueblo va a por el pueblo) y el jugador la 1.
+3. **«Los aldeanos no huyen ante los zombies agresivos»**: el pánico del aldeano **existe en su cerebro**, pero **todos
+   los goals del oficio cogen el flag `MOVE`** y un goal con `MOVE` **excluye** a los demás, así que el pánico **no
+   podía moverlo**. El propio registro del jugador lo prueba con nombres: `Dionisio (Granjero) was slain by Zombie`,
+   `Jacinto (Granjero) was slain by Aggressive Zombie`, **los dos sin haber dado un paso**.
+   **ARREGLO**: `VillagerFleeGoal`, a **prioridad 0 y con `MOVE`**: cuando hay un enemigo a 12 bloques el aldeano
+   **suelta el trabajo y corre a su casa** (o en dirección contraria si la casa está cerca del peligro). No se le pone a
+   los guardias: esos pelean.
+
+**Y EL CIMIENTO** (mismo día, mismo reporte): `sellarSuelo` tapaba la capa de arriba y **se paraba en el primer bloque
+firme**, así que una **cueva con techo** bajo la plaza —y el borde de la mina, hueco a propósito— quedaban huecos («da a
+un pozo»). `afianzarElSuelo` rellena de **piedra** todo hueco **24 bloques hacia abajo** en un disco **más ancho que el
+recinto** (corral anexo, caseta del minero, arboleda, pesquera), respetando el pozo de la mina y el agua del lago y del
+bebedero. **Trazado 79.**
+
 ### I164 · EL COMPOSTERO SE **VIGILA EN EL LATIDO** (30-sep-2026)
 
 La pasada de I163 corre **una vez** (dentro de `prepareRepairs`, cuando el trazado del pueblo se queda atrás), pero el
