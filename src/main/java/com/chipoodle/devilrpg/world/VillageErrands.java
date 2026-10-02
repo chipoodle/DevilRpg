@@ -162,17 +162,22 @@ public final class VillageErrands {
         if (abierta) {
             return false;
         }
-        // LA DIRECCIÓN EN LA QUE LA PUERTA SEPARA: una puerta/compuerta de una valla orientada al norte separa el norte
-        // del sur, o sea por el eje ESTE-OESTE (su `getClockWise`).
-        Direction separa = estado.getValue(HorizontalDirectionalBlock.FACING).getClockWise();
-        int ladoYo = Integer.signum(separa.getStepX() * (yo.getX() - p.getX())
-                + separa.getStepZ() * (yo.getZ() - p.getZ()));
-        int ladoRecado = Integer.signum(separa.getStepX() * (recado.getX() - p.getX())
-                + separa.getStepZ() * (recado.getZ() - p.getZ()));
-        if (ladoYo == 0 || ladoRecado == 0 || ladoYo == ladoRecado) {
-            return false; // los dos del mismo lado (o el aldeano encima): esta puerta no es la que hay que abrir
+        // LA DIRECCIÓN EN LA QUE LA PUERTA SEPARA. La convención del juego es que una puerta o compuerta **se cruza a
+        // lo largo de su `FACING`** (una compuerta que mira al norte se pasa yendo de norte a sur), así que ése es el
+        // eje que se prueba primero. Y para no arriesgar una rendición por equivocarme de eje, se prueba **también** el
+        // perpendicular: abrir una puerta de más es barato (el propio goal de los portones la vuelve a cerrar si no hay
+        // nadie dentro), pero **no** abrir la que estorba es una rendición segura.
+        Direction eje = estado.getValue(HorizontalDirectionalBlock.FACING);
+        for (Direction separa : new Direction[]{eje, eje.getClockWise()}) {
+            int ladoYo = Integer.signum(separa.getStepX() * (yo.getX() - p.getX())
+                    + separa.getStepZ() * (yo.getZ() - p.getZ()));
+            int ladoRecado = Integer.signum(separa.getStepX() * (recado.getX() - p.getX())
+                    + separa.getStepZ() * (recado.getZ() - p.getZ()));
+            if (ladoYo != 0 && ladoRecado != 0 && ladoYo != ladoRecado) {
+                VillagerGateGoal.abrirParaUnAldeano(level, p.immutable());
+                return true;
+            }
         }
-        VillagerGateGoal.abrirParaUnAldeano(level, p.immutable());
-        return true;
+        return false; // los dos del mismo lado (o el aldeano encima): esta puerta no es la que hay que abrir
     }
 }
