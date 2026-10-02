@@ -5128,6 +5128,14 @@ public final class VillageManager {
         villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET,
                 new net.minecraft.world.entity.ai.memory.WalkTarget(
                         new net.minecraft.world.entity.ai.behavior.BlockPosTracker(destino), velocidad, 1));
+        // Y LA MIRADA AL MISMO SITIO (I174, 30-sep-2026). El cerebro del aldeano tiene, en su actividad de OCIO, el
+        // comportamiento «**andar hacia donde mira**» (`SetWalkTargetFromLookTarget`): si la mirada apunta a otro lado
+        // —o a ninguna parte—, ese paseo tira de él en contra del recado y el aldeano **camina sin ir a ningún sitio**
+        // (el «dar vueltas sobre sí mismo» que ya está escrito en `parar()`). Medido con I173: había ruta (7 y 23 nodos,
+        // `alcanza=SI`) y el aldeano recorría **4,6 bloques en 13 s** y **0,5 en 9 s**. Poniendo la mirada donde va el
+        // recado, los dos jefes apuntan al mismo lado en vez de pelearse.
+        villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET,
+                new net.minecraft.world.entity.ai.behavior.BlockPosTracker(destino));
         // Y ADEMÁS, EL CAMINO A LA NAVEGACIÓN (30-sep-2026, tercera iteración de I171 y medida). Escribir solo el
         // recuerdo del cerebro no bastaba: el paquete de actividades del juego **borra `WALK_TARGET` al terminar sus
         // comportamientos**, así que el aldeano volvía a quedarse parado en el mismo tick (los avisos seguían diciendo
