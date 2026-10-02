@@ -5125,6 +5125,16 @@ public final class VillageManager {
         villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET,
                 new net.minecraft.world.entity.ai.memory.WalkTarget(
                         new net.minecraft.world.entity.ai.behavior.BlockPosTracker(destino), velocidad, 1));
+        // Y ADEMÁS, EL CAMINO A LA NAVEGACIÓN (30-sep-2026, tercera iteración de I171 y medida). Escribir solo el
+        // recuerdo del cerebro no bastaba: el paquete de actividades del juego **borra `WALK_TARGET` al terminar sus
+        // comportamientos**, así que el aldeano volvía a quedarse parado en el mismo tick (los avisos seguían diciendo
+        // `cerebro=-` con el apunte ya puesto). La navegación tiene su **propio camino**, y eso el cerebro del juego no
+        // lo toca: si no hay camino vivo, se le da también. Con las dos cosas —el recuerdo para que el paseo no lo
+        // desvíe y el camino para que ande— el aldeano se mueve aunque le borren el recuerdo.
+        var nav = villager.getNavigation();
+        if (nav.getPath() == null || nav.getPath().isDone()) {
+            nav.moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D, velocidad);
+        }
     }
 
     /** ¿Tiene el aldeano algún goal del mod en marcha? (los de {@code com.chipoodle.devilrpg.entity.goal}). */
