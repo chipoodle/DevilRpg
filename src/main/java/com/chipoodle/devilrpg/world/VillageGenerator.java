@@ -6300,7 +6300,30 @@ public final class VillageGenerator {
         return asentadas;
     }
 
-    /** Bloques hacia abajo que se <b>afianzan</b> bajo la aldea (I166). */    private static final int PROFUNDIDAD_DEL_CIMIENTO = 24;
+    /** Bloques hacia abajo que se <b>afianzan</b> bajo la aldea (I166). */
+    private static final int PROFUNDIDAD_DEL_CIMIENTO = 24;
+
+    /**
+     * ¿Esa celda es del <b>túnel de la mina</b> (el caracol), que es hueco a propósito?
+     * <p>
+     * Se mira <b>el anillo</b> ({@link #MINA_ANILLO}: las 32 celdas del caracol, radio {@link #MINA_RADIO}) con un
+     * bloque de holgura, y solo por debajo de la capa que se pisa. <b>NO</b> se usa el cilindro de exclusión de la mina
+     * ({@link #esCeldaDeLaMina}, mucho más ancho): la <b>choza del minero está en el hueco del centro del anillo</b>, así
+     * que con el cilindro el cimiento no rellenaba nada de lo que el jugador ve hundido (medido en la corrida 107: ni un
+     * bloque puesto, y la choza seguía sobre su charca).
+     */
+    private static boolean esElAnilloDeLaMina(BlockPos center, BlockPos pos) {
+        for (BlockPos eje : MINA_OFFSETS) {
+            int dx = pos.getX() - center.getX() - eje.getX();
+            int dz = pos.getZ() - center.getZ() - eje.getZ();
+            for (int[] celda : MINA_ANILLO) {
+                if (Math.abs(dx - celda[0]) <= 1 && Math.abs(dz - celda[1]) <= 1) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     /**
      * <b>EL CIMIENTO DE LA ALDEA</b> (I166, 30-sep-2026 — lo pidió el jugador: *«varias construcciones están hundidas
@@ -6336,12 +6359,14 @@ public final class VillageGenerator {
                 }
                 for (int y = cota - 1; y > cota - 1 - PROFUNDIDAD_DEL_CIMIENTO && y > level.getMinBuildHeight(); y--) {
                     BlockPos p = new BlockPos(x, y, z);
-                    // EL CARACOL DE LA MINA SE RESPETA **CELDA A CELDA** (30-sep-2026): antes se saltaba la COLUMNA
-                    // entera si estaba sobre el pozo (`estaSobreElPozo`, un cilindro de radio 4-5 por cada mina), y eso
-                    // dejaba sin tapar el hueco que el jugador ve **alrededor de la choza del minero** (medido: de y=76
-                    // hacia abajo todo era AIRE, con el agua del fondo en y=72 — *"alrededor está hueco y da a un
-                    // pozo"*—). La mina solo necesita que **sus propias celdas** sigan huecas.
-                    if (esCeldaDeLaMina(center, cota, p) || esCeldaDePasoDeLaMina(center, cota, p)) {
+                    // EL TÚNEL DE LA MINA ES EL ANILLO, NO TODA SU ZONA (30-sep-2026, medido). El primer intento
+                    // saltaba las celdas del **cilindro de exclusión** de la mina (`esCeldaDeLaMina`, radio
+                    // MINA_RADIO + MINA_GALERIA_LARGO + 1) y con eso el cimiento **no ponía ni un bloque** (corrida 107:
+                    // la choza del minero seguía sobre el vacío, con su charca, tal cual). El motivo es que **la choza
+                    // está en el HUECO DEL CENTRO del anillo**: su columna no es túnel, y el caracol que hay que
+                    // respetar son las celdas del anillo (`MINA_ANILLO`, radio 4, que baja un bloque por vuelta). Con
+                    // esta regla, el interior se rellena y el caracol sigue abierto.
+                    if (esElAnilloDeLaMina(center, p)) {
                         continue;
                     }
                     BlockState s = level.getBlockState(p);
