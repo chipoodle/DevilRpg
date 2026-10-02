@@ -13,7 +13,7 @@ vale**.
 | **zurrón** | el inventario del aldeano: sus 8 huecos, lo que lleva encima | **inventario** |
 | **«la despensa no traga»** | que el cofre de la despensa está lleno y no admite más | **«la despensa está llena»** |
 | **«si el almacén tampoco tragara»** | que el almacén tampoco tiene sitio | **«si en el almacén tampoco cabe»** |
-| **cota** | el nivel de los pies del pueblo (el suelo firme está un bloque por debajo) | **cota** (se deja: es la palabra del propio juego para la altura, y ya está explicada en las invariantes) |
+| **cota** (lo que decía antes) | **jerga de topografía**, no del juego: es la **altura** a la que está el pueblo | **nivel del pueblo** — y se explica con un dibujo, abajo |
 | **POI / estación** | el bloque donde un aldeano trabaja (compostero, ahumador, mesa…) | **puesto de trabajo** |
 | **rendición** | el aviso de que un aldeano **no consiguió llegar** a su destino y lo deja por un rato | **«no consigue llegar»** / **se rinde** |
 | **testigo** | la marca del pueblo que sirve para saber si una estructura sigue en pie | **señal de la estructura** |
@@ -28,6 +28,30 @@ El cambio se hizo con un script (`build/glosario.py`) que sustituye **solo en co
 **Al escribir texto nuevo en este proyecto**: si dudas, mira esta tabla; y si una palabra no la entendería alguien que
 no haya leído el código, se cambia.
 
+## «cota» → **«nivel del pueblo»** (preguntado el 30-sep-2026)
+
+El jugador preguntó *«¿qué es cota?»*. Es **jerga de topografía** (la altura de un terreno) y yo la usaba como si fuera
+algo obvio. **Lo que significa en este proyecto**, con un dibujo:
+
+```
+      nivel del pueblo = 78   ← aquí están los PIES del aldeano: aquí se anda
+      suelo firme      = 77   ← el bloque que se pisa (SIEMPRE uno por debajo)
+      relleno          = 76   ← tierra/piedra debajo
+```
+
+Así que «el suelo va en *cota − 1*» es lo mismo que decir **«el suelo está un bloque por debajo de donde andan»**. Se
+usa para todo lo que tiene que estar a la altura del pueblo: el kiosco, el muro, los caminos, los composteros, las
+parcelas… y sirve para detectar lo que está **torcido** (una cosa un bloque más alta o más baja de lo que toca).
+
+**Dónde se ha cambiado**: en los **avisos que lee el jugador** (los del registro), que ahora dicen *«kiosco de la plaza
+colocado **al nivel del pueblo** 78»*, *«muro reconstruido **al nivel del pueblo** 78»*, *«REPARADA (quitados 6452 bloques
+de restos **por encima del nivel del pueblo** (78) y terreno nivelado)»*.
+
+**Dónde NO se ha cambiado, y por qué**: dentro del **código** la palabra sigue en **nombres de funciones y variables**
+(`cotaDeLaPlaza`, `fijarLaCotaDeLaAldea`, `int cota = …`): son **983 apariciones** mezcladas con el código y renombrarlas
+a ciegas **rompe la compilación** (lo intenté y rompió 164 ficheros; se revirtió). Los nombres internos no los lee nadie
+más que quien programa, y están explicados aquí.
+
 ## Corregido el 30-sep-2026: **lo «hundido» que veía el jugador era el VACÍO de debajo**
 
 El jugador dijo: *«varias construcciones están hundidas un bloque y **alrededor está hueco y da a un pozo** porque
@@ -35,20 +59,20 @@ El jugador dijo: *«varias construcciones están hundidas un bloque y **alrededo
 guardado (`build/slice_mina.py`), alrededor de la choza del minero:
 
 ```
-y=77  G G . . B B B B B B B . . G G     <- el suelo de la choza (bien: cota−1)
+y=77  G G . . B B B B B B B . . G G     <- el suelo de la choza (bien: nivel del pueblo−1)
 y=76  . . . . . . . . . . . . . . .     <- AIRE
 y=75  . . . . . . . . . . W . . . .     <- AIRE (y la columna del pozo de la mina)
 y=74  . . . . . . . . . . . . . . .     <- AIRE
 ```
 
-La choza **no está hundida** —su suelo está a `cota − 1`, que es lo correcto—: **está sobre el vacío**. Debajo y alrededor
+La choza **no está hundida** —su suelo está a `nivel del pueblo − 1`, que es lo correcto—: **está sobre el vacío**. Debajo y alrededor
 no hay terreno, y solo el **pozo de la mina** (hueco a propósito) tiene algo. Eso es lo que hace que se vea «hundida» y lo
 que un día se abre en socavón. **Lo tapa el CIMIENTO de I166** (radio 86 desde el centro del pueblo; la choza está a 44,
 así que entra de sobra): rellena de piedra **24 bloques hacia abajo** todo hueco y **respeta el pozo de la mina**.
 
 **Y una corrección mía, dicha sin adornos**: supuse que era **la huerta** la que estaba un bloque hundida (por una
-rendición con `destino=farmland` en `y=77` y los aldeanos en `y=78`)… y **la medición dice que no**: como **la cota es el
-nivel de los pies y el suelo va en `cota − 1`**, el cultivo en `y=77` con el pueblo andando en `y=78` es **lo correcto**
+rendición con `destino=farmland` en `y=77` y los aldeanos en `y=78`)… y **la medición dice que no**: como **el nivel del pueblo es el
+nivel de los pies y el suelo va en `nivel del pueblo − 1`**, el cultivo en `y=77` con el pueblo andando en `y=78` es **lo correcto**
 (el corte del mundo lo confirma en las dos parcelas). Aquella rendición era la clase A de siempre —el destino es un
 cultivo, que no se pisa—, que ya arregla I154. **I167** (`asentarLaHuertaALaCota`, trazado 80) se queda como **red de
-seguridad** para cuando una migración cambie la cota y el plano se quede con la vieja: **no** era el fallo que se veía.
+seguridad** para cuando una migración cambie el nivel del pueblo y el plano se quede con la vieja: **no** era el fallo que se veía.

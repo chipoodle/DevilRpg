@@ -1,7 +1,7 @@
 # Aldea: invariantes y lista de consecuencias
 
 Este documento existe por una razón concreta: **casi todos los bugs que reportó el jugador en la aldea fueron
-una sola clase** (una altura que no era la cota) y, peor, varios salieron de arreglar el síntoma donde apuntaba el
+una sola clase** (una altura que no era el nivel del pueblo) y, peor, varios salieron de arreglar el síntoma donde apuntaba el
 informe en vez de arreglar la **invariante** y barrer el resto del código. Cada regla de aquí abajo está escrita
 después de un bug **medido en juego**, con la evidencia, para que no vuelva.
 
@@ -30,7 +30,7 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > | I4 | tamaño de parcela a mano (`9`, `5`) | I4 |
 > | I5 | medidas del kiosco a mano | I4 |
 > | I6 | `getNavigation().moveTo` | I5 |
-> | I7 | `parcelasDe(center)` sin la cota | I1 |
+> | I7 | `parcelasDe(center)` sin el nivel del pueblo | I1 |
 > | I8 | `setBlock`/`destroyBlock`/`colocar` en el latido | I6 |
 > | I9 | construcción nueva sin subir `CURRENT_LAYOUT` | I7 |
 > | I10 | nivelar la huella de una **parcela** sin preguntar antes | I11 |
@@ -62,7 +62,7 @@ centro que se saca del plano). Con esa Y:
 
 **Regla:** la Y de cualquier cosa de la aldea (cultivos, cofres, composteros, puestos de trabajo, huecos, medidas de
 bloques) sale de `VillageGenerator.cotaDeLaPlaza(level, center)`. Si hace falta un centro "con Y buena", se pide a
-`VillageManager.centroDe` (que ya devuelve la **cota**) o se usa `parcelasDe(level, center)`.
+`VillageManager.centroDe` (que ya devuelve la **nivel del pueblo**) o se usa `parcelasDe(level, center)`.
 
 ### I2 · Las distancias "dentro de la aldea" son HORIZONTALES
 La aldea es un **recinto en el plano XZ**. Midiendo en 3D, un aldeano a 30 bloques por encima del suelo cuenta como
@@ -105,7 +105,7 @@ camino ("primero da vueltas y se va a otro lado antes de recogerlos").
 El latido de la aldea corre cada 10 s para siempre. Cualquier "asegurar" que no detecte que la obra ya está hecha
 se convierte en una máquina de reconstruir; y reconstruir un cofre **tira su contenido** al suelo (mecánica de
 vanilla) y vacía la despensa de la aldea.
-**Regla:** comprobar con un bloque testigo buscado **a la cota** (no por la Y del centro) y no tocar lo que ya está.
+**Regla:** comprobar con un bloque testigo buscado **a el nivel del pueblo** (no por la Y del centro) y no tocar lo que ya está.
 
 ### I7 · Cambiar lo que se construye obliga a subir la migración
 Las aldeas ya construidas no se rehacen solas: la migración solo corre si `layout < CURRENT_LAYOUT` (o
@@ -146,7 +146,7 @@ todavía spawnnea con vegetales como items sobre ellos"*.
   guardado del jugador: 144 cultivos y **solo 2 maduros** justo después de una migración. Arreglo: si la celda ya
   tiene un cultivo, se deja.
 - **Capa 2 (el NIVELADO se los llevaba antes).** El arreglo anterior **no bastaba**: `plot()` empieza nivelando la
-  huella con `nivelarHuella`, que **recorta** el terreno que sobresale de la cota y, en una parcela en **cuesta**
+  huella con `nivelarHuella`, que **recorta** el terreno que sobresale de el nivel del pueblo y, en una parcela en **cuesta**
   (una aldea de montaña), ese recorte se llevaba por delante los cultivos de las celdas altas **antes** de llegar a
   la comprobación de "ya hay cultivo". Medido en su aldea de montaña: las tres parcelas con sus 71 cultivos pero
   **casi todos de edad 0-1** y semillas de trigo y de remolacha por el suelo. Arreglo: `bancalHecho()` (si hay
@@ -164,7 +164,7 @@ El lint (**I10**) lo comprueba: un `nivelarHuella` sobre `PLOT_*` sin `bancalHec
 ### I12 · "Dentro de la aldea", para un BICHO, es recinto **+ altura**
 Nació de una **aldea caída en juego**. Un bicho "dentro del pueblo" se contaba **solo** con la distancia horizontal
 (radio de la valla), y en una aldea de montaña eso mete en el pueblo a **todo lo que vive en las cuevas de debajo**.
-Medido en el guardado del jugador justo después de la caída (aldea 1, cota 95, centro `(990,990)`): **24** monstruos
+Medido en el guardado del jugador justo después de la caída (aldea 1, nivel del pueblo 95, centro `(990,990)`): **24** monstruos
 contaban como "dentro" y **18** estaban en cuevas o repisas (`y=5` … `y=89`); con la banda de altura quedan **6**,
 todos a la altura del pueblo. Dos consecuencias, las dos vistas:
 
@@ -195,7 +195,7 @@ dentro de los muros").
 
 ### I14 · Nada queda **colgado del aire** (un farol va SOBRE su apoyo)
 El jugador lo vio dos veces y en dos sitios distintos: *"en la cabaña del pescador hay faroles flotando"* y *"y lo
-mismo en la granja"*. La auditoría de la aldea entera (aldea 2, cota 120) encontró **16 faroles sin apoyo**:
+mismo en la granja"*. La auditoría de la aldea entera (aldea 2, nivel del pueblo 120) encontró **16 faroles sin apoyo**:
 **14** en la cerca de la **granja anexa** (1 bloque por encima del poste) y **2** en la **pesquera** (3 bloques por
 encima de la orilla del lago). Causa: el ayudante `farolEnElPoste` colocaba el farol en la casilla que le dieran y
 **daba por hecho** que debajo había un poste; los llamantes le pasaban la casilla del **farol** contando un poste que
@@ -211,7 +211,7 @@ flotando en una aldea ya construida; el plano se recaptura después, así que el
 > celda o el **estado** equivocados, medidos los dos en el guardado del jugador:
 >
 > - **El porche de la taberna.** El jugador: *"el pórtico está cortado con un espacio, ¿por qué? debería estar
->   completo"*. Aldea 2, cota 120, taberna en `1438,1428`: los **dos faroles de las puntas del alero**
+>   completo"*. Aldea 2, nivel del pueblo 120, taberna en `1438,1428`: los **dos faroles de las puntas del alero**
 >   (`(1435,123,1432)` y `(1435,123,1438)`, `lantern[hanging=true]` **con aire encima**) estaban colocados **en la
 >   celda del escalón del toldo** y lo **sustituían** —y como el **plano guarda el último bloque de cada celda**, el
 >   obrero reponía el farol, no el escalón—: el alero quedaba **cortado** en sus dos últimas celdas y los faroles
@@ -234,7 +234,7 @@ flotando en una aldea ya construida; el plano se recaptura después, así que el
 > La misma auditoría (`tools/audita_aldea.py`, **versionada**; antes estaba en `build/`, fuera de git) comprueba
 > además: faroles y **vallas** flotando, **cofres tapados** (un bloque encima: no se pueden abrir), **puertas
 > incompletas** (sin su mitad) y **camas sueltas** (sin cabecera). Saca las aldeas **del propio guardado**
-> (`data/devilrpg_villages.dat`: índice, centro y cota), así que las audita todas de una pasada. Medido tras el
+> (`data/devilrpg_villages.dat`: índice, centro y nivel del pueblo), así que las audita todas de una pasada. Medido tras el
 > arreglo: **aldea 2: 0 en las cinco listas** (la migración 47 corrió al jugarla) y **aldea 0: 14 faroles**
 > pendientes hasta que el jugador pase por ella (el retrofit los baja al migrar).
 
@@ -391,11 +391,11 @@ Vanilla convierte la **tierra de cultivo en tierra** en cuanto alguien salta enc
 pegada al césped, vuelve a ser **césped**: en la aldea conviven aldeanos, animales y el jugador, así que los parcelas
 se quedan con **calvas**. El jugador las vio y las reportó con captura: *"de esta parcela veo que hay dos espacios que
 no tienen cultivo y nadie los está reparando para hacerlos cultivables"*.
-**Medido en su guardado** (aldea 2, centro `1414,1414`, cota `120`): los tres parcelas tienen **216** celdas de cultivo
+**Medido en su guardado** (aldea 2, centro `1414,1414`, nivel del pueblo `120`): los tres parcelas tienen **216** celdas de cultivo
 y al **plano** le faltaban exactamente **2**, `(1384,1430)` y `(1384,1434)` —las dos de la columna oeste del parcela de
 `(1384,1428)`—, que en el mundo eran **`grass_block`** a `y=119`. Dos reglas, entonces:
 
-- **La huerta entra SIEMPRE en el plano.** Sus celdas son **geometría fija** (las parcelas de `FARM_PLOTS`, a `cota-1`,
+- **La huerta entra SIEMPRE en el plano.** Sus celdas son **geometría fija** (las parcelas de `FARM_PLOTS`, a `nivel del pueblo-1`,
   con la acequia en `PLOT_WATER_ROW`): al capturar, `VillageGenerator.estadoDeLaHuerta` pide **tierra de cultivo** (o
   **agua**) aunque el mundo las tenga pisoteadas, vaciadas o con el agua congelada. Sin esto, el plano de una aldea
   **migrada** —que es un **escaneo** del mundo— se queda **sin** las celdas que ya estaban pisoteadas al capturarlo
@@ -429,7 +429,7 @@ contra el techo: `subida = techo - cabeza`). Es decir: el primer bloque **sólid
 celdas libres. Con dos, el techo queda a **2,0** y el que sube se queda **empujado contra la contrahuella**, con la
 cabeza pegada al techo (parece que "no se puede pasar" aunque quepa de pie).
 
-**Medido en su guardado** (aldea 2, centro `1414,1414`, cota `120`, taberna en `1438,1428`, `y1=125`, `yTecho=130`,
+**Medido en su guardado** (aldea 2, centro `1414,1414`, nivel del pueblo `120`, taberna en `1438,1428`, `y1=125`, `yTecho=130`,
 `build/taberna_subida.py`): los **dos** escalones atascados eran el **2º** (`dx=5`, `dz=11`: huella en `y=127`, con
 los tablones del techo de la posada a 2,0 — `(1443,129,1439)`) y el **3º** (`dx=5`, `dz=10`: huella en `y=128`, con
 la placa de tejas a 2,0 — `(1443,130,1438)`): **exactamente** los dos bloques que el jugador rompió a mano. Y el
@@ -450,20 +450,20 @@ daño), no un descuido.
 
 ### I27 · El AGUA (y su hielo) no es un hueco que se rellene: un estanque de la aldea se repone
 El jugador, mirando la caseta del pescador: *"¿por qué la choza para pesca no tiene su estanque para pescar?"*. El
-**lago de la pesquera** (etapa G, base `1434,1458` en la aldea 2, cota `120`) era una **plaza de césped** con la
+**lago de la pesquera** (etapa G, base `1434,1458` en la aldea 2, nivel del pueblo `120`) era una **plaza de césped** con la
 pasarela y los dos faroles encima.
 
 **Medido en su guardado** (81 columnas del lago y su orilla, `build/lago_pesquera.py`): en la capa que se pisa
-(`cota-1`) había **46 de césped**, 32 de arena y los 3 postes de la pasarela —**0 de agua**—; en `cota-2`, **46 de
-tierra** y solo **3 de agua**; el fondo de arena de `cota-3` estaba intacto. Las tres celdas de agua que quedaban eran
+(`nivel del pueblo-1`) había **46 de césped**, 32 de arena y los 3 postes de la pasarela —**0 de agua**—; en `nivel del pueblo-2`, **46 de
+tierra** y solo **3 de agua**; el fondo de arena de `nivel del pueblo-3` estaba intacto. Las tres celdas de agua que quedaban eran
 justo las **columnas de los postes**: la firma del relleno.
 
 **Causa (y es de ORDEN).** La pesquera se construyó en la **migración 46** y las migraciones siguientes vuelven a
-llamar a `farm(level, center)` (un argumento) → `prepararTerreno` → `nivelar(..., LEVEL_RADIUS = 64, cota)`, que
-**nivela la aldea entera**. `nivelar` **rellena los huecos de debajo de la cota** y daba por "terreno que sobra"
+llamar a `farm(level, center)` (un argumento) → `prepararTerreno` → `nivelar(..., LEVEL_RADIUS = 64, nivel del pueblo)`, que
+**nivela la aldea entera**. `nivelar` **rellena los huecos de debajo de el nivel del pueblo** y daba por "terreno que sobra"
 (`esTerrenoRecortable`) **cualquier** cosa con `fluidState`, **agua incluida**: como el lago está a 43-54 del centro
 (cae dentro del disco de 64), el nivelado lo tapó —`groundY` de esas columnas devuelve el techo del pozo, así que el
-bucle puso **tierra** en `cota-2` y **césped** en `cota-1`, y las columnas de los postes se salvaron porque ahí
+bucle puso **tierra** en `nivel del pueblo-2` y **césped** en `nivel del pueblo-1`, y las columnas de los postes se salvaron porque ahí
 `groundY` sí es sólido y el bucle quedaba vacío—. Y **no se reparaba solo** porque `pesqueraConstruida` se conforma con
 el **agua O el barril**: con el barril en pie, `asegurarPesquera` salía por el early-return.
 
@@ -493,7 +493,7 @@ el **agua O el barril**: con el barril en pie, `asegurarPesquera` salía por el 
 ### I28 · La celda central del kiosco es DE LA CAMPANA (y el sello no es un bloque)
 El jugador: *"sitúa la campana justo en el centro del kiosco y quita el beacon pues nunca se usa"*.
 
-**Medido en su guardado** (aldea 2, centro `1414,1414`, cota `120`, `build/kiosco_dump.py`): la campana estaba en
+**Medido en su guardado** (aldea 2, centro `1414,1414`, nivel del pueblo `120`, `build/kiosco_dump.py`): la campana estaba en
 `(1413,121,1415)` —**una celda al oeste y una al sur** del centro— y la celda central `(1414,121,1414)` estaba en
 **aire**; el **farol** colgaba en `(1414,124,1414)` (`hanging=true`, con bloque sólido encima: **I14 ✔**) y el
 **beacon** del sello ocupaba la **celda central del TEJADO** (`1414,125,1414`), que es de donde **cuelga** el farol.
@@ -557,7 +557,7 @@ el hueco, el pie y el tope.)*
 El jugador reportó *"las escaleras para el 3er piso están bloqueadas"* (era la taberna, I26) y, al ir a mirar la
 **barraca de la milicia** —el otro edificio con escalera y el que tiene las **8 camas** arriba—, la suya estaba peor.
 
-**Medido en su guardado** (aldea 2, base `1369,1436`, cota `120`: forjado `123`, dormitorio `124`, tejado `127`; con
+**Medido en su guardado** (aldea 2, base `1369,1436`, nivel del pueblo `120`: forjado `123`, dormitorio `124`, tejado `127`; con
 `build/barraca_dump.py` y `build/barraca_subida.py`, que aplica la regla del `maxUpStep` de I26 **escalón por
 escalón**):
 
@@ -635,7 +635,7 @@ queda **cogido sin dueño** para siempre (I23: vanilla solo suelta el ticket al 
   **a propósito** (un `BARREL` sería el puesto del pescador) y el **horno normal** del desván no es puesto de nadie
   (el del cocinero es el **ahumador**).
 
-**Medido** (aldea 2, centro `1414,1414`, cota `120`; `build/barraca_mesa.py`, que barre los bloques de las **tres**
+**Medido** (aldea 2, centro `1414,1414`, nivel del pueblo `120`; `build/barraca_mesa.py`, que barre los bloques de las **tres**
 aldeas del guardado): el único puesto que **no** era de un oficio del pueblo era la **mesa de cartografía de la
 barraca** (`1371,120,1438`), y además caía en la celda de la **paca** del maniquí de entrenamiento sureste (el
 constructor coloca el maniquí **antes** y la mesa se lo comía: el maniquí se quedaba **sin base**, con la calabaza y
@@ -656,7 +656,7 @@ un animal en el hueco, así que la navegación ni lo intenta) y se queda **empuj
 el pueblo ya tenía documentado para el almacén y el ahumador (*"la navegación no puede llegar a un bloque sólido y el
 aldeano se queda dando vueltas alrededor"*, ver `VillageStorage.puntoDeApoyo`), pero con un **cercado** de por medio.
 
-**Medido** (arnés, aldea 2, centro `1414,1414`, cota `120`, de día, guardia espadachín del puesto 0): el puesto del
+**Medido** (arnés, aldea 2, centro `1414,1414`, nivel del pueblo `120`, de día, guardia espadachín del puesto 0): el puesto del
 corral era **dentro** del cercado (`puntoDeApoyoAnexo`, a **3,0** del portón) y el guardia se quedaba en
 `1454,3,120,1412,3` —pegado a la valla oeste, a **4,0** del puesto— con `mejor = 4,08` que **no bajaba**, en **dos
 rondas seguidas de 200 ticks**. Y cuando el portón se abría de casualidad y entraba, se plantaba **en el hueco del
@@ -828,7 +828,7 @@ El error de esta familia es **un bloque de más hacia fuera**: se construye el a
 es "la del muro" cuando la del muro es **otra** celda, y queda una **columna de aire** entre los dos. No se ve como un
 agujero: se ve como un techito **suelto**, apoyado en sus postes y **sin tocar** la casa.
 
-**Medido** (guardado del jugador, aldea 2, taberna en `1438,1428`, cota `120`; lo reportó él: *"el techito que está en
+**Medido** (guardado del jugador, aldea 2, taberna en `1438,1428`, nivel del pueblo `120`; lo reportó él: *"el techito que está en
 la entrada de la taberna está incompleto porque no conecta con la pared"*): la **pared** está en `x = bx` y el porche
 salía hasta `bx-2` y `bx-3`, así que **`bx-1` estaba de aire en todas sus alturas: 7 de 7 celdas**. Con la fila que
 faltaba —escalón en `bx-1` a la altura de la de dentro y su tablón de soffito debajo, de punta a punta— el arnés
@@ -847,20 +847,20 @@ La valla de roble mide **1,5**, y un aldeano **anda** hacia arriba **0,6** (`max
 ahí salen los dos escalones que el jugador vio: *"siguen subiendo a la valla para poder entrar en vez de usar las
 compuertas"*.
 
-- **Lo que se PISA a `cota`** (un bloque sólido pegado por fuera) da una tapa a **`cota+1`**: de ahí al lomo de la
+- **Lo que se PISA a `nivel del pueblo`** (un bloque sólido pegado por fuera) da una tapa a **`nivel del pueblo+1`**: de ahí al lomo de la
   valla hay **0,5** y se **sube andando**.
-- **Lo que se pisa a `cota+0,5`** (una **losa** a ras del suelo) está a **1,0** del lomo: se **sube saltando**.
+- **Lo que se pisa a `nivel del pueblo+0,5`** (una **losa** a ras del suelo) está a **1,0** del lomo: se **sube saltando**.
 
 **Medido** (arnés, aldea 2, partida del jugador copiada) — las **dos** causas, y las dos eran construcción del pueblo:
 
 1. **El COMPOSTERO del granjero** (su puesto de trabajo) estaba a `corner.x-2`, **pegado** a la valla
-   (`corner.x-1`), con la tapa a `cota+1`: el granjero se subía por su propio compostero. Se veía en el guardado en
+   (`corner.x-1`), con la tapa a `nivel del pueblo+1`: el granjero se subía por su propio compostero. Se veía en el guardado en
    los **tres** parcelas (3 celdas de valla por parcela desde las que se podía subir, todas desde el compostero).
    **Migración 64**: el compostero pasa a `corner.x-3` (`COMPOSTERO_DX`), con una celda de aire entre él y la valla.
 2. **Las LOSAS que tapan la ACEQUIA**, en sus **dos extremos**: la acequia va tapada con una losa (para que el agua
-   no se congele y para que nadie se caiga dentro), la losa se pisa a `cota+0,5` y las **compuertas del parcela caen
+   no se congele y para que nadie se caiga dentro), la losa se pisa a `nivel del pueblo+0,5` y las **compuertas del parcela caen
    justo en la fila del medio** (el centro de los lados), así que el aldeano **saltaba la compuerta** desde la losa
-   del extremo. Medido: **42** lecturas de un granjero de pie sobre la valla (`y = cota+1,5`) en una corrida de 4 min,
+   del extremo. Medido: **42** lecturas de un granjero de pie sobre la valla (`y = nivel del pueblo+1,5`) en una corrida de 4 min,
    **todas** en la fila de la acequia y en los extremos del anillo. **Migración 65**: los dos extremos de la acequia
    vuelven a ser **celdas de cultivo** (se quita la losa y el agua se vuelve tierra de cultivo regada), así que la
    capa que se pisa queda a la altura de la tierra (119,94) y desde ahí **no se llega** al lomo de la valla. De paso
@@ -1004,10 +1004,10 @@ Tres reglas que salieron del mismo encierro (el granjero que no podía salir del
    siempre**. Medido: el granjero tenía elegida la compuerta **norte** (a 7,09 bloques) en vez de la **este** (a
    **0,87**), así que «vigilaba» una puerta lejana y no abría la suya; por eso se pasaba la noche dentro del parcela con
    la cama al otro lado. Ahora, en `tick`, si `distancia > ABRIR` se vuelve a elegir la más cercana de verdad.
-2. **Validar la lista guardada.** La lista de portones se cachea **una vez por goal** con la cota del momento: si el
+2. **Validar la lista guardada.** La lista de portones se cachea **una vez por goal** con el nivel del pueblo del momento: si el
    goal se creó con la aldea a medio migrar, sus posiciones caen al aire y el aldeano se queda **sin poder abrir
    ninguna puerta**. Ahora, si ninguna puerta de la lista está **cerca y es una puerta de verdad** (`FenceGateBlock`),
-   se recalcula (como mucho una vez cada 5 s: la cota mira el terreno).
+   se recalcula (como mucho una vez cada 5 s: el nivel del pueblo mira el terreno).
 3. **Hacer REHACER el camino al abrir** (`abrir`): la ruta que traía el aldeano se calculó con la compuerta **cerrada**
    —el juego no le deja planificar a través de una puerta de valla cerrada—, así que acaba en su propia casilla y el
    aldeano **no se mueve**; la compuerta se cierra a los 5 s sin que nadie la cruce y vuelta a empezar. Al abrir se le
@@ -1165,7 +1165,7 @@ lo que ya no pasa es que eso se quede ahí.
 El jugador, con la captura del cofre lleno de comida delante: *"me dice que la aldea pasa hambre y que la despensa
 está vacía, sin embargo hay bastante comida"*.
 
-**Medido** en su guardado y su log (aldea 2, centro `1414,1414`, cota `120`; `build/hambre_medida.py` vuelca la comida
+**Medido** en su guardado y su log (aldea 2, centro `1414,1414`, nivel del pueblo `120`; `build/hambre_medida.py` vuelca la comida
 de cada aldea y la marca `DevilRpgUltimaComida` de cada aldeano):
 
 | Qué | Lo que decía |
@@ -1206,7 +1206,7 @@ guardado** con `build/hambre_medida.py` (la comida de cada aldea y la marca de c
 El jugador, mirando su parcela: *"¿por qué hay partes de la parcela que no tienen plantado nada? se supone que los
 granjeros deben tener todas ocupadas"*.
 
-**Medido** en su guardado (`build/huerta_vacias.py`, celda a celda, aldea 2 cota `120`): los tres parcelas tienen
+**Medido** en su guardado (`build/huerta_vacias.py`, celda a celda, aldea 2 nivel del pueblo `120`): los tres parcelas tienen
 **66, 69 y 71** de sus **72** celdas plantables ocupadas, y las **16** que faltan son `farmland` **con el hueco de
 arriba libre** (sembrables y vacías), **casi todas en los carriles por los que se entra y se sale del parcela** (los
 dos extremos de la acequia y las columnas de los lados). En la **aldea 0**, que lleva más tiempo sin verse, faltan
@@ -1234,7 +1234,7 @@ y cuenta las celdas que no tienen nada.
 
 El jugador: *"el ganadero quiere ir a la taberna y no puede, la única salida está obstruida por una lámpara"*.
 
-**Medido** en su guardado (aldea 2, centro `1414,1414`, cota `120`; `build/anexo_porton.py` y, ya versionada, la
+**Medido** en su guardado (aldea 2, centro `1414,1414`, nivel del pueblo `120`; `build/anexo_porton.py` y, ya versionada, la
 auditoría):
 
 - El **portón del corral** (`1455,120,1414`, `oak_fence_gate[facing=west]`) tenía un farol **en la celda de la
@@ -1327,7 +1327,7 @@ vez: *un paso que va detrás de otro que no termina nunca no se alcanza jamás*.
 
 El jugador: *"Zacarías según va a dormir pero está afuera y no toma cama"*.
 
-**Medido en su guardado** (aldea 2, cota 120): Zacarías (`Sin oficio`) tenía por cama la de la **posada**
+**Medido en su guardado** (aldea 2, nivel del pueblo 120): Zacarías (`Sin oficio`) tenía por cama la de la **posada**
 (`1446,125,1429`, segunda planta de la taberna) y estaba en la calle, en `(1446,120,1427)` — **la misma X/Z, una
 planta más abajo**— con la etiqueta *"Yendo a dormir"* y sin acostarse. La celda de espera que le calculó el reparto
 era `(1446,125,1427)`, también **arriba**. Y el log lo cantaba en bucle para varios aldeanos
@@ -1468,12 +1468,12 @@ contrario en `VillageStorage`: *"el constructor —que también es recolector—
    que el farol del portón, I54): `quitarElFarolDeLaEscalera` **devuelve la celda** y el latido la borra del plano.
 
 **Límite conocido (dicho a propósito)**: el obrero trabaja en la banda `REPAIR_MAX_UP`/`REPAIR_MAX_DOWN` (**+5/−6**
-sobre la cota), así que **los tejados quedan fuera**: medido en la aldea 0, **27** losas de la placa del tejado de la
+sobre el nivel del pueblo), así que **los tejados quedan fuera**: medido en la aldea 0, **27** losas de la placa del tejado de la
 taberna (a **+11**) pendientes y sin nadie que las reponga. Subir a un tejado es otra obra, no una reparación de
 planta.
 
 **Se comprueba contra el guardado** con `build/obras_pendientes.py` (cuántas celdas del plano están pendientes, de
-qué bloque, a qué distancia y a qué altura sobre la cota) y en el log (el tira y afloja del farol de la escalera
+qué bloque, a qué distancia y a qué altura sobre el nivel del pueblo) y en el log (el tira y afloja del farol de la escalera
 **desaparece**, y el obrero firma sus bloques con `Repuso …`).
 
 ### I61 · Un golem no aparece (ni se queda) en un piso de arriba
@@ -1481,7 +1481,7 @@ qué bloque, a qué distancia y a qué altura sobre la cota) y en el log (el tir
 El jugador: *"los golems no deben spawnear en el 3er piso"*.
 
 **Medido** en su guardado: de los **5** golems de hierro de las tres aldeas, **uno** estaba en
-`(1446.8,131,1430.4)` de la aldea 2 → **+11** sobre la cota (`120`) = **el desván de la taberna** (el 3.er piso), y
+`(1446.8,131,1430.4)` de la aldea 2 → **+11** sobre el nivel del pueblo (`120`) = **el desván de la taberna** (el 3.er piso), y
 al lado del aldeano que lo había sumado (Onofre, el cocinero, dormía en `(1442,131,1432)`, a **4** bloques).
 
 **Por qué.** El golem de hierro de vanilla lo **suma un aldeano** cuando da el aviso de alarma, y lo hace **donde
@@ -1490,12 +1490,12 @@ el pueblo y se queda atrapado arriba—. Y el golem del **mod** (`VillageGenerat
 `spawnY` → `groundY`, que en una columna con una construcción devuelve **su tejado**.
 
 **Regla:** un golem que entra al mundo **dentro de una aldea y por encima del suelo** se **baja a una casilla libre
-a la cota**, al lado de la plaza (suelo firme y **seco**, dos celdas libres: nunca al agua ni dentro de un bloque).
+a el nivel del pueblo**, al lado de la plaza (suelo firme y **seco**, dos celdas libres: nunca al agua ni dentro de un bloque).
 Se hace en la **entrada al mundo** —el mismo sitio donde el sello corta los spawns, así que vale para las **dos**
 vías (vanilla y mod)— y el **latido** lo repite para los golems que **ya** estaban en alto (el del guardado se baja
 en la primera pasada, sin esperar a que se muera). Es **idempotente**: a un golem a nivel del suelo no se le toca.
 
-**Se comprueba contra el guardado** (el `dy` de cada golem sobre la cota de su aldea: tiene que ser **0**) y en el
+**Se comprueba contra el guardado** (el `dy` de cada golem sobre el nivel del pueblo de su aldea: tiene que ser **0**) y en el
 log (`un golem aparecio N bloque(s) por encima del suelo (dentro de un edificio): se le baja a ...`).
 
 ### I62 · La milicia aprende matando (y su tope es el del zombie más fuerte)
@@ -1552,7 +1552,7 @@ los spawns de dentro. Pero había un agujero real: `CustomSpawner` miraba el sel
 posiciones del grupo **se sorteaban otra vez** (`findSpawnPosition`) sin comprobación, así que un bicho del grupo
 podía aparecer dentro aunque el ancla estuviera fuera.
 
-**Regla:** el sello se comprueba para **cada** posición de spawn. Y la altura se mide con la **cota de la aldea**
+**Regla:** el sello se comprueba para **cada** posición de spawn. Y la altura se mide con la **nivel del pueblo de la aldea**
 (I12), no con `level.getSeaLevel()` con un margen de 96: con el nivel del mar, una cueva veinte bloques por debajo
 de la plaza y una loma treinta por encima contaban como "dentro de la aldea" (el sello cortaba spawns que no eran de
 la aldea y no distinguía bien el suelo del pueblo).
@@ -1984,7 +1984,7 @@ está marcada como que fue invadida por zombis la primera vez que se llega, camb
 mueren y las construcciones quedan destruidas con telarañas. El bug aquí es que yo me alejé de la aldea y cuando
 regresé se disparó esta función de aldea abandonada cuando no tendría que haber pasado"*.
 
-**Medido en su guardado** (21-sep-2026, 21:02): `Fallen = [1]`, y la aldea **1** (990,990, cota 96) cayó el
+**Medido en su guardado** (21-sep-2026, 21:02): `Fallen = [1]`, y la aldea **1** (990,990, nivel del pueblo 96) cayó el
 **17-sep a las 18:50:09** —`Aldea 1 queda en ruinas: 1483 bloques cambiados` + `La aldea 1 ha CAÍDO y queda en
 ruinas`—, con el chat del asedio **clásico** (*"La aldea cayó… El objetivo avanza."*). La última posición del jugador
 al cerrar el juego es **(975, 110, 997)**: dentro de esa aldea en ruinas. Su aldea viva (la 2) está entera:
@@ -2194,7 +2194,7 @@ sumaban:
   kiosco están todos dentro de ese disco"*.
 
 **Regla**: el veto protege **la obra del pueblo** (casas, plaza, huerta, kiosco), pero hay una **banda** —el anillo de
-la valla, `MURALLA_ANCHO` = 5 bloques hacia dentro y hacia fuera, y de la cota hacia arriba (`MURALLA_ALTO` = 6), nunca
+la valla, `MURALLA_ANCHO` = 5 bloques hacia dentro y hacia fuera, y de el nivel del pueblo hacia arriba (`MURALLA_ALTO` = 6), nunca
 hacia abajo— donde **sí se pica**: es la **brecha** por la que entra un asedio. La usan los **dos** caminos que rompen
 bloques (`breakBlockTowards` de la marcha y `BreakBlockGoal`, el que se abre paso hacia un objetivo), con un solo
 ayudante (`protegidoPorLaAldea`), porque **el veto estaba al revés**: de más en la marcha (la muralla) y **de menos** en
@@ -2276,23 +2276,23 @@ el hoyo abierto a la vista. El obrero daba la aldea por terminada.
 62): una celda de **aire** por debajo de **la capa de tránsito**, con **suelo de aldea justo debajo** (`dirt`, `grass`,
 `coarse_dirt`, `podzol`, `rooted_dirt`, `mud`, `gravel`, `sand`, `stone`, andesita, diorita, granito, `dirt_path`,
 `farmland`) y hasta `AGUJERO_MAX_PROFUNDIDAD` = 4 hacia abajo. Se tapa **de abajo arriba** (cada celda tapada deja suelo
-debajo de la de encima) con **hierba en la capa de arriba** (`cota - 1`) y **tierra** por debajo. Nunca se pisa una celda
+debajo de la de encima) con **hierba en la capa de arriba** (`nivel del pueblo - 1`) y **tierra** por debajo. Nunca se pisa una celda
 que ya tenga bloque: si el jugador puso algo ahí, se queda.
 
-Dos fallos medidos en el primer intento (los dos en el **mismo** sitio: la cota es la Y del **aire** sobre el suelo,
+Dos fallos medidos en el primer intento (los dos en el **mismo** sitio: el nivel del pueblo es la Y del **aire** sobre el suelo,
 `VillageGenerator.groundY` devuelve `suelo + 1`):
 
 - **El agujero era el propio aldeano.** La banda admitía `dy` hasta **+1**, así que el aire donde el aldeano tiene los
   **pies** —que tiene suelo debajo, la hierba— contaba como agujero. Medido con el arnés (`MEDIR_AGUJERO`, aldea 2 de la
   copia): los **tres** obreros devolvían `veObjetivo` = **su propia `blockPosition`**, o sea que su meta era poner un
-  bloque **donde estaban de pie**. Ahora la banda es `cota - 1` hacia abajo, nunca la capa de arriba.
-- **La hierba iba a la capa de abajo.** El bloque de la capa de arriba es `cota - 1`, no la cota: el cráter pedía
-  `minecraft:dirt` en la celda del **césped** del suelo de la aldea. Ahora `cota - 1` es `grass_block` y por debajo,
+  bloque **donde estaban de pie**. Ahora la banda es `nivel del pueblo - 1` hacia abajo, nunca la capa de arriba.
+- **La hierba iba a la capa de abajo.** El bloque de la capa de arriba es `nivel del pueblo - 1`, no el nivel del pueblo: el cráter pedía
+  `minecraft:dirt` en la celda del **césped** del suelo de la aldea. Ahora `nivel del pueblo - 1` es `grass_block` y por debajo,
   `dirt`.
 
 **Medido de punta a punta** (misma corrida, cráter de 3x3x2 abierto por el arnés en `(1421, 120..119, 1421)` de la copia,
-cota 120): `findRepairTarget` → `BlockPos{x=1421, y=119, z=1421}`; el cráter queda `... ... ...` en la capa de tránsito
-y **`GGG GGG GGG` en `cota - 1`** (hierba, sin escalón) entre t=600 y t=800; y al final `veObjetivo=null` (la aldea vuelve
+nivel del pueblo 120): `findRepairTarget` → `BlockPos{x=1421, y=119, z=1421}`; el cráter queda `... ... ...` en la capa de tránsito
+y **`GGG GGG GGG` en `nivel del pueblo - 1`** (hierba, sin escalón) entre t=600 y t=800; y al final `veObjetivo=null` (la aldea vuelve
 a estar completa). Lo tapó **Anselmo (Recolector)** con la etiqueta *"Reparando la aldea"* → *"Repuso tierra"* → otra vez
 *"Recogiendo"*. Ver I91: el que lo tapó es el recolector **porque** su reparación va a prioridad 3.
 
@@ -2467,12 +2467,12 @@ larga); los **objetivos de armas y armadura del HERRERO** ("no están haciendo s
 tocar**, que es la otra mitad de lo que pidió el jugador; y quién cogía 2 espadas y 1 escudo sin log en la corrida
 anterior. El **modelo** del guardia con su equipo es del CLIENTE.
 
-### I95 · Un suelo a la COTA es una plataforma de un bloque: o lleva ESCALÓN, o se construye a `cota - 1`
+### I95 · Un suelo a la NIVEL DEL PUEBLO es una plataforma de un bloque: o lleva ESCALÓN, o se construye a `nivel del pueblo - 1`
 
 El jugador: *"el punto de apoyo del almacén (517,64,666) es inalcanzable"*.
 
-**Medido** en su guardado (aldea 0, centro `470,646`, cota **63**; `build/almacen_mapa.py`, solo lectura): el
-cobertizo del almacén tenía su suelo de **`stone_bricks` en `y=63`** —la **cota**, o sea la capa que se pisa— con el
+**Medido** en su guardado (aldea 0, centro `470,646`, nivel del pueblo **63**; `build/almacen_mapa.py`, solo lectura): el
+cobertizo del almacén tenía su suelo de **`stone_bricks` en `y=63`** —la **nivel del pueblo**, o sea la capa que se pisa— con el
 **césped del pueblo en `y=62`**, así que la capa de tránsito del cobertizo era **64** y
 `VillageStorage.puntoDeApoyo` devolvía exactamente `(517,64,666)`. Subir ahí es un escalón de **1,0** y el juego sube
 **0,6 andando**: **ningún aldeano podía subir**. Lo dejaban aparcado 5 min (I33) **siete aldeanos distintos** —los dos
@@ -2481,20 +2481,20 @@ herreros, el cocinero, el ganadero, el leñador...— y los **seis guardias**, c
 en el ganadero **Zacarias**, `DevilRpgPuntoFallido = (517,64,666)` con `DevilRpgPuntoFallidoHasta = 80965` y el reloj
 del mundo en `75127` —o sea, **aparcado en ese mismo momento**—.
 
-**El kiosco es la otra plataforma a la cota y NO falla**, y esa diferencia es la regla: el kiosco tiene **escaleras en
+**El kiosco es la otra plataforma a el nivel del pueblo y NO falla**, y esa diferencia es la regla: el kiosco tiene **escaleras en
 sus cuatro entradas** (medido: `E` en las cuatro celdas centrales de sus lados, `y=63`), o sea que el escalón **se
 sube**. Los otros dos cobertizos del pueblo —el del **corral anexo** y el **taller del leñador**— no tienen el
-problema porque ponen el suelo a **`cota - 1`** y se entra **andando** (su código lo dice: *"El SUELO (cota - 1: la
-capa que se pisa es la cota, I1)"*).
+problema porque ponen el suelo a **`nivel del pueblo - 1`** y se entra **andando** (su código lo dice: *"El SUELO (nivel del pueblo - 1: la
+capa que se pisa es el nivel del pueblo, I1)"*).
 
-**Regla:** un suelo **a la cota** es una **plataforma de un bloque entero** y, si el pueblo tiene que subirse a ella,
-**lleva su escalón** (como el kiosco) **o va a `cota - 1`** (como los dos cobertizos). El almacén se pasa a la segunda
+**Regla:** un suelo **a el nivel del pueblo** es una **plataforma de un bloque entero** y, si el pueblo tiene que subirse a ella,
+**lleva su escalón** (como el kiosco) **o va a `nivel del pueblo - 1`** (como los dos cobertizos). El almacén se pasa a la segunda
 convención (**migración 69**, `VillageGenerator.bajarElAlmacenAlSuelo`): el cobertizo se construye con el suelo a
-`cota - 1`, el interior despejado de la cota hacia arriba, y `VillageStorage` lee **sus cofres y su punto de apoyo en
-la COTA** (`pos`, `puntoDeApoyo`), no en `cota + 1`.
+`nivel del pueblo - 1`, el interior despejado de el nivel del pueblo hacia arriba, y `VillageStorage` lee **sus cofres y su punto de apoyo en
+la NIVEL DEL PUEBLO** (`pos`, `puntoDeApoyo`), no en `nivel del pueblo + 1`.
 
 En las aldeas ya construidas lo **baja** un reparador, y es **idempotente** (su guardia es la capa de piedra del
-cobertizo **viejo**, en la cota: si ahí no hay `stone_bricks`, no hay nada que bajar), **solo toca los bloques del
+cobertizo **viejo**, en el nivel del pueblo: si ahí no hay `stone_bricks`, no hay nada que bajar), **solo toca los bloques del
 cobertizo** (piedra del suelo, troncos de los postes, tablones del tejado, el farol y sus cofres) y **saca lo de sus
 cofres a la mano** antes de tirarlos (I6) para devolverlo al almacén nuevo; lo que no quepa se deja en el suelo del
 cobertizo, donde lo recoge el recolector. Va **antes** de tirar el plano (I8).
@@ -2543,7 +2543,7 @@ es una espera **infinita**.
 ### I97 · Un destino FIJO aparcado no se vuelve a elegir (y lo que recoge el ganadero se mide con SU alcance)
 
 Dos cosas del mismo reporte del jugador (*"el ganadero no coge los huevos del gallinero"*), las dos medido en su
-partida (aldea 0, centro `470,646`, cota 63):
+partida (aldea 0, centro `470,646`, nivel del pueblo 63):
 
 - **El ganadero tenía 4 huevos en el inventario y su destino fijo aparcado.** `DevilRpgPuntoFallido = (517,64,666)` (I95)
   y la etiqueta de **otro** goal (*"Recogiendo lo suyo"*). El goal de su oficio elegía el destino fijo
@@ -2612,15 +2612,15 @@ en esa lista** (la misma limitación que el reloj del asedio, I86) — esa parte
 
 El jugador, con captura: *"¿y por qué el kiosco tiene un bloque de tierra en vez de escaleras?"*.
 
-**Medido** en su guardado (aldea 0, kiosco en `470,646`, cota 63; `build/kiosco_tierra.py`): de las cuatro
+**Medido** en su guardado (aldea 0, kiosco en `470,646`, nivel del pueblo 63; `build/kiosco_tierra.py`): de las cuatro
 escaleras de las entradas, **tres están bien** (norte, este y oeste) y la del **sur** —la celda `(470,63,650)`, que
 el constructor pone con `escalera(Direction.NORTH)`— era un **`dirt_path`**, y lo era **en el mundo y en el plano**.
-Ese `dirt_path` **sobresale un bloque** (va en la cota, no a ras de suelo), que es exactamente lo que se ve en la
+Ese `dirt_path` **sobresale un bloque** (va en el nivel del pueblo, no a ras de suelo), que es exactamente lo que se ve en la
 captura.
 
 **Causa (de ORDEN):** los caminos se dibujan **después** del kiosco y `VillageGenerator.line()` pone el camino en
 `groundY(px,pz) - 1`, o sea **sobre el bloque de superficie que encuentre**. En esa celda `groundY` ya veía la
-**escalera** (sólida en la cota) → el camino se pintó **en su celda**, se la comió, y como el **plano se captura
+**escalera** (sólida en el nivel del pueblo) → el camino se pintó **en su celda**, se la comió, y como el **plano se captura
 escaneando el mundo**, el plano se quedó con el camino y el obrero lo daba por bueno: la escalera no volvía nunca.
 
 **Regla:** `line()` **solo sustituye terreno natural** (`esTerrenoNatural`): una escalera, una losa, tierra labrada o
@@ -2661,7 +2661,7 @@ o sea que no vuelve a dar experiencia).
 Lo preguntó el jugador: *"los herreros también hacen flechas y el arquero las usa y las dispara? … que en el almacén
 haya flechas. ¿Qué otra cosa se necesitaría?"*.
 
-**Medido en su guardado y sus logs** (aldea 0, cota 63; `build/flechas_medida.py`):
+**Medido en su guardado y sus logs** (aldea 0, nivel del pueblo 63; `build/flechas_medida.py`):
 
 | Eslabón | Estado |
 |---|---|
@@ -2701,7 +2701,7 @@ herramientas para que el minero haga su trabajo, similar a los otros 2 herreros.
 | Pieza | Regla | Por qué |
 |---|---|---|
 | **Solar y caseta** | Solar **11×11** en `rel (-9, +12)` (base `456,653`, eje `461,658`), a **15** de la plaza y **58** del almacén; caseta **7×7** con el **cortapiedras** (su puesto de trabajo), **horno**, **balsa de agua a ras del suelo**, cama y farol | El solar se midió libre con `build/solar_mina.py`; el cortapiedras es el puesto del oficio `MASON` (I31) y sin él el juego le borra el oficio |
-| **Caracol** | Radio **4** (anillo de **32** celdas), **medio bloque de bajada por celda** (**16** por vuelta), de la cota a `MINA_FONDO = -58` (**240 pasos**) | Un bloque entero **no se sube** andando (I26/I95: `maxUpStep` 0,6) y la mina se recorre **en los dos sentidos** |
+| **Caracol** | Radio **4** (anillo de **32** celdas), **medio bloque de bajada por celda** (**16** por vuelta), de el nivel del pueblo a `MINA_FONDO = -58` (**240 pasos**) | Un bloque entero **no se sube** andando (I26/I95: `maxUpStep` 0,6) y la mina se recorre **en los dos sentidos** |
 | **Pieza del caracol** | **Losa** en los pasos pares y **adoquín entero** en los impares | **No escaleras**: una escalera tiene la cara alta en **una** dirección (I26) y el anillo tiene **esquinas**; en una esquina el que sube sale por el lado del escalón y el siguiente está un bloque entero más abajo (**1,0, no se sube**). La losa es uniforme en las cuatro direcciones. Comprobado celda a celda (`build/mina_geometria.py`): **todos** los saltos son 0,5 |
 | **Soportes** | Marco de **dos postes (2 de alto) y su viga** cada **16 escalones** (8 bloques) en el caracol, y cada **8 celdas** en las galerías | Con uno cada 4 escalones el pueblo no da abasto de tablones (8 marcos por vuelta): medido, lo asierra el herrero de herramientas |
 | **Galerías** | Cada **8 bloques** de descenso, **24** celdas en cruz (norte, este, sur, oeste), con su marco y su antorcha | Es lo que "saca minerales" de verdad, y en cruz para no agujerear siempre el mismo lado |
@@ -2777,7 +2777,7 @@ de uso por celda, la durabilidad de verdad: 250 celdas el de hierro) y cuando se
    taberna no le da la ración se quedaba plantado en la puerta (medido: minutos sin cavar y sin comer). Ahora espera
    `ESPERA_DE_COMIDA_MAXIMA` (20 s) y, si no come, vuelve al tajo.
 
-**Medido con el arnés** (`MEDIR_MINERO`, corridas sobre copias de su partida: aldea 0, cota 63, 240 pasos hasta el
+**Medido con el arnés** (`MEDIR_MINERO`, corridas sobre copias de su partida: aldea 0, nivel del pueblo 63, 240 pasos hasta el
 fondo):
 
 | Qué | Medida |
@@ -2876,10 +2876,10 @@ cuando ya puede ir a la despensa a dejar todo"*. Tres cosas, las tres medidas co
    cortaba a las **8-11 unidades** y el parcela se quedaba en **12-15 maduras para siempre** (medido). Ahora
    `SEMILLAS_PARA_COMPOSTAR = 8` (tope 16) y el compostero se atiende en cuanto hay 4 de sobra.
 3. **El rescate no la veía**: `rescatarAldeanosAtrapados` solo miraba a los aldeanos a **más de 4 bloques** de la
-   cota; la granjera **Ursula**, congelada **dentro de su casa** en `428,65,669` (cota 63, su cama en el piso de
+   nivel del pueblo; la granjera **Ursula**, congelada **dentro de su casa** en `428,65,669` (nivel del pueblo 63, su cama en el piso de
    arriba y la escalera debajo de los pies), quedaba **exenta** y no la rescataba nadie: su parcela se quedaba con
    **36 plantas maduras** y en el log salía `no consigue llegar a 440,63,668` cada 5 min. Ahora se exime al que está
-   **en la calle por la altura de los pies** (`cota + 0,6`: lo que se sube andando, I26/I95), así que a los 30 s sin
+   **en la calle por la altura de los pies** (`nivel del pueblo + 0,6`: lo que se sube andando, I26/I95), así que a los 30 s sin
    moverse se le baja a la plaza.
 
 **Medido después**: parcela 0 **36 → 21 → 0** maduras (en cuanto pisó la calle), parcela 2 **15 → 9 → 6 → 0**, parcela 1
@@ -2943,7 +2943,7 @@ una vez `LLEVAR_TRIGO = 16`"*.
   semillas: ver `SEMILLAS_PARA_COMPOSTAR`).
 - **Y EL RESCATE DEL ATRAPADO CUENTA LA CELDA EN HORIZONTAL (x,z)**: el arreglo de la vuelta anterior (eximir al que
   está "en la calle" por la altura de los pies) **no bastaba**, y lo cazó el arnés: la granjera **Ursula** se quedaba
-  **botando** en la escalera de su casa (misma columna `428,669`, la Y oscilando entre **65 y 67** con la cota en 63)
+  **botando** en la escalera de su casa (misma columna `428,669`, la Y oscilando entre **65 y 67** con el nivel del pueblo en 63)
   más de **80 s** con su parcela 0 en **29 matas maduras** que no bajaban, y en el log **no salía ni un solo**
   `estaba atascado dentro de una casa`. La causa: `rescatarAldeanosAtrapados` guardaba la celda con
   `blockPosition().asLong()`, que **incluye la Y**, así que **cada bote reiniciaba el contador** de "lleva 30 s
@@ -2958,7 +2958,7 @@ una vez `LLEVAR_TRIGO = 16`"*.
 
 **RESUELTO EN LA MISMA VUELTA (migración 72): la puerta de la taberna al almacén.** El jugador dijo que sí a abrir el
 paso, y se abrió con una **puerta de servicio en el muro ESTE de la taberna** (`abrirElPasoDeLaTabernaAlAlmacen`), a la
-cota, **una celda al sur del centro del cobertizo** (la columna despejada de la rejilla de postes de 3 en 3, que es
+nivel del pueblo, **una celda al sur del centro del cobertizo** (la columna despejada de la rejilla de postes de 3 en 3, que es
 donde enfrente está el punto de apoyo) y con dos celdas de suelo llano al otro lado, así que **no hay escalón**. Es
 idempotente (si ya hay puerta no escribe; si el paso ya está en aire no le pone una puerta a un boquete) y va **antes
 de tirar el plano** (I8), o sea que la puerta entra en el plano y el obrero la mantiene.
@@ -3149,7 +3149,7 @@ puede distinguir un resto de un poste del pueblo.
 
 **Regla:**
 - **Alrededor del tocón** (`limpiarAlrededorDelTocon`): después de cada tala se barre una caja de `RADIO_LIMPIEZA` (12)
-  de ancho y desde la cota − 2 hasta la cota + `ALTURA_MAX` + 6, y se rematan los troncos colgando que haya dentro. Es
+  de ancho y desde el nivel del pueblo − 2 hasta el nivel del pueblo + `ALTURA_MAX` + 6, y se rematan los troncos colgando que haya dentro. Es
   lo que limpia "justo donde tala".
 - **En el monte, cerca de él** (`buscarRestoEnElMonte`): además del barrido de la arboleda, se buscan restos en un
   radio de 20 alrededor del **propio leñador**, y **solo fuera de la muralla** (y como mucho a `FENCE_RADIUS` + 40 del
@@ -3859,11 +3859,11 @@ desde `507,46,613` y ahí hay **agua** (`W` en `505..507,611..612` a `y=45..46`)
 El recolector (`VillagerCollectGoal`) era el que más se rendía de la aldea: **64 de las 159** rendiciones de una
 corrida larga, y **62** de ellas con solo dos patrones, los dos medidos:
 
-1. **COSAS ENCIMA DE UN TEJADO.** 20 rendiciones con destino `424/426/427, 67, 670`: `67` es **`cota + 4`** y el
+1. **COSAS ENCIMA DE UN TEJADO.** 20 rendiciones con destino `424/426/427, 67, 670`: `67` es **`nivel del pueblo + 4`** y el
    techo de la barraca está en **`y=66`** (medido con `build/slice_mina.py 421 429 667 673 65 68 "New World (2)"`:
    tablones en 66 y **aire en 67**), o sea que el objeto está **encima del tejado** y ahí no se sube. El filtro de
-   altura era `item.getY() > cota + ALTURA_MAXIMA` con **4**, que justo lo dejaba pasar. Bajado a **3** (la calle
-   es `cota`; con 4 se colaba el tejado).
+   altura era `item.getY() > nivel del pueblo + ALTURA_MAXIMA` con **4**, que justo lo dejaba pasar. Bajado a **3** (la calle
+   es `nivel del pueblo`; con 4 se colaba el tejado).
 2. **COSAS FUERA DEL MURO.** 35 rendiciones con destinos como `553,63,595` o `542,63,583` (a ~97 del centro, con
    la muralla en 62) y `ruta=1 nodos … alcanza=NO`. Medido con `tools/arnes/ruta_atasco.py 521 612 553 595 63`:
    **NO HAY RUTA** desde dentro hasta ese objeto, y el planificador del juego dice lo mismo (una ruta de **1 nodo**
@@ -4178,7 +4178,7 @@ mira **solo X/Z**, y el final de la galería del paso 32 (que sale **hacia fuera
 cae a **65 bloques del centro**, o sea fuera del muro de radio 62… **a 17 bloques bajo el suelo**. El muro es una valla
 **de la superficie**: por debajo de la capa del suelo no hay nada que cruzar (y el aldeano que está bajo tierra sale por
 su propio sitio, el caracol, que está **dentro** del pueblo). Arreglado con esa guarda en `pasoParaCruzarElMuro`
-(`villager.getBlockY() < cota-1 || destino.getY() < cota-1 → null`), y **medido**: la ruta del minero a la celda 21 de
+(`villager.getBlockY() < nivel del pueblo-1 || destino.getY() < nivel del pueblo-1 → null`), y **medido**: la ruta del minero a la celda 21 de
 la galería pasa a ser `22 nodos … alcanza=SI` (antes se iba al portón), la galería **se termina (24/24)** y el caracol
 **sigue bajando** (pasos 34 → 44).
 
@@ -4252,80 +4252,80 @@ O sea: el criterio del traspaso («que `hechas` suba y `pasos` siga creciendo si
 cumple `hechas` **24/24**, `pasos` **40** y el pedernal del almacén **subiendo a su objetivo**; y el minero, que antes
 se pasaba la corrida colando, **completa la misma galería en la mitad de ticks**.
 
-### I149 · LA COTA DE LA ALDEA **NO PUEDE MEDIRSE DOS VECES**: el pueblo modela el terreno del que sale (29-sep-2026)
+### I149 · LA NIVEL DEL PUEBLO DE LA ALDEA **NO PUEDE MEDIRSE DOS VECES**: el pueblo modela el terreno del que sale (29-sep-2026)
 
 **Lo que pasó, y lo pagó el jugador**: *«la taberna está duplicada una arriba de otra, casas duplicadas, casas flotando,
 parcelas en otro nivel»*. Su log lo enseñó entero, y **en tres vueltas**:
 
-1. **Primera lectura**: la aldea se reconstruía sola y la cota **subía en cada pasada** (`92 → 118 → 124 → 125 → 126 →
+1. **Primera lectura**: la aldea se reconstruía sola y el nivel del pueblo **subía en cada pasada** (`92 → 118 → 124 → 125 → 126 →
    127`), porque el pueblo **modela el terreno** («despejados 19602 bloques», «picos de las esquinas quitados») y
-   **`cotaDeLaPlaza` medía ese mismo terreno cada vez** que se le preguntaba (143 sitios). Con la cota nueva, todo lo
+   **`cotaDeLaPlaza` medía ese mismo terreno cada vez** que se le preguntaba (143 sitios). Con el nivel del pueblo nueva, todo lo
    construido quedaba «sin construir» → **volvía a levantar la aldea encima**.
 2. **Segunda lectura (un error mío)**: se culpó a una «regla del cielo» que se había metido el día antes en los
    **rellenos de terreno**. Se revirtió entera y **el bucle siguió** (el log del mundo nuevo: la aldea construida a la
-   cota **66** y en la pasada siguiente la **78**). O sea: **no era eso**.
+   nivel del pueblo **66** y en la pasada siguiente la **78**). O sea: **no era eso**.
 3. **La causa de verdad**: `cotaDeLaPlaza` **no tenía caché**. Y el primer caché que se puso **tampoco valía**, porque
-   usaba el **`BlockPos` completo como clave**… y **el centro de la aldea se pasa CON LA COTA DENTRO**
-   (`new BlockPos(x, cota, z)`): al moverse la cota **cambiaba la clave**, se volvía a medir y el caché no servía de
+   usaba el **`BlockPos` completo como clave**… y **el centro de la aldea se pasa CON LA NIVEL DEL PUEBLO DENTRO**
+   (`new BlockPos(x, nivel del pueblo, z)`): al moverse el nivel del pueblo **cambiaba la clave**, se volvía a medir y el caché no servía de
    nada. El log lo delata a la vista: **`614, 70, 598`** y luego **`614, 94, 598`** — mismo X y Z, **distinta Y**.
 
-**EL ARREGLO**: la cota es un **dato de la fundación**. Se mide **una vez** y se recuerda, con la clave en **mundo + X +
+**EL ARREGLO**: el nivel del pueblo es un **dato de la fundación**. Se mide **una vez** y se recuerda, con la clave en **mundo + X +
 Z** (nunca la Y).
 
 **MEDIDO, ya con el arreglo** (`build/medida-tanda12.log`, 22.000+ ticks sobre el guardado del jugador): **0 aldeas
-pre-generadas**, **0 kioscos colocados** (o sea, la cota quieta) y **una sola** taberna construida, con **0 avisos** de
-rendición. Contra el bucle anterior (una reconstrucción cada pocos segundos y la cota subiendo en cada pasada).
+pre-generadas**, **0 kioscos colocados** (o sea, el nivel del pueblo quieta) y **una sola** taberna construida, con **0 avisos** de
+rendición. Contra el bucle anterior (una reconstrucción cada pocos segundos y el nivel del pueblo subiendo en cada pasada).
 
 **LA LECCIÓN**: **un caché con la clave mal elegida es peor que no tenerlo** (da falsa confianza), y el síntoma estaba
-en el log a la vista (la misma aldea, misma X/Z, cota distinta). Y de la primera vuelta queda lo bueno: **los rellenos
-del terreno no se tocan sin medir que la cota converge**, y **subir `CURRENT_LAYOUT`** dispara la migración, que
+en el log a la vista (la misma aldea, misma X/Z, nivel del pueblo distinta). Y de la primera vuelta queda lo bueno: **los rellenos
+del terreno no se tocan sin medir que el nivel del pueblo converge**, y **subir `CURRENT_LAYOUT`** dispara la migración, que
 construye **encima** de lo que ya hay si no lo retira.
 
 **Y LA CAUSA DE VERDAD, que apareció después**: `groundY` devuelve **el bloque más alto de la columna, tejados
-incluidos**, así que la aldea **medía su propio tejado**. El testigo «¿ya está construida?» buscaba el parcela a la cota
+incluidos**, así que la aldea **medía su propio tejado**. El testigo «¿ya está construida?» buscaba el parcela a el nivel del pueblo
 **74** (el tejado de la pasada anterior) mientras la construcción iba a la **51** (el suelo pelado) → no se reconocía
 nunca → reconstruía encima, cada vez más arriba (eso era *«las construcciones salen elevadas»* del principio, y el
 `92 → 118 → 124 → 125 → 126 → 127` de la primera vuelta). El caché no podía arreglarlo: cacheaba una medida que
 **cambiaba sola**. Y el destrozo *«solo muros, un hoyo enorme y la taberna hundida»*: el **muro es de TRONCOS** y el
 despeje **respeta los troncos** (para no talar árboles), así que sobrevivía a todas las limpiezas mientras el nivelado
-**recortaba el terreno** a la cota nueva → el muro quedaba **flotando sobre el hueco**.
+**recortaba el terreno** a el nivel del pueblo nueva → el muro quedaba **flotando sobre el hueco**.
 
 **EL ARREGLO DE VERDAD**: `VillageGenerator.sueloNatural(level, x, z)` — el suelo **natural** de la columna (baja desde
 `groundY` hasta el primer bloque de terreno, ignorando lo construido **y la vegetación**, que `esTerrenoNatural` da por
 buena), usado en las **dos** medidas: `levelTerrain` (la que construye) y `cotaDeLaPlaza` (la del testigo).
 
 **Y LA REPARACIÓN DE LAS ALDEAS YA APILADAS** (trazado **75**, `repararLaAldeaApilada`): quita **todo** lo que hay por
-encima de la cota dentro del recinto (**troncos incluidos**), nivela el terreno y **vuelve a levantar el pueblo entero**
+encima de el nivel del pueblo dentro del recinto (**troncos incluidos**), nivela el terreno y **vuelve a levantar el pueblo entero**
 —casas, templo, muro, huerta y **todos** los `asegurar*` del latido—, porque dejar el resto al latido lo dejaba a
 medias: el latido está detrás de `isUnderAttack`, `hayEnemigosDentro` y `vivos > 0`, y en el arnés (**asedio en pausa,
 `aldeanos=0`**) no corría nunca. Corre al entrar al pueblo (`manageNearby`), que es donde los chunks están cargados.
 
 **MEDIDO** (`build/medida-tanda15.log`, sobre el guardado destrozado del jugador): `REPARADA (quitados **2473** bloques
-de restos por encima de la cota **62** y terreno nivelado)`, **kiosco a la cota 62**, y **una sola vez** cada
+de restos por encima de el nivel del pueblo **62** y terreno nivelado)`, **kiosco a el nivel del pueblo (62)**, y **una sola vez** cada
 cosa —taberna, almacén, corral con sus 13 faroles y 10 animales, herrería, pesquera, taller del leñador, barraca de la
-milicia, casas, iglesia y muro—, todas a la **misma cota 62** y con **0 reconstrucciones**.
+milicia, casas, iglesia y muro—, todas a la **misma nivel del pueblo 62** y con **0 reconstrucciones**.
 
 **Y DOS FALLOS MÁS, LOS DOS MÍOS, QUE SALIERON AL MEDIR** (trazado **76**):
 
-1. **El caché de la cota congelaba la medida tomada ANTES del trabajo de terreno.** La primera llamada la hace el
+1. **El caché de el nivel del pueblo congelaba la medida tomada ANTES del trabajo de terreno.** La primera llamada la hace el
    **guardia del parcela**, al principio de `generate`, cuando el terreno todavía es el natural (en una ladera, la
    montaña cruda); el generador luego **despeja y nivela** y construye con **su** medida. Medido en el guardado del
    jugador: la aldea 1 se construyó a la **74** y el latido levantó después el **kiosco, el almacén y el corral a la
    103** — dos cotas en el mismo pueblo (eso era *«la segunda aldea está peor que antes»*). **El arreglo**: el generador
-   **FIJA** la cota en cuanto la conoce (`fijarLaCotaDeLaAldea`) y esa es la única para todos.
+   **FIJA** el nivel del pueblo en cuanto la conoce (`fijarLaCotaDeLaAldea`) y esa es la única para todos.
 2. **`sueloNatural` devolvía el bloque de suelo, no el nivel a los pies.** `groundY` (el heightmap) da el nivel al que
    **se anda**, así que mezclar las dos convenciones hacía que **cada reparación bajara el pueblo un bloque** (medido:
    aldea a 62 → la reparación midió 61 → la niveló a 61, con **12 avisos** de rutas rotas por el desnivel). **El
    arreglo**: devolver `y + 1`.
 
 **Y una cosa que se probó y NO vale** (queda dicho para no repetirla): saltarse la reparación cuando los testigos
-«parecen» estar a la cota. La aldea 1 tenía **su huerta y su kiosco a la 97** (la plaza) y aun así el **almacén y el
+«parecen» estar a el nivel del pueblo. La aldea 1 tenía **su huerta y su kiosco a la 97** (la plaza) y aun así el **almacén y el
 corral a la 103** y la **taberna y la mina a la 74**: pasó el testigo y se quedó partida. La reparación corre **una vez
 por aldea** al subir el trazado; el precio es demoler y volver a levantar un pueblo sano esa única vez.
 
 **MEDIDO, con el trazado 76, sobre la aldea 1 partida del jugador** (`build/medida-tanda20.log`): `REPARADA (quitados
-**20450** bloques de restos por encima de la cota **97**)`, y **kiosco, taberna, almacén, corral, herrería, pesquera y
-muro todos a la cota 97, una vez cada uno**, con **0 reconstrucciones y 0 avisos**. La aldea 0, que ya estaba sana a la
+**20450** bloques de restos por encima de el nivel del pueblo **97**)`, y **kiosco, taberna, almacén, corral, herrería, pesquera y
+muro todos a el nivel del pueblo (97), una vez cada uno**, con **0 reconstrucciones y 0 avisos**. La aldea 0, que ya estaba sana a la
 62, solo se pone al día (`medida-tanda18.log`).
 
 
@@ -4340,7 +4340,7 @@ arriba… si encuentras una regla que solucione este rollo y no conflictúe con 
 
 **Lo que había, medido** (`build/slice_mina.py` sobre el guardado del jugador):
 
-1. **La chimenea era un PILAR MACIZO** de ladrillo (`B`) de la cota a cinco bloques sobre el techo: **sin tiro**, el
+1. **La chimenea era un PILAR MACIZO** de ladrillo (`B`) de el nivel del pueblo a cinco bloques sobre el techo: **sin tiro**, el
    humo no podía salir y en el centro no cabía nada. **Eso sí era el caso.**
 2. **Y OJO — AQUÍ ME EQUIVOQUÉ Y QUEDA ESCRITO**: creí que el **hueco de la escalera** de la posada estaba
    **relleno de tierra** (leí el forjado **normal**, `z=661`, como si fuera el hueco). En el mapa de la taberna
@@ -4360,9 +4360,9 @@ if (!level.canSeeSky(pos)) {
 
 **Y no conflictúa con ninguna otra**: un hoyo debajo de un **árbol** sí ve el cielo (las hojas lo dejan pasar) y se
 tapa como siempre; la **mina** ya está excluida justo antes (`estaSobreElPozo`), así que su pozo y sus galerías siguen
-protegidos; y las reparaciones del **plano** no cambian (el plano solo mira dos bloques bajo la cota).
+protegidos; y las reparaciones del **plano** no cambian (el plano solo mira dos bloques bajo el nivel del pueblo).
 
-**Y la chimenea**: el caño pasa de pilar macizo a **tubo de 3×3 con el centro de aire** desde la cota hasta el remate
+**Y la chimenea**: el caño pasa de pilar macizo a **tubo de 3×3 con el centro de aire** desde el nivel del pueblo hasta el remate
 (el remate es de losas **alrededor**, con el centro abierto), y **la cara que da al hogar se deja sin tocar** —el hogar
 está justo al otro lado del muro—, así que el aire del hogar y el tiro quedan **conectados**. **MEDIDO** en el mundo
 (`build/slice_mina.py 503 513 656 662 63 70 world`): el caño es `B B` / `. B` —ladrillo alrededor y **aire en el
@@ -4373,7 +4373,7 @@ centro**— de `y=63` al remate. **La taberna vieja se rehace sola**: su testigo
 
 * **La fogata está en su hogar**: `y=63, z=660` sale `B B B C B B D B B B D` —el `C` (`campfire`) justo en `x=503`, la
   celda del hogar— y **encima suyo es aire**, así que el humo sube.
-* **El tiro, hueco y con paredes**: en `z=659` el caño sale `. B . B .` de la cota al remate — **aire en el centro** y
+* **El tiro, hueco y con paredes**: en `z=659` el caño sale `. B . B .` de el nivel del pueblo al remate — **aire en el centro** y
   **ladrillo a los dos lados**—, y la cara que da al hogar está abierta, así que el aire del hogar y el tiro están
   **conectados**.
 * **Y los tres rellenos** (tapagujeros del obrero, `nivelar` y `sellarSuelo`) respetan la regla del cielo.
@@ -4420,7 +4420,7 @@ etiqueta se repite en **tres** (2 · 5 · 7) — y la media de hoy (**0,83**: 0,
 * **Dos reales**: en el **piso de la taberna** (`suelo=dark_oak_planks`, `y=68`), con **`nav=[sin ruta]`** y la ruta
   **de un solo nodo: ella misma** (`cerebro=-`). Encerrada arriba. **Acaba saliendo** (después sigue con su oficio:
   `Guardando lo suyo`), así que es un tropiezo, no un bucle. **Sin arreglar.**
-* **Uno falso**: ya a la cota, `ruta=11 nodos hasta 517,63,666 alcanza=SI` —la ruta al almacén **era buena**— pero su
+* **Uno falso**: ya a el nivel del pueblo, `ruta=11 nodos hasta 517,63,666 alcanza=SI` —la ruta al almacén **era buena**— pero su
   **`cerebro=507,68,662`** apuntaba al **piso** (su POI), así que no la seguía y el aviso lo cantaba como rendición.
 
 **El arreglo** (el mismo que ya se hizo en el guardia, I125/I119): en el `canContinueToUse` del leñador, si el cerebro
@@ -4779,7 +4779,7 @@ coloca o lo recupera más tarde (el propio latido repone testigos).
 **EL ARREGLO**: la comprobación (`asentarLosComposterosALaCota`) se hace **también en el latido**, cada
 `VILLAGE_POLL_TICKS` (**200 ticks = 10 s**): es barato (**tres columnas**) e idempotente, y cuando asienta uno **muda el
 `JOB_SITE`** del granjero que apuntaba al viejo.
-**Juez**: las muestras del censo con `puesto` en `y = cota + 1` → **0**, y la traza `compostero(s) ASENTADOS a la cota`.
+**Juez**: las muestras del censo con `puesto` en `y = nivel del pueblo + 1` → **0**, y la traza `compostero(s) ASENTADOS a el nivel del pueblo`.
 
 **MEDIDO (4 corridas, 101-104) — y es EL MEJOR LOTE DE LA SESIÓN**: total **4 · 6 · 8 · 9 → media 6,75** (los lotes
 anteriores: 20,25 · 22,25 · 15,25 · 30,25), con el censo del granjero en **`puesto y=63`: 2 · 2 · 2 · 2** (antes
@@ -4793,7 +4793,7 @@ mina **3**.
 repositor no lo ponga en alto** (o que el asentado se haga **antes** de capturar el testigo), y así la vigilancia
 quedaría solo como red.
 
-### I163 · EL COMPOSTERO —el PUESTO del granjero— A LA COTA (30-sep-2026)
+### I163 · EL COMPOSTERO —el PUESTO del granjero— A LA NIVEL DEL PUEBLO (30-sep-2026)
 
 **El fallo, medido en el mundo guardado** (corte de `build/slice_mina.py`):
 
@@ -4802,8 +4802,8 @@ quedaría solo como red.
 (534, 580)  y=61 grass  y=62 air           y=63 air         ← el parcela, un bloque MÁS BAJO
 ```
 
-Al oeste del parcela 0 el **suelo natural está en `y=62`** — **un bloque por encima de la cota**, que es el nivel por el
-que se anda (`cota − 1` es el bloque del suelo) — y el compostero se colocó **encima**, así que queda en **`y=63`**. El
+Al oeste del parcela 0 el **suelo natural está en `y=62`** — **un bloque por encima de el nivel del pueblo**, que es el nivel por el
+que se anda (`nivel del pueblo − 1` es el bloque del suelo) — y el compostero se colocó **encima**, así que queda en **`y=63`**. El
 granjero camina a su puesto y **no puede subir**: un aldeano no sube un bloque entero (el juego le da **0,6**). Y como el
 compostero es **su estación de trabajo**, **todos** sus recados acaban apuntando a esa altura: medido, **42 de 60
 destinos de una corrida en `y=63`** con **todos** los aldeanos en `y=62`, y el censo del arnés delatándolo —
@@ -4813,18 +4813,18 @@ corridas).
 **Por qué no lo arreglaba la migración que ya existía**: `moverComposterosDelBancal` exige que la **celda nueva esté
 libre** y allí hay **césped**, así que se rendía y lo dejaba dicho en el registro.
 
-**EL ARREGLO**: `asentarLosComposterosALaCota` — si el compostero está un bloque por encima de la cota, **se baja a la
-cota** (poniéndole el suelo firme que le falte) y se quita el de arriba. **Conservador** (solo toca celdas que son
-compostero o el terreno justo encima, y solo si la celda de la cota está **libre**) e **idempotente**; devuelve los pares
+**EL ARREGLO**: `asentarLosComposterosALaCota` — si el compostero está un bloque por encima de el nivel del pueblo, **se baja a la
+nivel del pueblo** (poniéndole el suelo firme que le falte) y se quita el de arriba. **Conservador** (solo toca celdas que son
+compostero o el terreno justo encima, y solo si la celda de el nivel del pueblo está **libre**) e **idempotente**; devuelve los pares
 `{viejo, nuevo}` para que el latido **mude el `JOB_SITE`** del granjero con él (como ya hacía la migración 64).
 `CURRENT_LAYOUT` sube a **77** con su documentación, que es lo que hace que la pasada corra en un mundo ya construido.
 
-**JUECES (los tres directos)**: (1) los `puesto=` del censo del granjero, **todos a la cota**; (2) los **destinos a
-`y = cota + 1`**, a **0**; (3) la traza `compostero(s) ASENTADOS a la cota` en el registro. Y de fondo, el total y el
+**JUECES (los tres directos)**: (1) los `puesto=` del censo del granjero, **todos a el nivel del pueblo**; (2) los **destinos a
+`y = nivel del pueblo + 1`**, a **0**; (3) la traza `compostero(s) ASENTADOS a el nivel del pueblo` en el registro. Y de fondo, el total y el
 trabajo del pueblo sin bajar.
 
 **MEDIDO, 4 corridas (93-96)**: total **5 · 23 · 6 · 47 → media 20,25** (frente a 22,25 del lote anterior), con
-**las dos mejores corridas de toda la sesión (5 y 6)**; los **destinos a `y = cota + 1`: 1 · 1 · 1 · 9** (eran **42** en
+**las dos mejores corridas de toda la sesión (5 y 6)**; los **destinos a `y = nivel del pueblo + 1`: 1 · 1 · 1 · 9** (eran **42** en
 la 83 y **31** en la 92); el censo del granjero dice **`puesto y=62` en 3.395 / 2.844 / 3.386 / 2.807 muestras** y
 **`y=63` en 2 / 410 / 2 / 448**; y el trabajo del pueblo en su rango (granja 889/786/607/369, pescador 8-9, herrería
 76-87, cocina 3-14, mina 2).
@@ -4832,15 +4832,15 @@ la 83 y **31** en la 92); el censo del granjero dice **`puesto y=62` en 3.395 / 
 **Y DOS VERDADES QUE HAY QUE DECIR**:
 1. **La pasada `ASENTADOS` no actuó en ninguna de las cuatro** (`ASENTADOS 0`), porque en esas corridas el pueblo pasó
    por la **reparación** (`REPARADA` en el registro), que ya **quita el escalón** del terreno y deja el compostero a la
-   cota. Es decir: en el arnés el arreglo que actúa es la reparación, y **esta pasada queda como RED DE SEGURIDAD** —
+   nivel del pueblo. Es decir: en el arnés el arreglo que actúa es la reparación, y **esta pasada queda como RED DE SEGURIDAD** —
    la que arregla el mundo del jugador, donde el compostero **sí** está en `63` en el guardado y la reparación no corre
    (su trazado ya está al día).
 2. **Queda un residuo**: en dos de las cuatro corridas el puesto de **algunos** granjeros vuelve a leerse en `y=63`
-   (410 y 448 muestras de ~3.250 = **~13 %**). Como los destinos a `cota+1` ya son 1-9, no es el bucle de antes, pero
+   (410 y 448 muestras de ~3.250 = **~13 %**). Como los destinos a `nivel del pueblo+1` ya son 1-9, no es el bucle de antes, pero
    **hay un POI de compostero en alto que se sigue cogiendo**: el siguiente paso es mirar **qué estación reclama** el
    granjero (`JOB_SITE`) cuando sale en 63 — puede ser el compostero de **otro** parcela o un POI viejo que nadie limpió.
 
-### I162 · EL ESTALLIDO DE DESTINOS A `cota + 1`: **el puesto del granjero no está a la misma altura** (30-sep-2026, MEDIDO)
+### I162 · EL ESTALLIDO DE DESTINOS A `nivel del pueblo + 1`: **el puesto del granjero no está a la misma altura** (30-sep-2026, MEDIDO)
 
 **Lo que se midió, capa a capa, y en este orden** (todo con el mundo guardado, sin arnés):
 1. **Los parcelas están BIEN**: corte del mundo en las dos parcelas (`build/slice_mina.py`) → la **tierra de cultivo en
@@ -4850,8 +4850,8 @@ la 83 y **31** en la 92); el censo del granjero dice **`puesto y=62` en 3.395 / 
    `y=63`**: `destino 579, 63, 571 desde 579, 62, 568`, `destino 582, 63, 573 desde 586, 62, 573` — y en el mundo
    `(579, 62, 571)` es una **remolacha** (cultivo), con la tierra en 61. O sea: **el goal apunta al aire por encima del
    cultivo**.
-3. **Ni `buscarTierraVacia` ni `buscarCalva` ni `buscarCultivo` pueden dar 63**: los tres recorren la parcela a la cota
-   (`esquinaDeLaParcela(...)` → `y = cota`) y devuelven `tierra.above()` (que con el mundo real es **62**).
+3. **Ni `buscarTierraVacia` ni `buscarCalva` ni `buscarCultivo` pueden dar 63**: los tres recorren la parcela a el nivel del pueblo
+   (`esquinaDeLaParcela(...)` → `y = nivel del pueblo`) y devuelven `tierra.above()` (que con el mundo real es **62**).
 4. **Y EL DATO QUE LO EXPLICA**: el censo del granjero que imprime el arnés trae **su puesto de trabajo** y sale
    **inconsistente**:
    ```
@@ -4863,7 +4863,7 @@ la 83 y **31** en la 92); el censo del granjero dice **`puesto y=62` en 3.395 / 
    si el compostero está un bloque por encima del suelo, **el granjero camina a un sitio al que no puede subir** ✓✓.
 
 **EL SIGUIENTE PASO, concreto**: medir la **Y real del bloque del compostero** de cada parcela y **unificarla con la
-cota**. **Y YA ESTÁ MEDIDO** (mismo día, mundo guardado, `build/slice_mina.py`):
+nivel del pueblo**. **Y YA ESTÁ MEDIDO** (mismo día, mundo guardado, `build/slice_mina.py`):
 
 ```
 (533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del parcela 0
@@ -4871,19 +4871,19 @@ cota**. **Y YA ESTÁ MEDIDO** (mismo día, mundo guardado, `build/slice_mina.py`
 ```
 
 **La causa raíz es un ESCALÓN DE TERRENO**: al oeste del parcela 0 el suelo natural está en **y=62** (un bloque por
-encima de la cota) mientras el parcela y su alrededor están en **y=61**. El compostero —el **puesto de trabajo del
+encima de el nivel del pueblo) mientras el parcela y su alrededor están en **y=61**. El compostero —el **puesto de trabajo del
 granjero**— se colocó **encima** de ese escalón, así que queda en **y=63**, **un bloque por encima del suelo por el que
 anda todo el pueblo**, y el granjero camina a un puesto al que **no puede subir** (un aldeano no sube un bloque entero:
-el juego le da 0,6). En el otro parcela el compostero sí está a la cota (`puesto=573, 62, 570`) ✓: de ahí que el censo
+el juego le da 0,6). En el otro parcela el compostero sí está a el nivel del pueblo (`puesto=573, 62, 570`) ✓: de ahí que el censo
 salga **inconsistente** y que el bucle solo aparezca en algunas corridas.
 
 **EL ARREGLO QUE TOCA (siguiente ronda, con la medida delante)**:
 1. **Nivelar ese escalón** con la maquinaria que ya existe (`nivelar` / `repararLaAldeaApilada`, que ya quita lo que
-   sobra por encima de la cota) **alrededor de los parcelas**, no solo en el casco: el parcela 0 está **dentro** del
+   sobra por encima de el nivel del pueblo) **alrededor de los parcelas**, no solo en el casco: el parcela 0 está **dentro** del
    radio de la cerca (dx −30, dz +14), así que el escalón está **dentro** de lo que el pueblo considera suyo.
-2. **Y bajar el compostero a la cota** si sigue en alto (es un bloque, se mueve con la misma pasada idempotente).
+2. **Y bajar el compostero a el nivel del pueblo** si sigue en alto (es un bloque, se mueve con la misma pasada idempotente).
 3. **Y endurecer el goal** (patrón de I156): el puesto y el objetivo deben pasar el contrato de **casilla de pie a la
-   cota** **al elegirse**, no al caminar; así un mundo torcido no se convierte en un bucle, sino en «no hay faena aquí».
+   nivel del pueblo** **al elegirse**, no al caminar; así un mundo torcido no se convierte en un bucle, sino en «no hay faena aquí».
 
 **Y el instrumento, de paso**: el censo del granjero llena el registro (**4.400-4.600 líneas por corrida**); conviene
 bajarlo a `debug` o espaciarlo, porque tapa lo que se busca.
@@ -4900,18 +4900,18 @@ de I119 (el del guardia) y **no** la variante que se había descartado (pregunta
 **Moraleja de método, otra vez la misma**: una corrida no distingue una mejora de una casualidad; hay que mirar **las
 cuatro**.
 
-### I160 · LA COTA LA DICE **EL PUEBLO**, NO EL OBJETIVO (30-sep-2026)
+### I160 · LA NIVEL DEL PUEBLO LA DICE **EL PUEBLO**, NO EL OBJETIVO (30-sep-2026)
 
 En `VillagerFarmGoal` la geometría del parcela (la compuerta de entrada y la salida) se calculaba con **`target.getY()`
-como cota** — el único sitio del fichero que se la pedía al objetivo en vez de a `cotaDeLaPlaza`. Si el objetivo caía
+como nivel del pueblo** — el único sitio del fichero que se la pedía al objetivo en vez de a `cotaDeLaPlaza`. Si el objetivo caía
 **un nivel por encima** (una celda bajo un techo, encima de una losa, una mata que el plano pone alta), **la salida y las
 cuatro compuertas se calculaban a esa altura** y el granjero se rendía con destinos inalcanzables.
 
 **MEDIDO (corrida 83, que dio 60 avisos cuando la media era 15)**: **42 de los 60 destinos** de esa corrida estaban en
-**y=63**, mientras **todos** los aldeanos andan a **y=62** y la cota del pueblo es **62** (lo dice el propio registro:
-`kiosco de la plaza colocado a la cota 62`). Los destinos eran de dos formas: `destino=air encima=oak_planks` (bajo un
-toldo) y aire a un nivel. **Ahora la cota es la del pueblo**, como en el resto del goal.
-**Juez**: el total de la corrida y el recuento de destinos en `y = cota + 1` (a **0**).
+**y=63**, mientras **todos** los aldeanos andan a **y=62** y el nivel del pueblo del pueblo es **62** (lo dice el propio registro:
+`kiosco de la plaza colocado a el nivel del pueblo (62)`). Los destinos eran de dos formas: `destino=air encima=oak_planks` (bajo un
+toldo) y aire a un nivel. **Ahora el nivel del pueblo es la del pueblo**, como en el resto del goal.
+**Juez**: el total de la corrida y el recuento de destinos en `y = nivel del pueblo + 1` (a **0**).
 
 ### I159 · EL FRENO DEL DESATASCO ES CONTRA **LA MISMA CELDA**, NO CONTRA EL RELOJ (30-sep-2026)
 
@@ -4965,7 +4965,7 @@ no consigue llegar a 584, 62, 574 desde 585, 62, 574
 2. **SI UN ALDEANO ESTÁ METIDO EN UN PORTÓN, SE ABRE EL PORTÓN** (`desatascarSiEstaEncajado`, I157): abrir la compuerta
    lo **libera sin mover a nadie** (mucho mejor que teletransportarlo), con un freno corto de 2 s. Lleva su marca
    `// lint:ok I8` justificada: solo abre el portón que tiene a un aldeano **dentro**, solo si está **cerrado** y no
-   depende de la cota (el bloque es el de sus propios pies).
+   depende de el nivel del pueblo (el bloque es el de sus propios pies).
 - **EL ARREGLO QUE SE DESCARTÓ**: hacer que el tramo del portón fuera la casilla de al lado. **No hace falta** —el
   `mejorEntradaLibre` del granjero ya devuelve la casilla **de dentro** y la de al lado del portón—: el problema no era
   *a dónde* iba, sino que **la compuerta se cerraba encima**.
@@ -4986,13 +4986,13 @@ no consigue llegar a 594, 62, 581 desde 594, 62, 579
    (ruta=1 nodos … alcanza=NO; destino=air encima=deepslate_tile_stairs)   etiqueta="Ximeno (Cocinero) / Yendo a la cocina"
 ```
 
-La casilla de la cocina era **`puesto + (0, 0, -1)` a mano**, sin comprobar **nada**: ni que se pisara, ni la cota, ni que
+La casilla de la cocina era **`puesto + (0, 0, -1)` a mano**, sin comprobar **nada**: ni que se pisara, ni el nivel del pueblo, ni que
 hubiera ruta. La celda fija estaba **debajo de la escalera** —`encima=deepslate_tile_stairs`—, así que **no es casilla de
 pie** y el planificador no puede meterlo ahí: el cocinero se rendía **con el ahumador al lado** (12 rendiciones de
 «Yendo a la cocina» en las 4 corridas de referencia).
 
 **EL ARREGLO (patrón del nivel 3: candidatas + contrato + validación)**:
-1. Se recorren las **cuatro casillas de al lado del ahumador**, **a la cota** del pueblo;
+1. Se recorren las **cuatro casillas de al lado del ahumador**, **a el nivel del pueblo** del pueblo;
 2. se exige **casilla de pie** (`esCeldaDePie`: pies y cabeza libres, suelo firme) **y ver el ahumador**
    (`hayVistaLibre` — es su contrato: se cocina desde donde se le ve, que era el otro fallo medido: cocinaba tras el
    tabique);
@@ -5009,7 +5009,7 @@ en el trabajo**, que es donde tiene que estar. Y de paso: `Buscando recambios` d
 (el fallo de rendimiento, cerrado) y los guardias entrenando (**963-1.777**).
 
 **LA VERSIÓN CON RUTA SE RETIRÓ, y la verificación fue la mejor medida del día**: al quitar la comprobación de ruta
-(quedándose las candidatas a la cota, la casilla de pie y el caché), las **dos corridas de verificación** dieron
+(quedándose las candidatas a el nivel del pueblo, la casilla de pie y el caché), las **dos corridas de verificación** dieron
 **31 y 16** —las dos mejores de toda la sesión, con la media de referencia en 30,25— con **`Entrando a la huerta` 0 y 0**
 (el bucle de I157 desapareció), `Yendo a la cocina` **3 y 1** y el cocinero trabajando **9 y 7** piezas (la media era 3).
 
@@ -5044,7 +5044,7 @@ cerrado, y no se abre porque no llega. Es la clase D del plan (`docs/aldea-cereb
 **EL ARREGLO**: cuando el ganadero **se queda sin ruta**, la aldea **le abre SU portón** antes de insistir
 (`VillageErrands.abrirLaPuertaSiHaceFalta`), y **solo si el recado CRUZA la cerca**: si el aldeano y su recado están los
 dos dentro, el portón se queda **cerrado** — así **no se escapan las gallinas**.
-**Y OJO CON LA COTA**: `nivel` vale `Integer.MIN_VALUE` hasta que lo resuelve `destinoDelTramo`, que va **después**, así
+**Y OJO CON LA NIVEL DEL PUEBLO**: `nivel` vale `Integer.MIN_VALUE` hasta que lo resuelve `destinoDelTramo`, que va **después**, así
 que hay que resolverla **antes** de buscar el portón (fue el fallo del primer intento: se buscaba con una altura falsa
 y no se abría nada).
 
@@ -5114,7 +5114,7 @@ en las 4 corridas de referencia), así que su trabajo allí es perseguir celdas 
 reparando cuando de verdad hay un cráter queda **verificado por construcción** (solo se salta huecos sin casilla de pie
 a menos del alcance, que son irreparables andando: medido, ruta de un nodo).
 
-### I152 · LA CASILLA DEL ENTRENAMIENTO, **A LA COTA Y CON RUTA VALIDADA** (29-sep-2026)
+### I152 · LA CASILLA DEL ENTRENAMIENTO, **A LA NIVEL DEL PUEBLO Y CON RUTA VALIDADA** (29-sep-2026)
 
 **El fallo, medido** (`build/medida-tanda41.log`): **todas** las rendiciones de los guardias eran la misma —
 
@@ -5129,7 +5129,7 @@ estructura de la diana). Pasa cualquier prueba **local** (`sePuedeEstar`: aire, 
 nunca si se podía llegar** — y con el despachador encendido eso son **12 rendiciones por corrida**.
 
 **EL ARREGLO (patrón del nivel 3: candidatas + contrato + validación)**:
-1. **La casilla tiene que estar A LA COTA** del pueblo.
+1. **La casilla tiene que estar A LA NIVEL DEL PUEBLO** del pueblo.
 2. **Y tiene que haber RUTA que la alcance** (`hayRutaQueAlcanza`), preguntada **solo si el guardia está a menos de 48
    bloques** (más lejos, la región de búsqueda del juego no da ruta y el tirón es el que lo lleva — I145).
 3. **Si ninguna candidata se alcanza, NO SE ENTRENA**: el guardia vuelve a la ronda.
@@ -5138,7 +5138,7 @@ nunca si se podía llegar** — y con el despachador encendido eso son **12 rend
 - `Yendo a entrenar` **0 · 0 · 0 · 0** y `no llego a la diana` **0**, con el total en **22 · 41 · 33 · 36** (la
   referencia: 13 · 72 · 19 · 40 → **sin regresión**);
 - **y siguen entrenando**: el censo `ENTRENO` del arnés da **392 y 278 muestras** con el contador subiendo de **0 a
-  1017-1241** (y 630 en la otra), entrenando en **y=62**, la cota ✓.
+  1017-1241** (y 630 en la otra), entrenando en **y=62**, el nivel del pueblo ✓.
 
 ### I150 · UN SOLO JEFE PARA EL RUMBO — y **sostenerlo a ciegas empeora** (29-sep-2026)
 
@@ -5279,7 +5279,7 @@ oscila** (0,30 · 0,40 · 0,60 en corridas comparables), que es exactamente lo q
 1. **¿Quién más LEE lo que cambio?** Buscar todos los usos (`grep`) y revisarlos uno a uno. *(Fallo real: cambié el
    sentido de `stuckTicks` y no miré los tres `canContinueToUse` que lo leen → granjero, recolector y obrero
    ciclados.)*
-2. **¿Depende de una ALTURA?** ¿Es la cota (I1)? ¿Y si el centro/base trae otra Y?
+2. **¿Depende de una ALTURA?** ¿Es el nivel del pueblo (I1)? ¿Y si el centro/base trae otra Y?
 3. **¿Cambia el estado del mundo ya guardado?** → migración (I7) y cómo se repara una aldea que ya existe.
 4. **¿Corre en el latido o en un goal repetido?** → ¿es idempotente? (I6) ¿puede destruir un contenedor? ¿puede
    dejar objetos tirados?
@@ -5321,13 +5321,13 @@ oscila** (0,30 · 0,40 · 0,60 en corridas comparables), que es exactamente lo q
 | `build/cama_toolsmith.py` | **¿Por qué una cama no se puede usar?** (I43): imprime la rejilla de bloques alrededor de una cama en las capas que se pisan, que es lo que delata el muro o el mobiliario que impide ponerse a ≤2,0 para acostarse. |
 | `build/mapa_cama.py` | **Mapa compacto de una zona del guardado** (una letra por bloque, con camas, vallas, compuertas, muros y suelos): es lo que enseñó la habitación tapiada del herrero. Ojo: los símbolos son de una letra (`O` = oak door **no** "abierta": para el estado, leer las propiedades). |
 | `build/faroles_hanging.py` | **Faroles sin apoyo de verdad** (I14): mira la propiedad `hanging` contra su dirección, que es lo que **no** mira la auditoría de Python (una valla debajo vale para un farol *posado*, no para uno *colgado*; la de Java sí lo mira desde la migración 55). Dice qué reparador arregla cada uno. |
-| `build/kiosco_dump.py` | **El kiosco entero, capa a capa** (I28): cuenta los bloques por capa, imprime la huella de `cota-2` a `cota+7` y localiza la **campana**, el **farol** y el **beacon** con sus propiedades (dónde están y en qué celda relativa al centro). |
+| `build/kiosco_dump.py` | **El kiosco entero, capa a capa** (I28): cuenta los bloques por capa, imprime la huella de `nivel del pueblo-2` a `nivel del pueblo+7` y localiza la **campana**, el **farol** y el **beacon** con sus propiedades (dónde están y en qué celda relativa al centro). |
 | `build/aldeanos.py`, `build/aldeanos.py` | Aldeanos: profesión, inventario, posición (carpeta `entities/`). |
 | `build/herreria.py`, `build/huecos_ore.py`, `build/solares*.py` | Herrería, huecos y minerales flotantes, solares libres. |
 | `build/plantillas*.py`, `build/paleta.py` | Plantillas del juego: tamaños, puertas y qué bloques traen. |
-| `tools/audita_aldea.py` (**versionada**) | **Auditoría de las aldeas enteras**: faroles y vallas flotando, cofres tapados, puertas incompletas, camas sueltas y **portones con el hueco tapado** (I54). Lee las PROPIEDADES de los bloques y saca las aldeas del guardado (índice, centro y cota): `--aldea N`, `--caidas`, `--resumen`, `--centro X Z --cota N`. |
+| `tools/audita_aldea.py` (**versionada**) | **Auditoría de las aldeas enteras**: faroles y vallas flotando, cofres tapados, puertas incompletas, camas sueltas y **portones con el hueco tapado** (I54). Lee las PROPIEDADES de los bloques y saca las aldeas del guardado (índice, centro y nivel del pueblo): `--aldea N`, `--caidas`, `--resumen`, `--centro X Z --nivel del pueblo N`. |
 | `tools/arnes/ruta_atasco.py` (**versionada**) | **¿HAY RUTA de pie entre dos celdas?** Recorrido en anchura sobre los bloques del guardado con la regla de *casilla de pie* (aire a los pies y a la cabeza, suelo firme debajo), movimientos a los 4 lados y **±1 de altura**: dice `HAY RUTA: N pasos` con el camino entero, o hasta dónde llega. **Es la herramienta que decidió I112** (del atasco `527,63,672` al almacén `517,63,666` hay ruta, pero son 68 pasos y **empieza yendo al lado contrario**). |
-| `tools/arnes/portones_del_muro.py` (**versionada**) | **Los cuatro portones cardinales del muro**: aplica `esCeldaDePie` a la **casilla de paso de dentro y de fuera** de cada uno (a la cota del pueblo) y dice `pisable=SI/NO` con los bloques que hay. Es lo que comprueba que la regla de I112 tiene a dónde mandar al aldeano. |
+| `tools/arnes/portones_del_muro.py` (**versionada**) | **Los cuatro portones cardinales del muro**: aplica `esCeldaDePie` a la **casilla de paso de dentro y de fuera** de cada uno (a el nivel del pueblo del pueblo) y dice `pisable=SI/NO` con los bloques que hay. Es lo que comprueba que la regla de I112 tiene a dónde mandar al aldeano. |
 | `build/aldeanos_todos.py` (ignorado) | **TODAS las entidades "villager" de un radio del guardado**, con su id real (`villager` **y** `zombie_villager`), sus `CustomName` (la etiqueta de dos líneas), su oficio, su cama y su **UUID formateado**. Es lo que distinguió "aldeano sin cama" de "cría sin cama" y de "aldeano-zombi dentro del recinto" (3b.61). |
 | `build/plantilla_casa.py` (ignorado) | **La plantilla del juego, capa a capa**: lee los `.nbt` de `village/plains/houses/*` del jar del cliente (van comprimidos con gzip) y vuelca tamaño y vista de planta. Es lo que dice si un hueco de una casa "viene del juego" o lo perdió el mundo (3b.65/I50). |
 | `build/plano_celda.py` (ignorado) | **El PLANO de la aldea del `devilrpg_villages.dat`**: saca `Blueprints -> [Index, Palette, Pos(long[]), State(int[])]` y contesta si una celda está en el plano (y con qué bloque) y qué dicen sus vecinas. Es lo que demostró que el hueco de la pared **no estaba en el plano** y por eso el obrero no lo reponía (3b.65/I50). |
@@ -5338,8 +5338,8 @@ oscila** (0,30 · 0,40 · 0,60 en corridas comparables), que es exactamente lo q
 | `build/huerta_vacias.py` (ignorado) | **Las celdas del parcela que no tienen nada** (I53): vuelca los tres parcelas **celda a celda** (cultivo con su edad, tierra vacía, calva, acequia) con un mapa de una letra por celda y cuenta las que están `farmland` con el hueco de arriba libre. |
 | `build/portones_farol.py`, `build/anexo_porton.py` (ignorados) | **El hueco de los portones y el farol que lo tapa** (I54): volcan los 14 portones de las tres aldeas (los 12 de los parcelas, el del corral y el del gallinero), miran las **seis celdas** por las que se cruza cada uno (la hoja y las dos de al lado, en las dos capas) y dicen qué hay en ellas **y qué pide el PLANO**; `anexo_porton.py` pinta además el corral y sus dos portones capa a capa. |
 | `build/aldeanos_equipo.py` (ignorado) | **Cada aldeano con su equipo**: su etiqueta (nombre + actividad), oficio, posición, **si está durmiendo**, su **cama** (`HOME`), su destino, **todo su inventario** y las marcas del mod; y el **contenido de los cofres** de la zona (donde el herrero deja lo que forja). Es la medida de I55/I56/I57 (la cama de otra planta, la armadura que no se fabrica, la espada que se queda en el cofre). |
-| `build/obras_pendientes.py` (ignorado) | **Las obras pendientes de una aldea** (I60): recorre el **plano** celda a celda y lo compara con el mundo (con la regla de `necesitaReparacion`), dice cuántas celdas están pendientes, de qué bloque, a qué distancia del centro y a qué **altura sobre la cota** (para ver lo que se sale de la banda del obrero), y lista los aldeanos marcados como **obrero**. Es lo que demostró que la muralla dañada **no estaba en el plano**. |
-| `build/almacen_mapa.py` (ignorado) | **El almacén, capa a capa** (I95): vuelca los bloques de su recuadro a las capas de la cota, encima y debajo, y enseña los bloques clave (el punto de apoyo, los cofres, los postes). Es lo que midió que el suelo estaba **en la cota** (un escalón de 1,0) con el césped del pueblo en `cota - 1`. |
+| `build/obras_pendientes.py` (ignorado) | **Las obras pendientes de una aldea** (I60): recorre el **plano** celda a celda y lo compara con el mundo (con la regla de `necesitaReparacion`), dice cuántas celdas están pendientes, de qué bloque, a qué distancia del centro y a qué **altura sobre el nivel del pueblo** (para ver lo que se sale de la banda del obrero), y lista los aldeanos marcados como **obrero**. Es lo que demostró que la muralla dañada **no estaba en el plano**. |
+| `build/almacen_mapa.py` (ignorado) | **El almacén, capa a capa** (I95): vuelca los bloques de su recuadro a las capas de el nivel del pueblo, encima y debajo, y enseña los bloques clave (el punto de apoyo, los cofres, los postes). Es lo que midió que el suelo estaba **en el nivel del pueblo** (un escalón de 1,0) con el césped del pueblo en `nivel del pueblo - 1`. |
 | `build/gallinero_medida.py` (ignorado) | **¿Se alcanza lo que cae en el corralillo sin entrar en él?** (I96/I97): aplica **la misma cuenta que el goal** (distancia 3D de los pies del aldeano al centro de la celda del objeto) a **cada** celda del gallinero, con los dos alcances (el viejo y el nuevo), y cuenta las gallinas que tiene el portón pegadas. Es lo que midió que con 1,8 **no se alcanzaba ninguna** celda desde fuera y que con 3,5 se alcanzan **todas**. |
 | `build/diag_ganadero.py`, `build/marcas_aldeano.py` (ignorados) | **El ganadero y sus marcas**: los animales y los objetos del corral con su edad, y el NBT **crudo** de un aldeano (dónde vive `DevilRpgPuntoFallido` y qué vale). Es lo que enseñó que el ganadero tenía **4 huevos** en el inventario y el punto del almacén **aparcado**. |
 

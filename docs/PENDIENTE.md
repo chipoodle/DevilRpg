@@ -127,8 +127,8 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
    que el paseo se llevara al aldeano**, y al llegar de verdad a sus destinos quedó al descubierto **la lista real de
    lo que está roto**. Esa lista es el trabajo del nivel 3.
 3. **Nivel 3 · arreglar las CLASES, no las etiquetas** (I152–I155):
-   - **I152 guardias** — la casilla del entrenamiento estaba **2 bloques por encima** de la cota (encima de la diana),
-     pasaba la prueba local y estaba **aislada** (ruta de un nodo). Ahora: **a la cota** + **ruta validada** + **si
+   - **I152 guardias** — la casilla del entrenamiento estaba **2 bloques por encima** de el nivel del pueblo (encima de la diana),
+     pasaba la prueba local y estaba **aislada** (ruta de un nodo). Ahora: **a el nivel del pueblo** + **ruta validada** + **si
      ninguna vale, no entrena**, y **el «no» caduca a los 5 s** (cacheado para siempre, un guardia se quedó **sin
      entrenar en toda una corrida**: 267 censos con `entrenado` máximo **0**). **MEDIDO**: `Yendo a entrenar` **0** en
      todas y `entrenado` subiendo de 0 a **914-1.800** en las cuatro.
@@ -160,16 +160,16 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
    - **I157 el bucle del portón** (la mayor mejora: **30,25 → 15,25** de media, `Entrando a la huerta` 34/50 → 0-6),
    - **I158 taberna** (el atasco se mide contra el paso: `Yendo a la taberna` **29 → 3** en su lote),
    - **I159 el freno del desatasco** (`Sembrando`/`Cosechando` **12 → 4**),
-   - **I160 la cota del parcela** (destinos a cota+1: **42 → 1-5** por corrida).
+   - **I160 el nivel del pueblo del parcela** (destinos a nivel del pueblo+1: **42 → 1-5** por corrida).
    **El cuadro del lote final (85-88, 89 avisos en 4 corridas)**: `Bajando lo del corral` **35 → 10**,
    `Recogiendo lo suyo` **40 → 10**, `Yendo a la taberna` **29 → 11**, `Sacrificando un animal` **15 → 5**,
    `Sembrando` **11 → 9**; y el pueblo trabaja (pescador 7-10, herrería 60-74, cocina 2-8, mina 2-3).
    **LO QUE SIGUE, con su número del lote final**:
    - **I163+I164 · EL COMPOSTERO (el PUESTO del granjero) — HECHO Y MEDIDO (30-sep-2026)**: estaba en **y=63** sobre un
-     **escalón del terreno** (suelo natural en 62, un bloque sobre la cota) y el granjero **no podía subir a su
+     **escalón del terreno** (suelo natural en 62, un bloque sobre el nivel del pueblo) y el granjero **no podía subir a su
      puesto**, así que **todos sus recados** apuntaban a esa altura (**42 de 60 destinos en y=63** en una corrida). Se
-     **asienta a la cota** (y se muda el `JOB_SITE`), **se vigila en el latido** cada 10 s y **se quitan los composteros
-     de más** —medido en el mundo del arnés: la columna del parcela 1 tenía **DOS**, el bueno a la cota y **otro encima**,
+     **asienta a el nivel del pueblo** (y se muda el `JOB_SITE`), **se vigila en el latido** cada 10 s y **se quitan los composteros
+     de más** —medido en el mundo del arnés: la columna del parcela 1 tenía **DOS**, el bueno a el nivel del pueblo y **otro encima**,
      resto de la migración 64—. `CURRENT_LAYOUT = 78`.
      **MEDIDO (4 corridas, 101-104): EL MEJOR LOTE DE LA SESIÓN** — total **4 · 6 · 8 · 9 (media 6,75)**, el censo con
      `puesto y=63` en **2 · 2 · 2 · 2** (antes **410-448**), la limpieza actuando **0 · 11 · 9 · 23** veces, y el trabajo
@@ -361,7 +361,7 @@ dentro de un bloque** (su celda no es aire): no se pueden recoger y solo sirven 
 > rendiciones** y ninguna es esta: `Bajando lo del corral` 2, `Recogiendo lo suyo` 2, `Yendo a la taberna` 3 (ver §11).
 
 **Y EL RECOLECTOR EN EL PARCELA** (mismo log, 6 en la ventana): se rinde desde `484,62,658` con **`pies=farmland`** y
-`cabeza=wheat` —o sea **encajada dentro del cultivo**, un bloque POR DEBAJO de la cota—, y ahí mismo tiene una ruta a la
+`cabeza=wheat` —o sea **encajada dentro del cultivo**, un bloque POR DEBAJO de el nivel del pueblo—, y ahí mismo tiene una ruta a la
 campana que **SÍ alcanza** (`ruta=23 nodos … alcanza=SI`). Hay que ver si es el mismo falso positivo de I146 (el
 cerebro en otra parte) o el desatasco del parcela.
 

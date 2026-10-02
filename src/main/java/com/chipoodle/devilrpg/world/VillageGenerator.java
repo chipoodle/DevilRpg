@@ -810,7 +810,7 @@ public final class VillageGenerator {
             return; // el kiosco ya está y con el tamaño actual
         }
         kiosco(level, center, nivel);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: kiosco de la plaza colocado a la cota {}", center, nivel);
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: kiosco de la plaza colocado al nivel del pueblo {}", center, nivel);
     }
 
     /**
@@ -6293,7 +6293,7 @@ public final class VillageGenerator {
             }
         }
         if (asentadas > 0) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: huerta ASENTADA a la cota {}: {} celda(s) de cultivo/acequia"
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: huerta ASENTADA al nivel del pueblo {}: {} celda(s) de cultivo/acequia"
                     + " puestas en la capa que se pisa (estaban hundidas o altas de una migración; I167)", center, cota,
                     asentadas);
         }
@@ -6797,7 +6797,7 @@ public final class VillageGenerator {
             }
         }
         fence(level, center);
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: muro reconstruido a la cota {} ({} restos quitados)",
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: muro reconstruido al nivel del pueblo {} ({} restos quitados)",
                 center, baseY, quitados);
     }
 
@@ -6988,8 +6988,8 @@ public final class VillageGenerator {
         // El terreno, liso a la cota (y con su talud): ahora `nivelar` mide el suelo natural, no los tejados.
         nivelar(level, center, LEVEL_RADIUS, cota);
         DevilRpg.LOGGER.info(
-                "[Village] Aldea en {}: REPARADA (quitados {} bloques de restos por encima de la cota {} y terreno "
-                        + "nivelado); el pueblo se levanta de nuevo a esa cota",
+                "[Village] Aldea en {}: REPARADA (quitados {} bloques de restos por encima del nivel del pueblo ({}) y terreno "
+                        + "nivelado); el pueblo se levanta de nuevo a ese nivel",
                 center, quitados, cota);
     }
 
@@ -7936,7 +7936,7 @@ public final class VillageGenerator {
                         colocar(level, extra, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                         asentados.add(new BlockPos[]{extra, destino}); // y el PUESTO del granjero, al bueno
                         DevilRpg.LOGGER.info("[Village] Parcela {} de {}: quitado un compostero DE MÁS en {} (el puesto"
-                                + " bueno está a la cota, en {}): con dos, el granjero reclamaba el de arriba y no podía"
+                                + " bueno está al nivel del pueblo, en {}): con dos, el granjero reclamaba el de arriba y no podía"
                                 + " subir (I164)", i, center.toShortString(), extra.toShortString(),
                                 destino.toShortString());
                     }
@@ -7951,7 +7951,7 @@ public final class VillageGenerator {
             }
             if (!level.getBlockState(destino).isAir() || !level.getBlockState(destino.above()).isAir()) {
                 DevilRpg.LOGGER.info("[Village] Parcela {} de {}: su compostero está un bloque alto en {} y la celda de"
-                        + " la cota ({}) no está libre: no se asienta (el granjero tendrá su puesto cuesta arriba)",
+                        + " el nivel del pueblo ({}) no está libre: no se asienta (el granjero tendrá su puesto cuesta arriba)",
                         i, center.toShortString(), actual.toShortString(), destino.toShortString());
                 continue;
             }
@@ -7964,7 +7964,7 @@ public final class VillageGenerator {
             asentados.add(new BlockPos[]{actual, destino});
         }
         if (!asentados.isEmpty()) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} compostero(s) ASENTADOS a la cota {} (estaban un bloque"
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} compostero(s) ASENTADOS al nivel del pueblo {} (estaban un bloque"
                     + " alto sobre un escalón del terreno y el granjero no podía subir a su puesto, I163)",
                     center.toShortString(), asentados.size(), cota);
         }

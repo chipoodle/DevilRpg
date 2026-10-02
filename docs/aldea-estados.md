@@ -21,7 +21,7 @@ Se lee con `tools/nbtdump.py` (o con los scripts de `build/`). Claves del NBT:
 | `Noticed` | `"<índice>:<uuid>"`: a ese jugador ya se le avisó de esa aldea | `noticeIfNear` | `isNoticed(i, uuid)` |
 | `Pressure` | presión de horda por aldea (minutos sin atención) | `accruePressure` / `resetPressure` | — |
 | `Settlement[]` | por aldea: `Health` (aldeanos censados), `Food`, `StarvingSince`, `Layout`, `CasasVersion`, `AnexoAnimales`, `RepopulatedAt` | el latido | `VillageSavedData.get…` |
-| `Blueprints[]` | el **plano** de lo construido (paleta + posiciones): es de donde salen el centro y la cota | `preGenerate` y las migraciones | `getBlueprint` / `VillageManager.centroDe` |
+| `Blueprints[]` | el **plano** de lo construido (paleta + posiciones): es de donde salen el centro y el nivel del pueblo | `preGenerate` y las migraciones | `getBlueprint` / `VillageManager.centroDe` |
 
 **Al cargar**, una aldea de `Fallen` se añade también a `resolved` (`VillageSavedData.java:185`): una aldea caída no
 vuelve a asediarse nunca.
@@ -161,7 +161,7 @@ Si algo "no cuadra" con el tiempo, casi siempre es una de estas:
 | `VillagerMinerGoal.ADOQUIN_PARA_SUBIR` | 64 (una pila) | adoquín que junta antes de subir a colarlo (16 pedernales) | `VillagerMinerGoal.java` |
 | `VillageGenerator.MINA_SOPORTE_CADA` | 16 escalones | un **marco de madera** cada 8 bloques de descenso (y cada 8 celdas en las galerías) | `VillageGenerator.java` |
 | `VillageGenerator.MINA_GALERIA_CADA` / `_LARGO` | 8 bloques / 24 celdas | cada cuánto se abre una galería y cuánto se adentra (**hacia fuera** del pozo) | `VillageGenerator.java` |
-| `VillageGenerator.MINA_FONDO` | −58 | hasta dónde baja el caracol (240 pasos desde la cota 63) | `VillageGenerator.java` |
+| `VillageGenerator.MINA_FONDO` | −58 | hasta dónde baja el caracol (240 pasos desde el nivel del pueblo (63)) | `VillageGenerator.java` |
 | `VillagerMinerGoal.SELLOS_MAXIMOS` | 12 | celdas **seguidas** de agua/lava que sella antes de dar la mina por terminada | `VillagerMinerGoal.java` |
 
 ## 4. Receta de diagnóstico (lo que se hizo para el caso de la aldea abandonada)
