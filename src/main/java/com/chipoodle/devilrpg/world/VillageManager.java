@@ -806,9 +806,13 @@ public final class VillageManager {
      *       <b>rellena de piedra todo hueco</b> bajo el suelo en un disco más ancho que el recinto (corral anexo,
      *       caseta del minero, arboleda, pesquera), 24 bloques hacia abajo, sin tocar el pozo de la mina ni el agua
      *       del lago y del bebedero.</li>
+     *   <li><b>80:</b> <b>LA HUERTA, A LA COTA</b> (I167). El plano apunta las celdas de cultivo con la cota de cuando
+     *       se capturó, así que tras una migración el obrero reponía la huerta <b>un bloque hundida</b> (medido en el
+     *       registro del jugador: la parcela en {@code y=77} y el pueblo andando en {@code y=78}) y el granjero no
+     *       podía pisarla. Esta versión <b>asienta cada celda de cultivo y de acequia en la capa que se pisa</b>.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 79;
+    public static final int CURRENT_LAYOUT = 80;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2262,6 +2266,12 @@ public final class VillageManager {
             // suelo en un disco más ancho que el recinto (corral anexo, caseta del minero, arboleda, pesquera).
             VillageGenerator.afianzarElSuelo(level, center, VillageGenerator.FENCE_RADIUS + 24,
                     VillageGenerator.cotaDeLaPlaza(level, center));
+            // I167 · Y LA HUERTA, A LA COTA DEL PUEBLO (30-sep-2026). El plano apunta las celdas de cultivo con la cota
+            // de cuando se capturó: si el pueblo pasó por una migración que le cambió la altura, el obrero reponía la
+            // huerta **un bloque hundida** (medido en el registro del jugador: `no consigue llegar a 582, 77, 577
+            // desde 582, 78, 580 … destino=farmland` — la parcela en 77 y el pueblo andando en 78) y el granjero no
+            // podía pisarla. Aquí se asienta cada celda de cultivo y de acequia en la capa que se pisa.
+            VillageGenerator.asentarLaHuertaALaCota(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
             for (BlockPos[] par : composterosMovidos) {
                 BlockPos viejo = par[0];
                 BlockPos nuevo = par[1];

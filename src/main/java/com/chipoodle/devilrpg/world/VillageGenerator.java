@@ -6235,8 +6235,72 @@ public final class VillageGenerator {
         }
     }
 
-    /** Bloques hacia abajo que se <b>afianzan</b> bajo la aldea (I166). */
-    private static final int PROFUNDIDAD_DEL_CIMIENTO = 24;
+    /**
+     * I167 · <b>LA HUERTA, A LA COTA DEL PUEBLO</b> (30-sep-2026 — lo reportó el jugador: *«varias construcciones están
+     * hundidas un bloque»*, y su registro lo midió: {@code no consigue llegar a 582, 77, 577 desde 582, 78, 580 …
+     * destino=farmland}, o sea la parcela en {@code y=77} y el pueblo andando en {@code y=78}).
+     * <p>
+     * <b>POR QUÉ PASA</b>: el <b>plano</b> de la aldea (un escaneo del mundo) apunta las celdas de la huerta con la
+     * {@code cota} que tenía el pueblo <b>cuando se capturó</b> ({@code estadoDeLaHuerta(center, nivel, pos)}). Si
+     * después el pueblo pasa por una migración que le cambia la cota —o se repara con otra—, el obrero repone la huerta
+     * <b>a la altura vieja</b>: un bloque hundida, con el borde del bancal abierto al terreno y el granjero sin poder
+     * pisarla (los pies le quedan un bloque por debajo del suelo por el que anda el resto del pueblo).
+     * <p>
+     * <b>LO QUE HACE</b>: recorre las celdas de las tres parcelas, mira <b>dónde está hoy el suelo</b> de cada una
+     * (tierra de cultivo, acequia o el terreno), y lo <b>baja o lo sube a {@code cota − 1}</b> —que es la capa que se
+     * pisa— conservando el tipo de celda que le toca ({@link #estadoDeLaHuerta}). No toca el cultivo de encima (el
+     * granjero lo barre y lo resiembra él) y es <b>idempotente</b>: si ya está en su sitio, no hace nada.
+     *
+     * @return cuántas celdas ha asentado
+     */
+    public static int asentarLaHuertaALaCota(ServerLevel level, BlockPos center, int cota) {
+        int asentadas = 0;
+        for (int i = 0; i < FARM_PLOTS.length; i++) {
+            BlockPos esquina = esquinaDeLaParcela(center, i, cota);
+            for (int dx = 0; dx < PLOT_WIDTH; dx++) {
+                for (int dz = 0; dz < PLOT_DEPTH; dz++) {
+                    BlockPos suelo = esquina.offset(dx, -1, dz); // la capa que se pisa: el suelo va aquí
+                    BlockState deseado = estadoDeLaHuerta(center, cota, suelo);
+                    if (deseado == null) {
+                        continue; // esa celda del bancal no es de cultivo ni acequia (es un borde)
+                    }
+                    // ¿DÓNDE ESTÁ EL SUELO AHORA? Se busca en la columna, dos por encima y dos por debajo.
+                    BlockPos actual = null;
+                    for (int dy = 2; dy >= -2; dy--) {
+                        BlockPos q = suelo.offset(0, dy, 0);
+                        if (level.getBlockState(q).is(Blocks.FARMLAND) || level.getBlockState(q).is(Blocks.WATER)) {
+                            actual = q;
+                            break;
+                        }
+                    }
+                    if (actual != null && actual.getY() == suelo.getY()) {
+                        continue; // ya está en su sitio (ni hundida ni alta)
+                    }
+                    if (level.getBlockState(suelo).getBlock() instanceof CropBlock) {
+                        colocar(level, suelo, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL); // la mata vieja, fuera
+                    }
+                    if (actual != null) {
+                        colocar(level, actual, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    }
+                    // Y el hueco de encima, libre: si no, el aldeano no puede pisar la celda.
+                    if (!level.getBlockState(suelo.above()).isAir()
+                            && !(level.getBlockState(suelo.above()).getBlock() instanceof CropBlock)) {
+                        colocar(level, suelo.above(), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    }
+                    colocar(level, suelo, deseado, Block.UPDATE_ALL);
+                    asentadas++;
+                }
+            }
+        }
+        if (asentadas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: huerta ASENTADA a la cota {}: {} celda(s) de cultivo/acequia"
+                    + " puestas en la capa que se pisa (estaban hundidas o altas de una migración; I167)", center, cota,
+                    asentadas);
+        }
+        return asentadas;
+    }
+
+    /** Bloques hacia abajo que se <b>afianzan</b> bajo la aldea (I166). */    private static final int PROFUNDIDAD_DEL_CIMIENTO = 24;
 
     /**
      * <b>EL CIMIENTO DE LA ALDEA</b> (I166, 30-sep-2026 — lo pidió el jugador: *«varias construcciones están hundidas
