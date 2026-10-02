@@ -113,6 +113,39 @@ hace el herrero (**10**, hasta el objetivo de 16 pedernales) y la misma galería
   `Guardando lo suyo` **5 → 0**, `Yendo a la taberna` **1-2 → 0**, el bucle del parcela **7 → 1**, y la **tasa del
   pueblo 0,50-0,60 → 0,30** por 1.000 ticks (`tools/arnes/medidas-atascos-sueltos.txt`).
 
+### 8.bis.0. SESIÓN DEL 30-sep-2026: **los cuatro reportes del jugador, y el pueblo a 1 aviso** — ACTA
+
+El jugador se quejó, con razón, de que llevaba rondas midiendo etiquetas mientras él veía cosas a simple vista. Sus
+cuatro reportes, cada uno con su causa **medida** en su propio registro:
+
+| lo que reportó | la causa (medida) | el arreglo |
+|---|---|---|
+| **«los zombis del raid inicial son muy lentos y no atacan a los aldeanos»** | el perfil tenía `baseSpeed = 0.071` y **el zombi del juego anda a 0.23** (un **31 %**), y el aldeano estaba en el `targetSelector` en **prioridad 4**, detrás del jugador | base **0.23**, velocidad con tope **×1.6**; el aldeano pasa a **prioridad 0** (I165) |
+| **«los aldeanos no huyen ante los zombis agresivos»** | el pánico **existe** en su cerebro, pero **los goals del oficio cogen `MOVE`** y lo excluyen: no podía moverse (su registro: `Dionisio … slain by Zombie`, **sin dar un paso**) | `VillagerFleeGoal` a **prioridad 0 y con `MOVE`**: suelta el trabajo y corre a su casa (I165) |
+| **«varias construcciones hundidas y alrededor hueco, da a un pozo»** | medido con cortes del mundo: la choza del minero tiene el suelo **bien** (`cota−1`) pero **debajo hay 5 bloques de aire con agua al fondo** (el «pozo»); la aldea está **sobre el vacío** en esa zona | **cimiento**: rellena de piedra todo hueco **24 bloques** abajo en un disco de 86, respetando **el anillo del caracol** de la mina (I166) |
+| **«semillas y vegetales flotando en la superficie de la parcela»** | **era el mod**: dos `addFreshEntity(new ItemEntity(...))` soltaban el sobrante **en la celda de la mata** | **no se tira nada**: el sobrante va al almacén y, si no cabe, **a la mano**; y la cosecha **no se frena por capacidad** (I166) |
+
+**Y el cuadro por etiqueta de las corridas recientes** (105, 106 y 111: **4 · 3 · 1** avisos, con la mejor de la sesión
+en **1**), contra las etiquetas que el objetivo pedía cerrar:
+
+| etiqueta | referencia (I154) | ahora |
+|---|---|---|
+| `Yendo a la cocina` | 26 | **0** |
+| `Labro la huerta` / `Labrando la huerta` | 14 | **0** |
+| `Sembrando` | 11 | **0** |
+| `Trajo … del almacén a la despensa` | 3 | **0** |
+| `Buscando recambios` | 3 | **0** |
+| `Yendo a la arboleda` | — | **0** |
+| `Bajando lo del corral` | 35 | **0** |
+| `Recogiendo lo suyo` | 40 | **0** |
+| `Yendo a la taberna` | 29 | **0** |
+| `Sacrificando un animal` | 15 | **5** (arreglado en I168, **pendiente de medir**) |
+| `Guardando lo suyo` | — | **2** (es el caso de I169, **pendiente de medir**) |
+
+**Lo que queda**: (a) medir 4 corridas con I168 + I169 + el cimiento en su sitio; (b) la **clase B** —la ruta **alcanza**
+y el goal se rinde igual—, que es la única forma que sobrevive en el mejor registro (`ruta=23 nodos … alcanza=SI` desde
+dentro del corral, con el minero yendo al almacén: el caso de I169); (c) el acta del cuadro de arriba con su media.
+
 ### 8.bis. SESIÓN DEL 29-sep-2026 (tarde): **el nivel 3, medido y cerrado por clases** — ACTA
 
 El jugador mandó **reescribir el cerebro de los aldeanos** («si es necesario hay que cambiar toda la arquitectura…
