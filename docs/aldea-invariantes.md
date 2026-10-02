@@ -4734,8 +4734,25 @@ goal del mod lo escribe **una sola vez** al empezar la faena, no en cada tick—
 
 **ARREGLO**: `ponerRumbo` apunta **a dónde** y **cuándo** en los datos del propio aldeano, y el **latido** se lo devuelve
 si no tiene rumbo y el apunte es **reciente**. Es **pasivo** (nunca pelea con el goal ni le cambia el destino: solo
-rellena un hueco) y el apunte **caduca en 6 segundos** desde la última vez que el goal lo pidió, así que un recado
-terminado no deja al aldeano caminando a un sitio que ya no toca.
+rellena un hueco).
+
+**Y HICIERON FALTA TRES ITERACIONES, todas medidas con el banco rápido (3 min cada una)** — quedan escritas porque las dos
+primeras **no** funcionaron:
+
+1. **Caducidad a 6 segundos** ✗: resultó que **los goals solo piden el rumbo al empezar el tramo**, no en cada tick → el
+   apunte caducaba, el cerebro se quedaba vacío y el aldeano seguía parado (corridas 7 y 8).
+2. **Mantenerlo mientras el goal del mod siga activo** ✗: mejor, pero los avisos seguían diciendo `cerebro=-` (corridas
+   9, 10 y 11): el paquete de actividades del juego **borra `WALK_TARGET` al terminar sus comportamientos**, así que el
+   aldeano volvía a quedarse parado **en el mismo tick**.
+3. **Además del cerebro, el camino a la NAVEGACIÓN** ✓: la navegación tiene su **propio camino** y eso el cerebro del
+   juego no lo toca; si no hay camino vivo, se le da también. Con las dos cosas —el recuerdo para que el paseo no lo
+   desvíe y el camino para que ande— el aldeano se mueve aunque le borren el recuerdo.
+
+**Estado medido tras las tres**: corridas rápidas **1 · 1 · 0** (las mejores), con las etiquetas **rotando** de una corrida
+a otra (`Guardando lo suyo`, `Recogiendo el corral`): las **familias sistemáticas se han ido** y queda el tropiezo suelto.
+Sigue habiendo avisos con `cerebro=-` (el arnés lee el recuerdo del cerebro, que el juego vuelve a borrar), así que **la
+pregunta siguiente, ya concreta y de 3 minutos, es si ese aldeano está realmente atascado o si su goal se rinde antes de
+tiempo** (`nav.moveTo` devolviendo `false`).
 
 ### I170 · LA CLASE B: **LA RUTA ES LA QUE MANDA** (30-sep-2026)
 

@@ -92,6 +92,12 @@ jugador cerca), así que una partida abierta en un servidor sin jugadores **no t
 ## Cómo se usa
 
 ```powershell
+# 0) LO RÁPIDO, PARA ITERAR (30-sep-2026): 3 MINUTOS POR CORRIDA Y CON LAS ETIQUETAS
+#    Copia el mundo, arranca el servidor, lo deja 3 minutos y devuelve el recuento POR ETIQUETA
+#    (que es lo único que dice si un arreglo sirvió). De 80 minutos por pregunta a 3.
+pwsh -NoProfile -File build\tanda-rapida.ps1 1 2        # dos corridas = ~7 minutos
+#    Las 4 corridas LARGAS (build\tanda-tasa.ps1) se reservan para CONFIRMAR lo que ya salió bien aquí.
+
 # 1) Copiar el arnés al mod (es lo único que se compila)
 Copy-Item tools\arnes\GuardHarness.java src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java
 
@@ -110,6 +116,21 @@ Select-String run\logs\latest.log -Pattern '\[Arnes\]|\[Village\] Guardia|no lle
 Remove-Item src\main\java\com\chipoodle\devilrpg\debug -Recurse -Force
 Remove-Item run\world -Recurse -Force; Move-Item run\world.antes run\world
 ```
+
+### El banco rápido, y por qué existe
+
+El jugador lo pidió el 30-sep-2026, después de dos semanas en las que **cada pregunta costaba 80 minutos** (4 corridas de
+20 minutos): *«¿por qué tardas tanto en hacer mediciones?»*. Tenía razón: el cuello de botella no era el código, era el
+instrumento.
+
+`build/tanda-rapida.ps1` hace lo mismo que la tanda larga pero con **3 minutos de reloj** por corrida (~2 minutos de
+juego: el pueblo ya está construido y sus oficios han empezado), y devuelve **el recuento por etiqueta** en vez del total a
+secas —porque las etiquetas son lo que dice **qué** falla—. Y deja el mundo en `run/world`, así que después se puede
+**cortar con `build/slice_mina.py`** para comprobar en el terreno lo que el registro dice (así se encontró, por ejemplo,
+que el cimiento rellenaba el eje de la choza del minero y dejaba su borde hueco).
+
+**Regla de uso**: aquí se itera; la **tanda larga de 4 corridas** es para **confirmar** un arreglo que ya salió bien en el
+banco rápido. Nunca al revés.
 
 ## Qué mide
 
