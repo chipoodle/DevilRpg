@@ -4715,6 +4715,28 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I169 · SI PARA LLEGAR HAY QUE CRUZAR UNA PUERTA CERRADA, **SE ABRE** (30-sep-2026)
+
+La **última familia** que quedaba en el registro, y la más tonta de todas: destinos que **sí son casillas de pie** pero
+**sin ruta** —`ruta=1 nodos … alcanza=NO` **entre dos casillas normales**—. Medido en el mejor lote (corridas 105/106):
+
+```
+Guardando lo suyo       ruta=1 nodos hasta 545, 78, 598 alcanza=NO
+Recogiendo el corral    ruta=1 nodos hasta 626, 78, 567 alcanza=NO
+```
+
+Dos casillas normales con **la valla de la parcela o la del corral en medio y su compuerta cerrada**: el planificador
+**no cruza una compuerta cerrada**, así que el aldeano **se rendía teniendo el destino a un paso**.
+
+**ARREGLO**: se cablea por fin el módulo del nivel 3 que estaba **escrito y sin usar** (`VillageErrands.
+abrirLoQueCierreElPaso`), y se hace **en el punto único por el que caminan todos los goals** (`caminarHacia`). Se
+**sondea el camino** hacia el recado (una L de 6 pasos: 24 consultas) y se abre **solo la puerta que de verdad separa** al
+aldeano de su recado —se compara en qué lado de la pared está cada uno, por la dirección en la que la puerta separa—, así
+que **no se abren las del corral** y no se escapan las gallinas.
+
+**Lo que NO se hizo, y por qué**: el primer borrador barría un cubo de 9×9×5 alrededor del aldeano (405 consultas **por
+aldeano y por tick**), que es exactamente el tipo de coste que ya me mordió antes; se cambió a sondear el camino.
+
 ### I168 · EL GANADERO VA A UNA **CASILLA DE PIE AL LADO DEL ANIMAL** (30-sep-2026)
 
 Medido en el **mejor lote de la sesión** (corridas 105 y 106: siete avisos entre las dos): **cinco eran del ganadero**, y
