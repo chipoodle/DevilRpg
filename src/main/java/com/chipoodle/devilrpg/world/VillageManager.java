@@ -2695,6 +2695,10 @@ public final class VillageManager {
         for (Villager villager : level.getEntitiesOfClass(Villager.class,
                 new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 16))) {
             desatascarSiEstaEncajado(villager);
+            // I171 · Y SI SE LE HA PERDIDO EL RUMBO, SE LE DEVUELVE (30-sep-2026). Medido con el banco rápido: los
+            // avisos que quedaban decían `cerebro=-`, o sea el aldeano PARADO con el recado en pie porque alguien le
+            // había borrado el destino del cerebro. Ver `devolverElRumboSiSeLePerdio`.
+            devolverElRumboSiSeLePerdio(villager, level);
         }
         // I164 · Y EL COMPOSTERO —el PUESTO del granjero— SE VIGILA EN EL LATIDO (30-sep-2026). La pasada de
         // `prepareRepairs` (I163) corre **una vez**, pero el compostero puede quedar —o **volver a quedar**— un bloque
@@ -5069,8 +5073,64 @@ public final class VillageManager {
         ponerRumbo(villager, objetivo, velocidad);
     }
 
+    /** El último sitio al que se le mandó caminar, con qué velocidad y cuándo (I171). */
+    private static final String RUMBO_POS = "DevilRpgRumboPos";
+    private static final String RUMBO_VEL = "DevilRpgRumboVel";
+    private static final String RUMBO_TICK = "DevilRpgRumboTick";
+    /**
+     * Cuánto dura el rumbo guardado. El goal lo pide **cada tick** mientras el recado sigue en pie, así que un rumbo
+     * que no se renueva en 6 segundos es de un recado que ya terminó: no se le devuelve.
+     */
+    private static final long RUMBO_CADUCA = 120L;
+
+    /**
+     * I171 · <b>SI AL ALDEANO SE LE PIERDE EL RUMBO, SE LE DEVUELVE</b> (30-sep-2026, medido con el banco rápido).
+     * <p>
+     * Ésta era la causa real de las rendiciones que quedaban, y estaba delante de las narices en el propio aviso:
+     * <b>{@code cerebro=-}</b>. Los tres avisos de la corrida rápida 5 lo decían igual —el granjero a tres bloques de su
+     * destino, el minero yendo al almacén— y los tres con el {@code WALK_TARGET} <b>vacío</b>: el aldeano no es que
+     * caminara mal, es que <b>se había quedado sin sitio al que ir</b>. Alguien se lo borra (el propio cerebro del juego
+     * usa ese recuerdo para su paseo y lo limpia al terminar una actividad, y algún goal del mod lo escribe una sola vez
+     * al empezar la faena, no en cada tick), y el goal se queda esperando a que llegue hasta rendirse.
+     * <p>
+     * <b>LO QUE HACE</b>: cuando un goal manda caminar ({@link #ponerRumbo}), se apunta <b>a dónde</b> y <b>cuándo</b> en
+     * los datos del propio aldeano. Y en el latido, si el aldeano <b>no tiene rumbo</b> y el apunte es <b>reciente</b>
+     * (el goal lo sigue pidiendo), <b>se le devuelve</b>. Es pasivo: nunca pelea con el goal ni cambia su destino, solo
+     * rellena un hueco. Y si el goal deja de pedirlo, el apunte <b>caduca</b> en 6 segundos y no se le devuelve nada.
+     */
+    private static void devolverElRumboSiSeLePerdio(Villager villager, ServerLevel level) {
+        CompoundTag datos = villager.getPersistentData();
+        if (!datos.contains(RUMBO_POS)) {
+            return;
+        }
+        if (villager.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
+            return; // tiene rumbo: no se toca nada
+        }
+        if (level.getGameTime() - datos.getLong(RUMBO_TICK) > RUMBO_CADUCA) {
+            datos.remove(RUMBO_POS); // el recado ya no lo pide: caduca (no se le manda a un sitio viejo)
+            return;
+        }
+        BlockPos destino = BlockPos.of(datos.getLong(RUMBO_POS));
+        if (villager.blockPosition().distSqr(destino) <= 2.0D) {
+            datos.remove(RUMBO_POS); // ya está ahí
+            return;
+        }
+        float velocidad = datos.contains(RUMBO_VEL) ? datos.getFloat(RUMBO_VEL) : 0.5F;
+        // OJO: NO se renueva la marca de tiempo al devolverlo. Así el rumbo dura como mucho 6 segundos desde la ÚLTIMA
+        // vez que el goal lo pidió, y un recado terminado no deja al aldeano caminando a un sitio que ya no toca.
+        villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET,
+                new net.minecraft.world.entity.ai.memory.WalkTarget(
+                        new net.minecraft.world.entity.ai.behavior.BlockPosTracker(destino), velocidad, 1));
+    }
+
     /** Escribe el destino en el cerebro del aldeano ({@code WALK_TARGET}/{@code LOOK_TARGET}), sin más. */
     private static void ponerRumbo(Villager villager, BlockPos objetivo, float velocidad) {
+        // I171: se apunta a dónde y cuándo, para poder DEVOLVERLE el rumbo si el cerebro se lo borra (ver
+        // `devolverElRumboSiSeLePerdio`). El apunte es del propio aldeano y caduca solo.
+        CompoundTag datos = villager.getPersistentData();
+        datos.putLong(RUMBO_POS, objetivo.asLong());
+        datos.putFloat(RUMBO_VEL, velocidad);
+        datos.putLong(RUMBO_TICK, villager.level().getGameTime());
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
                 new net.minecraft.world.entity.ai.memory.WalkTarget(
                         new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo), velocidad, 1));
