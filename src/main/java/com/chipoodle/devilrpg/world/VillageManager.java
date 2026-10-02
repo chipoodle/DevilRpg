@@ -5159,6 +5159,35 @@ public final class VillageManager {
         return false;
     }
 
+    /** Cuándo avanzó por última vez su ruta (I172). */
+    private static final String AVANCE_TICK_TAG = "DevilRpgAvanceTick";
+
+    /**
+     * I172 · <b>¿ESTÁ ANDANDO O ESTÁ ATASCADO?</b> — «la ruta no ha avanzado en los últimos N ticks» (30-sep-2026).
+     * <p>
+     * <b>EL FALLO QUE ARREGLA, y era mío</b>: para no rendirse cuando el aldeano rutea (clase B) se empezó a usar
+     * {@link #avanzaPorLaRuta}, que devuelve {@code true} <b>solo en el tick en que cambia el nodo de la ruta</b> —y el
+     * nodo cambia cada muchos ticks—. Los goals que lo usaban como {@code if (avanza) sano else stuck++} seguían
+     * sumando «atascado» en <b>todos los demás ticks</b>, así que se rendían <b>mientras andaban</b>: por eso el arreglo
+     * anterior apenas cambió nada (medido con el banco rápido: la traza de «sin camino» no saltó <b>ni una vez</b> en
+     * dos corridas, o sea que la navegación <b>siempre</b> encontraba camino y el aldeano no estaba atascado de verdad).
+     * <p>
+     * <b>LO CORRECTO</b> es guardar <b>cuándo</b> avanzó por última vez y preguntar por el <b>tiempo</b>: si avanzó en los
+     * últimos {@code ticks}, <b>no</b> está atascado.
+     */
+    public static boolean laRutaAvanzoHacePoco(Villager villager, int ticks) {
+        CompoundTag datos = villager.getPersistentData();
+        long ahora = villager.level().getGameTime();
+        var ruta = villager.getNavigation().getPath();
+        if (ruta != null && !ruta.isDone()
+                && (!datos.contains(AVANCE_TAG) || ruta.getNextNodeIndex() > datos.getInt(AVANCE_TAG))) {
+            datos.putInt(AVANCE_TAG, ruta.getNextNodeIndex());
+            datos.putLong(AVANCE_TICK_TAG, ahora);
+            return true;
+        }
+        return ahora - datos.getLong(AVANCE_TICK_TAG) <= ticks;
+    }
+
     /** Escribe el destino en el cerebro del aldeano ({@code WALK_TARGET}/{@code LOOK_TARGET}), sin más. */
     private static void ponerRumbo(Villager villager, BlockPos objetivo, float velocidad) {
         // I171: se apunta a dónde y cuándo, para poder DEVOLVERLE el rumbo si el cerebro se lo borra (ver
