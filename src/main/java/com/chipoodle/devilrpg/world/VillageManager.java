@@ -5077,6 +5077,9 @@ public final class VillageManager {
     private static final String RUMBO_POS = "DevilRpgRumboPos";
     private static final String RUMBO_VEL = "DevilRpgRumboVel";
     private static final String RUMBO_TICK = "DevilRpgRumboTick";
+    /** Dónde y cuándo empezó el tramo actual: para poder decir **cuánto se ha movido** si se rinde (I173). */
+    private static final String TRAMO_POS = "DevilRpgTramoPos";
+    private static final String TRAMO_TICK = "DevilRpgTramoTick";
     /**
      * Cuánto dura el rumbo guardado. El goal lo pide **cada tick** mientras el recado sigue en pie, así que un rumbo
      * que no se renueva en 6 segundos es de un recado que ya terminó: no se le devuelve.
@@ -5193,6 +5196,12 @@ public final class VillageManager {
         // I171: se apunta a dónde y cuándo, para poder DEVOLVERLE el rumbo si el cerebro se lo borra (ver
         // `devolverElRumboSiSeLePerdio`). El apunte es del propio aldeano y caduca solo.
         CompoundTag datos = villager.getPersistentData();
+        // I173: y si el destino es NUEVO (otro tramo), se apunta desde dónde arranca ese tramo. Es lo que permite
+        // contestar «¿se movió?» cuando el goal se rinde, que es la pregunta que el aviso no sabía responder.
+        if (!datos.contains(RUMBO_POS) || datos.getLong(RUMBO_POS) != objetivo.asLong()) {
+            datos.putLong(TRAMO_POS, villager.blockPosition().asLong());
+            datos.putLong(TRAMO_TICK, villager.level().getGameTime());
+        }
         datos.putLong(RUMBO_POS, objetivo.asLong());
         datos.putFloat(RUMBO_VEL, velocidad);
         datos.putLong(RUMBO_TICK, villager.level().getGameTime());
@@ -5643,10 +5652,25 @@ public final class VillageManager {
                 goalsCorriendo.append(w.getGoal().getClass().getSimpleName()).append(' ');
             }
         }
+        // I173 · ¿SE HA MOVIDO O NO? (30-sep-2026). Es la pregunta que quedaba y el aviso **no** la contestaba: se
+        // apuntaba el estado del aldeano **después** de rendirse (con el rumbo ya borrado y la navegación parada, o sea
+        // una autopsia), y así se persiguió dos rondas un `cerebro=-` que no era la causa. Ahora se apunta el **tramo**:
+        // desde dónde y cuándo empezó a caminar hacia ahí, y **cuántos bloques** ha recorrido. Si se ha movido y aun
+        // así se rinde, el fallo está en cómo el goal mide el avance; si no se ha movido **nada**, está encajado.
+        double recorridos = -1.0D;
+        long ticksDelTramo = -1L;
+        CompoundTag datosTraza = villager.getPersistentData();
+        if (datosTraza.contains(TRAMO_POS)) {
+            BlockPos inicioDelTramo = BlockPos.of(datosTraza.getLong(TRAMO_POS));
+            recorridos = Math.sqrt(inicioDelTramo.distToCenterSqr(villager.position()));
+            ticksDelTramo = villager.level().getGameTime() - datosTraza.getLong(TRAMO_TICK);
+        }
         DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}) etiqueta=\"{}\" cerebro={}"
-                        + " nav=[{}] goals=[{}]: lo deja por {} min y sigue con lo demas",
+                        + " nav=[{}] goals=[{}] tramo=[recorridos {} bloques en {} ticks]: lo deja por {} min y sigue"
+                        + " con lo demas",
                 villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde, etiqueta, cerebro, navegacion,
-                goalsCorriendo.toString().trim(), PUNTO_FALLIDO_TICKS / (60 * 20));
+                goalsCorriendo.toString().trim(), String.format("%.1f", recorridos), ticksDelTramo,
+                PUNTO_FALLIDO_TICKS / (60 * 20));
     }
 
     /** El nombre corto (sin {@code Block{minecraft:...}}) del bloque de una celda, para los avisos del log. */
