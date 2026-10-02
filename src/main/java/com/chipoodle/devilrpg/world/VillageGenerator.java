@@ -6235,6 +6235,62 @@ public final class VillageGenerator {
         }
     }
 
+    /** Bloques hacia abajo que se <b>afianzan</b> bajo la aldea (I166). */
+    private static final int PROFUNDIDAD_DEL_CIMIENTO = 24;
+
+    /**
+     * <b>EL CIMIENTO DE LA ALDEA</b> (I166, 30-sep-2026 — lo pidió el jugador: *«varias construcciones están hundidas
+     * un bloque y alrededor está hueco y da a un pozo, porque abajo de la villa está hueco y debería ser sólido:
+     * chequea alrededor de la choza del minero»*).
+     * <p>
+     * <b>LO QUE FALLABA</b>: {@code sellarSuelo} tapa la capa de arriba, pero <b>se para en el primer bloque firme</b>:
+     * una <b>cueva o barranca con techo sólido justo debajo de la aldea</b> —lo normal en cueva, y garantizado en el
+     * borde de la mina— <b>queda hueca</b>. Y ahí se abre un día: el agua entra, un creeper rompe, alguien cava, y la
+     * plaza (o la choza del minero) se cae al vacío o aparece el socavón por el que se cae un aldeano.
+     * <p>
+     * <b>LO QUE HACE</b>: en un <b>disco más ancho que el recinto</b> (para cubrir el corral anexo, la caseta del
+     * minero, la arboleda y la pesquera) recorre <b>cada columna hacia abajo</b> desde la capa que se pisa y
+     * <b>rellena de piedra todo hueco</b> (aire, cueva, agua o lava) hasta {@link #PROFUNDIDAD_DEL_CIMIENTO} bloques.
+     * No toca la columna del <b>pozo de la mina</b> (que es hueco a propósito) ni las columnas cuyo suelo es
+     * <b>agua</b> (el lago de la pesquera y el bebedero del corral). Es <b>idempotente</b>: donde ya hay piedra no
+     * hace nada, así que repetirlo no cambia nada.
+     *
+     * @return cuántos bloques ha puesto
+     */
+    public static int afianzarElSuelo(ServerLevel level, BlockPos center, int radio, int cota) {
+        int puestos = 0;
+        for (int dx = -radio; dx <= radio; dx++) {
+            for (int dz = -radio; dz <= radio; dz++) {
+                if (dx * dx + dz * dz > radio * radio) {
+                    continue; // el disco, como el nivelado
+                }
+                int x = center.getX() + dx;
+                int z = center.getZ() + dz;
+                BlockPos arriba = new BlockPos(x, cota - 1, z);
+                if (level.getBlockState(arriba).is(Blocks.WATER) || level.getBlockState(arriba).is(Blocks.LAVA)) {
+                    continue; // el lago y el bebedero son agua a propósito
+                }
+                if (estaSobreElPozo(center, arriba)) {
+                    continue; // el pozo de la mina sale a la superficie: es hueco por diseño
+                }
+                for (int y = cota - 1; y > cota - 1 - PROFUNDIDAD_DEL_CIMIENTO && y > level.getMinBuildHeight(); y--) {
+                    BlockPos p = new BlockPos(x, y, z);
+                    BlockState s = level.getBlockState(p);
+                    if (s.isAir() || s.is(Blocks.WATER) || s.is(Blocks.LAVA) || s.is(Blocks.CAVE_AIR)) {
+                        colocar(level, p, Blocks.STONE.defaultBlockState(), 3);
+                        puestos++;
+                    }
+                }
+            }
+        }
+        if (puestos > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: CIMIENTO puesto: {} bloques solidos bajo el suelo (huecos"
+                    + " de cueva/barranca tapados de raiz; radio {}, profundidad {})", center, puestos, radio,
+                    PROFUNDIDAD_DEL_CIMIENTO);
+        }
+        return puestos;
+    }
+
     /**
      * <b>Cota de una aldea ya construida</b>: se <b>lee</b> de la plaza (el centro, donde no hay casas) y se
      * nivela el terreno a ella. Es la que usan las migraciones de aldeas viejas.

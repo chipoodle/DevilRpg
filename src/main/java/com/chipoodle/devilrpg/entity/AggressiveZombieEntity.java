@@ -78,6 +78,13 @@ public class AggressiveZombieEntity extends Zombie {
     private int worldSiegeIndex = -1;
     /** Umbral de distancia para que el zombie pueda romper obsidiana (más lejos = más nivel). */
     private static final double OBSIDIAN_THRESHOLD = 700;
+    /**
+     * Tope del escalado que se aplica a la <b>velocidad</b> del asaltante (I165, 30-sep-2026): la vida y el daño
+     * escalan con la distancia/amenaza (hasta ×4), pero la velocidad solo hasta <b>+60 %</b>. Con la base del zombi
+     * normal (0.23) eso deja un asaltante que <b>siempre corre</b> —0.23 en la primera aldea, 0.37 en el extremo— en vez
+     * de uno que va a un 31 % de la velocidad de un zombi hasta que el escalado lo rescata.
+     */
+    private static final double VELOCIDAD_TOPE_DE_ESCALA = 1.6D;
 
     public AggressiveZombieEntity(EntityType<? extends Zombie> type, Level world) {
         super(type, world);
@@ -553,7 +560,7 @@ public class AggressiveZombieEntity extends Zombie {
         // ALDEANOS: el mundo también es hostil con los asentamientos. Es lo que hace que una horda que marcha
         // a por una aldea sea una amenaza real para sus habitantes (y no solo para el jugador): si el jugador
         // no va a defenderla, los aldeanos caen.
-        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Villager.class, true));
+        this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Villager.class, true)); // I165: el PRIMER objetivo de una horda que marcha a la aldea
         // Golems (defensas de la aldea) SOLO si el zombie va a por una aldea: así uno suelto no se pelea con
         // un golem que no le estaba haciendo nada.
         this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, IronGolem.class, 10, true, false,
@@ -772,7 +779,14 @@ public class AggressiveZombieEntity extends Zombie {
 
         // Aplicar el escalado sobre los valores base del perfil
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(SPAWN_PROFILE.baseHealth() * scaleFactor);
-        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(SPAWN_PROFILE.baseSpeed() * scaleFactor);
+        // LA VELOCIDAD **NO** ESCALA COMO LA VIDA NI EL DAÑO (30-sep-2026, lo reportó el jugador: *"son muy lentos
+        // caminando inicialmente, aunque ya en niveles más avanzados son tan rápidos como el zombie normal"*).
+        // Medido en el perfil: `baseSpeed = 0.071` y el **zombi normal del juego anda a 0.23** — o sea que un asaltante
+        // de la primera aldea iba a **un 31 %** de la velocidad de un zombi de vanilla, y solo llegaba a parecer normal
+        // cuando el ×4 del escalado lo empujaba a ~0.28. Ahora la base es la del zombi normal y la velocidad escala
+        // **poco** (hasta +60 %): un asaltante corre siempre, y el escalado se nota en vida y daño, no en eternizarse.
+        double velocidad = SPAWN_PROFILE.baseSpeed() * Math.min(scaleFactor, VELOCIDAD_TOPE_DE_ESCALA);
+        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(velocidad);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(SPAWN_PROFILE.baseDamage() * scaleFactor);
 
         // Subir la vida ACTUAL al nuevo máximo: al escalar solo se cambiaba el máximo, así que un zombie

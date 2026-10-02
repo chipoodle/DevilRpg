@@ -799,9 +799,16 @@ public final class VillageManager {
      *       <b>POI</b>, el granjero reclamaba <b>el de arriba</b> en unas corridas y el de la cota en otras (censo:
      *       {@code puesto=573, 63, 570} en <b>408-448 muestras</b> de ~3.250). Esta versión <b>quita los que sobran</b>
      *       y manda el {@code JOB_SITE} al bueno.</li>
+     *   <li><b>79:</b> <b>EL CIMIENTO DE LA ALDEA</b> (I166). Lo pidió el jugador: *«varias construcciones están
+     *       hundidas un bloque y alrededor está hueco y da a un pozo, porque abajo de la villa está hueco y debería ser
+     *       sólido»*. `sellarSuelo` tapaba solo la capa de arriba y <b>se paraba en el primer bloque firme</b>, así que
+     *       una <b>cueva con techo sólido</b> bajo la plaza —y el borde de la mina— quedaban huecos. Esta versión
+     *       <b>rellena de piedra todo hueco</b> bajo el suelo en un disco más ancho que el recinto (corral anexo,
+     *       caseta del minero, arboleda, pesquera), 24 bloques hacia abajo, sin tocar el pozo de la mina ni el agua
+     *       del lago y del bebedero.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 78;
+    public static final int CURRENT_LAYOUT = 79;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2247,6 +2254,14 @@ public final class VillageManager {
             // (42 de 60 destinos en y=63 en una corrida). La migración de arriba no puede con ese caso —exige la celda
             // libre y allí hay césped—, así que se baja el compostero a la cota y se le pone el suelo que le falte.
             composterosMovidos.addAll(VillageGenerator.asentarLosComposterosALaCota(level, center));
+            // I166 · Y EL CIMIENTO: abajo de la aldea NO PUEDE HABER HUECO (lo pidió el jugador: *"varias
+            // construcciones están hundidas un bloque y alrededor está hueco y da a un pozo, porque abajo de la villa
+            // está hueco y debería ser sólido; chequea alrededor de la choza del minero"*). `sellarSuelo` tapa la capa
+            // de arriba pero se para en el primer bloque firme, así que una cueva CON TECHO bajo la plaza (y el borde
+            // de la mina, que es hueco a propósito) quedaban huecos: aquí se rellena de piedra todo hueco bajo el
+            // suelo en un disco más ancho que el recinto (corral anexo, caseta del minero, arboleda, pesquera).
+            VillageGenerator.afianzarElSuelo(level, center, VillageGenerator.FENCE_RADIUS + 24,
+                    VillageGenerator.cotaDeLaPlaza(level, center));
             for (BlockPos[] par : composterosMovidos) {
                 BlockPos viejo = par[0];
                 BlockPos nuevo = par[1];
@@ -2799,6 +2814,16 @@ public final class VillageManager {
                     && com.chipoodle.devilrpg.entity.goal.VillagerPickupGoal.tieneMateriales(
                             villager.getVillagerData().getProfession())) {
                 asegurarGoalDeRecogidaPorOficio(villager, center, objectiveIndex);
+            }
+        }
+        // HUIR DEL PELIGRO (I165, lo pidió el jugador: *"los aldeanos no huyen ante los zombies agresivos"*). Va a
+        // PRIORIDAD 0 y con MOVE: por delante de todos los oficios, para que cuando un enemigo se acerque el aldeano
+        // SUELTE el trabajo y CORRA a su casa. Sin esto, los goals del oficio (que también piden MOVE) tapaban el
+        // pánico del juego y el aldeano se quedaba plantado hasta que lo mataban. A los guardias no se les pone:
+        // esos pelean.
+        for (Villager villager : aldeanos) {
+            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)) {
+                asegurarElHuir(villager);
             }
         }
         // LA TABERNA (etapa F): el aldeano con hambre se va a la taberna a comer y a reponer energía (lo pidió el
@@ -5115,6 +5140,22 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(0, new com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal(villager));
+    }
+
+    /**
+     * Le pone a un aldeano de la aldea <b>el goal de HUIR</b> (I165), una sola vez, a <b>prioridad 0</b> y con
+     * <b>MOVE</b>. Es la pieza que le faltaba al pánico del juego: los goals del oficio cogen {@code MOVE}, así que el
+     * pánico <b>no podía mover al aldeano</b> y se quedaba plantado hasta que el asaltante lo mataba (medido en el
+     * registro del jugador: `Dionisio (Granjero) was slain by Zombie`, `Jacinto (Granjero) was slain by Aggressive
+     * Zombie`, los dos <b>sin haber dado un paso</b>). A los <b>guardias</b> no se les pone: esos pelean.
+     */
+    public static void asegurarElHuir(Villager villager) {
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerFleeGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(0, new com.chipoodle.devilrpg.entity.goal.VillagerFleeGoal(villager));
     }
 
     /**

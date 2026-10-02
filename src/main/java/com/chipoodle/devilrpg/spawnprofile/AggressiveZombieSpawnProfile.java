@@ -13,7 +13,8 @@ public final class AggressiveZombieSpawnProfile {
             17,     // minHardDistance: la zona protegida se encoge hasta 17 bloques a máxima amenaza
             3.0,    // maxScaleMultiplier: +300% de atributos en la distancia máxima
             10,   // baseHealth
-            0.071,  // baseSpeed
+            0.23,  // baseSpeed: LA DEL ZOMBI DEL JUEGO (antes 0.071 = un 31 % de él: los asaltantes de la primera
+                   //           aldea iban lentísimos y solo parecían normales con el ×4 del escalado. I165)
             0.7,    // baseDamage
             20,     // baseXp (experiencia base, como un mob normal)
             4.5     // maxXpMultiplier: +450% de XP en la distancia máxima
