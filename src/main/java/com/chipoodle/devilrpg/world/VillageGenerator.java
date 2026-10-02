@@ -6334,11 +6334,16 @@ public final class VillageGenerator {
                 if (level.getBlockState(arriba).is(Blocks.WATER) || level.getBlockState(arriba).is(Blocks.LAVA)) {
                     continue; // el lago y el bebedero son agua a propósito
                 }
-                if (estaSobreElPozo(center, arriba)) {
-                    continue; // el pozo de la mina sale a la superficie: es hueco por diseño
-                }
                 for (int y = cota - 1; y > cota - 1 - PROFUNDIDAD_DEL_CIMIENTO && y > level.getMinBuildHeight(); y--) {
                     BlockPos p = new BlockPos(x, y, z);
+                    // EL CARACOL DE LA MINA SE RESPETA **CELDA A CELDA** (30-sep-2026): antes se saltaba la COLUMNA
+                    // entera si estaba sobre el pozo (`estaSobreElPozo`, un cilindro de radio 4-5 por cada mina), y eso
+                    // dejaba sin tapar el hueco que el jugador ve **alrededor de la choza del minero** (medido: de y=76
+                    // hacia abajo todo era AIRE, con el agua del fondo en y=72 — *"alrededor está hueco y da a un
+                    // pozo"*—). La mina solo necesita que **sus propias celdas** sigan huecas.
+                    if (esCeldaDeLaMina(center, cota, p) || esCeldaDePasoDeLaMina(center, cota, p)) {
+                        continue;
+                    }
                     BlockState s = level.getBlockState(p);
                     if (s.isAir() || s.is(Blocks.WATER) || s.is(Blocks.LAVA) || s.is(Blocks.CAVE_AIR)) {
                         colocar(level, p, Blocks.STONE.defaultBlockState(), 3);
