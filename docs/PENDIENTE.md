@@ -48,14 +48,14 @@ restaurado) y **todo commiteado**.
 de la **media 1,29** de la tanda anterior a **0,30** con el código final (**media de 3 corridas: 0,10 · 0,30 · 0,50**),
 y el pueblo queda en **7 avisos, TODOS SUELTOS y ningún bucle** (contra 18 avisos con bucles de **16** y **19** de la
 referencia de la mañana): los gordos (`Yendo a la taberna` 16, `Volviendo a la plaza` 19, `Cuidando el ganado` 3,
-`no consigue entrar al bancal` 5) están **a cero**.
+`no consigue entrar al parcela` 5) están **a cero**.
 
 **Cerrado y MEDIDO en esta sesión** (con el criterio que lo prueba):
 
 | qué | medida |
 |---|---|
-| **el granjero** (I129) | el caminante daba por **llegado** lo que está a 1 bloque → `caminarHaciaExacto` (tolerancia 0 + ruta pedida a mano): `no consigue entrar al bancal` **5 → 0**, avisos de huerta **6 → 0**, el granjero **`Cosechando`** |
-| **la recolectora encerrada** (I130) | no podía **salir del bancal** (una puerta de valla cerrada **no es navegable**): `abrirLaCompuertaDeAlLado` + salir con paso exacto → `Volviendo a la plaza` **19 → 0** (total **27 → 9**) |
+| **el granjero** (I129) | el caminante daba por **llegado** lo que está a 1 bloque → `caminarHaciaExacto` (tolerancia 0 + ruta pedida a mano): `no consigue entrar al parcela` **5 → 0**, avisos de huerta **6 → 0**, el granjero **`Cosechando`** |
+| **la recolectora encerrada** (I130) | no podía **salir del parcela** (una puerta de valla cerrada **no es navegable**): `abrirLaCompuertaDeAlLado` + salir con paso exacto → `Volviendo a la plaza` **19 → 0** (total **27 → 9**) |
 | **el ganadero** (I131) | perseguía la **celda cruda del animal** (que no se pisa) → `casillaDePieCercaDe` (regla I114): `Cuidando el ganado` **3 → 0** (total **9 → 5**) |
 | **el aldeano METIDO en un bloque** | el criterio bueno es **la forma de colisión contra la altura de los pies** (con `esCeldaDePie`: 940 falsos positivos; con la caja: 0 disparos) → **2 desatascos reales**, 0 falsos positivos |
 | **la mina ATRAVIESA el agua** (I132) | **aísla** la cáscara 3×3×3, **seca** la celda y **sigue** → `hechas 0 → 3/24`, **`TOPE=NO`**; y **la mina BAJA** (`pasos 16 → 32`, `y 54 → 46`) con **16 piezas de caracol** |
@@ -63,9 +63,9 @@ referencia de la mañana): los gordos (`Yendo a la taberna` 16, `Volviendo a la 
 | **la taberna** | `VillagerTavernGoal` caminaba a la **celda de la mesa** (no pisable) → `casillaDePieCercaDe`: `Yendo a la taberna` **16 → 0** y la corrida **2,73 → 0,47** por 1.000 ticks |
 | **la medida** (I135) | `tools/arnes/rendiciones.py`: rendiciones **por 1.000 ticks en ventana fija**, por etiqueta, con media y rango |
 | **la boca de la galería** (I136) | el aldeano va **de pie sobre la losa** (nodo `y+1`) y con **dos** celdas de hueco el vecino sale **BLOCKED**: no entra ni sale → **tres** celdas. `hechas` **3/24 congelado 3.600 ticks → 24/24** y `pasos` **32 → 44** (la cara de `y=46` a `y=40`); y **las paredes contra el agua** al abrir cada celda |
-| **la cadena del hierro de los raids** (I137) | el **guardia** mata, **lootea** (2 pepitas), **deja el hierro en el almacén** (13 depósitos, de 0 a **20** pepitas) y **el herrero forja el pico de HIERRO**; el eslabón que faltaba era que el guardia se lo quedaba en el zurrón |
-| **la balsa, al herrero de herramientas** (I138) | era la faena que le comía el tiempo al minero (**33-46 coladas** con el pedernal en su zurrón y el almacén clavado en 6) → ahora cuela el **herrero**: coladas del minero **0**, del herrero **10**, el pedernal **6 → 16**, y la misma galería en **t≈17.200** en vez de **t≈37.800** |
-| **los atascos sueltos** (I139) | (1) el guardia: el atasco se medía **solo por la recta** y la ronda es un círculo → cuenta el **avance por la ruta** (`Patrullando` **9 → 2**); (2) a por un objeto caído se iba a la **celda cruda** (la mesa, una valla) → `casillaDePieCercaDe` (`Recogiendo el corral` **4 → 0**, `Guardando lo suyo` **5 → 0**); (3) «pisable» no incluía **los cultivos** → el bancal no tenía ni una casilla de pie (el granjero hundido en bucle **7 → 1**) |
+| **la cadena del hierro de los raids** (I137) | el **guardia** mata, **lootea** (2 pepitas), **deja el hierro en el almacén** (13 depósitos, de 0 a **20** pepitas) y **el herrero forja el pico de HIERRO**; el eslabón que faltaba era que el guardia se lo quedaba en el inventario |
+| **la balsa, al herrero de herramientas** (I138) | era la faena que le comía el tiempo al minero (**33-46 coladas** con el pedernal en su inventario y el almacén clavado en 6) → ahora cuela el **herrero**: coladas del minero **0**, del herrero **10**, el pedernal **6 → 16**, y la misma galería en **t≈17.200** en vez de **t≈37.800** |
+| **los atascos sueltos** (I139) | (1) el guardia: el atasco se medía **solo por la recta** y la ronda es un círculo → cuenta el **avance por la ruta** (`Patrullando` **9 → 2**); (2) a por un objeto caído se iba a la **celda cruda** (la mesa, una valla) → `casillaDePieCercaDe` (`Recogiendo el corral` **4 → 0**, `Guardando lo suyo` **5 → 0**); (3) «pisable» no incluía **los cultivos** → el parcela no tenía ni una casilla de pie (el granjero hundido en bucle **7 → 1**) |
 
 **El aviso de método que salió de aquí**: al normalizar la medida, el "ruido" escondía **16 rendiciones de un solo
 aldeano en un solo sitio** (la taberna). La medida no era un trámite: **destapó el fallo**.
@@ -92,7 +92,7 @@ desbloqueada — la primera corrida buena da **0,30** por 1.000 ticks (contra 1,
 
 **Y también CERRADO en esta sesión**: la **cadena del hierro de los raids** (§6b.2/§6b.3) — **I137**: el guardia mata,
 lootea, **deja el hierro en el almacén** (13 depósitos; el almacén de 0 a 20 pepitas) y **el herrero forja el pico de
-hierro**, que se lleva el minero. El eslabón que faltaba era el guardia (se quedaba el botín en el zurrón) y el
+hierro**, que se lleva el minero. El eslabón que faltaba era el guardia (se quedaba el botín en el inventario) y el
 instrumento tenía tres trampas (contaba pepitas en el suelo, la barredora descartaba el zombi y el escaneo era de 140
 bloques): está todo en `tools/arnes/medidas-pepitas.txt`.
 
@@ -107,10 +107,10 @@ hace el herrero (**10**, hasta el objetivo de 16 pedernales) y la misma galería
   ronda es un **círculo**: en un rodeo la recta sube. Ahora cuenta también el **avance por la ruta viva**. MEDIDO:
   `Patrullando` **9 → 2**.
 * **al objeto caído se iba a la celda CRUDA** (que puede ser la **mesa de la taberna**, una **valla** o el propio
-  bancal): `casillaDePieCercaDe` en los cuatro goals que recogen **+** `desatascarSiEstaEncajado` antes de contar
-  atasco. Y de raíz: **«pisable» no incluía los cultivos** (`esCeldaDePie` pedía aire y un bancal no tiene aire) →
+  parcela): `casillaDePieCercaDe` en los cuatro goals que recogen **+** `desatascarSiEstaEncajado` antes de contar
+  atasco. Y de raíz: **«pisable» no incluía los cultivos** (`esCeldaDePie` pedía aire y un parcela no tiene aire) →
   el granjero hundido en la farmland **no tenía a dónde salir**. MEDIDO: `Recogiendo el corral` **4 → 0**,
-  `Guardando lo suyo` **5 → 0**, `Yendo a la taberna` **1-2 → 0**, el bucle del bancal **7 → 1**, y la **tasa del
+  `Guardando lo suyo` **5 → 0**, `Yendo a la taberna` **1-2 → 0**, el bucle del parcela **7 → 1**, y la **tasa del
   pueblo 0,50-0,60 → 0,30** por 1.000 ticks (`tools/arnes/medidas-atascos-sueltos.txt`).
 
 ### 8.bis. SESIÓN DEL 29-sep-2026 (tarde): **el nivel 3, medido y cerrado por clases** — ACTA
@@ -160,7 +160,7 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
    - **I157 el bucle del portón** (la mayor mejora: **30,25 → 15,25** de media, `Entrando a la huerta` 34/50 → 0-6),
    - **I158 taberna** (el atasco se mide contra el paso: `Yendo a la taberna` **29 → 3** en su lote),
    - **I159 el freno del desatasco** (`Sembrando`/`Cosechando` **12 → 4**),
-   - **I160 la cota del bancal** (destinos a cota+1: **42 → 1-5** por corrida).
+   - **I160 la cota del parcela** (destinos a cota+1: **42 → 1-5** por corrida).
    **El cuadro del lote final (85-88, 89 avisos en 4 corridas)**: `Bajando lo del corral` **35 → 10**,
    `Recogiendo lo suyo` **40 → 10**, `Yendo a la taberna` **29 → 11**, `Sacrificando un animal` **15 → 5**,
    `Sembrando` **11 → 9**; y el pueblo trabaja (pescador 7-10, herrería 60-74, cocina 2-8, mina 2-3).
@@ -169,7 +169,7 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
      **escalón del terreno** (suelo natural en 62, un bloque sobre la cota) y el granjero **no podía subir a su
      puesto**, así que **todos sus recados** apuntaban a esa altura (**42 de 60 destinos en y=63** en una corrida). Se
      **asienta a la cota** (y se muda el `JOB_SITE`), **se vigila en el latido** cada 10 s y **se quitan los composteros
-     de más** —medido en el mundo del arnés: la columna del bancal 1 tenía **DOS**, el bueno a la cota y **otro encima**,
+     de más** —medido en el mundo del arnés: la columna del parcela 1 tenía **DOS**, el bueno a la cota y **otro encima**,
      resto de la migración 64—. `CURRENT_LAYOUT = 78`.
      **MEDIDO (4 corridas, 101-104): EL MEJOR LOTE DE LA SESIÓN** — total **4 · 6 · 8 · 9 (media 6,75)**, el censo con
      `puesto y=63` en **2 · 2 · 2 · 2** (antes **410-448**), la limpieza actuando **0 · 11 · 9 · 23** veces, y el trabajo
@@ -180,7 +180,7 @@ uno con **4 corridas y por etiqueta** (la lección de la mañana: el total no di
    - **`Yendo a la cocina` 17** (era 12): sigue **abierta**. Ya se sabe lo que **no** vale: preguntar la ruta en `canUse`
      (dispara el bucle del portón, I157) y preguntarla a los 40 ticks de atasco (I161: **17 → 26**, retirada).
    - **`Labro la huerta` / `Labrando la huerta`** (14 en el lote del 30-sep): **misma clase** —`ruta=1 nodos … alcanza=NO`
-     entre **dos casillas normales** (`aire/aire/hierba`), o sea **un recinto cerrado de por medio** (el bancal y su
+     entre **dos casillas normales** (`aire/aire/hierba`), o sea **un recinto cerrado de por medio** (el parcela y su
      valla)—.
    - El **contador de trabajo de la granja** (197-889 entre lotes): es **varianza** (el mismo código da 889 y 369), no
      una entrega perdida.
@@ -360,10 +360,10 @@ dentro de un bloque** (su celda no es aire): no se pueden recoger y solo sirven 
 > **1**, contra las **7 en la ventana / 12 en la corrida** de la medida original. La ventana de esa corrida suma **7
 > rendiciones** y ninguna es esta: `Bajando lo del corral` 2, `Recogiendo lo suyo` 2, `Yendo a la taberna` 3 (ver §11).
 
-**Y EL RECOLECTOR EN EL BANCAL** (mismo log, 6 en la ventana): se rinde desde `484,62,658` con **`pies=farmland`** y
+**Y EL RECOLECTOR EN EL PARCELA** (mismo log, 6 en la ventana): se rinde desde `484,62,658` con **`pies=farmland`** y
 `cabeza=wheat` —o sea **encajada dentro del cultivo**, un bloque POR DEBAJO de la cota—, y ahí mismo tiene una ruta a la
 campana que **SÍ alcanza** (`ruta=23 nodos … alcanza=SI`). Hay que ver si es el mismo falso positivo de I146 (el
-cerebro en otra parte) o el desatasco del bancal.
+cerebro en otra parte) o el desatasco del parcela.
 
 ### 1. El `JOB_SITE` del minero (el cortapiedras, un bloque): **medido, y no cuesta nada** (cerrado)
 
@@ -414,17 +414,17 @@ la del recuadro: **cosmético, cerrado**.
 destino **con tolerancia de 1 bloque** (`caminarHacia` pone `WalkTarget(..., 1)`), así que el planificador **lo daba
 por llegado**, le devolvía una ruta de **un solo punto** (la celda donde él ya estaba) y **no daba ni un paso**: el
 tramo de la compuerta no avanzaba, a los 120 ticks **aparcaba esa entrada** y probaba otra puerta —hasta las cuatro—
-y se rendía. Medido: los **6 avisos de una corrida, todos a distancia 1**, y **5** `no consigue entrar al bancal`.
+y se rendía. Medido: los **6 avisos de una corrida, todos a distancia 1**, y **5** `no consigue entrar al parcela`.
 
 **El arreglo**: `VillageManager.caminarHaciaExacto(...)`, un caminar **con tolerancia 0** (y que además le pide la
 ruta a la navegación a mano, porque el cerebro puede escribir su propio destino en el mismo tick). Se usa en los dos
-tramos del granjero que exigen **pisar** una celda: **entrar** por la compuerta y **salir** del bancal.
+tramos del granjero que exigen **pisar** una celda: **entrar** por la compuerta y **salir** del parcela.
 
 **MEDIDO, antes y después** (misma partida, misma copia, modo `MEDIR_MINERO`):
 
 | | antes | después |
 |---|---|---|
-| `no consigue entrar al bancal …` | **5** | **0** |
+| `no consigue entrar al parcela …` | **5** | **0** |
 | avisos de `Entrando a la huerta` | **6** | **0** |
 | el granjero trabajando | se rendía en la puerta | **`Valeriano (Granjero) / Cosechando`** y entregas a la despensa de **73, 71, 45 y 14** |
 
@@ -432,14 +432,14 @@ tramos del granjero que exigen **pisar** una celda: **entrar** por la compuerta 
 está en `tools/arnes/medidas-mina-sellada.txt` §11: los dos fallaron y se quitaron, y fue esa medida la que dejó a la
 vista que el problema era la tolerancia del caminante.)*
 
-### 3. La RECOLECTORA: **ARREGLADA y MEDIDA** (se quedaba encerrada en el bancal)
+### 3. La RECOLECTORA: **ARREGLADA y MEDIDA** (se quedaba encerrada en el parcela)
 
-**Medido**: **19 rendiciones** en `Volviendo a la plaza` con `ruta=1 nodos … alcanza=NO` **desde dentro de un bancal**
-(`pies=farmland cabeza=wheat`): entra a los bancales a por lo que se cae —su faena— y **no puede salir**, porque una
+**Medido**: **19 rendiciones** en `Volviendo a la plaza` con `ruta=1 nodos … alcanza=NO` **desde dentro de un parcela**
+(`pies=farmland cabeza=wheat`): entra a los parcelas a por lo que se cae —su faena— y **no puede salir**, porque una
 **puerta de valla cerrada no es navegable** para el juego y nadie se la abre.
 
 **El arreglo**: `VillageManager.abrirLaCompuertaDeAlLado(...)` (compartida con el granjero) + en la recolectora, si
-está dentro de un bancal, mandarla a la **celda de dentro de la compuerta más cercana** con `caminarHaciaExacto` y
+está dentro de un parcela, mandarla a la **celda de dentro de la compuerta más cercana** con `caminarHaciaExacto` y
 **abrírsela** en cuanto la tiene al lado (probando otra si esa está aparcada).
 
 **MEDIDO**: rendiciones del pueblo **27 → 9**; `Filomena / Volviendo a la plaza` **19 → 0**; y ahora **sale y
@@ -602,7 +602,7 @@ herrero**, no el minero.
    se puede forjar con 27 pepitas** cuando no hay 3 lingotes (vanilla: 9 pepitas = 1 lingote).
 3. **Hierro de los zombis de los raids** — **HECHO y MEDIDO** (27-sep-2026, I137): la cadena que pidió el jugador
    (raid → guardia → hierro → el herrero) está medida eslabón a eslabón. **El eslabón que faltaba en el mod era el
-   guardia**: looteaba y **se quedaba el hierro en el zurrón** (medido: de t=300 a t=2.700 con el almacén a 0, porque
+   guardia**: looteaba y **se quedaba el hierro en el inventario** (medido: de t=300 a t=2.700 con el almacén a 0, porque
    su goal no tenía ningún paso que lo dejara) → arreglado con `VillagerGuardGoal.dejarElHierroEnElAlmacen` (el guardia
    **va** al almacén cuando lleva hierro). Y el instrumento tenía **tres trampas** que daban un falso "no funciona":
    contaba pepitas **en el suelo** (el mod se las da **al que mata**), la **barredora** del arnés **descartaba** el
@@ -614,7 +614,7 @@ herrero**, no el minero.
    si en ese momento no lleva** — y el minero **cavaba antes de tenerlas** (el log: cavó la celda 8 de la galería a
    las 03:31 y fabricó las antorchas a las 03:34) y **nunca repasaba**. Censo del arnés: el caracol con sus pasos
    **0, 8, 16, 24 y 32** en `air` (ni una antorcha), la galería con sus celdas 8 y 16 en `+1=air`, y el minero con
-   **8 antorchas en el zurrón SIN GASTAR**. Arreglo, dos partes: **(a) la fase `ENCENDER`** (`buscarHuecoDeLuz`)
+   **8 antorchas en el inventario SIN GASTAR**. Arreglo, dos partes: **(a) la fase `ENCENDER`** (`buscarHuecoDeLuz`)
    repasa **del frente hacia la boca** y pone la antorcha que falte antes de seguir cavando; **(b) no se baja sin
    luz**: `hayQueSubir` pedía luz solo con `celdasCavadas > 0`, así que la **primera bajada** era a oscuras → ahora la
    pide también en el primer viaje **si el pueblo puede dársela** (antorcha hecha, o **carbón/carbón vegetal de un
@@ -641,7 +641,7 @@ de **I114/I131**: **se camina a una casilla de pie**.
 
 
 Al medir por tasa y desglosar por etiqueta (I135) salió el atasco **más grande que queda**, y es **nuevo**: al dejar de
-quedarse encerrada en los bancales (I130), **Filomena llega a la taberna** y ahí se rinde:
+quedarse encerrada en los parcelas (I130), **Filomena llega a la taberna** y ahí se rinde:
 **`16x Filomena (Recolector) / Yendo a la taberna`** en una sola corrida (dos tercios de su total, 2,73 por 1.000
 ticks). Es el sitio por donde hay que empezar: leer su aviso con `cerebro=`, `nav=` y `pies=` (probablemente otra vez
 el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y **medir con
@@ -671,7 +671,7 @@ el patrón de "no puedo entrar/salir de un recinto" o "la celda no se pisa"), y 
 >
 > **Y EL TALLER/BALSA, HECHO Y MEDIDO EN LA MISMA SESIÓN** (I138, `tools/arnes/medidas-balsa.txt`): era la
 > **opción C** que quedaba (pasar la balsa y el acarreo al herrero de herramientas). El bucle estaba medido —el
-> minero **33-46 coladas** con el pedernal en su zurrón y el almacén **clavado en 6**— y el arreglo es el traspaso:
+> minero **33-46 coladas** con el pedernal en su inventario y el almacén **clavado en 6**— y el arreglo es el traspaso:
 > la receta «Colando» es del **herrero de herramientas** y su ciclo la deja en el almacén. MEDIDO: coladas del minero
 > **33-46 → 0**, las del herrero **10** (y para: el pedernal llega a su objetivo de **16**), y la galería del paso 32
 > se completa en **t≈17.200** en vez de **t≈37.800**.
@@ -735,7 +735,7 @@ Eran **dos clases**, las dos medidas con el desglose por etiquetas y las dos con
    **9 → 0**.
 2. **Al objeto caído se va por una CASILLA DE PIE**: los goals que recogen (`CollectGoal`, `PickupGoal`,
    `AnimalFarmGoal`, `FarmGoal`) caminaban a `objetivo.blockPosition()`, y lo que se cae puede quedar **encima de algo
-   que no se pisa** (la **mesa de la taberna** `516,64,639`, una **valla**, **dentro** de un bancal con
+   que no se pisa** (la **mesa de la taberna** `516,64,639`, una **valla**, **dentro** de un parcela con
    `pies=farmland`): el planificador no da ruta hasta ahí y el aldeano se rendía. Arreglo: `casillaDePieCercaDe`
    (regla I114/I131) **y** `desatascarSiEstaEncajado` antes de contar atasco (el ayudante del leñador, I122).
 
@@ -760,12 +760,12 @@ entrenar` de los guardias (1 por guardia, con `nav` que no alcanza el puesto de 
 del granjero con los pies en la farmland (el bucle desaparece, el hundimiento se repite) y **1** de `Yendo a entrenar`
 (clase I119). Y de método: la corrida intermedia **pareció una regresión** (11 avisos) y era el instrumento diciendo
 la verdad —el desatasco disparaba (14 desatascos reales) pero **no tenía a dónde sacarlo** porque exigía aire, y
-dentro de un bancal no hay aire—.
+dentro de un parcela no hay aire—.
 
 Lo que queda **ya no es un sitio concreto**: las **11 rendiciones** de las dos corridas de hoy son **todas de 1**, y
 **5 son guardias en su ronda** (la clase de I115, el rodeo del círculo de la ronda). Los atascos gordos están a cero
 (`Yendo a la taberna` 16 → **0**, `Volviendo a la plaza` 19 → **0**, `Cuidando el ganado` 3 → **0**, `no consigue
-entrar al bancal` 5 → **0**).
+entrar al parcela` 5 → **0**).
 
 | etiqueta suelta (1x) | corrida |
 |---|---|
@@ -784,7 +784,7 @@ aparecen más casos que las 11 del desglose (que cuenta en la ventana `t=2.000-1
 | `Eufemia (Guardia espadachín) / Patrullando el corral` | `ruta=29 nodos … alcanza=SI` |
 | `Onofre (Guardia espadachín) / Patrullando la arboleda` | `ruta=20 nodos … alcanza=SI` |
 | `Dorotea (Guardia arquero) / Patrullando la arboleda` | `ruta=16 nodos … alcanza=SI` |
-| `Hipolito (Granjero) / Recogiendo lo que se cayó` | `ruta=3 nodos … alcanza=NO; pies=farmland` (un bancal) |
+| `Hipolito (Granjero) / Recogiendo lo que se cayó` | `ruta=3 nodos … alcanza=NO; pies=farmland` (un parcela) |
 | `Valeriano (Granjero) / Buscando recambios` | `ruta=11 nodos … alcanza=NO; cerebro=488,64,659` (el cerebro va **un bloque por encima**: la clase de I114/I131, `casillaDePieCercaDe`) |
 | `Vicenta (Ganadero) / Recogiendo el corral` | `ruta=2 nodos … alcanza=NO` |
 

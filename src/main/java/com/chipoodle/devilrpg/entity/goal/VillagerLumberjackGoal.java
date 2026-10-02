@@ -446,7 +446,7 @@ public class VillagerLumberjackGoal extends Goal {
         // alcance de cualquier aldeano (ni el recolector llega a un objeto que está a 5 bloques por encima de sus
         // pies), y el suelo del pueblo se llenaba de plantones tirados: medido en el guardado del jugador, 53
         // plantones de abedul y 19 palos colgados en las copas de su aldea de mar. Desramado, todo cae al suelo —los
-        // plantones van al zurrón del leñador, para replantar, y el resto al pie del árbol— y lo recoge el recolector.
+        // plantones van al inventario del leñador, para replantar, y el resto al pie del árbol— y lo recoge el recolector.
         int hojas = troncos > 0 ? desramar(level, target, altura) : 0;
         // Las HOJAS que queden colgando se van solas (mecánica de vanilla).
         if (eraBase && troncos > 0) {
@@ -464,7 +464,7 @@ public class VillagerLumberjackGoal extends Goal {
     }
 
     /**
-     * Pica un tronco: se lleva la madera al zurrón, la suelta al suelo si no le cabe y toca su sonido.
+     * Pica un tronco: se lleva la madera al inventario, la suelta al suelo si no le cabe y toca su sonido.
      */
     private void picarTronco(ServerLevel level, BlockPos p) {
         BlockState tronco = level.getBlockState(p);
@@ -512,7 +512,7 @@ public class VillagerLumberjackGoal extends Goal {
      * la arboleda (fuera no se podía distinguir un resto de un poste del pueblo). Aquí no hay que distinguirlo: la
      * caja está alrededor de un árbol que <b>acaba de talar él</b>.
      *
-     * @return cuántos troncos ha rematado (se suman a los del árbol y se llevan al zurrón como la demás madera)
+     * @return cuántos troncos ha rematado (se suman a los del árbol y se llevan al inventario como la demás madera)
      */
     private int limpiarAlrededorDelTocon(ServerLevel level, BlockPos base) {
         // La Y se mide DESDE LA COTA del pueblo (I1), no desde la del tocón: la aldea está nivelada y los árboles que
@@ -618,7 +618,7 @@ public class VillagerLumberjackGoal extends Goal {
 
     /**
      * <b>Desrama</b> el árbol talado: quita las hojas de su copa, las que están alrededor de su tronco. Los
-     * <b>plantones</b> van al zurrón del leñador (son los que necesita para replantar) y lo demás (palos, manzanas)
+     * <b>plantones</b> van al inventario del leñador (son los que necesita para replantar) y lo demás (palos, manzanas)
      * <b>al pie del árbol</b>, al suelo, que es donde el recolector del pueblo lo encuentra; si cayeran desde la copa
      * se quedarían encima de los árboles de al lado, en el aire, para siempre.
      */
@@ -844,7 +844,7 @@ public class VillagerLumberjackGoal extends Goal {
         return n;
     }
 
-    /** Saca UNA harina de huesos del zurrón (vacío si no le queda). */
+    /** Saca UNA harina de huesos del inventario (vacío si no le queda). */
     private ItemStack sacarHarina() {
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);

@@ -183,7 +183,7 @@ public class VillagerCollectGoal extends Goal {
         return distanciaHorizontalAlCentro() > RADIO_VUELTA * RADIO_VUELTA;
     }
 
-    /** La última celda de salida de bancal que se le dio (para no contar atasco al cambiar de compuerta). */
+    /** La última celda de salida de parcela que se le dio (para no contar atasco al cambiar de compuerta). */
     @Nullable
     private BlockPos ultimaSalida;
     /**
@@ -194,10 +194,10 @@ public class VillagerCollectGoal extends Goal {
     private BlockPos ultimoPunto;
 
     /**
-     * <b>La celda de dentro de la compuerta más cercana del bancal en el que esté metido</b> (o {@code null} si no
-     * está en ninguno). Es la salida: la recolectora entra a los bancales a por lo que se cae y, con la compuerta
+     * <b>La celda de dentro de la compuerta más cercana de la parcela en el que esté metido</b> (o {@code null} si no
+     * está en ninguno). Es la salida: la recolectora entra a las parcelas a por lo que se cae y, con la compuerta
      * <b>cerrada</b> —que no es navegable para el juego—, se quedaba <b>encerrada</b> (medido el 26-sep-2026: 19
-     * rendiciones volviendo a la plaza, `ruta=1 nodos … alcanza=NO` desde dentro de un bancal).
+     * rendiciones volviendo a la plaza, `ruta=1 nodos … alcanza=NO` desde dentro de una parcela).
      */
     @Nullable
     private BlockPos laSalidaDelBancal(ServerLevel level) {
@@ -335,11 +335,11 @@ public class VillagerCollectGoal extends Goal {
             double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
                     destino.getZ() + 0.5D));
             if (distancia > VillageStorage.ALCANCE_ALMACEN) {
-                // SI ESTÁ METIDA EN UN BANCAL, PRIMERO SE SALE POR SU COMPUERTA (medido el 26-sep-2026): la
-                // recolectora entra a los bancales a por lo que se cae —eso es su faena— y luego NO PODÍA SALIR,
+                // SI ESTÁ METIDA EN UNA PARCELA, PRIMERO SE SALE POR SU COMPUERTA (medido el 26-sep-2026): la
+                // recolectora entra a las parcelas a por lo que se cae —eso es su faena— y luego NO PODÍA SALIR,
                 // porque una puerta de valla CERRADA **no es navegable** para el juego: se rendía volviendo a la
-                // plaza con `ruta=1 nodos … alcanza=NO` desde dentro del bancal (19 rendiciones en una corrida, con
-                // la plaza a 39 bloques). Se le busca la compuerta más cercana de su bancal, se le manda a la celda
+                // plaza con `ruta=1 nodos … alcanza=NO` desde dentro de la parcela (19 rendiciones en una corrida, con
+                // la plaza a 39 bloques). Se le busca la compuerta más cercana de su parcela, se le manda a la celda
                 // de DENTRO (que sí se pisa) y, en cuanto la tiene al lado, se le ABRE (el juego no deja que un
                 // aldeano abra una puerta de valla: la abre el pueblo).
                 BlockPos salida = laSalidaDelBancal(level);
@@ -544,14 +544,14 @@ public class VillagerCollectGoal extends Goal {
                 // pedernal = 4), pero el pedernal y las flechas que caen al suelo solo los barría un herrero a 20
                 // bloques de él (`VillagerPickupGoal`), así que fuera de ese radio se quedaban ahí. Medido en el
                 // guardado del jugador (aldea 0): el almacén con 355 troncos y 30 palos, **ni un pedernal, ni una
-                // pluma, ni una flecha**, y los tres arqueros de la milicia con **2, 0 y 0 flechas** en el zurrón.
+                // pluma, ni una flecha**, y los tres arqueros de la milicia con **2, 0 y 0 flechas** en el inventario.
                 || s.is(Items.FLINT) || s.is(Items.ARROW)
                 || s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.IRON_INGOT) || s.is(Items.IRON_NUGGET) || s.is(Items.COPPER_INGOT)
                 || s.is(Items.GOLD_INGOT) || s.is(Items.CARROT) || s.is(Items.POTATO)
                 // EL BETABEL TAMBIÉN: faltaba, y no es un descuido menor —el juego solo deja que un aldeano recoja
                 // BETABEL_SEMILLAS, no el betabel—, así que un betabel que caía al suelo no lo cogía NADIE: ni el
                 // granjero (vanilla no lo tiene en su lista de recogida) ni el recolector. Se quedaba ahí hasta
-                // pudrirse. Medido en el guardado del jugador: betabeles tirados en el bancal con 3 minutos de edad.
+                // pudrirse. Medido en el guardado del jugador: betabeles tirados en la parcela con 3 minutos de edad.
                 || s.is(Items.BEETROOT)
                 || s.is(Blocks.OAK_LOG.asItem()) || s.is(Blocks.OAK_PLANKS.asItem())
                 || s.is(Blocks.OAK_SAPLING.asItem()) || s.getDescriptionId().contains("sapling")

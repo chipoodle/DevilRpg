@@ -17,11 +17,11 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
  * <p>
  * El golem de hierro de la aldea lo pone el <b>juego</b>, no el mod: el aldeano que junta suficientes quejas
  * <b>convoca</b> uno y lo crea <b>a su lado</b> ({@code Villager.spawnGolemIfNeeded}), así que si el que lo convoca es
- * un <b>granjero dentro de su bancal</b>, el golem <b>nace en la huerta</b> — y ahí no solo estorba: la tierra de
- * cultivo pisada se vuelve tierra y el bancal se pierde.
+ * un <b>granjero dentro de su parcela</b>, el golem <b>nace en la huerta</b> — y ahí no solo estorba: la tierra de
+ * cultivo pisada se vuelve tierra y la parcela se pierde.
  * <p>
  * Aquí se corta <b>en el momento de entrar en el mundo</b>: si el que llega es un golem y la casilla cae sobre la
- * huella de un bancal de una aldea,
+ * huella de una parcela de una aldea,
  * <ul>
  *   <li>si <b>acaba de nacer</b> ahí: <b>no entra</b> (el suceso se cancela) y queda en el log;</li>
  *   <li>si <b>viene del guardado</b> (o de otra dimensión): no se le borra nada, se le <b>saca a la calle</b>, que es
@@ -36,7 +36,7 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 @EventBusSubscriber(modid = DevilRpg.MODID)
 public class CommonForgeGolemEventSubscriber {
 
-    /** Radio alrededor de una aldea en el que merece la pena mirar (los bancales están a 30-45 del centro). */
+    /** Radio alrededor de una aldea en el que merece la pena mirar (las parcelas están a 30-45 del centro). */
     private static final double RADIO_DE_LA_ALDEA = 100.0D;
 
     @SubscribeEvent

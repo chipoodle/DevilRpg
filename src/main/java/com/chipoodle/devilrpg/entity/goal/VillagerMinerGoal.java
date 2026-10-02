@@ -112,7 +112,7 @@ public class VillagerMinerGoal extends Goal {
      * casi todo era andar). Se funde igual todo lo que lleve cuando sube por cualquier otro motivo.
      */
     private static final int MINERAL_PARA_SUBIR = 3;
-    /** Con estos huecos libres o menos en el zurrón, se sube a descargar (si no, lo sacado se queda por el suelo). */
+    /** Con estos huecos libres o menos en el inventario, se sube a descargar (si no, lo sacado se queda por el suelo). */
     private static final int HUECOS_LIBRES_MINIMOS = 2;
     /**
      * Ticks que el minero espera su ración antes de volver al tajo. Con hambre y comida en el pueblo se para a comer
@@ -323,7 +323,7 @@ public class VillagerMinerGoal extends Goal {
         if (VillageStorage.cuenta(level, center, s -> s.is(Items.TORCH)) > 0) {
             return true;
         }
-        // LOS PALOS Y LA LEÑA VALEN DEL ALMACÉN **O DEL ZURRÓN**: el minero lleva los suyos encima (medido:
+        // LOS PALOS Y LA LEÑA VALEN DEL ALMACÉN **O DEL INVENTARIO**: el minero lleva los suyos encima (medido:
         // `0:16xminecraft:stick`, `2:2xminecraft:oak_log`) y con ellos hace el carbón vegetal y las antorchas en el
         // taller. Mirando solo el almacén, un pueblo sin palos en el cofre dejaba al minero bajar a oscuras aunque
         // pudiera hacerse la luz él mismo.
@@ -343,7 +343,7 @@ public class VillagerMinerGoal extends Goal {
      * <p>
      * Los disparadores: <b>mineral crudo</b> que fundir, <b>adoquín</b> de sobra para sacar pedernal
      * ({@link #ADOQUIN_PARA_SUBIR}), que se ha quedado <b>sin antorchas</b> (una mina a oscuras cría bichos dentro de
-     * la muralla) y el <b>zurrón lleno</b> (si no, lo que saque se queda por el suelo del túnel).
+     * la muralla) y el <b>inventario lleno</b> (si no, lo que saque se queda por el suelo del túnel).
      */
     private boolean hayQueSubir(ServerLevel level) {
         if (cuantosEnInventario(VillagerMinerGoal::esMineralCrudo) >= MINERAL_PARA_SUBIR
@@ -366,7 +366,7 @@ public class VillagerMinerGoal extends Goal {
                 libres++;
             }
         }
-        // Y EL ZURRÓN LLENO SOLO CUENTA SI PUEDE VACIARLO. Antes bastaba con tener dos huecos libres, y el minero lleva
+        // Y EL INVENTARIO LLENO SOLO CUENTA SI PUEDE VACIARLO. Antes bastaba con tener dos huecos libres, y el minero lleva
         // SIEMPRE encima sus recados (pico, tablones, palos, carbón y leña: seis o siete huecos de los ocho), así que
         // subía a "entregar" una y otra vez SIN ENTREGAR NADA —los recados no los suelta— y la mina no avanzaba ni una
         // celda. Lo vio el jugador: *"el minero aparece como trabajando dentro de su choza pero realmente no hace
@@ -377,7 +377,7 @@ public class VillagerMinerGoal extends Goal {
 
     /**
      * ¿Lleva algo que el almacén <b>quiera</b> (o sea, algo que no sea de los recados)? Es lo que decide si "tener el
-     * zurrón lleno" es motivo para subir: lleno de tablones y palos —que se queda para trabajar— no lo es.
+     * inventario lleno" es motivo para subir: lleno de tablones y palos —que se queda para trabajar— no lo es.
      */
     private boolean hayParaEntregar() {
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
@@ -530,7 +530,7 @@ public class VillagerMinerGoal extends Goal {
         // pero mientras el goal está corriendo no se vuelve a preguntar, así que con el pico roto el minero seguía
         // "picando" en el sitio —gastando tiempo y mano— sin poder sacar nada. Lo que tiene que hacer es SOLTAR la
         // faena para que `canUse` lo mande al almacén a por otro pico (o al taller). Medido: `pico=SIN PICO` con el
-        // zurrón lleno de adoquín y el minero clavado en la galería del paso 32.
+        // inventario lleno de adoquín y el minero clavado en la galería del paso 32.
         if (fase == Fase.CAVAR && !tienePico()) {
             return false;
         }
@@ -618,7 +618,7 @@ public class VillagerMinerGoal extends Goal {
                     // taller**, así que la primera bajada se hacía a oscuras y esas celdas dependían del repaso
                     // (`buscarHuecoDeLuz`). MEDIDO: en `build/medida-luz-2.log` el minero ya había cavado 8 celdas sin
                     // una sola antorcha. Se pide el taller **solo si el pueblo puede darle luz** (antorchas hechas, o
-                    // carbón/leña del almacén O del zurrón, siempre con palos): si no puede, cava a oscuras, que es lo
+                    // carbón/leña del almacén O del inventario, siempre con palos): si no puede, cava a oscuras, que es lo
                     // único que le queda, y el repaso la encenderá cuando haya. Sin esa guarda, subir sería un bucle.
                     int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
                     boolean faltaLuz = cuantosEnInventario(Items.TORCH) <= 0 && elPuebloPuedeDarLuz(level);
@@ -997,7 +997,7 @@ public class VillagerMinerGoal extends Goal {
         rellenarElSuelo(level, celda.below());
         minarLasVetasDeAlLado(level, celda);
         // Y EL SUELO SE VUELVE A MIRAR **DESPUÉS** DE LAS VETAS: `minarLasVetasDeAlLado` pica las SEIS de al lado —el
-        // SUELO incluido—, así que si debajo de la galería había una veta, se la lleva al zurrón y deja **aire**: el
+        // SUELO incluido—, así que si debajo de la galería había una veta, se la lleva al inventario y deja **aire**: el
         // túnel se queda **sin suelo** y deja de ser un sitio por el que se anda (I114: se camina a una **casilla de
         // pie**). Se rellena otra vez para que la galería que el minero acaba de abrir se pueda recorrer.
         rellenarElSuelo(level, celda.below());
@@ -1066,7 +1066,7 @@ public class VillagerMinerGoal extends Goal {
         if (botin != null && !botin.isEmpty()) {
             ItemStack resto = guardarEnInventario(botin);
             if (!resto.isEmpty()) {
-                Block.popResource(level, pos, resto); // sin sitio en el zurrón: se queda en el suelo del túnel
+                Block.popResource(level, pos, resto); // sin sitio en el inventario: se queda en el suelo del túnel
             }
         }
         // Y EL AGUJERO QUE ACABO DE ABRIR, CON PAREDES: si al lado hay agua (o lava), se sella AQUÍ. Sin esto el
@@ -1232,7 +1232,7 @@ public class VillagerMinerGoal extends Goal {
             return new ItemStack(Items.COBBLED_DEEPSLATE);
         }
         // LA TIERRA, LA ARENA Y LA GRAVA <b>NO</b> SE RECOGEN (la grava solo por su 10 % de pedernal): al minero no
-        // le sirven de nada, y con el zurrón de OCHO huecos que tiene un aldeano, llenárselo de basura era lo que le
+        // le sirven de nada, y con el inventario de OCHO huecos que tiene un aldeano, llenárselo de basura era lo que le
         // obligaba a subir a vaciarlo <b>cada tres celdas</b> (medido: dos celdas de galería en once minutos, con el
         // minero subiendo y bajando el caracol). Lo que no se recoge se queda en el túnel y el juego lo borra solo.
         if (b == Blocks.GRAVEL) {
@@ -1362,7 +1362,7 @@ public class VillagerMinerGoal extends Goal {
      * lleva), y el minero <b>cava antes de tener antorchas</b> —el carbón sale de la mina, así que las primeras
      * vueltas son a oscuras— y <b>nunca volvía a pasar por esas celdas</b>. MEDIDO con el censo del arnés: el caracol
      * tenía sus pasos <b>0, 8, 16, 24 y 32</b> con la celda de la cabeza en {@code air} (ni una antorcha) y la galería
-     * del paso 32 sus celdas 8 y 16 igual, mientras el minero llevaba <b>8 antorchas sin gastar</b> en el zurrón (las
+     * del paso 32 sus celdas 8 y 16 igual, mientras el minero llevaba <b>8 antorchas sin gastar</b> en el inventario (las
      * fabricó a las 03:34 y había cavado la celda 8 de la galería a las <b>03:31</b>).
      */
     @Nullable
@@ -1405,7 +1405,7 @@ public class VillagerMinerGoal extends Goal {
      * <p>
      * <b>La balsa ya no está aquí</b> (27-sep-2026): colar adoquín → pedernal lo hace el herrero de herramientas (ver
      * {@link VillagerSmithGoal}), que era lo que pedía el jugador para que el minero solo picara. Medido: con la balsa
-     * aquí, el minero encadenaba <b>33 coladas</b> (46 en otra corrida) porque el pedernal se quedaba en su zurrón y el
+     * aquí, el minero encadenaba <b>33 coladas</b> (46 en otra corrida) porque el pedernal se quedaba en su inventario y el
      * umbral miraba el almacén.
      */
     private boolean trabajarEnElTaller(ServerLevel level) {
@@ -1435,7 +1435,7 @@ public class VillagerMinerGoal extends Goal {
             }
         }
         // 2) LA BALSA YA NO ES SUYA (27-sep-2026): la cuela el HERRERO DE HERRAMIENTAS. Era la faena que le comía el
-        //    tiempo de la mina, y estaba MEDIDA: el pedernal se lo quedaba él en el zurrón (esta rama guarda con
+        //    tiempo de la mina, y estaba MEDIDA: el pedernal se lo quedaba él en el inventario (esta rama guarda con
         //    `guardarEnInventario`) mientras el umbral que miraba era el del ALMACÉN, así que no se alcanzaba nunca y
         //    encadenaba coladas: 33 en una corrida y 46 en otra, con las últimas celdas de la galería a 5-8 minutos
         //    cada una. Lo pidió el jugador: *"pasar la balsa (colar adoquín → pedernal) y el acarreo al herrero de
@@ -1482,7 +1482,7 @@ public class VillagerMinerGoal extends Goal {
     /**
      * Deja en el almacén <b>todo lo sacado</b> y <b>lo que lleva DE SOBRA de sus recados</b>: se queda con
      * {@link #cuantoSeQueda} de cada cosa (el pico, unos tablones, unos palos, algo de carbón y algo de leña) y el
-     * resto lo suelta. Antes era "todo o nada": un hueco con 64 palos no se soltaba nunca y el zurrón se le quedaba
+     * resto lo suelta. Antes era "todo o nada": un hueco con 64 palos no se soltaba nunca y el inventario se le quedaba
      * sin sitio para el mineral (ver {@link #hayQueSubir}).
      */
     private void entregar(ServerLevel level) {
@@ -1497,7 +1497,7 @@ public class VillagerMinerGoal extends Goal {
                 continue; // no lleva de sobra de eso
             }
             ItemStack resto = VillageStorage.guardar(level, center, s.copyWithCount(sobra));
-            int devuelto = resto.getCount(); // lo que no le cupiera al almacén se queda en el zurrón (no se tira)
+            int devuelto = resto.getCount(); // lo que no le cupiera al almacén se queda en el inventario (no se tira)
             if (seQueda + devuelto <= 0) {
                 villager.getInventory().setItem(i, ItemStack.EMPTY);
             } else {
@@ -1514,7 +1514,7 @@ public class VillagerMinerGoal extends Goal {
     /**
      * <b>Cuántas unidades de eso se queda</b> al llegar al almacén (el resto lo deja allí). Antes era "todo o nada" y
      * el minero se quedaba con los recados <b>enteros para siempre</b>: un hueco con 64 palos que no suelta nunca es un
-     * hueco menos para el mineral, y con seis o siete huecos de recados el zurrón se le quedaba sin sitio (ver
+     * hueco menos para el mineral, y con seis o siete huecos de recados el inventario se le quedaba sin sitio (ver
      * {@link #hayQueSubir}).
      */
     private int cuantoSeQueda(ItemStack s) {
@@ -1546,7 +1546,7 @@ public class VillagerMinerGoal extends Goal {
 
     // --- el pico (la herramienta, que gasta y le forja el herrero de herramientas) -------------------
 
-    /** ¿Lleva un pico encima (en la mano o en el zurrón)? */
+    /** ¿Lleva un pico encima (en la mano o en el inventario)? */
     private boolean tienePico() {
         return (!villager.getMainHandItem().isEmpty() && esPico(villager.getMainHandItem()))
                 || cuantosEnInventario(VillagerMinerGoal::esPico) > 0;
@@ -1634,7 +1634,7 @@ public class VillagerMinerGoal extends Goal {
         }
     }
 
-    /** Saca del zurrón hasta {@code cuantas} unidades de lo que cumpla el filtro (o {@code null} si no hay). */
+    /** Saca del inventario hasta {@code cuantas} unidades de lo que cumpla el filtro (o {@code null} si no hay). */
     @Nullable
     private ItemStack quitarDelInventario(Predicate<ItemStack> filtro, int cuantas) {
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {

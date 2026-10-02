@@ -163,7 +163,7 @@ public class VillagerPickupGoal extends Goal {
         }
         if (profesion == VillagerProfession.MASON) {
             // La MINA (etapa I): lo que se le cae al suelo al minero (adoquín, piedra, minerales crudos, carbón,
-            // pedernal y el material de las vetas). El minero ya se lo guarda en el zurrón al picarlo; esto es para
+            // pedernal y el material de las vetas). El minero ya se lo guarda en el inventario al picarlo; esto es para
             // lo que se queda por el suelo del túnel (porque no le cupo) y para el pedernal de la grava.
             return s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE) || s.is(Items.COBBLESTONE_SLAB)
                     || s.is(Items.RAW_IRON) || s.is(Items.RAW_COPPER) || s.is(Items.RAW_GOLD)
@@ -355,7 +355,7 @@ public class VillagerPickupGoal extends Goal {
                     destino.getZ() + 0.5D));
             if (distancia > alcanceDeGuardado()) {
                 // AL ALMACÉN (al otro lado del pueblo) SE VA POR TIRONES: la ruta directa desde fuera de la muralla no
-                // le sale al planificador y, sin ruta, el aldeano empuja la pared y se queda con lo suyo en el zurrón
+                // le sale al planificador y, sin ruta, el aldeano empuja la pared y se queda con lo suyo en el inventario
                 // para siempre (medido con el arnés: el leñador pegado al muro en 527,63,672 con destino 517,63,666).
                 // Ver `VillageManager.tironConMemoria` / `pasoParaCruzarElMuro` (I105/I112).
                 BlockPos paso = destinoTipo() == Destino.ALMACEN

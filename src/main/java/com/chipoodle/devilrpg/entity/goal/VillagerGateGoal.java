@@ -211,7 +211,7 @@ public class VillagerGateGoal extends Goal {
         // un portón a menos de `RADIO`): un portón elegido a mala hora —la aldea a medio construir, la casilla sin
         // cargar— se quedaba pegado PARA SIEMPRE y el aldeano «vigilaba» una puerta lejana sin abrir la que tenía al
         // lado. Medido con el arnés: Isidoro, con su compuerta a 0,87 bloques, tenía elegida la del norte (a 7,09),
-        // así que no abría ninguna y se pasaba la noche encerrado en el bancal con su cama al otro lado.
+        // así que no abría ninguna y se pasaba la noche encerrado en la parcela con su cama al otro lado.
         if (distancia > ABRIR) {
             BlockPos laDeAlLado = portonMasCercano(level);
             if (laDeAlLado != null && distancia(laDeAlLado) < distancia) {
@@ -295,7 +295,7 @@ public class VillagerGateGoal extends Goal {
             // —cuando `cotaDeLaPlaza` todavía no devolvía la cota definitiva— sus posiciones caen al aire y el aldeano
             // se queda SIN PODER ABRIR NINGUNA PUERTA para siempre (las del anexo, que sí caían bien, le quedaban a
             // más de 16 bloques). Medido con el arnés: Isidoro, con su compuerta a 1,15 bloques, no la abría nunca y
-            // se pasaba la noche encerrado en el bancal. Se recalcula (como mucho, una vez cada 5 s: la cota mira el
+            // se pasaba la noche encerrado en la parcela. Se recalcula (como mucho, una vez cada 5 s: la cota mira el
             // terreno).
             proximoRecalculo = level.getGameTime() + 100;
             portones = portonesDelAnexo(center, VillageGenerator.cotaDeLaPlaza(level, center)).toArray(new BlockPos[0]);
@@ -324,7 +324,7 @@ public class VillagerGateGoal extends Goal {
 
     /**
      * Los portones que abre y cierra el pueblo cerca de este aldeano: los dos del <b>anexo</b> (el corral y el
-     * gallinero), que son los que guardan animales, y las <b>cuatro puertas de valla de cada bancal</b> de la granja
+     * gallinero), que son los que guardan animales, y las <b>cuatro puertas de valla de cada parcela</b> de la granja
      * (etapa F). El jugador no puede abrirlas con un aldeano (el juego solo le deja abrir puertas de madera), así que
      * las abre el pueblo. La lista vive en <b>un solo sitio</b> ({@link VillageGenerator#todosLosPortones}, I4): la
      * usan también el despeje del hueco y el filtro del plano (I54).
@@ -376,7 +376,7 @@ public class VillagerGateGoal extends Goal {
         // CERRADA —el juego no le deja planificar a través de una puerta de valla cerrada—, así que acaba en su propia
         // casilla: el aldeano se queda pegado a la valla, la compuerta se cierra a los 5 s sin que nadie la cruce y
         // vuelta a empezar. Borrándole el destino, el cerebro lo vuelve a pedir (y el goal del granjero también) y la
-        // ruta nueva SÍ cruza. Medido con el arnés: Isidoro (bancal 2) se quedaba toda la noche en `1394,119,1452`,
+        // ruta nueva SÍ cruza. Medido con el arnés: Isidoro (parcela 2) se quedaba toda la noche en `1394,119,1452`,
         // la celda de dentro de su compuerta, con la cama reclamada al otro lado y las cuatro compuertas cerradas.
         // (El arreglo de "no borrárselo cuando la ruta viva ya alcanza" se midió y se retiró: ver arriba y I126.)
         villager.getNavigation().stop();
@@ -495,7 +495,7 @@ public class VillagerGateGoal extends Goal {
      * <p>
      * El eje por el que se cruza es el del {@code FACING}: en una puerta de valla el {@code FACING} mira al lado por
      * el que se entra (la del corral mira al <b>oeste</b> y se cruza de este a oeste; la del gallinero al <b>sur</b>;
-     * las de los bancales, al norte o al este según el lado), y la valla va perpendicular. Se mide en <b>XZ</b>
+     * las de las parcelas, al norte o al este según el lado), y la valla va perpendicular. Se mide en <b>XZ</b>
      * (invariante I2): el portón es un plano vertical y la Y no dice nada.
      */
     private static int lado(BlockState estado, BlockPos porton, double x, double z) {
@@ -553,7 +553,7 @@ public class VillagerGateGoal extends Goal {
 
     /**
      * <b>Abre el portón porque lo necesita un aldeano</b> (lo llama el goal del GRANJERO cuando va a entrar en su
-     * bancal y ya está al lado de la compuerta).
+     * parcela y ya está al lado de la compuerta).
      * <p>
      * El juego <b>no deja</b> que un aldeano abra una puerta de valla, así que las abre el pueblo por
      * {@link VillagerGateGoal} —que va a prioridad 2, sin banderas, y abre la compuerta cuyo <b>destino</b> está al

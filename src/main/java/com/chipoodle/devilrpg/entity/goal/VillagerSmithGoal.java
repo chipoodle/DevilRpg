@@ -89,7 +89,7 @@ public class VillagerSmithGoal extends Goal {
      * (colar adoquín → pedernal) y el acarreo al herrero de herramientas para que el minero solo pique"*.
      * <p>
      * <b>MEDIDO, y era un bucle</b>: el minero hacía la colada con `guardarEnInventario` (el pedernal se lo quedaba
-     * <b>en el zurrón</b>) y el umbral que miraba era el del <b>almacén</b>, así que no se alcanzaba nunca: en una
+     * <b>en el inventario</b>) y el umbral que miraba era el del <b>almacén</b>, así que no se alcanzaba nunca: en una
      * corrida hizo <b>33 coladas seguidas</b> (46 en otra) y las últimas celdas de la galería le costaban <b>5-8
      * minutos cada una</b>. Aquí el ciclo del herrero (RECOGER → TRABAJAR → ENTREGAR) deja el pedernal en el almacén
      * <b>en cada faena</b>, que es lo que hace que el objetivo se cumpla y la faena se acabe.

@@ -442,7 +442,7 @@ public class VillagerGuardGoal extends Goal {
             stuckTicks = 0;
         }
         // 3.b) Y EL HIERRO QUE HA LOOTEADO, AL ALMACÉN (27-sep-2026, medido): el que mata el zombi de raid se queda
-        //      sus pepitas en el zurrón (`AggressiveZombieEntity.dropCustomDeathLoot`) y el herrero las necesita para
+        //      sus pepitas en el inventario (`AggressiveZombieEntity.dropCustomDeathLoot`) y el herrero las necesita para
         //      el pico de hierro. El guardia VA a dejarlas (no espera a pasar por delante: su ronda es un círculo
         //      alrededor del pueblo y no pasa por el almacén). Va DESPUÉS del combate y de la marcha (pelear manda) y
         //      antes de la ronda; si el sitio está aparcado (I33) se queda como estaba.
@@ -930,7 +930,7 @@ public class VillagerGuardGoal extends Goal {
      * para los picos.
      * <p>
      * <b>MEDIDO, y era el eslabón que faltaba</b>: el zombi de raid suelta sus pepitas y <b>el que lo mata se las
-     * queda en el zurrón</b> ({@code AggressiveZombieEntity.dropCustomDeathLoot}: *"el que mata, lootea"*), pero el
+     * queda en el inventario</b> ({@code AggressiveZombieEntity.dropCustomDeathLoot}: *"el que mata, lootea"*), pero el
      * guardia <b>no tenía ningún paso que las dejara</b> en el almacén: en el arnés, el que mataba (un herrero de
      * armas) llevaba su pepita <b>de t=300 a t=2.700</b> —y con etiquetas `Yendo al almacen` / `Volviendo al
      * almacen` de por medio— mientras el almacén seguía a **0**; el que depositaba era el herrero por SU goal

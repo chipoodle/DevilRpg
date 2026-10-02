@@ -337,7 +337,7 @@ vaca a **12,1** bloques de la base del corral, la oveja a **13,5** —las dos **
 otro lado del plano) y **se cierra en cuanto el lado cambia** —se apunta de qué lado estaba al abrirlo—, con un tope
 de **5 s** por si no lo cruza; el eje de cruce es el del `FACING` de la puerta (la valla va perpendicular: comprobado
 en su guardado, el del corral mira al oeste y se cruza en X, el del gallinero al sur y se cruza en Z, y los 12 de los
-bancales también). (b) El **latido** cierra cualquier portón del anexo que lleve abierto **más de 5 s sin ningún
+parcelas también). (b) El **latido** cierra cualquier portón del anexo que lleve abierto **más de 5 s sin ningún
 jugador a 7 bloques** (mira solo esas dos casillas: es idempotente y barato) — eso es lo que tapa el agujero del
 guardado y el caso de que no quede ningún aldeano con el portón a la vista. (c) El rebaño **vuelve andando**
 (`VuelveAlCorralGoal`, prioridad 4: por debajo de huir/criar/comida y por encima de pasear): va al portón **por
@@ -386,13 +386,13 @@ del pueblo sin hojas es indistinguible de un resto).
 propósito), así que el obrero no los "repara" (ni al capturar el plano ni al leerlo, sin migración: el del jugador
 tenía **9 troncos de acacia** apuntados como huecos, y reponerlos era levantar troncos sin copa).
 
-### I25 · La tierra de cultivo del bancal se vuelve a LABRAR (y su humedad no es daño)
+### I25 · La tierra de cultivo del parcela se vuelve a LABRAR (y su humedad no es daño)
 Vanilla convierte la **tierra de cultivo en tierra** en cuanto alguien salta encima (`FarmBlock.fallOn`) y la tierra,
-pegada al césped, vuelve a ser **césped**: en la aldea conviven aldeanos, animales y el jugador, así que los bancales
+pegada al césped, vuelve a ser **césped**: en la aldea conviven aldeanos, animales y el jugador, así que los parcelas
 se quedan con **calvas**. El jugador las vio y las reportó con captura: *"de esta parcela veo que hay dos espacios que
 no tienen cultivo y nadie los está reparando para hacerlos cultivables"*.
-**Medido en su guardado** (aldea 2, centro `1414,1414`, cota `120`): los tres bancales tienen **216** celdas de cultivo
-y al **plano** le faltaban exactamente **2**, `(1384,1430)` y `(1384,1434)` —las dos de la columna oeste del bancal de
+**Medido en su guardado** (aldea 2, centro `1414,1414`, cota `120`): los tres parcelas tienen **216** celdas de cultivo
+y al **plano** le faltaban exactamente **2**, `(1384,1430)` y `(1384,1434)` —las dos de la columna oeste del parcela de
 `(1384,1428)`—, que en el mundo eran **`grass_block`** a `y=119`. Dos reglas, entonces:
 
 - **La huerta entra SIEMPRE en el plano.** Sus celdas son **geometría fija** (las parcelas de `FARM_PLOTS`, a `cota-1`,
@@ -402,7 +402,7 @@ y al **plano** le faltaban exactamente **2**, `(1384,1430)` y `(1384,1434)` —l
   (el `seDescartaDelPlano` las da por "terreno natural") y el obrero **no tiene nada que reponer** ahí.
 - **El granjero vuelve a labrar.** Su cadena empezaba en "tierra de cultivo vacía" (`buscarTierraVacia` solo mira
   celdas que **ya** son `farmland`), así que sembraba en lo labrado y **nunca** labraba una calva. Ahora tiene la tarea
-  `LABRAR` **antes de sembrar**: celdas de bancal que son tierra o césped, **con agua cerca** y con el hueco de arriba
+  `LABRAR` **antes de sembrar**: celdas de parcela que son tierra o césped, **con agua cerca** y con el hueco de arriba
   **libre** (el aire encima es lo que garantiza que **no arranca ningún cultivo**, I11). La migración **54** las labra
   en las aldeas ya construidas con `labrarCalvasDelBancal` (idempotente y con las mismas condiciones).
 
@@ -626,7 +626,7 @@ queda **cogido sin dueño** para siempre (I23: vanilla solo suelta el ticket al 
 
 **Regla:** en la aldea solo hay puestos de trabajo de los oficios **del pueblo**, cada uno en el sitio que le toca:
 
-- **compostero** en cada bancal (FARMER), **muela** y **mesa de herrería** en la herrería (WEAPONSMITH/TOOLSMITH),
+- **compostero** en cada parcela (FARMER), **muela** y **mesa de herrería** en la herrería (WEAPONSMITH/TOOLSMITH),
   **telar** en el corral anexo (SHEPHERD, el ganadero), **ahumador** en la cocina de la taberna (BUTCHER, el
   cocinero), **barril** en la pesquera (FISHERMAN), **soporte de pociones** en la iglesia (CLERIC, viene en la
   plantilla `plains_temple_4`) y la **campana** del kiosco, que es el POI de **reunión** y va ahí a propósito (I28).
@@ -724,7 +724,7 @@ cupo era una **lista escrita a mano** en el gestor y se quedó con **SIETE** pue
 llegaron el **segundo granjero** (etapa F) y el **pescador** (etapa G) nadie la subió, así que para el reparto esos
 dos oficios eran **siempre** "gente de sobra" y **la milicia se los llevaba** — y el daño no es cosmético: el
 **compostero** del segundo granjero seguía **cogido** (`free_tickets=0`) mientras su dueño patrullaba, así que **un
-bancal se quedaba sin nadie**, y dos pescadores dejaban la pesquera por la ronda.
+parcela se quedaba sin nadie**, y dos pescadores dejaban la pesquera por la ronda.
 
 **Medido** (aldea 2 del guardado del jugador, `build/milicia_cupo.py`, que aplica el reparto tal cual): con el cupo
 viejo los sobrantes eran **3** (los dos pescadores y el segundo granjero, `9036d1d0`); con el nuevo, **1** (el
@@ -748,7 +748,7 @@ De dónde salen los titulares de más (**medido y deducido del código**, no sup
 
 1. **El bloque da el oficio**: el paquete `CORE` de vanilla trae `AcquirePoi` → `AssignProfessionFromJobSite`, y
    `VillagerProfession.NONE` tiene por adquirible **`ALL_ACQUIRABLE_JOBS`**: cualquier aldeano **sin oficio** reclama
-   una estación **libre** y se vuelve de ese oficio. La aldea 2 tenía **un compostero libre** (el 3.er bancal) ⇒ el
+   una estación **libre** y se vuelve de ese oficio. La aldea 2 tenía **un compostero libre** (el 3.er parcela) ⇒ el
    primer aldeano sin oficio que pasara por ahí se volvía un **tercer granjero** (y ese sobrante se lo llevaba la
    milicia ⇒ compostero cogido sin dueño trabajándolo: el daño de I35).
 2. **`reponerProfesiones` da una plaza cuando cree que falta**: cuenta solo los aldeanos **cargados** dentro de
@@ -770,7 +770,7 @@ obrero). Con eso **"una profesión por estación"** deja de depender de quién e
 
 - **Tickets PERDIDOS** (`soltarTicketsPerdidos`): una estación con el ticket cogido (`free_tickets = 0`) pero **sin
   ningún aldeano que la tenga en el cerebro**. El juego solo suelta el ticket al morir el aldeano (I23), así que un
-  ticket perdido deja la estación **muerta para siempre**. Medido: el **compostero del tercer bancal**
+  ticket perdido deja la estación **muerta para siempre**. Medido: el **compostero del tercer parcela**
   (`1384,120,1448`) estaba así, y su titular (el tercer granjero) no lo habría podido reclamar nunca. Se sueltan los
   de los oficios a los que les **falta gente** (cupo contra titulares cargados), consultando los puestos ocupados
   **por el tipo del oficio** (`heldJobSite`): sin listas de coordenadas, vale para cualquier oficio.
@@ -841,7 +841,7 @@ el guardado** que no quede **aire** entre los dos; la prueba barata es que la ce
 (`colocarSiEstaVacio`) siempre que se pueda: rellenar la fila que falta no puede comerse lo que haya puesto el
 jugador, mientras que **mover** el añadido obliga a borrar el viejo.
 
-### I40 · La valla de un bancal NO tiene escalones (ni para andar ni para saltar)
+### I40 · La valla de un parcela NO tiene escalones (ni para andar ni para saltar)
 
 La valla de roble mide **1,5**, y un aldeano **anda** hacia arriba **0,6** (`maxUpStep`) pero **salta** ~**1,25**. De
 ahí salen los dos escalones que el jugador vio: *"siguen subiendo a la valla para poder entrar en vez de usar las
@@ -855,18 +855,18 @@ compuertas"*.
 
 1. **El COMPOSTERO del granjero** (su puesto de trabajo) estaba a `corner.x-2`, **pegado** a la valla
    (`corner.x-1`), con la tapa a `cota+1`: el granjero se subía por su propio compostero. Se veía en el guardado en
-   los **tres** bancales (3 celdas de valla por bancal desde las que se podía subir, todas desde el compostero).
+   los **tres** parcelas (3 celdas de valla por parcela desde las que se podía subir, todas desde el compostero).
    **Migración 64**: el compostero pasa a `corner.x-3` (`COMPOSTERO_DX`), con una celda de aire entre él y la valla.
 2. **Las LOSAS que tapan la ACEQUIA**, en sus **dos extremos**: la acequia va tapada con una losa (para que el agua
-   no se congele y para que nadie se caiga dentro), la losa se pisa a `cota+0,5` y las **compuertas del bancal caen
+   no se congele y para que nadie se caiga dentro), la losa se pisa a `cota+0,5` y las **compuertas del parcela caen
    justo en la fila del medio** (el centro de los lados), así que el aldeano **saltaba la compuerta** desde la losa
    del extremo. Medido: **42** lecturas de un granjero de pie sobre la valla (`y = cota+1,5`) en una corrida de 4 min,
    **todas** en la fila de la acequia y en los extremos del anillo. **Migración 65**: los dos extremos de la acequia
    vuelven a ser **celdas de cultivo** (se quita la losa y el agua se vuelve tierra de cultivo regada), así que la
    capa que se pisa queda a la altura de la tierra (119,94) y desde ahí **no se llega** al lomo de la valla. De paso
-   cada bancal gana **dos celdas plantables**.
+   cada parcela gana **dos celdas plantables**.
 
-**Regla:** alrededor de la valla de un bancal **nada que se pueda pisar** salvo el suelo del bancal. En concreto:
+**Regla:** alrededor de la valla de un parcela **nada que se pueda pisar** salvo el suelo del parcela. En concreto:
 nada sólido pegado por fuera a la capa que se pisa (ni compostero, ni cofre, ni un poste), y la fila del agua va
 tapada pero **no llega a la valla** (sus extremos son celdas de cultivo). Y el mismo patrón vale para cualquier
 cerca del pueblo que quiera ser un cierre (el corral): si al lado hay una tapa, el cierre no cierra.
@@ -966,10 +966,10 @@ repartir camas:
 
 1. **No compartida**: ni la cama ni su **otra mitad** pueden estar en el cerebro de otro aldeano. El dueño se busca
    **alrededor de la cama** (`laTieneOtro`), no solo en la lista del censo (que se arma alrededor de la plaza): un
-   granjero en su bancal o un leñador en la arboleda no están en esa lista y la cama parecía libre.
+   granjero en su parcela o un leñador en la arboleda no están en esa lista y la cama parecía libre.
 2. **No ocupada** (`BedBlock.OCCUPIED`, en cualquiera de las dos mitades) y **entera** (las dos mitades son camas).
-3. **Alcanzable**: fuera de un bancal, solo si `villager.getNavigation().createPath(cama, 1).canReach()`. **Encerrado
-   en un bancal** (cercado con valla y compuertas cerradas) sí vale la que más se acerca —es el rescate, y el goal del
+3. **Alcanzable**: fuera de un parcela, solo si `villager.getNavigation().createPath(cama, 1).canReach()`. **Encerrado
+   en un parcela** (cercado con valla y compuertas cerradas) sí vale la que más se acerca —es el rescate, y el goal del
    granjero lo saca por la compuerta (I44)—, pero **solo** en ese caso: una cama a la que no llega le cuesta el `HOME`
    a los 60 s. Medido: el herrero recibía una cama del dormitorio con **un muro de adoquín** de por medio (su ruta
    acababa a 2,00 bloques, y para acostarse hace falta ≤2,0) y no se dormía nunca.
@@ -996,13 +996,13 @@ da a nadie y ese aldeano se queda sin cama. Es construcción/mobiliario del pueb
 
 ### I44 · El goal de portones RE-ELIGE, VALIDA su lista y hace REHACER el camino
 
-Tres reglas que salieron del mismo encierro (el granjero que no podía salir del bancal a dormir):
+Tres reglas que salieron del mismo encierro (el granjero que no podía salir del parcela a dormir):
 
 1. **Re-elegir el portón si el que tiene no es el de al lado.** `portonMasCercano` solo se llama desde `canUse`, y
    `canUse` **no se vuelve a llamar mientras el goal está corriendo** (sigue mientras tenga un portón a menos de
    `RADIO`): un portón elegido a mala hora —la aldea a medio migrar, la casilla sin cargar— **se quedaba pegado para
    siempre**. Medido: el granjero tenía elegida la compuerta **norte** (a 7,09 bloques) en vez de la **este** (a
-   **0,87**), así que «vigilaba» una puerta lejana y no abría la suya; por eso se pasaba la noche dentro del bancal con
+   **0,87**), así que «vigilaba» una puerta lejana y no abría la suya; por eso se pasaba la noche dentro del parcela con
    la cama al otro lado. Ahora, en `tick`, si `distancia > ABRIR` se vuelve a elegir la más cercana de verdad.
 2. **Validar la lista guardada.** La lista de portones se cachea **una vez por goal** con la cota del momento: si el
    goal se creó con la aldea a medio migrar, sus posiciones caen al aire y el aldeano se queda **sin poder abrir
@@ -1014,7 +1014,7 @@ Tres reglas que salieron del mismo encierro (el granjero que no podía salir del
    borran `WALK_TARGET` y `PATH` (y se para la navegación) para que el cerebro vuelva a pedir el destino **con la
    compuerta ya abierta**.
 
-**Y la celda de salida de un bancal es la de FUERA**, no la de dentro (`VillageGenerator.salidaDeLaParcela`): el goal
+**Y la celda de salida de un parcela es la de FUERA**, no la de dentro (`VillageGenerator.salidaDeLaParcela`): el goal
 de portones solo abre si el destino del aldeano está **al otro lado** (`vaACruzar`); mandándolo a la celda de dentro
 —la de entrar— la compuerta **no se abre** (medido: el granjero se quedaba en `1394,119,1452`, pegado a la valla).
 
@@ -1135,16 +1135,16 @@ también había perdido) → `Aldea 2: 4 hueco(s) de las casas del juego tapados
 ### I51 · La cosecha del granjero NO se queda en el suelo (la barre él)
 
 Lo reportó el jugador: *"los granjeros están dejando muchos vegetales en el suelo cuando cosechan"*. Medido con el
-arnés: **502 lecturas de vegetal tirado** en los bancales sobre 345 barridos, con **edad mediana 1077 ticks (54 s)**,
+arnés: **502 lecturas de vegetal tirado** en los parcelas sobre 345 barridos, con **edad mediana 1077 ticks (54 s)**,
 máxima **4597 (230 s)** y **3 zanahorias todavía al final** de la corrida (a punto de desaparecer a los 5 min). Y no era
 sólo "no me cabe": la granjera tenía **2 huecos libres de 8**. Parte de lo que cae lo suelta el **propio juego** (su
 faena `HarvestFarmland` cosecha con `destroyBlock(..., true)` y espera que el aldeano **pise** el objeto), y el
 **recolector no puede entrar** en las parcelas (están cercadas y las compuertas de valla no las abre un aldeano).
 
-**Regla:** en la huerta, **el que ensucia barre**: el granjero es el único que puede entrar en su bancal, así que
+**Regla:** en la huerta, **el que ensucia barre**: el granjero es el único que puede entrar en su parcela, así que
 (`VillagerFarmGoal`):
 
-1. **Barre su bancal** (`Tarea.RECOGER`): el objeto caído más cercano **dentro del bancal en el que está** —trigo,
+1. **Barre su parcela** (`Tarea.RECOGER`): el objeto caído más cercano **dentro del parcela en el que está** —trigo,
    zanahoria, patata, betabel y las semillas que no le sobren—, y **sigue con el siguiente** mientras le quepa. Lo que
    no le quepa se queda en el suelo (nunca se borra nada del pueblo).
 2. **No cosecha lo que no le cabe** (`leCabeLaCosecha` con `Block.getDrops` **antes** de romper la planta): se va antes
@@ -1201,21 +1201,21 @@ regalar una hogaza por boca (ver el aviso del método)—.
 guardado** con `build/hambre_medida.py` (la comida de cada aldea y la marca de comida de cada aldeano, con el
 `gameTime` del guardado para saber **quién** lleva sin comer).
 
-### I53 · Un bancal sembrado se mantiene sembrado (el granjero también SIEMBRA la celda vacía)
+### I53 · Un parcela sembrado se mantiene sembrado (el granjero también SIEMBRA la celda vacía)
 
-El jugador, mirando su bancal: *"¿por qué hay partes de la parcela que no tienen plantado nada? se supone que los
+El jugador, mirando su parcela: *"¿por qué hay partes de la parcela que no tienen plantado nada? se supone que los
 granjeros deben tener todas ocupadas"*.
 
-**Medido** en su guardado (`build/huerta_vacias.py`, celda a celda, aldea 2 cota `120`): los tres bancales tienen
+**Medido** en su guardado (`build/huerta_vacias.py`, celda a celda, aldea 2 cota `120`): los tres parcelas tienen
 **66, 69 y 71** de sus **72** celdas plantables ocupadas, y las **16** que faltan son `farmland` **con el hueco de
-arriba libre** (sembrables y vacías), **casi todas en los carriles por los que se entra y se sale del bancal** (los
+arriba libre** (sembrables y vacías), **casi todas en los carriles por los que se entra y se sale del parcela** (los
 dos extremos de la acequia y las columnas de los lados). En la **aldea 0**, que lleva más tiempo sin verse, faltan
-**147 de 216** (bancal 0: 70 de 72; bancal 1: 14 —13 vacías y una calva—; bancal 2: 63). *(Y ojo con lo que **no** es
-un hueco: los cultivos de **edad 0-1** son dos píxeles verdes y desde arriba parecen tierra —en el bancal 1 eran
+**147 de 216** (parcela 0: 70 de 72; parcela 1: 14 —13 vacías y una calva—; parcela 2: 63). *(Y ojo con lo que **no** es
+un hueco: los cultivos de **edad 0-1** son dos píxeles verdes y desde arriba parecen tierra —en el parcela 1 eran
 **30 de 69**, el 43%—; eso es lo normal, porque el granjero replanta cada celda que cosecha.)*
 
 **Causa (y es de ORDEN, como I25 y I51).** El granjero tenía **dos** faenas de la tierra —cosechar lo maduro y labrar
-la calva, que alternaban desde el arreglo de I25— y **sembrar iba DETRÁS de las dos**. Con tres bancales (216 celdas)
+la calva, que alternaban desde el arreglo de I25— y **sembrar iba DETRÁS de las dos**. Con tres parcelas (216 celdas)
 **siempre** hay algo maduro en alguno, así que el paso `PLANTAR` no se alcanzaba **nunca**. Y las celdas se vacían
 solas: el **cerebro del aldeano** tiene su propia faena de granjero (`HarvestFarmland`, I51) y **solo replanta si
 lleva semillas**, y lo que se **pisa** (I25) se vuelve a labrar pero **nadie lo siembra**. La parcela, entonces,
@@ -1227,7 +1227,7 @@ maduro (que no pasa nunca). La siembra sigue exigiendo lo de siempre: semillas *
 paso de recambios lo manda a la despensa) y el hueco de arriba **libre** (I11: no se arranca ningún cultivo).
 
 **No tiene regla en el lint** (es un orden de faenas, no un patrón de texto): se comprueba **contra el guardado** con
-`build/huerta_vacias.py`, que vuelca los tres bancales celda a celda (cultivo con su **edad**, tierra vacía y calva)
+`build/huerta_vacias.py`, que vuelca los tres parcelas celda a celda (cultivo con su **edad**, tierra vacía y calva)
 y cuenta las celdas que no tienen nada.
 
 ### I54 · El HUECO de un portón es SAGRADO (ni un farol: deja la puerta INSERVIBLE)
@@ -1244,7 +1244,7 @@ auditoría):
   obrero lo habría repuesto.
 - La ganadera **Obdulia** estaba **dentro** del corral (`1460.9,120,1418.9`) y con el **almacén aparcado** de no
   poder llegar (`DevilRpgPuntoFallido` = `1461,121,1434`, el punto de apoyo del almacén).
-- Auditados **los 14 portones** de las tres aldeas del guardado (12 de los bancales, el del corral y el del
+- Auditados **los 14 portones** de las tres aldeas del guardado (12 de los parcelas, el del corral y el del
   gallinero), el **único** tapado era ése.
 
 **Por qué deja la puerta inservible.** El aldeano mide **1,95**: al cruzar ocupa la celda de la hoja **y la de
@@ -1592,12 +1592,12 @@ Lo cazó el jugador en su log: **cada 10 s**, sin parar,
 [Village] Aldea 2: f033ee63-… tenia el oficio de farmer de mas (el pueblo tiene 3 plaza(s)): se queda sin oficio…
 ```
 
-y el mismo aldeano bailando entre el bancal y la milicia (`se alista en la guardia como espadachín` / `deja la
+y el mismo aldeano bailando entre el parcela y la milicia (`se alista en la guardia como espadachín` / `deja la
 guardia y vuelve a su oficio`).
 
 **La causa, de una línea**: `reponerProfesiones` apuntaba **un oficio por TIPO** (`!presentes.contains(profesion)`)
 pero `slotDeProfesionFaltante` **gasta una plaza por cada VIVO** con ese oficio (el pueblo tiene **tres** granjeros):
-con la lista de tipos, el primer bancal cubría "farmer" y los otros dos parecían **libres** → daba de alta un
+con la lista de tipos, el primer parcela cubría "farmer" y los otros dos parecían **libres** → daba de alta un
 granjero **de más** en cada latido → y `podarOficiosDuplicados`, que **sí** cuenta titulares, se lo quitaba acto
 seguido. El pueblo se pasaba el día contratando y despidiendo al mismo granjero.
 
@@ -1707,7 +1707,7 @@ al compostero **16 por viaje** (`COMPOSTAR_MAX`). El grifo (el **recolector**, q
 cosechas) estaba abierto y el desagüe tapado: el montón solo podía crecer.
 
 **Regla**: cada granjero se lleva **64 semillas** por viaje al compostero (`COMPOSTAR_MAX`) en vez de 16, y la despensa
-solo guarda **`SEMILLAS_SOBRANTES_EN_DESPENSA` (32)** como **reserva de siembra** (los tres bancales necesitan ~27):
+solo guarda **`SEMILLAS_SOBRANTES_EN_DESPENSA` (32)** como **reserva de siembra** (los tres parcelas necesitan ~27):
 todo lo que pase de ahí acaba en **harina de huesos**, que es lo que abona el plantío y acelera la cosecha. Con tres
 granjeros y 64 por viaje, el montón baja de verdad (cada visita saca varias harinas de hueso).
 
@@ -1718,16 +1718,16 @@ solo dos granjeros, ¿porque todavía no se ha designado un granjero? recuerda q
 militar a la hora de asignar. Y también están tardando mucho en cosechar, hay campos llenos"*.
 
 **1) El guardia ocupaba una plaza de oficio.** `alistarGuardia` conservaba su oficio (y con él el **ticket de su
-estación**), así que una plaza de granjero quedaba "cubierta" por un guardia que **no pisaba el bancal**: el reparto
-veía 3 granjeros, el **tercer bancal se quedaba sin nadie** y el aldeano nuevo no podía reclamar la estación (el
+estación**), así que una plaza de granjero quedaba "cubierta" por un guardia que **no pisaba el parcela**: el reparto
+veía 3 granjeros, el **tercer parcela se quedaba sin nadie** y el aldeano nuevo no podía reclamar la estación (el
 ticket era del guardia). Arreglado: al alistarse, si su oficio es del pueblo se le **suelta la estación** y se queda
 **sin oficio** (su plaza es para un granjero de verdad; si deja la guardia, el reparto le da otra), y
 `reponerProfesiones` **no cuenta a los guardias** como titulares.
 
 **2) La cosecha esperaba su turno.** Las tres faenas (cosechar / labrar / sembrar) **rotaban siempre**, así que con
-los bancales llenos solo se cosechaba **uno de cada tres turnos**: el trigo se pasaba de maduro y el campo se veía
+los parcelas llenos solo se cosechaba **uno de cada tres turnos**: el trigo se pasaba de maduro y el campo se veía
 "lleno". Ahora **cosechar manda**: si hay cultivo maduro se cosecha ya; la rotación queda para labrar y sembrar, que
-es cuando el bancal no tiene nada maduro (la mitad del ciclo de un campo sano).
+es cuando el parcela no tiene nada maduro (la mitad del ciclo de un campo sano).
 
 ### I73 · Los guardias no se quedan plantados en el almacén, y tienen TURNO
 
@@ -2239,7 +2239,7 @@ tampoco tiene campo ✓.
   se abre paso hacia el objetivo **y** en el de la marcha al centro (que además exigía `getNavigation().isDone()`, y con
   una ruta viva que no lleva a ninguna parte tampoco picaba).
 - El candidato a picar exigía `isSolid()` y **la valla no es un cubo**: el asaltante se quedaba de bruces contra la
-  **valla de roble del bancal** sin picarla. Ahora se pregunta por la **forma de colisión** (no aire y con colisión).
+  **valla de roble del parcela** sin picarla. Ahora se pregunta por la **forma de colisión** (no aire y con colisión).
 
 **Y una línea de log nueva** —`[Siege] un asaltante de la aldea N pica X en Y`—: sin ella no se podía distinguir "no
 pica" de "pica y el pueblo lo repone", y es lo que ha hecho medible todo esto.
@@ -2356,7 +2356,7 @@ arboleda (a **105**): de ahí que se fuera al monte con el bosque del pueblo a m
 
 **Medido con el arnés** (`MEDIR_LENADOR`, su aldea): en **todas** las muestras el destino del leñador cae **dentro** de
 la valla (`destinoDentro=true`) y la ronda es `Yendo por polvo de hueso` → `Cogio polvo de hueso (8)` → `Yendo a la
-arboleda` → `Abono la arboleda` (harina del zurrón 8 → 2), con la arboleda subiendo de **2 a 3 árboles** y los plantones
+arboleda` → `Abono la arboleda` (harina del inventario 8 → 2), con la arboleda subiendo de **2 a 3 árboles** y los plantones
 bajando de 10 a 9. Con el código de antes, el **mismo** montaje daba `destinoDentro=false` (a ~110 bloques del centro).
 
 **Dos fallos del primer intento, los dos medidos** (y por eso están escritos aquí): el abonado de la arboleda iba con el
@@ -2379,11 +2379,11 @@ el recolector (`VillagerCollectGoal.esDelPueblo`), así que se quedaban en el su
   almacén y deja el polvo de hueso en la despensa con la **receta de vanilla** (1 hueso = 3,
   `POLVO_DE_HUESO_POR_HUESO`).
 - Y **no se olvida del compostero**: si la despensa está por debajo de `HARINA_MINIMA` (8) y lleva semillas de sobra, el
-  compostero va **antes** que las faenas de la tierra. Era el paso que **no se alcanzaba nunca** —con los tres bancales
+  compostero va **antes** que las faenas de la tierra. Era el paso que **no se alcanzaba nunca** —con los tres parcelas
   (216 celdas) siempre hay algo maduro—, el mismo fallo que tuvo la siembra (ver el paso 3 de `canUse`).
 
 **Medido con el arnés** (`MEDIR_LENADOR`): `El granjero: Hizo 27 polvo de hueso (de 9 hueso(s))` (los 8 sembrados más el
-que ya tenía la aldea), con el anuncio en su etiqueta, y la harina pasando por el zurrón de los granjeros (`Abono la
+que ya tenía la aldea), con el anuncio en su etiqueta, y la harina pasando por el inventario de los granjeros (`Abono la
 huerta`) y por el del leñador.
 
 **No medido**: el empujón del compostero (`HARINA_MINIMA`). En la corrida el pueblo tenía harina de sobra todo el rato
@@ -2545,7 +2545,7 @@ es una espera **infinita**.
 Dos cosas del mismo reporte del jugador (*"el ganadero no coge los huevos del gallinero"*), las dos medido en su
 partida (aldea 0, centro `470,646`, cota 63):
 
-- **El ganadero tenía 4 huevos en el zurrón y su destino fijo aparcado.** `DevilRpgPuntoFallido = (517,64,666)` (I95)
+- **El ganadero tenía 4 huevos en el inventario y su destino fijo aparcado.** `DevilRpgPuntoFallido = (517,64,666)` (I95)
   y la etiqueta de **otro** goal (*"Recogiendo lo suyo"*). El goal de su oficio elegía el destino fijo
   (`ENTREGAR` → `VillageStorage.puntoDeApoyo`) **sin mirar si estaba aparcado**: arrancaba, `tick` veía el
   aparcamiento, soltaba el destino y `canContinueToUse` lo paraba — y **al arrancar había CANCELADO al goal de
@@ -2554,14 +2554,14 @@ partida (aldea 0, centro `470,646`, cota 63):
   **Regla:** un destino **fijo** (el almacén, el punto de apoyo del corral) que está **aparcado** hace que el goal
   **no arranque** y espere un rato, igual que ya hacía `VillagerPickupGoal.canUse` con su destino: no se arranca para
   abortar en el tick siguiente. Medido con el arnés tras el arreglo: el ganadero deja de parpadear, se le ve con el
-  goal de recogida (`goals=[6:VillagerPickupGoal]`), llena el zurrón (4 → 8 huevos) y **entrega** (medido:
+  goal de recogida (`goals=[6:VillagerPickupGoal]`), llena el inventario (4 → 8 huevos) y **entrega** (medido:
   `el ganadero guardo 8 cosa(s) de su oficio en la despensa` y **8** líneas de `N cosa(s) del corral al almacen`, que
   antes **no** salían porque el punto del almacén era inalcanzable).
 - **El alcance con el que recoge del suelo es el SUYO** (ver arriba): el corral es su puesto de trabajo y tiene
   **valla de por medio**, así que lo que alcanza ahí lo mide su propio `REACH` (3,5), no el del recolector por oficio
   (2,5) ni el 1,8 que tenía. Lo medido, con el instrumento que toca en cada caso: **en vivo con el arnés** (con el
   alcance en 2,5) los huevos que están **encima de la paja** —los que con 1,8 no se alcanzaban **nunca**— ya se los
-  lleva (se ve desaparecer el huevo viejo y subir el zurrón); y **celda a celda contra el guardado**
+  lleva (se ve desaparecer el huevo viejo y subir el inventario); y **celda a celda contra el guardado**
   (`build/gallinero_medida.py`, que aplica la misma distancia que el goal) el corralillo **entero** —la fila norte a
   **3,04** del pasillo y los de la paja a **3,35**— solo lo cubre **3,5**. Lo que no se ha visto en vivo es la corrida
   con el valor final (3,5): lo que hay medido de él es la cuenta celda a celda.
@@ -2571,7 +2571,7 @@ que caiga **dentro de la valla** (en la celda de la propia valla, cosa que pasa 
 ella) sigue necesitando entrar. Y entrar al corralillo es poco fiable por construcción: su único portón es una
 **puerta de valla** (el juego no planifica a través de ella cerrada, I96), las gallinas **viven** en él y la puerta se
 cierra sola a los 5 s (I22). Lo que sí se midió es que, con el portón abierto, el ganadero **entra y trabaja dentro**
-(`PORTON … open=true` en los volcados, con los huevos del corralillo desapareciendo y el zurrón subiendo).
+(`PORTON … open=true` en los volcados, con los huevos del corralillo desapareciendo y el inventario subiendo).
 
 ### I98 · Una horda del mundo va por el RELOJ del mundo (y la presión se acumula en el latido)
 
@@ -2669,7 +2669,7 @@ haya flechas. ¿Qué otra cosa se necesitaría?"*.
 | El herrero **hace flechas** | ✅ **56** tandas de `Hizo 4 flechas` (224 flechas) — receta `Flechando`: 1 palo + 1 pluma + 1 pedernal = 4, con objetivo `OBJETIVO_FLECHAS` = **64 en el almacén** |
 | El **arquero** las usa | ✅ `VillagerGuardGoal`: saca `FLECHAS_POR_VIAJE` del **almacén** y dispara flechas de verdad (gasta una por disparo) |
 | El **almacén**, hoy | ❌ **355 troncos, 32 tablones, 2 cuerdas, 30 palos** y **ni una pluma, ni un pedernal, ni una flecha** |
-| Los **arqueros**, hoy | ❌ **2, 0 y 0 flechas** en el zurrón (Josefa, Dorotea, Aurelia) |
+| Los **arqueros**, hoy | ❌ **2, 0 y 0 flechas** en el inventario (Josefa, Dorotea, Aurelia) |
 | El **pedernal** | ❌ **nadie lo produce**: no hay ninguna meta que cave grava y el recolector no lo barría |
 
 **Regla (lo que se ha hecho):** el **recolector** barre también **pedernal y flechas** (`VillagerCollectGoal
@@ -2756,7 +2756,7 @@ de uso por celda, la durabilidad de verdad: 250 celdas el de hierro) y cuando se
    de la boca salía con **césped** y el minero no tenía por dónde empezar. Ahora hay **una sola cuenta**
    (`celdaDelCaracolDesdeElEje`) y la de centro y eje son la misma.
 2. **Subía al taller después de CADA celda** (16 celdas en 136 s, casi todo andando): el disparador era "tiene
-   adoquín y algo cavado". Ahora sube con **tanda hecha** (32 adoquines, mineral crudo, sin antorchas o zurrón
+   adoquín y algo cavado". Ahora sube con **tanda hecha** (32 adoquines, mineral crudo, sin antorchas o inventario
    lleno).
 3. **En la galería el destino era la celda SIN cavar** (piedra): el caminante no puede ir a una celda por la que no
    se anda, así que el minero se quedaba plantado **en la superficie justo encima de la mina**, con la etiqueta
@@ -2767,7 +2767,7 @@ de uso por celda, la durabilidad de verdad: 250 celdas el de hierro) y cuando se
    que su primera celda era la del paso 15 —ya cavada y con su pieza— y el minero **se comía su propio escalón**. El
    progreso oscilaba **16 → 15 → 16** y en el log salían en bucle `caracol paso 15` / `galeria … celda 1 de 24`. Ahora
    la dirección es **siempre hacia fuera** del pozo.
-6. **Subía a vaciar el zurrón cada tres celdas**: se le llenaba de **tierra, arena y grava** (basura que no le sirve).
+6. **Subía a vaciar el inventario cada tres celdas**: se le llenaba de **tierra, arena y grava** (basura que no le sirve).
    Medido: **dos celdas de galería en once minutos**. Ahora no recoge basura (de la grava solo el 10 % de pedernal) y
    sube con tanda hecha.
 7. **El `JOB_SITE` en disputa con el latido**: si en la aldea hay **otro cortapiedras**, el latido y el goal se lo
@@ -2815,7 +2815,7 @@ haya utilizado aún"*.
   agujero en el suelo del pueblo que el tapagujeros iría rellenando a medias. La migración **tira el plano** y el
   nuevo se captura ya con la caseta nueva dentro (I8).
 
-### I103 · La huerta se cosecha ANTES de compostar, y un bancal SIN DUEÑO se coge aunque su ticket esté perdido
+### I103 · La huerta se cosecha ANTES de compostar, y un parcela SIN DUEÑO se coge aunque su ticket esté perdido
 
 El jugador, otra vez: *"otra vez los granjeros están dejando demasiadas parcelas sin cosechar. Ya no hay verduras para
 comer pero las parcelas no están siendo cosechadas. ¿qué pasa?"*.
@@ -2828,8 +2828,8 @@ cultivo a cultivo, los composteros con su dueño y los bichos dentro del recinto
 
 ```
 [Arnes] GRANJERO c38cb784 nombre=Ursula ... job=SIN PUESTO   <- la tercera granjera, sin estación
-[Arnes] COMPOSTERO bancal 0 en 437,63,660 bloque=composter poi=SI dueno(s): NADIE   <- libre y sin dueño
-[Arnes] TIERRA bancal 0: MADURAS 37 | creciendo 37 | VACIAS 0     <- y ahí se quedó CUATRO minutos
+[Arnes] COMPOSTERO parcela 0 en 437,63,660 bloque=composter poi=SI dueno(s): NADIE   <- libre y sin dueño
+[Arnes] TIERRA parcela 0: MADURAS 37 | creciendo 37 | VACIAS 0     <- y ahí se quedó CUATRO minutos
 [Arnes] BICHOS DENTRO DEL RECINTO: 0                              <- el latido del pueblo sí corría
 ```
 
@@ -2837,8 +2837,8 @@ cultivo a cultivo, los composteros con su dueño y los bichos dentro del recinto
 
 1. **La estación se buscaba MAL cuando su ticket estaba perdido.** `reclamarEstacionesDelPueblo` pedía al gestor de
    puntos de interés **la estación ocupada MÁS CERCANA** (al centro de la aldea) y, si era de otro aldeano,
-   **abandonaba**. Con el compostero del **bancal 0** con el ticket perdido y el del **bancal 1** (más cerca del
-   centro) en manos de otro granjero, la tercera granjera se quedaba **sin puesto para siempre**: su bancal se quedaba
+   **abandonaba**. Con el compostero del **parcela 0** con el ticket perdido y el del **parcela 1** (más cerca del
+   centro) en manos de otro granjero, la tercera granjera se quedaba **sin puesto para siempre**: su parcela se quedaba
    sin nadie y con 37 plantas maduras que no bajaban ni una. **Regla:** de las estaciones de su oficio se elige
    **una LIBRE** y, si no hay, **una OCUPADA SIN DUEÑO** (el ticket perdido, que se suelta y se coge); la "más
    cercana" es el último recurso.
@@ -2849,8 +2849,8 @@ cultivo a cultivo, los composteros con su dueño y los bichos dentro del recinto
    labrar, sembrar) va **antes** que la que **transforma** (compostar, abonar) — cuando se llega al compostero ya no
    queda nada maduro, así que el viaje no le quita el turno a nadie— y al compostero se va con un **puñado**
    (`SEMILLAS_MINIMAS_PARA_COMPOSTAR = 4`), salvo que falte harina de verdad.
-3. **Y una red de seguridad**: un granjero **sin estación** ya no se reparte el bancal por UUID a secas (podía caer en
-   el de un compañero y dejar otro sin nadie): se le da **el bancal que no tenga dueño**.
+3. **Y una red de seguridad**: un granjero **sin estación** ya no se reparte el parcela por UUID a secas (podía caer en
+   el de un compañero y dejar otro sin nadie): se le da **el parcela que no tenga dueño**.
 
 **Medido después** (misma corrida, ~9 min): `Ursula` **reclama su estación de farmer en 437,63,660** y los tres
 composteros quedan con dueño; las maduras bajan **37 → 10 → 0**, **4 → 1 → 0** y **20 → 10 → 0**, las parcelas siguen
@@ -2860,29 +2860,29 @@ llenas (`VACIAS 0`) y la despensa sube de **267 a 466 puntos** con las verduras 
 > **La lección, en una línea:** una estación **libre** no se coge por cercanía al centro sino **buscando la que no
 > tiene dueño**, y la faena que **produce comida** va antes que la que **la transforma**.
 
-**TERCERA VUELTA: LA BARRIDA DEL BANCAL (y el aldeano atrapado en su casa).** El jugador afinó lo que quería: *"lo
+**TERCERA VUELTA: LA BARRIDA DEL PARCELA (y el aldeano atrapado en su casa).** El jugador afinó lo que quería: *"lo
 que quiero es que una vez que un granjero está en una parcela, revise TODA y coseche TODAS las que ya están maduras.
 Si llegan a sobrar, que pare cuando llegue a su límite de capacidad y deje sin cosechar las que sobran, entonces es
 cuando ya puede ir a la despensa a dejar todo"*. Tres cosas, las tres medidas con el arnés:
 
 1. **La barrida** (`VillagerFarmGoal`, tarea `COSECHAR`): al cosechar una mata, el granjero busca **la siguiente
-   madura de SU bancal** y sigue con ella **sin soltar la faena** (el mismo patrón que ya usaban abonar y recoger del
-   suelo). Solo para cuando **no queda ninguna madura**, cuando la siguiente **ya no le cabe** (entonces el zurrón
+   madura de SU parcela** y sigue con ella **sin soltar la faena** (el mismo patrón que ya usaban abonar y recoger del
+   suelo). Solo para cuando **no queda ninguna madura**, cuando la siguiente **ya no le cabe** (entonces el inventario
    está lleno: a la despensa, que es justo lo que pidió) o cuando se le acaba el tiempo. Antes hacía **una celda por
    salida** y volvía a decidir, así que entre cosecha y cosecha se iba a la despensa cada 8 unidades y dejaba el resto
    de la parcela a medias.
 2. **El tope de semillas era el tapón**: guardaba hasta **72** (`SEMILLAS_MAX` 8 + `SEMILLAS_PARA_COMPOSTAR` 64) —
-   **1-2 huecos del zurrón**— y con los huecos llenos de semillas `leCabeLaCosecha` decía que no: la barrida se
-   cortaba a las **8-11 unidades** y el bancal se quedaba en **12-15 maduras para siempre** (medido). Ahora
+   **1-2 huecos del inventario**— y con los huecos llenos de semillas `leCabeLaCosecha` decía que no: la barrida se
+   cortaba a las **8-11 unidades** y el parcela se quedaba en **12-15 maduras para siempre** (medido). Ahora
    `SEMILLAS_PARA_COMPOSTAR = 8` (tope 16) y el compostero se atiende en cuanto hay 4 de sobra.
 3. **El rescate no la veía**: `rescatarAldeanosAtrapados` solo miraba a los aldeanos a **más de 4 bloques** de la
    cota; la granjera **Ursula**, congelada **dentro de su casa** en `428,65,669` (cota 63, su cama en el piso de
-   arriba y la escalera debajo de los pies), quedaba **exenta** y no la rescataba nadie: su bancal se quedaba con
+   arriba y la escalera debajo de los pies), quedaba **exenta** y no la rescataba nadie: su parcela se quedaba con
    **36 plantas maduras** y en el log salía `no consigue llegar a 440,63,668` cada 5 min. Ahora se exime al que está
    **en la calle por la altura de los pies** (`cota + 0,6`: lo que se sube andando, I26/I95), así que a los 30 s sin
    moverse se le baja a la plaza.
 
-**Medido después**: bancal 0 **36 → 21 → 0** maduras (en cuanto pisó la calle), bancal 2 **15 → 9 → 6 → 0**, bancal 1
+**Medido después**: parcela 0 **36 → 21 → 0** maduras (en cuanto pisó la calle), parcela 2 **15 → 9 → 6 → 0**, parcela 1
 **1 → 0**, los tres con **74/74 celdas sembradas** (`VACIAS 0`) y la despensa de **267 a 525 puntos** con las
 verduras de **58 a 193**. Líneas literales en `tools/arnes/medidas-huerta.txt` (apartados 3 y 4).
 
@@ -2897,11 +2897,11 @@ terminar de cosechar todo"*, y su log lo canta:
 [13:30:06] c38cb784-... no consigue llegar a BlockPos{x=440, y=63, z=667}: lo deja por 5 min
 ```
 
-**Lo que pasaba**: el granjero no conseguía cruzar la compuerta de su bancal y, al rendirse, el goal aparcaba **la
+**Lo que pasaba**: el granjero no conseguía cruzar la compuerta de su parcela y, al rendirse, el goal aparcaba **la
 mata que iba a cosechar** (`stuckTicks = STUCK_LIMIT` en la pierna de la entrada → `canContinueToUse` aparcaba el
 **objetivo**): cada intento fallido se llevaba por delante **una planta del borde** (440,668 → 440,667 → …) y, como el
 goal de la huerta se rendía, entraba el de recoger, se iba a la despensa con la cosecha y volvía **a fallar en la
-misma compuerta** — con **cuatro compuertas** por bancal, tres de ellas sin usar.
+misma compuerta** — con **cuatro compuertas** por parcela, tres de ellas sin usar.
 
 **Reglas (el jugador lo dijo claro: *"es una puerta!!! debe poder abrirla y cruzar sí o sí"*):**
 
@@ -2914,9 +2914,9 @@ misma compuerta** — con **cuatro compuertas** por bancal, tres de ellas sin us
   se calculó con ella cerrada y acababa en su propia casilla, pegado a la valla. Es el mismo remedio que ya usaba
   `VillagerGateGoal.abrir` (medido allí con Isidoro).
 - **La huerta no es de los golems**: el golem de hierro lo pone el **juego** (`Villager.spawnGolemIfNeeded` lo crea
-  **al lado del aldeano que lo convoca**), así que un granjero dentro de su bancal lo hacía **nacer en la huerta** — y
-  la tierra de cultivo pisada se vuelve tierra y el bancal se pierde. `CommonForgeGolemEventSubscriber` corta el
-  suceso: si el golem acaba de nacer sobre la huella de un bancal **no entra** (y queda en el log), y si viene del
+  **al lado del aldeano que lo convoca**), así que un granjero dentro de su parcela lo hacía **nacer en la huerta** — y
+  la tierra de cultivo pisada se vuelve tierra y el parcela se pierde. `CommonForgeGolemEventSubscriber` corta el
+  suceso: si el golem acaba de nacer sobre la huella de un parcela **no entra** (y queda en el log), y si viene del
   guardado **se le saca a la calle**. La red de seguridad para el que se cuele andando está en el latido
   (`VillageManager.sacarLosGolemsDeLaHuerta`, que también saca al que ya estaba dentro en el guardado del jugador).
   La prueba de "sobre la huerta" es solo X/Z (`VillageGenerator.sobreLaHuellaDeUnBancal`), que es lo bastante barata
@@ -2939,12 +2939,12 @@ una vez `LLEVAR_TRIGO = 16`"*.
 - **Si el pan no cabe, el trigo vuelve al barril**: igual que en `cocinar`, la materia prima no se destruye porque la
   despensa esté llena de verdura (se devuelve el trigo y se hornea cuando haya hueco).
 - **Cada viaje lleva 16**: `LLEVAR_TRIGO = 16` (eran 8) — el doble de comida por paseo a la taberna, que está a 40-55
-  bloques. El hueco del zurrón aguanta 64, así que 16 no compromete la barrida del bancal (lo que la cortaba eran las
+  bloques. El hueco del inventario aguanta 64, así que 16 no compromete la barrida del parcela (lo que la cortaba eran las
   semillas: ver `SEMILLAS_PARA_COMPOSTAR`).
 - **Y EL RESCATE DEL ATRAPADO CUENTA LA CELDA EN HORIZONTAL (x,z)**: el arreglo de la vuelta anterior (eximir al que
   está "en la calle" por la altura de los pies) **no bastaba**, y lo cazó el arnés: la granjera **Ursula** se quedaba
   **botando** en la escalera de su casa (misma columna `428,669`, la Y oscilando entre **65 y 67** con la cota en 63)
-  más de **80 s** con su bancal 0 en **29 matas maduras** que no bajaban, y en el log **no salía ni un solo**
+  más de **80 s** con su parcela 0 en **29 matas maduras** que no bajaban, y en el log **no salía ni un solo**
   `estaba atascado dentro de una casa`. La causa: `rescatarAldeanosAtrapados` guardaba la celda con
   `blockPosition().asLong()`, que **incluye la Y**, así que **cada bote reiniciaba el contador** de "lleva 30 s
   quieto" (`ATRAPADO_TICKS`) y el rescate no disparaba **nunca**. Ahora la celda se mide con
@@ -2997,7 +2997,7 @@ mismo margen de 30 s (`ATRAPADO_TICKS`); desde la calle va a trabajar por su cue
 **Medido después del arreglo** (misma copia, ~12 min): **una sola** bajada de la cama en toda la corrida, **6 árboles
 talados**, **6 entregas al almacén** (`el lenador guardo 16 cosa(s) de su oficio`), y sus avisos de "no consigue
 llegar a la arboleda" quedan en los **2 primeros** (antes de bajarle); el resto son árboles del monte a 100+ bloques
-que aparca y sigue. Sin regresiones: tres bancales a 0 maduras, golems 0 y el cocinero con 7 viajes por leña y 160
+que aparca y sigue. Sin regresiones: tres parcelas a 0 maduras, golems 0 y el cocinero con 7 viajes por leña y 160
 horneadas. Ver `tools/arnes/medidas-huerta.txt`, apartado 7.
 
 **Y QUEDA APUNTADO (la causa de fondo, sin arreglar)**: el **piso de arriba de esa casa está desconectado** del bajo
@@ -3060,7 +3060,7 @@ sería dejar en el almacén un pico que nadie usa.
 
 **Medido** (MEDIR_MINERO, copia de su partida, ~13 min, con el almacén sin picos ni lingotes como el suyo):
 `El herrero de herramientas: Forjo un pico de madera` **×3**; el minero pasa a `pico=minecraft:wooden_pickaxe(1/59)`,
-**vuelve a la mina** (`dCara` 23,56 → 10,31) y **vuelve a cavar** (`pasos=16` → `19`, con adoquín en el zurrón); al
+**vuelve a la mina** (`dCara` 23,56 → 10,31) y **vuelve a cavar** (`pasos=16` → `19`, con adoquín en el inventario); al
 gastarse el pico (59 usos) el herrero forja otro. Ver `tools/arnes/medidas-minero.txt`, apartado 3.
 
 ### I107 · La despensa se come VARIADA: no hay comida que no se coma
@@ -3131,7 +3131,7 @@ para esto).
 también cuenta** como material de antorchas (con un tronco se fabrica el carbón vegetal), así que una ida al almacén le
 deja completo y se va a trabajar.
 **Medido** (MEDIR_MINERO con el carbón del almacén vaciado, ~6 min): `quema un tronco en el horno y saca 1 de carbon
-vegetal (para las antorchas)` **×2**, `hace 4 antorchas con un carbon y un palo` **×2**, su zurrón pasa por
+vegetal (para las antorchas)` **×2**, `hace 4 antorchas con un carbon y un palo` **×2**, su inventario pasa por
 `1x charcoal` → `8x torch`, y **vuelve a cavar** (`caracol paso 17` y `paso 18`). Ver
 `tools/arnes/medidas-minero.txt`, apartado 4.
 
@@ -3165,29 +3165,29 @@ en `(515,64,667)` sigue (1 → 1) y los **66** marcos de la mina a y=57 siguen (
 
 **Y SE CAZÓ DE PASO (pendiente)**: en la primera corrida el leñador **no taló nada** porque se quedó **pegado a la
 muralla** (`527,63,672`, r = 62, justo encima del muro) intentando llegar al almacén (`no consigue llegar a
-517,63,666`); con la madera en el zurrón no hay faena. El problema es **el camino desde fuera de la muralla al
+517,63,666`); con la madera en el inventario no hay faena. El problema es **el camino desde fuera de la muralla al
 almacén** (familia de I103/I105) y queda apuntado para la vuelta siguiente. → **Resuelto en I112.**
 
-### I111 · El minero no se queda en bucle con el zurrón lleno de RECADOS
+### I111 · El minero no se queda en bucle con el inventario lleno de RECADOS
 
 Lo reportó el jugador con dos capturas: *"¿por qué el minero aparece como trabajando dentro de su choza pero realmente
 no hace nada? Bajé a su cantera pero no ha terminado de hacer un hoyo ni nada, se quedó como con madera... aparece el
 minero sólo entrando y saliendo de su choza pero no va a trabajar"*.
 
-**La causa (un livelock de verdad)**: `hayQueSubir()` daba por "zurrón lleno" tener **dos huecos libres o menos** y
+**La causa (un livelock de verdad)**: `hayQueSubir()` daba por "inventario lleno" tener **dos huecos libres o menos** y
 subía a entregar; pero el minero lleva **siempre** encima sus recados —pico, tablones, palos, carbón y leña: **seis o
 siete huecos de los ocho**— y `entregar` era **todo o nada**: de esos no soltaba ni uno. Así que subía, no entregaba
 nada, volvía, y volvía a estar "lleno": **entrando y saliendo de la caseta para siempre, sin cavar una celda** (y el
-zurrón lleno de madera, que es justo lo que se veía en la captura).
+inventario lleno de madera, que es justo lo que se veía en la captura).
 
 **Regla:**
-- `hayQueSubir()`: el zurrón lleno **solo cuenta si puede vaciarlo** (`hayParaEntregar()` = llevar **de sobra** de
+- `hayQueSubir()`: el inventario lleno **solo cuenta si puede vaciarlo** (`hayParaEntregar()` = llevar **de sobra** de
   algo, aunque sea de los recados).
 - `entregar()`: ya no es todo o nada; deja en el almacén **lo que lleva de sobra** de cada cosa según
   `cuantoSeQueda()` —pico **2**, tablones **16**, palos **8**, antorchas **16**, carbón **8**, leña **2**— y lo que no
-  le quepa al almacén se queda en el zurrón (no se tira).
+  le quepa al almacén se queda en el inventario (no se tira).
 
-**Medido** (MEDIR_MINERO, copia de su partida, ~14 min): el zurrón pasa de **6-7 huecos de recados a `1x stick`**; el
+**Medido** (MEDIR_MINERO, copia de su partida, ~14 min): el inventario pasa de **6-7 huecos de recados a `1x stick`**; el
 minero **baja a la mina** y `faena: Picando` (`caracol paso 17` y `paso 18`, `pasos` de **16 → 19**), y sus viajes de
 subida son para **entregar de verdad** (pedernal, carbón, antorchas y lo sacado: `2x` cada uno). El bucle de
 "entrando y saliendo" desapareció. Ver `tools/arnes/medidas-minero.txt`, apartado 5.
@@ -3195,7 +3195,7 @@ subida son para **entregar de verdad** (pedernal, carbón, antorchas y lo sacado
 ### I112 · Para cruzar la muralla se va POR EL PORTÓN (y el atasco se mide contra el paso, no contra el destino)
 
 Venía apuntado de I110: el leñador se quedaba **pegado a la muralla** en `527,63,672` intentando llegar al almacén
-(`517,63,666`, a **11 bloques**) y, con la madera en el zurrón, no talaba nada. La ronda anterior le puso el tirón
+(`517,63,666`, a **11 bloques**) y, con la madera en el inventario, no talaba nada. La ronda anterior le puso el tirón
 (I105/I103) y **no lo arregló**; medido, el log se llenaba de `no consigue llegar a BlockPos{x=517, y=63, z=666}`.
 
 **La causa, medida con los bloques del guardado** (`build/ruta_atasco.py`, la misma regla de *casilla de pie* que usa
@@ -3222,7 +3222,7 @@ almacén como punto fallido (I33) y volvía a empezar: **22 rendiciones y 0 entr
   cuenta como avance y la llegada se sigue midiendo contra el destino (la faena no se adelanta).
 
 **Medido** (MEDIR_LENADOR, copia de su partida, 280 s de juego; el arnés ahora planta al leñador **en el atasco mismo**
-—`CENTRO.offset(57,0,26)` = `527,63,672`— con 16 troncos en el zurrón):
+—`CENTRO.offset(57,0,26)` = `527,63,672`— con 16 troncos en el inventario):
 
 | concepto | antes | ahora |
 |---|---|---|
@@ -3234,7 +3234,7 @@ almacén como punto fallido (I33) y volvía a empezar: **22 rendiciones y 0 entr
 El log lo enseña paso a paso: `Llevando la madera va al otro lado del muro (517, 63, 666): cruza por el porton
 531, 63, 646` → `destino=531,63,646` (va al portón) → a los 200 ticks `destino=517,63,666` (ya cruzó) → `Guardo 16 de
 lo suyo` y `el lenador guardo 16 cosa(s) de su oficio en el almacen`. Los **6** atascos que quedan en la corrida son de
-**otros** aldeanos y en otros sitios (bancales y la mina), **ninguno** en el almacén. Ver
+**otros** aldeanos y en otros sitios (parcelas y la mina), **ninguno** en el almacén. Ver
 `tools/arnes/medidas-lenador.txt`, apartado 6.
 
 ### I113 · El APARCADO (I33) no puede dejar al minero sin pico ni a la mina sin cavar
@@ -3253,7 +3253,7 @@ aparcado con su hora y la lista completa de goals):
 ```
 [Arnes] MINERO-ESTADO t=40  descansando=false hambre=false comida=1258
         apoyo=BlockPos{x=517, y=63, z=666} aparcado=true aparcadoHasta=129790 gameTime=127118 picoEnMano=false
-[Arnes] MINERO t=2400 pos=501,63,616 pico=SIN PICO(0/0) zurron=[0:2xstick] goals=[]     <- 120 s sin nada que hacer
+[Arnes] MINERO t=2400 pos=501,63,616 pico=SIN PICO(0/0) inventario=[0:2xstick] goals=[]     <- 120 s sin nada que hacer
 [Village] El minero: pico nuevo: minecraft:wooden_pickaxe                              <- al caducar el aparcado
 [Village] El minero: caracol paso 17 en 499, 53, 620
 [Village] e9329a25-... no consigue llegar a BlockPos{x=499, y=53, z=620}: lo deja por 5 min
@@ -3784,7 +3784,7 @@ tiene que despejar las **tres**, no dos.
 El mapa del sitio (`build/slice_mina.py 505 509 609 614 44 50 world`) lo enseña: la galería sale hacia el norte
 desde `507,46,613` y ahí hay un **acuífero**. Queda por medir el mecanismo fino (si el agua vuelve a entrar entre la
 comprobación y el picado, y por qué `sellosSeguidos` no llega a `SELLOS_MAXIMOS`), y de paso que el minero se queda
-**sin pico** con el zurrón lleno de adoquín y con la ruta a su taller **2 corta**
+**sin pico** con el inventario lleno de adoquín y con la ruta a su taller **2 corta**
 (`rutaFaena=[a1=38n alcance=NO fin=501,63,613 dFin=2.00]`).
 
 #### Los PORTONES: medido, y el arreglo RETIRADO (misma sesión)
@@ -3808,7 +3808,7 @@ aperturas se le está borrando el destino a alguien que ya iba llegando).
 Lo siguiente que salió al abrir el pozo (I126): con el minero ya bajando, se quedó **clavado en el paso 32** —
 `pasos=32` durante **110.000 ticks**, **282 líneas** de `El minero: galeria` repartidas entre **la celda 1 (121
 veces) y la 2 (120)** de la misma galería, **0** líneas de `sella agua/lava`, **0** de `la mina se PARA`, el pico
-rompiéndose de tanto "picar" (1 vez `se le ha roto el pico`) y el zurrón lleno de adoquín. El mapa del sitio
+rompiéndose de tanto "picar" (1 vez `se le ha roto el pico`) y el inventario lleno de adoquín. El mapa del sitio
 (`build/slice_mina.py 505 509 609 614 44 50 world`) enseñó el acuífero: la galería del paso 32 sale hacia el norte
 desde `507,46,613` y ahí hay **agua** (`W` en `505..507,611..612` a `y=45..46`).
 
@@ -3880,9 +3880,9 @@ rendiciones totales del pueblo bajan a **0,64 por 1.000 ticks** (el antes de est
 Lo pidió el jugador de la forma más clara: *"no puedes reparar al granjero… quiero que funcione YA toda la mecánica,
 sin excusas; si algo del juego vanilla falla, reescríbelo con una versión propia que sí funcione"*.
 
-**El fallo, medido** (26-sep-2026): el granjero que va a entrar en su bancal se quedaba **pegado a la compuerta** y se
+**El fallo, medido** (26-sep-2026): el granjero que va a entrar en su parcela se quedaba **pegado a la compuerta** y se
 rendía. Los avisos lo decían todo: **6 avisos `Entrando a la huerta`, TODOS a distancia 1** de la celda que
-perseguían, y **5** líneas `El granjero no consigue entrar al bancal 1 por 484,63,658: … probara otra compuerta` (o
+perseguían, y **5** líneas `El granjero no consigue entrar al parcela 1 por 484,63,658: … probara otra compuerta` (o
 sea: aparcaba la entrada, probaba otra, y hasta las cuatro).
 
 **La causa**: `VillageManager.caminarHacia` pone el destino en el cerebro con `WalkTarget(..., 1)` — **tolerancia de un
@@ -3898,13 +3898,13 @@ nuevo destino.
 (`WalkTarget(..., 0)`) que **además le pide la ruta a la navegación a mano** (`getNavigation().moveTo(...)`), porque
 el cerebro del aldeano puede volver a escribir su propio destino en el mismo tick (I119/I125) y con la ruta ya pedida
 el caminante **no se queda quieto**. Se usa en los dos tramos del granjero que exigen **pisar** una celda: **entrar**
-por la compuerta y **salir** del bancal.
+por la compuerta y **salir** del parcela.
 
 **MEDIDO, antes y después** (misma partida, misma copia, modo `MEDIR_MINERO`):
 
 | | antes | después |
 |---|---|---|
-| `no consigue entrar al bancal …` | **5** | **0** |
+| `no consigue entrar al parcela …` | **5** | **0** |
 | avisos de `Entrando a la huerta` | **6** | **0** |
 | el granjero | se rendía en la puerta | **`Cosechando`** (medido en el volcado `[Gate]`) y entregas a la despensa de **73, 71, 45 y 14** |
 
@@ -3912,25 +3912,25 @@ por la compuerta y **salir** del bancal.
 `Volviendo a la plaza` — se la manda a la plaza con `caminarHacia` y **no se mueve** porque ya está a un bloque. El
 mismo `caminarHaciaExacto` vale para ese tramo y para los demás goals que mandan a una celda concreta.
 
-### I130 · LA RECOLECTORA SE QUEDABA ENCERRADA EN EL BANCAL (una puerta de valla cerrada no es navegable)
+### I130 · LA RECOLECTORA SE QUEDABA ENCERRADA EN EL PARCELA (una puerta de valla cerrada no es navegable)
 
 Al arreglar al granjero (I129) salió la que quedaba arriba: **`Filomena (Recolector)`, 19 rendiciones** con la
 etiqueta `Volviendo a la plaza`, y el aviso decía exactamente qué pasaba:
 
 ```
-no consigue llegar a 470,63,646 (la plaza) desde 450,62,680 (dentro de un bancal) (ruta=1 nodos hasta 450,63,680
+no consigue llegar a 470,63,646 (la plaza) desde 450,62,680 (dentro de un parcela) (ruta=1 nodos hasta 450,63,680
     alcanza=NO; pies=farmland cabeza=wheat suelo=dirt | destino=stone_bricks encima=bell)
     etiqueta="Filomena (Recolector) / Volviendo a la plaza" cerebro=470,63,646 nav=[sin ruta]
 ```
 
-**La causa**: entra a los bancales a por lo que se cae —eso es su faena, y el jugador quiere que lo recoja— y luego
+**La causa**: entra a los parcelas a por lo que se cae —eso es su faena, y el jugador quiere que lo recoja— y luego
 **no puede salir**, porque una **puerta de valla cerrada no es navegable** para el juego: el planificador le devuelve
 una ruta de **un solo nodo que no alcanza** y se rinde con la plaza a 39 bloques. No es la tolerancia de I129: es que
 **el mundo le cierra el paso** y **nadie le abre la compuerta** (el juego no deja que un aldeano abra una puerta de
 valla: la abre el pueblo).
 
 **El arreglo**: `VillageManager.abrirLaCompuertaDeAlLado(level, celda)` —la que tenía el granjero, ahora compartida— y
-en la recolectora: si está **dentro de un bancal**, se le busca la **celda de dentro de la compuerta más cercana** (la
+en la recolectora: si está **dentro de un parcela**, se le busca la **celda de dentro de la compuerta más cercana** (la
 salida), se le manda ahí con `caminarHaciaExacto` y, en cuanto la tiene al lado, **se le abre** la compuerta; si esa
 no vale (aparcada, I33), prueba otra. Es el mismo camino que hace el granjero para **entrar**.
 
@@ -3940,7 +3940,7 @@ no vale (aparcada, I33), prueba otra. Es el mismo camino que hace el granjero pa
 |---|---|---|
 | rendiciones del pueblo | **27** | **9** |
 | `Filomena (Recolector) / Volviendo a la plaza` | **19** | **0** |
-| la recolectora | se rendía dentro del bancal | **sale por la compuerta** (`abro el porton 484,63,659 · destino=470,63,646 rutaViva=24 nodos alcanzaba=SI`) y **entrega** (`El recolector guardo 9 cosa(s) en el almacen`) |
+| la recolectora | se rendía dentro del parcela | **sale por la compuerta** (`abro el porton 484,63,659 · destino=470,63,646 rutaViva=24 nodos alcanzaba=SI`) y **entrega** (`El recolector guardo 9 cosa(s) en el almacen`) |
 
 **Y con esto quedan 9** en una corrida: `Vicenta (Ganadero) / Cuidando el ganado` **3**, `Tomasa (Leñador) / Llevando
 la madera` **2**, guardias **3** y `Valeriano (Granjero) / Guardando lo suyo` **1**. El siguiente por mirar es el
@@ -4017,7 +4017,7 @@ medida**, por dos razones independientes:
   <li>y **no queda ni un solo atasco repetido**: las 11 rendiciones de las dos corridas son **todas de 1**, y **5 son
       guardias en su ronda** (`Patrullando el corral` / `Patrullando la arboleda`, la clase de I115). Los atascos
       gordos —`Yendo a la taberna` 16, `Volviendo a la plaza` 19, `Cuidando el ganado` 3, `no consigue entrar al
-      bancal` 5— están **a cero**.</li>
+      parcela` 5— están **a cero**.</li>
 </ul>
 (Con 2 corridas esto es **orientación**, no un valor exacto: para afirmarlo hacen falta 3-4. Lo que sí dice el
 desglose es que **ya no hay un sitio concreto** donde se rinda el pueblo.)
@@ -4025,12 +4025,12 @@ desglose es que **ya no hay un sitio concreto** donde se rinda el pueblo.)
 **La consecuencia, dicha sin adornos**: la tasa **varía casi 7×** entre corridas comparables, así que **una corrida
 sola no prueba nada** salvo que el cambio sea grande; con 8 corridas, el intervalo de confianza al 95 % es de unas
 ±0,7 rendiciones por 1.000 ticks. Por eso **la prueba de un arreglo no es el total**, sino el **criterio concreto**
-que baja a cero (`no consigue entrar al bancal` 5 → 0, `Volviendo a la plaza` 19 → 0, `Cuidando el ganado` 3 → 0,
+que baja a cero (`no consigue entrar al parcela` 5 → 0, `Volviendo a la plaza` 19 → 0, `Cuidando el ganado` 3 → 0,
 `TOPE` sí → no, `pico de hierro` forjado) y, cuando se quiera hablar del total, **la media de 3-4 corridas**.
 
 **Y la herramienta se pagó sola en el primer uso**: la corrida de I132 era la más alta de la sesión (2,73) y **no era
 la mina**: era **`16x Filomena (Recolector) / Yendo a la taberna`** — dos tercios del total de esa corrida, en un
-atasco **nuevo**. Y nuevo **por mi propio arreglo**: al dejar de quedarse encerrada en los bancales (I130), la
+atasco **nuevo**. Y nuevo **por mi propio arreglo**: al dejar de quedarse encerrada en los parcelas (I130), la
 recolectora **llega a la taberna**, y ahí se rinde. Es decir: el "ruido" escondía un **efecto colateral real**, que la
 cuenta normalizada y el desglose por etiquetas han sacado a la luz. **Siguiente pendiente, ya con nombre y número.**
 
@@ -4048,7 +4048,7 @@ llevaba al almacén**, pero **no se acumulaban**: caían alrededor del zombi y l
 a las **27** que pide un pico de hierro (forjaba picos de **madera**).
 
 **El arreglo** (`AggressiveZombieEntity.dropCustomDeathLoot`): **si quien lo mata es un aldeano del pueblo —la
-guardia—, las pepitas van a SU ZURRÓN en el acto**, como cuando un jugador recoge lo que mata. Si no le caben, se
+guardia—, las pepitas van a SU INVENTARIO en el acto**, como cuando un jugador recoge lo que mata. Si no le caben, se
 caen al suelo (nunca se borra nada del pueblo). Ya no hay desaparición por tiempo y el aldeano las baja al almacén en
 su siguiente viaje.
 
@@ -4188,7 +4188,7 @@ Lo pidió el jugador: *"los guardias, al matar zombis que vengan de un raid del 
 hierro tiene que llegar al **herrero** para los picos. **La cadena entera está medida** (corrida
 `build/medida-pepitas8.log`; datos crudos en `tools/arnes/medidas-pepitas.txt`):
 
-> zombi de raid → **el guardia lo mata** → **lo lootea** (2 pepitas a su zurrón) → **lo deja en el almacén** → **el
+> zombi de raid → **el guardia lo mata** → **lo lootea** (2 pepitas a su inventario) → **lo deja en el almacén** → **el
 > herrero forja el pico de HIERRO** → y el minero se lo lleva.
 
 | eslabón | medida |
@@ -4203,15 +4203,15 @@ pagaron en corridas):
 
 1. **`EN EL SUELO: 0` en las cuatro corridas del 26-sep**: el mod **no tira** las pepitas al suelo cuando las mata un
    aldeano del pueblo —se las da **al que mata**, `AggressiveZombieEntity.dropCustomDeathLoot`: *"el que mata,
-   lootea"*—. Lo que hay que leer es **el zurrón del asesino**.
+   lootea"*—. Lo que hay que leer es **el inventario del asesino**.
 2. **La barredora del arnés** (`ticks % 20`, `discard()` de los monstruos dentro de 140 bloques) **descartaba el zombi
    plantado** ~40 ticks después; y `discard()` **no es morir**: ni muerte, ni botín, ni pepitas. El modo
    `MEDIR_PEPITAS` queda **fuera de la barredora**, como `MEDIR_MILICIA`.
 3. **El radio del escaneo (140)**: el que llevaba el botín se iba **al muelle** y salía de la cuenta (`en zurrones=1 […]
-   Yendo al muelle]` y dos muestras después `0`, **con la pepita todavía en su zurrón**) → **300**.
+   Yendo al muelle]` y dos muestras después `0`, **con la pepita todavía en su inventario**) → **300**.
 
 **Y el eslabón que FALTABA en el mod**: el guardia **no tenía ningún paso que dejara lo que looteaba**. Medido: el que
-mataba llevaba sus pepitas en el zurrón **de t=300 a t=2.700** —con etiquetas `Yendo al almacen` y `Volviendo al
+mataba llevaba sus pepitas en el inventario **de t=300 a t=2.700** —con etiquetas `Yendo al almacen` y `Volviendo al
 almacen` de por medio— mientras el almacén seguía a **0**; lo único que llegaba era cuando el que mataba era un
 **herrero de armas** (cuyo goal sí tiene su «deja lo tuyo», `VillageSmithGoal`). Arreglo:
 `VillagerGuardGoal.dejarElHierroEnElAlmacen` + el guardia **va** al almacén cuando lleva hierro (después del combate y
@@ -4225,7 +4225,7 @@ Lo pidió el jugador (la «opción C» del traspaso): *"pasar la balsa (colar ad
 herramientas para que el minero solo pique"*.
 
 **El bucle medido que había que quitar**: la colada vivía en `VillagerMinerGoal.trabajarEnElTaller` y guardaba el
-pedernal con `guardarEnInventario` —**al zurrón del minero**— mientras el umbral que miraba era el del **almacén**
+pedernal con `guardarEnInventario` —**al inventario del minero**— mientras el umbral que miraba era el del **almacén**
 (`VillageStorage.cuenta(…, FLINT)`): nunca se alcanzaba, así que encadenaba coladas. Medido en
 `build/medida-galeria-final.log`: **33 coladas** seguidas (46 en otra corrida) con el almacén **clavado en 6 pedernal**,
 y las últimas celdas de la galería a **5-8 minutos cada una** (celdas 21-24 abiertas a las 19:26, 19:33, 19:38 y 19:46).
@@ -4282,7 +4282,7 @@ del terreno no se tocan sin medir que la cota converge**, y **subir `CURRENT_LAY
 construye **encima** de lo que ya hay si no lo retira.
 
 **Y LA CAUSA DE VERDAD, que apareció después**: `groundY` devuelve **el bloque más alto de la columna, tejados
-incluidos**, así que la aldea **medía su propio tejado**. El testigo «¿ya está construida?» buscaba el bancal a la cota
+incluidos**, así que la aldea **medía su propio tejado**. El testigo «¿ya está construida?» buscaba el parcela a la cota
 **74** (el tejado de la pasada anterior) mientras la construcción iba a la **51** (el suelo pelado) → no se reconocía
 nunca → reconstruía encima, cada vez más arriba (eso era *«las construcciones salen elevadas»* del principio, y el
 `92 → 118 → 124 → 125 → 126 → 127` de la primera vuelta). El caché no podía arreglarlo: cacheaba una medida que
@@ -4308,7 +4308,7 @@ milicia, casas, iglesia y muro—, todas a la **misma cota 62** y con **0 recons
 **Y DOS FALLOS MÁS, LOS DOS MÍOS, QUE SALIERON AL MEDIR** (trazado **76**):
 
 1. **El caché de la cota congelaba la medida tomada ANTES del trabajo de terreno.** La primera llamada la hace el
-   **guardia del bancal**, al principio de `generate`, cuando el terreno todavía es el natural (en una ladera, la
+   **guardia del parcela**, al principio de `generate`, cuando el terreno todavía es el natural (en una ladera, la
    montaña cruda); el generador luego **despeja y nivela** y construye con **su** medida. Medido en el guardado del
    jugador: la aldea 1 se construyó a la **74** y el latido levantó después el **kiosco, el almacén y el corral a la
    103** — dos cotas en el mismo pueblo (eso era *«la segunda aldea está peor que antes»*). **El arreglo**: el generador
@@ -4514,17 +4514,17 @@ anochecer lo manda a la compuerta), pero **seguía pasando** y **no estaba medid
 
 **Por qué no se había cazado**: **todas** las corridas del arnés de esta sesión son **de DÍA** (`setDayTime(6000)`) y
 este bug es **de noche**. Con el modo `MEDIR_NOCHE` (18.000) y su instrumento (`vigilarGranjerosEnElBancal`, que
-imprime el bancal, los goals **que están corriendo**, el destino, la cama y **las cuatro compuertas**), el
+imprime el parcela, los goals **que están corriendo**, el destino, la cama y **las cuatro compuertas**), el
 diagnóstico salió en una corrida (`build/medida-noche-antes.log`):
 
 ```
-EN-BANCAL 596e09a8 farmer dentro=2 … durmiendo=false REST=true home=428,63,671
+EN-PARCELA 596e09a8 farmer dentro=2 … durmiendo=false REST=true home=428,63,671
           destino=SIN DESTINO goals=[VillagerGateGoal]
           compuertas: 446,63,679=cerrada 446,63,689=cerrada 441,63,684=cerrada 451,63,684=cerrada
-[Village] … esta encerrado en un bancal … el goal del granjero lo saca por la compuerta al anochecer
+[Village] … esta encerrado en un parcela … el goal del granjero lo saca por la compuerta al anochecer
 ```
 
-**La causa, medida**: el granjero se queda **de pie y sin destino** dentro del bancal —**19 de 38 muestras**— porque
+**La causa, medida**: el granjero se queda **de pie y sin destino** dentro del parcela —**19 de 38 muestras**— porque
 **su goal no llega ni a arrancar**: pegado a la valla, el `VillageGateGoal` está corriendo, los dos piden el flag de
 movimiento `MOVE` y **el del portón tiene más prioridad**, así que le **roba el control**. La rama de SALIR confiaba
 en que el portón se abriera solo (su comentario lo decía) y **el aviso del latido prometía algo que no podía pasar**
@@ -4537,11 +4537,11 @@ que es lo que pondría su tarea de SALIR.)
 
 **EL ARREGLO**: que la abra **el latido del pueblo**, que **sí** corre siempre y **ya** detectaba al encerrado —
 `VillageManager.abrirLaCompuertaAlQueEstaEncerrado`, llamado desde `atenderCamasDelPueblo`: al aldeano que está
-**dentro de un bancal y en su hora de descanso** se le abre la compuerta de **su** bancal (el mismo mecanismo que usa
+**dentro de un parcela y en su hora de descanso** se le abre la compuerta de **su** parcela (el mismo mecanismo que usa
 el granjero al **entrar**: `abrirLaCompuertaDeAlLado` + `salidaDeLaParcela`). Así no depende de prioridades de goals.
 Solo se abre mientras está dentro y descansando: lo que tarda en cruzar.
 
-**MEDIDO** (`build/medida-noche-despues2.log`): las muestras dentro del bancal pasan de **38 a 4** (de ≈76 s a ≈8 s) y
+**MEDIDO** (`build/medida-noche-despues2.log`): las muestras dentro del parcela pasan de **38 a 4** (de ≈76 s a ≈8 s) y
 las de `destino=SIN DESTINO` de **19 a 1**; la compuerta sale **ABIERTA** a los pocos segundos y el granjero se va a
 dormir. Datos crudos en `tools/arnes/medidas-granjero-noche.txt`.
 
@@ -4559,7 +4559,7 @@ oscuras **para siempre**.
 
 **El «antes», medido con el censo del arnés** (`build/medida-plaza3.log`): el caracol con sus pasos **0, 8, 16, 24 y
 32** y la celda de la cabeza en `air` (ni una antorcha), la galería del paso 32 con sus celdas **8 y 16** en `+1=air`,
-y el minero con **8 antorchas en el zurrón SIN GASTAR** (constantes en todas las muestras) — las tenía y no las ponía.
+y el minero con **8 antorchas en el inventario SIN GASTAR** (constantes en todas las muestras) — las tenía y no las ponía.
 
 **El arreglo: la fase `ENCENDER`.** `buscarHuecoDeLuz` devuelve la primera celda de la mina **a la que le falta su
 antorcha**, buscando **del frente hacia la boca** (lo más cerca del minero primero): en el caracol los pasos múltiplos
@@ -4571,7 +4571,7 @@ frente hacia la boca, **enciende la mina entera en unas pocas vueltas** y sin de
 subir y al bajar al taller).
 
 **MEDIDO** (`build/medida-antorchas.log` y `build/medida-luz-1.log`): los pasos del caracol **0, 8, 16, 24 y 32**
-pasan de `air` a **`wall_torch`** (los cinco), la **celda 8 de la galería** de `air` a **`wall_torch`**, y el zurrón del
+pasan de `air` a **`wall_torch`** (los cinco), la **celda 8 de la galería** de `air` a **`wall_torch`**, y el inventario del
 minero pasa de **8 antorchas sin gastar** a gastarlas (`El minero: encendio 499, 55, 629`, con la etiqueta `Enciende
 la mina`; **8 encendidos** en una corrida, en la boca, en el caracol y en **tres galerías**). Y en la corrida lanzada
 **sobre el guardado del jugador** (con su mina a oscuras) el repaso la enciende igual, **sin tocar el guardado**. De
@@ -4583,7 +4583,7 @@ el horno** (`quema un tronco en el horno` **6 veces** en esa corrida).
 `medida-luz-2.log` el minero ya había cavado 8 celdas **sin una sola antorcha**. La causa, medida: al salir del
 almacén la rama `RECOGER` **forzaba `fase = CAVAR`** (*«CARGADO: ahora HAY que recalcular la faena»*) y **se saltaba el
 taller**, aunque `hayQueSubir` siguiera pidiendo luz. **Arreglo**: en esa rama, si le falta luz y **el pueblo puede
-dársela** (antorchas hechas, o carbón/leña del almacén **o del zurrón**, siempre con palos), va al **taller** en vez de
+dársela** (antorchas hechas, o carbón/leña del almacén **o del inventario**, siempre con palos), va al **taller** en vez de
 a cavar. **MEDIDO** (`build/medida-luz-pico.log`), el orden es ahora: `quema un tronco en el horno` → `hace 4
 antorchas` (dos veces) → **y solo después** `caracol paso 0`. O sea: **se hace la luz antes de bajar**.
 
@@ -4717,25 +4717,25 @@ servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar e
 
 ### I166 · **A LA PARCELA NO SE TIRA NADA**, Y SE COSECHA ENTERA (30-sep-2026)
 
-Lo pidió el jugador, y con razón, tras ver **semillas y vegetales flotando sobre la superficie del bancal**:
+Lo pidió el jugador, y con razón, tras ver **semillas y vegetales flotando sobre la superficie del parcela**:
 *«no quiero que la solución sea que el granjero las recoja… quiero que no suelte nada en la parcela y que el granjero
 coseche TODA su parcela, cada una de las tierras sembradas cuando ya esté madura»*.
 
 **LA CAUSA ERA DEL MOD, no del juego**: en `VillagerFarmGoal.cosechar` había **dos `addFreshEntity(new ItemEntity(…))`
 que soltaban el sobrante EN LA CELDA DE LA MATA** — las semillas que pasaban del tope del compostero, y lo que no le
-cabía en los 8 huecos del zurrón. Es decir: la respuesta del código a «me sobra» era **tirarlo al suelo**, y el recojo
-del pueblo no puede entrar al bancal (valla y compuerta), así que ahí se quedaba.
+cabía en los 8 huecos del inventario. Es decir: la respuesta del código a «me sobra» era **tirarlo al suelo**, y el recojo
+del pueblo no puede entrar al parcela (valla y compuerta), así que ahí se quedaba.
 
 **LOS TRES CORTES DE RAÍZ**:
 1. **No se tira nada, por construcción**: el sobrante va al **ALMACÉN DE LA ALDEA** (`VillageStorage.guardar`), y si el
-   almacén tampoco tragara, el aldeano **se lo queda en la mano** hasta la próxima visita. Se han quitado **todos** los
+   almacén tampoco tuviera sitio, el aldeano **se lo queda en la mano** hasta la próxima visita. Se han quitado **todos** los
    `addFreshEntity(new ItemEntity…)` de los goals del pueblo (el **leñador** hacía lo mismo con los troncos, los palos y
    los plantones, y también se le ha quitado): **ningún goal de la aldea tira ya un solo ítem**.
 2. **La cosecha ya no se frena por capacidad**: se ha quitado la puerta «no se cosecha lo que no le cabe» (que dejaba el
-   bancal **a medias** y era la razón de que quedaran vegetales por el suelo) y el corte de la barrida por zurrón lleno.
+   parcela **a medias** y era la razón de que quedaran vegetales por el suelo) y el corte de la barrida por inventario lleno.
    La única razón para parar es que **no quede ninguna mata madura** en la parcela.
 3. **Y la parcela se barre de verdad**: el granjero ya tenía su tarea `RECOGER` (`buscarCaidoEnElBancal`, que va
-   recogiendo **objeto a objeto** hasta dejar el bancal limpio); ahora esa tarea **ya no puede ser deshecha** por el
+   recogiendo **objeto a objeto** hasta dejar el parcela limpio); ahora esa tarea **ya no puede ser deshecha** por el
    propio aldeano, porque no hay nada nuevo que tirar.
 
 **Lo que NO se ha hecho, a propósito**: «regar» los ítems al entrar (recogerlos mágicamente al cargar la aldea) o
@@ -4772,7 +4772,7 @@ bebedero. **Trazado 79.**
 
 La pasada de I163 corre **una vez** (dentro de `prepareRepairs`, cuando el trazado del pueblo se queda atrás), pero el
 compostero puede quedar —o **volver a quedar**— un bloque alto **después**. **Medido** (censo del granjero en 4 corridas):
-el compostero del **bancal 1** (`573, 63, 570`) salía en `y=63` en **la mitad de las corridas** y en `y=62` en la otra
+el compostero del **parcela 1** (`573, 63, 570`) salía en `y=63` en **la mitad de las corridas** y en `y=62` en la otra
 mitad **con el mismo mundo** —**408-446 muestras** de ~3.250 cuando salía alto, y **2** cuando no—, señal de que algo lo
 coloca o lo recupera más tarde (el propio latido repone testigos).
 
@@ -4798,16 +4798,16 @@ quedaría solo como red.
 **El fallo, medido en el mundo guardado** (corte de `build/slice_mina.py`):
 
 ```
-(533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del bancal 0
-(534, 580)  y=61 grass  y=62 air           y=63 air         ← el bancal, un bloque MÁS BAJO
+(533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del parcela 0
+(534, 580)  y=61 grass  y=62 air           y=63 air         ← el parcela, un bloque MÁS BAJO
 ```
 
-Al oeste del bancal 0 el **suelo natural está en `y=62`** — **un bloque por encima de la cota**, que es el nivel por el
+Al oeste del parcela 0 el **suelo natural está en `y=62`** — **un bloque por encima de la cota**, que es el nivel por el
 que se anda (`cota − 1` es el bloque del suelo) — y el compostero se colocó **encima**, así que queda en **`y=63`**. El
 granjero camina a su puesto y **no puede subir**: un aldeano no sube un bloque entero (el juego le da **0,6**). Y como el
 compostero es **su estación de trabajo**, **todos** sus recados acaban apuntando a esa altura: medido, **42 de 60
 destinos de una corrida en `y=63`** con **todos** los aldeanos en `y=62`, y el censo del arnés delatándolo —
-`puesto=533, 63, 580` en unos bancales y `puesto=573, 62, 570` en otros (por eso el bucle solo salía en algunas
+`puesto=533, 63, 580` en unos parcelas y `puesto=573, 62, 570` en otros (por eso el bucle solo salía en algunas
 corridas).
 
 **Por qué no lo arreglaba la migración que ya existía**: `moverComposterosDelBancal` exige que la **celda nueva esté
@@ -4838,12 +4838,12 @@ la 83 y **31** en la 92); el censo del granjero dice **`puesto y=62` en 3.395 / 
 2. **Queda un residuo**: en dos de las cuatro corridas el puesto de **algunos** granjeros vuelve a leerse en `y=63`
    (410 y 448 muestras de ~3.250 = **~13 %**). Como los destinos a `cota+1` ya son 1-9, no es el bucle de antes, pero
    **hay un POI de compostero en alto que se sigue cogiendo**: el siguiente paso es mirar **qué estación reclama** el
-   granjero (`JOB_SITE`) cuando sale en 63 — puede ser el compostero de **otro** bancal o un POI viejo que nadie limpió.
+   granjero (`JOB_SITE`) cuando sale en 63 — puede ser el compostero de **otro** parcela o un POI viejo que nadie limpió.
 
 ### I162 · EL ESTALLIDO DE DESTINOS A `cota + 1`: **el puesto del granjero no está a la misma altura** (30-sep-2026, MEDIDO)
 
 **Lo que se midió, capa a capa, y en este orden** (todo con el mundo guardado, sin arnés):
-1. **Los bancales están BIEN**: corte del mundo en las dos parcelas (`build/slice_mina.py`) → la **tierra de cultivo en
+1. **Los parcelas están BIEN**: corte del mundo en las dos parcelas (`build/slice_mina.py`) → la **tierra de cultivo en
    `y=61`** (la misma altura que el césped de alrededor), los **cultivos, la acequia y la valla en `y=62`**, y **nada en
    `y=63`** salvo los postes de las esquinas. La hipótesis de «la huerta está un bloque más alta» era **FALSA** ✓.
 2. **Todos los aldeanos andan a `y=62`** (43 de 43 avisos de la corrida 92) y **los destinos del granjero salen a
@@ -4855,31 +4855,31 @@ la 83 y **31** en la 92); el censo del granjero dice **`puesto y=62` en 3.395 / 
 4. **Y EL DATO QUE LO EXPLICA**: el censo del granjero que imprime el arnés trae **su puesto de trabajo** y sale
    **inconsistente**:
    ```
-   GRANJERO bancal=-1 valla=no puesto=533, 63, 580  pos=(604.58,62.00,595.51)  destino=533, 63, 580
-   GRANJERO bancal=-1 valla=no puesto=573, 62, 570  pos=(597.38,62.00,595.48)  destino=573, 62, 570
+   GRANJERO parcela=-1 valla=no puesto=533, 63, 580  pos=(604.58,62.00,595.51)  destino=533, 63, 580
+   GRANJERO parcela=-1 valla=no puesto=573, 62, 570  pos=(597.38,62.00,595.48)  destino=573, 62, 570
    ```
-   **Un mismo pueblo con el puesto (el compostero de su bancal) a `y=63` en unos casos y a `y=62` en otros**, mientras
+   **Un mismo pueblo con el puesto (el compostero de su parcela) a `y=63` en unos casos y a `y=62` en otros**, mientras
    todos los aldeanos andan a 62. El `puesto` del granjero es su **estación de trabajo**, y de ahí salen los destinos:
    si el compostero está un bloque por encima del suelo, **el granjero camina a un sitio al que no puede subir** ✓✓.
 
-**EL SIGUIENTE PASO, concreto**: medir la **Y real del bloque del compostero** de cada bancal y **unificarla con la
+**EL SIGUIENTE PASO, concreto**: medir la **Y real del bloque del compostero** de cada parcela y **unificarla con la
 cota**. **Y YA ESTÁ MEDIDO** (mismo día, mundo guardado, `build/slice_mina.py`):
 
 ```
-(533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del bancal 0
-(534, 580)  y=61 grass  y=62 air           y=63 air         ← el bancal, un bloque MÁS BAJO
+(533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del parcela 0
+(534, 580)  y=61 grass  y=62 air           y=63 air         ← el parcela, un bloque MÁS BAJO
 ```
 
-**La causa raíz es un ESCALÓN DE TERRENO**: al oeste del bancal 0 el suelo natural está en **y=62** (un bloque por
-encima de la cota) mientras el bancal y su alrededor están en **y=61**. El compostero —el **puesto de trabajo del
+**La causa raíz es un ESCALÓN DE TERRENO**: al oeste del parcela 0 el suelo natural está en **y=62** (un bloque por
+encima de la cota) mientras el parcela y su alrededor están en **y=61**. El compostero —el **puesto de trabajo del
 granjero**— se colocó **encima** de ese escalón, así que queda en **y=63**, **un bloque por encima del suelo por el que
 anda todo el pueblo**, y el granjero camina a un puesto al que **no puede subir** (un aldeano no sube un bloque entero:
-el juego le da 0,6). En el otro bancal el compostero sí está a la cota (`puesto=573, 62, 570`) ✓: de ahí que el censo
+el juego le da 0,6). En el otro parcela el compostero sí está a la cota (`puesto=573, 62, 570`) ✓: de ahí que el censo
 salga **inconsistente** y que el bucle solo aparezca en algunas corridas.
 
 **EL ARREGLO QUE TOCA (siguiente ronda, con la medida delante)**:
 1. **Nivelar ese escalón** con la maquinaria que ya existe (`nivelar` / `repararLaAldeaApilada`, que ya quita lo que
-   sobra por encima de la cota) **alrededor de los bancales**, no solo en el casco: el bancal 0 está **dentro** del
+   sobra por encima de la cota) **alrededor de los parcelas**, no solo en el casco: el parcela 0 está **dentro** del
    radio de la cerca (dx −30, dz +14), así que el escalón está **dentro** de lo que el pueblo considera suyo.
 2. **Y bajar el compostero a la cota** si sigue en alto (es un bloque, se mueve con la misma pasada idempotente).
 3. **Y endurecer el goal** (patrón de I156): el puesto y el objetivo deben pasar el contrato de **casilla de pie a la
@@ -4902,7 +4902,7 @@ cuatro**.
 
 ### I160 · LA COTA LA DICE **EL PUEBLO**, NO EL OBJETIVO (30-sep-2026)
 
-En `VillagerFarmGoal` la geometría del bancal (la compuerta de entrada y la salida) se calculaba con **`target.getY()`
+En `VillagerFarmGoal` la geometría del parcela (la compuerta de entrada y la salida) se calculaba con **`target.getY()`
 como cota** — el único sitio del fichero que se la pedía al objetivo en vez de a `cotaDeLaPlaza`. Si el objetivo caía
 **un nivel por encima** (una celda bajo un techo, encima de una losa, una mata que el plano pone alta), **la salida y las
 cuatro compuertas se calculaban a esa altura** y el granjero se rendía con destinos inalcanzables.
@@ -4919,7 +4919,7 @@ El desatasco por encajamiento (I154) tenía un freno **de reloj** (200 ticks) pa
 que el freno también tapaba los encajamientos **nuevos**: un aldeano sacado de una celda y encajado en otra esperaba
 hasta **10 s** con el planificador roto.
 
-**Y por qué es grave estar encajado**: **el planificador NO PUEDE NI EMPEZAR**. Medido: un granjero metido en el bancal
+**Y por qué es grave estar encajado**: **el planificador NO PUEDE NI EMPEZAR**. Medido: un granjero metido en el parcela
 (`pies=farmland`) devolvía **`ruta=1 nodos … alcanza=NO` INCLUSO a 33 bloques**
 (`de 576, 62, 578 a 543, 62, 603`) — **ningún destino tiene ruta** mientras esté encajado, así que su goal se rinde con
 cualquier etiqueta (`Sembrando`, `Cosechando`, `Trajo N del almacén a la despensa`…).
@@ -5216,7 +5216,7 @@ el 27-sep-2026 (avisos del log):
 | aviso | el objeto estaba sobre… |
 |---|---|
 | `Vicenta (Ganadero) / Recogiendo el corral` (x4) | la **mesa de la taberna** (`516,64,639`, `air` con `oak_planks` encima) y una **valla** (`513,63,640`, `destino=oak_fence`) |
-| `Valeriano / Hipolito (Granjero) / Guardando lo suyo` | **dentro** del bancal, con `pies=farmland cabeza=wheat` (`ruta=1 nodos … alcanza=NO`) |
+| `Valeriano / Hipolito (Granjero) / Guardando lo suyo` | **dentro** del parcela, con `pies=farmland cabeza=wheat` (`ruta=1 nodos … alcanza=NO`) |
 | `Filomena (Recolector) / Yendo a la taberna` | la mesa otra vez (`ruta=41 nodos … alcanza=NO`) |
 
 Es la **misma regla de I114/I131** (se camina a una **casilla de pie**), aplicada a los cuatro goals, y además se les
@@ -5224,15 +5224,15 @@ llama a **`VillageManager.desatascarSiEstaEncajado`** antes de contar atasco (el
 I122: el granjero con los pies **dentro de la farmland** no tiene ruta y se rendía por un atasco que no era suyo).
 
 **3) Y LA RAÍZ DE LOS DOS ÚLTIMOS: `esCeldaDePie` NO DEJABA PISAR UN CULTIVO.** La regla pedía `isAir()` **a los pies**,
-y un bancal tiene trigo o zanahorias **en la celda de los pies**: o sea que **no había ni una casilla de pie dentro del
-bancal** — y un aldeano **sí anda por encima de los cultivos** (es lo que hace al cosechar; el planificador les da esos
+y un parcela tiene trigo o zanahorias **en la celda de los pies**: o sea que **no había ni una casilla de pie dentro del
+parcela** — y un aldeano **sí anda por encima de los cultivos** (es lo que hace al cosechar; el planificador les da esos
 nodos por buenos). Consecuencia medida: el granjero hundido en la farmland **no tenía a dónde salir** (ni
 `desatascarSiEstaEncajado` encontraba casilla) y el que va a por un objeto caído **sobre el trigo**
 (`destino=farmland encima=wheat`) no tenía casilla de pie cerca. Arreglo: `sePisaALosPies` = **aire + los cultivos**
 (trigo, zanahorias, patatas, betabel, los tallos) **+ la hierba** (corta, alta, helecho). **NO** entra la **farmland**:
 es el SUELO (sólido) y darla por pisable sería declarar bueno justo al aldeano hundido que hay que sacar.
 Y la **misma regla** se le puso a `casillaPisableCercaDe` (la que usa el desatasco para elegir a dónde sacarlo): pedía
-`isAir()` y **devolvía `null` dentro de un bancal** — medido: 14 desatascos reales en una corrida (puertas y vallas) y,
+`isAir()` y **devolvía `null` dentro de un parcela** — medido: 14 desatascos reales en una corrida (puertas y vallas) y,
 en cambio, un granjero hundido en la farmland en **bucle de 7 avisos**, el mismo aldeano y la misma celda cada ~13 s
 (justo por encima del freno de 200 ticks del desatasco). Con las dos reglas unificadas hay a dónde sacarlo.
 
@@ -5314,7 +5314,7 @@ oscila** (0,30 · 0,40 · 0,60 en corridas comparables), que es exactamente lo q
 | `build/barraca_mesa.py` | **Puestos de trabajo de aldeano** (I31): los barre **bloque a bloque** en las tres aldeas del guardado, con sus coordenadas, y dice qué hay en la celda de la mesa de cartografía de la barraca y qué dice el **plano** de ella. |
 | `build/barraca_mesa_repara.py` | **El reparador de la migración 60** (la mesa de cartografía → la paca del maniquí), **celda a celda** y con la idempotencia: antes/después de la celda, el maniquí completo y que no quede ningún puesto de trabajo en la barraca. |
 | `build/barraca_diana.py` | **Las tres dianas de la barraca y el ORDEN de colocación** (migración 61): **transcribe el constructor** celda a celda y **canta cualquier celda escrita dos veces con bloques distintos** ("lo que va después gana"), además de simular el reparador de la diana (celda nueva libre en las tres aldeas, idempotencia, la celda vieja del arca sin tocar) y contar las dianas del **mundo** y del **plano**. |
-| `build/huertadiag.py`, `build/huerta_simula.py` | **Bancales**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
+| `build/huertadiag.py`, `build/huerta_simula.py` | **Parcelas**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
 | `build/combustible_aldea.py` | **Los aparatos que queman y la madera del almacén** (I41/I42): barre el guardado y lista ahumador, hornos, hogar y soporte de pociones con sus coordenadas, más el contenido de los cofres con la madera separada (`COMBUSTIBLE`). |
@@ -5332,16 +5332,16 @@ oscila** (0,30 · 0,40 · 0,60 en corridas comparables), que es exactamente lo q
 | `build/plantilla_casa.py` (ignorado) | **La plantilla del juego, capa a capa**: lee los `.nbt` de `village/plains/houses/*` del jar del cliente (van comprimidos con gzip) y vuelca tamaño y vista de planta. Es lo que dice si un hueco de una casa "viene del juego" o lo perdió el mundo (3b.65/I50). |
 | `build/plano_celda.py` (ignorado) | **El PLANO de la aldea del `devilrpg_villages.dat`**: saca `Blueprints -> [Index, Palette, Pos(long[]), State(int[])]` y contesta si una celda está en el plano (y con qué bloque) y qué dicen sus vecinas. Es lo que demostró que el hueco de la pared **no estaba en el plano** y por eso el obrero no lo reponía (3b.65/I50). |
 | `build/casa_hueco.py` (ignorado) | **Vista de planta de una zona del guardado** (x/y/z por capas, con códigos por bloque) alrededor de la casa que señaló el jugador: así se ven el hueco de la pared, la puerta, la ventana y el cofre de al lado. |
-| `build/huerta_items.py` (ignorado) | **Lo que hay tirado y cómo están los bancales**: cuenta las entidades de objeto del recinto por tipo (con edad y posición y si están dentro de un bancal) y vuelca los tres bancales capa a capa. Es la medida de partida de 3b.66/I51. |
+| `build/huerta_items.py` (ignorado) | **Lo que hay tirado y cómo están los parcelas**: cuenta las entidades de objeto del recinto por tipo (con edad y posición y si están dentro de un parcela) y vuelca los tres parcelas capa a capa. Es la medida de partida de 3b.66/I51. |
 | `build/cocina_medida.py` (ignorado) | **¿Desde DÓNDE cocinaba el cocinero?**: del log del arnés coge, para cada `N pieza(s) cocinadas`, la muestra `COCINERO pos=…` **inmediatamente anterior** (con `dentroDeLaTaberna`, `VEelAhumador`, `dCasilla`, `dAhumador` y la etiqueta). Es la medida de 3b.63/I48. |
 | `build/hambre_medida.py` (ignorado) | **La comida de la aldea y el reloj de cada aldeano** (I52): la `Food` y el `StarvingSince` de cada asentamiento, el `gameTime` del guardado y la marca `DevilRpgUltimaComida` de **cada** aldeano con su oficio, su posición y los minutos que lleva sin comer. Es lo que distingue "la despensa está vacía" de "este aldeano no ha comido" —y lo que enseñó que las **crías** viven con la marca del día que nacieron hasta que crecen. |
-| `build/huerta_vacias.py` (ignorado) | **Las celdas del bancal que no tienen nada** (I53): vuelca los tres bancales **celda a celda** (cultivo con su edad, tierra vacía, calva, acequia) con un mapa de una letra por celda y cuenta las que están `farmland` con el hueco de arriba libre. |
-| `build/portones_farol.py`, `build/anexo_porton.py` (ignorados) | **El hueco de los portones y el farol que lo tapa** (I54): volcan los 14 portones de las tres aldeas (los 12 de los bancales, el del corral y el del gallinero), miran las **seis celdas** por las que se cruza cada uno (la hoja y las dos de al lado, en las dos capas) y dicen qué hay en ellas **y qué pide el PLANO**; `anexo_porton.py` pinta además el corral y sus dos portones capa a capa. |
+| `build/huerta_vacias.py` (ignorado) | **Las celdas del parcela que no tienen nada** (I53): vuelca los tres parcelas **celda a celda** (cultivo con su edad, tierra vacía, calva, acequia) con un mapa de una letra por celda y cuenta las que están `farmland` con el hueco de arriba libre. |
+| `build/portones_farol.py`, `build/anexo_porton.py` (ignorados) | **El hueco de los portones y el farol que lo tapa** (I54): volcan los 14 portones de las tres aldeas (los 12 de los parcelas, el del corral y el del gallinero), miran las **seis celdas** por las que se cruza cada uno (la hoja y las dos de al lado, en las dos capas) y dicen qué hay en ellas **y qué pide el PLANO**; `anexo_porton.py` pinta además el corral y sus dos portones capa a capa. |
 | `build/aldeanos_equipo.py` (ignorado) | **Cada aldeano con su equipo**: su etiqueta (nombre + actividad), oficio, posición, **si está durmiendo**, su **cama** (`HOME`), su destino, **todo su inventario** y las marcas del mod; y el **contenido de los cofres** de la zona (donde el herrero deja lo que forja). Es la medida de I55/I56/I57 (la cama de otra planta, la armadura que no se fabrica, la espada que se queda en el cofre). |
 | `build/obras_pendientes.py` (ignorado) | **Las obras pendientes de una aldea** (I60): recorre el **plano** celda a celda y lo compara con el mundo (con la regla de `necesitaReparacion`), dice cuántas celdas están pendientes, de qué bloque, a qué distancia del centro y a qué **altura sobre la cota** (para ver lo que se sale de la banda del obrero), y lista los aldeanos marcados como **obrero**. Es lo que demostró que la muralla dañada **no estaba en el plano**. |
 | `build/almacen_mapa.py` (ignorado) | **El almacén, capa a capa** (I95): vuelca los bloques de su recuadro a las capas de la cota, encima y debajo, y enseña los bloques clave (el punto de apoyo, los cofres, los postes). Es lo que midió que el suelo estaba **en la cota** (un escalón de 1,0) con el césped del pueblo en `cota - 1`. |
 | `build/gallinero_medida.py` (ignorado) | **¿Se alcanza lo que cae en el corralillo sin entrar en él?** (I96/I97): aplica **la misma cuenta que el goal** (distancia 3D de los pies del aldeano al centro de la celda del objeto) a **cada** celda del gallinero, con los dos alcances (el viejo y el nuevo), y cuenta las gallinas que tiene el portón pegadas. Es lo que midió que con 1,8 **no se alcanzaba ninguna** celda desde fuera y que con 3,5 se alcanzan **todas**. |
-| `build/diag_ganadero.py`, `build/marcas_aldeano.py` (ignorados) | **El ganadero y sus marcas**: los animales y los objetos del corral con su edad, y el NBT **crudo** de un aldeano (dónde vive `DevilRpgPuntoFallido` y qué vale). Es lo que enseñó que el ganadero tenía **4 huevos** en el zurrón y el punto del almacén **aparcado**. |
+| `build/diag_ganadero.py`, `build/marcas_aldeano.py` (ignorados) | **El ganadero y sus marcas**: los animales y los objetos del corral con su edad, y el NBT **crudo** de un aldeano (dónde vive `DevilRpgPuntoFallido` y qué vale). Es lo que enseñó que el ganadero tenía **4 huevos** en el inventario y el punto del almacén **aparcado**. |
 
 Los scripts de `build/` no se versionan (está en `.gitignore`): son de lectura del guardado del jugador. Las
 herramientas que sí merecen sobrevivir están **versionadas en `tools/`** (ver `tools/README.md`): `lint_aldea.py`,

@@ -394,7 +394,7 @@ public final class VillageManager {
      *       el plano, con su camino.</li>
      *   <li>27: la <b>granja pasa a 4 carriles por lado</b> (parcela de 9x5 a 9x9, 72 cultivos por parcela) y se
      *       recolocan las dos parcelas a (-20,10) y (10,6): las aldeas ya construidas tienen que rehacer sus
-     *       bancales (y las parcelas nuevas tapan a las viejas, así que no quedan bancales sueltos).</li>
+     *       parcelas (y las parcelas nuevas tapan a las viejas, así que no quedan parcelas sueltos).</li>
      *   <li>29: <b>vuelve el herrero de HERRAMIENTAS</b> (y con él su mesa en el taller). Se retiró en el 28 al dejar
      *       un solo herrero por aldea, pero el jugador lo corrigió: hacen falta <b>los dos</b> herreros, que van a
      *       fabricar la indumentaria de la guardia (espada, escudo, armadura, arco y flechas) repartiéndose el
@@ -461,16 +461,16 @@ public final class VillageManager {
      *       diagonal noreste y los sitios de los aldeanos al doble de distancia. Los muros viejos (29 y 36) y las
      *       construcciones del trazado de 36 se <b>derriban</b> al migrar: si no, el pueblo se queda con dos
      *       murallas y con los edificios viejos al lado de los nuevos.</li>
-     *   <li>41: <b>LA TABERNA, EL BOSQUE, EL TERCER BANCAL Y LA BARRACA DE DOS PISOS</b> (etapa F, lo pidió el
+     *   <li>41: <b>LA TABERNA, EL BOSQUE, EL TERCER PARCELA Y LA BARRACA DE DOS PISOS</b> (etapa F, lo pidió el
      *       jugador: <i>"una 3ª parcela con su granjero porque hay poca comida; todas las parcelas rodeadas de vallas
      *       con varias fence gates y mucha iluminación; moved los árboles a un área más grande, un pequeño bosque
      *       donde el leñador tale y replante; una taberna donde trabaje el cocinero y todos vayan a comer, con dos
      *       pisos y el segundo con camas; el almacén a lado de la taberna; las barracas más bonitas, con área de
      *       entrenamiento y un segundo piso con las camas"</i>).
      *       <ul>
-     *         <li><b>Tercer bancal</b> (-28,34) y <b>segundo granjero</b> (el oficio se repite: los puestos se miran
+     *         <li><b>Tercer parcela</b> (-28,34) y <b>segundo granjero</b> (el oficio se repite: los puestos se miran
      *             por número, no por "está o no está").</li>
-     *         <li>Los <b>tres bancales</b> van <b>cercados</b> con <b>cuatro puertas de valla</b> cada uno (las abre
+     *         <li>Los <b>tres parcelas</b> van <b>cercados</b> con <b>cuatro puertas de valla</b> cada uno (las abre
      *             el pueblo) y <b>faroles en los postes</b>, que es lo que deja crecer los cultivos también de
      *             noche.</li>
      *         <li>La <b>arboleda</b> pasa a ser un <b>bosque de 22×18</b> en la esquina noroeste, con <b>doce</b>
@@ -575,14 +575,14 @@ public final class VillageManager {
      *   <li>54: la <b>HUERTA QUE NADIE VOLVÍA A LABRAR</b> (lo vio el jugador con captura: <i>"de esta parcela veo que
      *       hay dos espacios que no tienen cultivo y nadie los está reparando para hacerlos cultivables"</i>). Vanilla
      *       convierte la <b>tierra de cultivo en tierra</b> cuando alguien salta encima ({@code FarmBlock.fallOn}) y en
-     *       la aldea conviven aldeanos, animales y el jugador: el bancal se pisa y se queda con <b>calvas</b>. Nadie
+     *       la aldea conviven aldeanos, animales y el jugador: la parcela se pisa y se queda con <b>calvas</b>. Nadie
      *       las reponía por <b>dos motivos medidos</b> en su guardado (aldea 2): el <b>plano</b> de una aldea migrada
      *       es un <b>escaneo</b> del mundo y la tierra o el césped de esas celdas se descartaban como "terreno
      *       natural" (no estaban en el plano, así que el obrero no tenía nada que reponer) y el <b>granjero</b> solo
      *       sembraba en tierra de cultivo ya hecha, nunca la volvía a labrar. Ahora la huerta <b>entra siempre en el
      *       plano</b> (su geometría es fija: ver {@code VillageGenerator.estadoDeLaHuerta}) y el <b>granjero la
      *       labra</b> en su faena antes de sembrar; este reparador, idempotente, vuelve a labrar las calvas de una
-     *       aldea ya construida (solo celdas de bancal que ahora son tierra o césped, con agua cerca y el hueco de
+     *       aldea ya construida (solo celdas de parcela que ahora son tierra o césped, con agua cerca y el hueco de
      *       arriba libre: <b>no arranca ningún cultivo</b>, I11).</li>
      *   <li>55: el <b>TOLDO DEL PORCHE, ENTERO</b> (lo vio el jugador: <i>"el pórtico está cortado con un espacio, ¿por
      *       qué? debería estar completo"</i>). Los dos <b>faroles de las puntas</b> del alero se colocaban en la
@@ -678,12 +678,12 @@ public final class VillageManager {
      *       esté vacía</b>: es <b>aditivo</b> (no quita nada, así que no puede comerse lo que haya puesto el jugador)
      *       y su celda de al lado, en el muro, ya es sólida (medida: {@code dark_oak_planks}). Idempotente y solo en
      *       las celdas del porche: no rehace la taberna (ni la despensa ni las camas).</li>
-     *   <li>64: el <b>COMPOSTERO DEL BANCAL, UNA CELDA MÁS AFUERA</b> (lo reportó el jugador: <i>"siguen subiendo a la
+     *   <li>64: el <b>COMPOSTERO DE LA PARCELA, UNA CELDA MÁS AFUERA</b> (lo reportó el jugador: <i>"siguen subiendo a la
      *       valla para poder entrar en vez de usar las compuertas"</i>, y de paso el granjero no lo encontraba). El
-     *       compostero —el <b>puesto de trabajo del granjero</b>— estaba pegado a la valla del bancal
+     *       compostero —el <b>puesto de trabajo del granjero</b>— estaba pegado a la valla de la parcela
      *       ({@code corner.x-2}, con la valla en {@code corner.x-1}): su tapa queda a {@code cota+1} y desde ahí subir
      *       al lomo de la valla (1,5) es un paso de <b>0,5</b>, por debajo del {@code maxUpStep} (0,6), así que el
-     *       granjero <b>trepaba la valla</b>. Medido en su guardado: los <b>tres</b> bancales tenían ese escalón y era
+     *       granjero <b>trepaba la valla</b>. Medido en su guardado: los <b>tres</b> parcelas tenían ese escalón y era
      *       el compostero. Se mueve a {@code corner.x-3} ({@code COMPOSTERO_DX}, I40), que deja una celda de aire entre
      *       el compostero y la valla. Es <b>conservador</b> (solo si el viejo sigue siendo un compostero y la celda
      *       nueva está libre con suelo firme) e <b>idempotente</b>. Y al granjero cuyo {@code JOB_SITE} apuntaba al
@@ -770,7 +770,7 @@ public final class VillageManager {
      *       {@code VillageGenerator.tabernaConstruida}).</li>
      *   <li><b>75:</b> <b>LA COTA YA NO SE MIDE A SÍ MISMA</b>. La medida del suelo era {@code groundY} (el bloque
      *       <b>más alto</b> de la columna, <b>tejados incluidos</b>), así que en cuanto había una pasada construida
-     *       encima, la aldea medía <b>su propio tejado</b>: el testigo «¿ya está construida?» buscaba el bancal a la
+     *       encima, la aldea medía <b>su propio tejado</b>: el testigo «¿ya está construida?» buscaba la parcela a la
      *       cota <b>74</b> mientras la construcción iba a la <b>51</b> (el terreno pelado) → no se reconocía nunca y
      *       volvía a levantar la aldea ENCIMA, cada vez más arriba. De ahí *«las construcciones salen elevadas»* y la
      *       aldea apilada. Ahora se mide el <b>suelo natural</b> ({@code VillageGenerator.sueloNatural}: baja hasta el
@@ -779,7 +779,7 @@ public final class VillageManager {
      *       versión las <b>repara de una vez</b>: quita todo lo que hay por encima de la cota dentro del recinto,
      *       nivela y reconstruye ({@code repararLaAldeaApilada}). Ver I149.</li>
      *   <li><b>76:</b> <b>UNA SOLA COTA, LA DEL CONSTRUCTOR</b>. El arreglo anterior (caché de la cota) tenía un fallo
-     *       grave: la primera medida la tomaba el <b>guardia del bancal</b>, <b>antes</b> de despejar y nivelar el
+     *       grave: la primera medida la tomaba el <b>guardia de la parcela</b>, <b>antes</b> de despejar y nivelar el
      *       terreno, y esa medida quedaba congelada. En llano daba igual, pero en una <b>ladera</b> no: medido en el
      *       guardado del jugador, la aldea 1 se construyó a la cota <b>74</b> (terreno ya despejado) y el latido
      *       levantó después el <b>kiosco, el almacén y el corral a la 103</b> (la montaña cruda). Dos cotas en el mismo
@@ -788,13 +788,13 @@ public final class VillageManager {
      *       {@code repararLaAldeaApilada}, que las deja enteras a su cota.</li>
      *   <li><b>77:</b> <b>EL COMPOSTERO, A LA COTA</b> (I163). El compostero es el <b>puesto de trabajo</b> del granjero y
      *       puede haber quedado <b>un bloque alto</b> si el suelo natural está un bloque por encima de la cota (medido
-     *       en el guardado del jugador, al oeste del bancal 0: suelo en 62, compostero en 63). El granjero camina a su
+     *       en el guardado del jugador, al oeste de la parcela 0: suelo en 62, compostero en 63). El granjero camina a su
      *       puesto y <b>no puede subir</b> (un aldeano no sube un bloque entero), y como la estación es suya, <b>todos
      *       sus recados</b> acaban apuntando a esa altura —medido: <b>42 de 60 destinos en y=63</b> en una corrida, con
      *       todos los aldeanos en y=62—. Esta versión lo <b>asienta</b> a la cota (y le pone el suelo que le falte) y
      *       <b>muda el {@code JOB_SITE}</b> del granjero con él.</li>
-     *   <li><b>78:</b> <b>UNA SOLA ESTACIÓN POR BANCAL</b> (I164). Medido en el mundo del arnés: la columna del
-     *       compostero del bancal 1 tenía <b>DOS</b> composteros, el bueno a la cota y <b>otro un bloque por encima</b>
+     *   <li><b>78:</b> <b>UNA SOLA ESTACIÓN POR PARCELA</b> (I164). Medido en el mundo del arnés: la columna del
+     *       compostero de la parcela 1 tenía <b>DOS</b> composteros, el bueno a la cota y <b>otro un bloque por encima</b>
      *       —resto de la migración 64, que colocó el nuevo y no se llevó el viejo—. Como el compostero es un
      *       <b>POI</b>, el granjero reclamaba <b>el de arriba</b> en unas corridas y el de la cota en otras (censo:
      *       {@code puesto=573, 63, 570} en <b>408-448 muestras</b> de ~3.250). Esta versión <b>quita los que sobran</b>
@@ -2233,23 +2233,23 @@ public final class VillageManager {
             VillageGenerator.limpiarCaminosFlotantes(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
             VillageGenerator.farm(level, center);
             // LA HUERTA, OTRA VEZ CULTIVABLE (migración 54, lo vio el jugador: "dos espacios que no tienen cultivo y
-            // nadie los está reparando"). `farm` sale antes de tiempo si el bancal ya está hecho (`bancalHecho`, la
+            // nadie los está reparando"). `farm` sale antes de tiempo si la parcela ya está hecho (`bancalHecho`, la
             // guardia I11 que impide que el nivelado se lleve los cultivos por delante), así que las CALVAS que deja
             // el pisoteo no las toca nadie: aquí se vuelven a labrar, celda a celda y solo si de verdad son una
             // calva. Va antes de recapturar el plano para que el plano nuevo las tenga (aunque ya las pide
             // `estadoDeLaHuerta`) y es idempotente.
             VillageGenerator.labrarCalvasDelBancal(level, center);
-            // EL COMPOSTERO DEL BANCAL, UNA CELDA MÁS AFUERA (migración 64, lo reportó el jugador: *"siguen subiendo a
+            // EL COMPOSTERO DE LA PARCELA, UNA CELDA MÁS AFUERA (migración 64, lo reportó el jugador: *"siguen subiendo a
             // la valla para poder entrar en vez de usar las compuertas"*). El compostero del granjero —su puesto de
-            // trabajo— estaba PEGADO a la valla del bancal (`corner.x-2`, con la valla en `corner.x-1`) y su tapa
+            // trabajo— estaba PEGADO a la valla de la parcela (`corner.x-2`, con la valla en `corner.x-1`) y su tapa
             // queda a `cota+1`: subir al lomo de la valla (1,5) desde ahí es un paso de 0,5, por debajo del
             // `maxUpStep` del juego (0,6), así que el granjero la TREPABA en vez de entrar por la compuerta. Medido
-            // en su guardado: los TRES bancales tenían ese escalón, y era el compostero. Se mueve una celda afuera
+            // en su guardado: los TRES parcelas tenían ese escalón, y era el compostero. Se mueve una celda afuera
             // (`COMPOSTERO_DX`, I40) y, de paso, el granjero ya lo ENCUENTRA: su búsqueda miraba en la columna de la
             // valla y no lo veía nunca (por eso no compostaba ni abonaba).
             List<BlockPos[]> composterosMovidos = VillageGenerator.moverComposterosDelBancal(level, center);
             // I163 · Y SI EL COMPOSTERO QUEDÓ UN BLOQUE ALTO, SE ASIENTA A LA COTA (30-sep-2026). El compostero es el
-            // PUESTO del granjero: si está a `cota+1` (medido: sobre el escalón del terreno al oeste del bancal 0),
+            // PUESTO del granjero: si está a `cota+1` (medido: sobre el escalón del terreno al oeste de la parcela 0),
             // el granjero camina a un puesto al que no puede subir y TODOS sus recados apuntan a esa altura
             // (42 de 60 destinos en y=63 en una corrida). La migración de arriba no puede con ese caso —exige la celda
             // libre y allí hay césped—, así que se baja el compostero a la cota y se le pone el suelo que le falte.
@@ -2267,7 +2267,7 @@ public final class VillageManager {
                 BlockPos nuevo = par[1];
                 for (Villager granjero : aldeanos) {
                     // El PUESTO de ese granjero se MUDA con su compostero (la estación es suya, I36): así no cambia
-                    // de bancal. Un puesto que ya no está tampoco se queda cogido (I23).
+                    // de parcela. Un puesto que ya no está tampoco se queda cogido (I23).
                     Optional<GlobalPos> suyo = granjero.getBrain().getMemory(MemoryModuleType.JOB_SITE);
                     if (suyo.isPresent() && suyo.get().pos().equals(viejo)) {
                         moverPuestoDeTrabajo(level, granjero, viejo, nuevo);
@@ -2277,10 +2277,10 @@ public final class VillageManager {
             // Y LOS EXTREMOS DE LA ACEQUIA, DE VUELTA A CELDA DE CULTIVO (migración 65, la SEGUNDA causa del mismo
             // reporte: "siguen subiendo a la valla para poder entrar"). La acequia va tapada con una losa (para que
             // no se congele y para que nadie se caiga dentro), la losa se pisa a `cota+0,5` y las compuertas del
-            // bancal caen justo en la fila del medio: desde la losa del EXTREMO, el aldeano saltaba la valla (de
+            // parcela caen justo en la fila del medio: desde la losa del EXTREMO, el aldeano saltaba la valla (de
             // 120,5 a 121,5 hay 1,0 y un mob salta 1,25). Medido con el arnés: la granjera Cesarea venía por la
             // acequia y saltó por encima de la compuerta este. Los dos extremos vuelven a ser celdas de cultivo (la
-            // capa que se pisa queda a la altura de la tierra) y el bancal gana dos celdas plantables.
+            // capa que se pisa queda a la altura de la tierra) y la parcela gana dos celdas plantables.
             VillageGenerator.rehacerLosExtremosDeLaAcequia(level, center);
             // EL CORRAL, ENSANCHADO (migración 45): el corral pasa de 15x15 a 19x19 y se retira el viejo (solo sus
             // bloques). Va ANTES de `asegurarGranjaAnexa`, que si no saldría antes de tiempo al ver el corral viejo.
@@ -2379,7 +2379,7 @@ public final class VillageManager {
             // Y su CAMINO desde la plaza (torcido, para no cruzar la parcela de la granja).
             VillageGenerator.caminoALaTaberna(level, center);
             // LA PESQUERA (etapa G): el lago, la caseta del pescador, su BARRIL (el puesto) y sus peces. Va antes de
-            // tirar el plano, como todo lo demás, y con su camino desde la plaza (tampoco cruza ningún bancal).
+            // tirar el plano, como todo lo demás, y con su camino desde la plaza (tampoco cruza ningún parcela).
             VillageGenerator.asegurarPesquera(level, center);
             VillageGenerator.caminoALaPesquera(level, center);
             // MIGRACIÓN 57: EL AGUA DEL ESTANQUE, DE VUELTA. El `farm` de arriba niveló la aldea entera y, como el
@@ -2435,7 +2435,7 @@ public final class VillageManager {
             // FLECHAS (el puesto del flechero) y su farol. Va aquí, con el resto de lo que construye el pueblo y antes
             // de tirar el plano (I8), y es idempotente (su testigo es la propia mesa, I15): si ya está, no escribe ni
             // una celda. Los dos puestos nuevos (el 3er granjero y el leñador) NO se siembran aquí: los repone el
-            // latido al ver que sus plazas están vacías (`slotDeProfesionFaltante`), y el 3er bancal ya existe.
+            // latido al ver que sus plazas están vacías (`slotDeProfesionFaltante`), y el 3er parcela ya existe.
             VillageGenerator.asegurarElTallerDelLenador(level, center);
             // LA MINA DEL PUEBLO (etapa I, migración 70): la caseta del minero y la boca del caracol. Va ANTES de
             // tirar el plano (I8), o sea que el plano nuevo se captura ya con la caseta dentro y el obrero la
@@ -2643,7 +2643,7 @@ public final class VillageManager {
         // el nombre "al azar por UUID" se repite; aquí se le asigna a cada aldeano un nombre libre y se le guarda.
         repartirNombres(aldeanos);
         // Y LOS TICKETS PERDIDOS: una estación de un oficio del pueblo con el ticket COGIDO pero sin dueño vivo. El
-        // caso medido (aldea 2): el compostero del TERCER bancal tenía `free_tickets=0` y ningún aldeano con él en el
+        // caso medido (aldea 2): el compostero del TERCER parcela tenía `free_tickets=0` y ningún aldeano con él en el
         // cerebro, así que el tercer granjero (su titular) no podía reclamarlo: la estación quedaba muerta y el
         // oficio sin su puesto de trabajo (sin `JOB_SITE` vanilla no le registra la actividad de trabajar).
         soltarTicketsPerdidos(level, aldeanos, center, objectiveIndex);
@@ -2663,7 +2663,7 @@ public final class VillageManager {
         // Y EL QUE AMANECE DE PIE ENCIMA DE UNA CAMA, A LA CALLE (medido con el arnés: la leñadora Tomasa se pasaba el
         // día encima de su cama, y desde ahí NO hay ruta a ninguna parte).
         bajarDeLasCamas(level, aldeanos, center);
-        // Y EL GOLEM QUE SE METE EN LA HUERTA, A LA CALLE: la tierra de cultivo pisada se vuelve tierra y el bancal
+        // Y EL GOLEM QUE SE METE EN LA HUERTA, A LA CALLE: la tierra de cultivo pisada se vuelve tierra y la parcela
         // se pierde (lo pidió el jugador al ver uno dentro de una parcela). Es la red de seguridad del corte del
         // reparto de spawn, que lo hace `CommonForgeGolemEventSubscriber` en el momento de nacer.
         sacarLosGolemsDeLaHuerta(level, center);
@@ -2680,7 +2680,7 @@ public final class VillageManager {
         }
         // I164 · Y EL COMPOSTERO —el PUESTO del granjero— SE VIGILA EN EL LATIDO (30-sep-2026). La pasada de
         // `prepareRepairs` (I163) corre **una vez**, pero el compostero puede quedar —o **volver a quedar**— un bloque
-        // alto DESPUÉS: medido, el del bancal 1 salía en `y=63` en **la mitad** de las corridas y en `y=62` en la otra
+        // alto DESPUÉS: medido, el de la parcela 1 salía en `y=63` en **la mitad** de las corridas y en `y=62` en la otra
         // mitad **con el mismo mundo** (408-446 muestras de ~3.250 en las que salía alto, y 2 en las que no), señal de
         // que algo lo coloca o lo recupera más tarde. Así que se comprueba aquí, cada `VILLAGE_POLL_TICKS`: es barato
         // (tres columnas) e idempotente, y si asienta alguno **muda el `JOB_SITE`** del granjero que apuntaba al viejo.
@@ -2949,7 +2949,7 @@ public final class VillageManager {
         // SE CUENTAN de los sitios del pueblo (`VillageGenerator.puestosPorOficio()`), NO de una lista escrita aquí:
         // la lista a mano se quedó con SIETE puestos (los de la etapa E) y cuando llegaron el SEGUNDO GRANJERO
         // (etapa F) y el PESCADOR (etapa G) nadie la subió, así que esos dos oficios eran "gente de sobra" para el
-        // reparto: la milicia se llevaba al pescador y al segundo granjero y la pesquera y un bancal se quedaban sin
+        // reparto: la milicia se llevaba al pescador y al segundo granjero y la pesquera y una parcela se quedaban sin
         // nadie. Medido en el guardado del jugador (aldea 2, 10 adultos): los 4 espadachines eran los DOS
         // PESCADORES, el SEGUNDO GRANJERO (la guardia Bibiana, `9036d1d0`) y un aldeano sin oficio.
         Map<VillagerProfession, Integer> cupo = VillageGenerator.puestosPorOficio();
@@ -3155,8 +3155,8 @@ public final class VillageManager {
         // Y EL GRANJERO MANDA SOBRE EL MILITAR (lo pidió el jugador: *"recuerda que tiene prioridad el granjero que el
         // militar a la hora de asignar"*, viendo 3 parcelas con solo 2 granjeros): un guardia NO ocupa una plaza de
         // oficio del pueblo. Antes conservaba su oficio —y con él el ticket de su estación—, así que una plaza de
-        // granjero quedaba "cubierta" por un guardia que no pisaba el bancal: el reparto veía 3 granjeros, el tercer
-        // bancal se quedaba sin nadie y un aldeano nuevo no podía reclamar la estación (el ticket era del guardia).
+        // granjero quedaba "cubierta" por un guardia que no pisaba la parcela: el reparto veía 3 granjeros, el tercer
+        // parcela se quedaba sin nadie y un aldeano nuevo no podía reclamar la estación (el ticket era del guardia).
         // Ahora se le suelta la estación y se queda SIN OFICIO: su plaza queda libre para un granjero de verdad, y si
         // un día deja la guardia, el reparto le da otra (o la misma).
         if (VillageGenerator.esOficioDelPueblo(villager.getVillagerData().getProfession())) {
@@ -3368,7 +3368,7 @@ public final class VillageManager {
                 // Y SE CUENTA UNO POR TITULAR, NO UNO POR OFICIO. `slotDeProfesionFaltante` **gasta una plaza por cada
                 // vivo** con ese oficio (el pueblo tiene TRES granjeros), así que la lista tiene que llevar una entrada
                 // por aldeano. Con el `add` de antes (solo la primera vez, `!presentes.contains`) el pueblo veía
-                // cubierto el primer bancal y creía libres los otros dos: daba de alta un granjero de MÁS en cada
+                // cubierto el primer parcela y creía libres los otros dos: daba de alta un granjero de MÁS en cada
                 // latido y `podarOficiosDuplicados` —que sí cuenta titulares— se lo quitaba acto seguido. Es el bucle
                 // de 10 s que el jugador vio en su log: "aldeano sin oficio recupera el puesto de farmer" +
                 // "f033ee63 tenia el oficio de farmer de mas (el pueblo tiene 3 plaza(s))".
@@ -3415,7 +3415,7 @@ public final class VillageManager {
                 continue;
             }
             // OJO: `release` **revienta** si en esa celda ya no hay punto de interés —`IllegalStateException: POI never
-            // registered at ...`, medido al mover el compostero del bancal (migración 64): la memoria apuntaba al
+            // registered at ...`, medido al mover el compostero de la parcela (migración 64): la memoria apuntaba al
             // compostero viejo, que ya no existe—. Un puesto que ya no está no hay que soltarlo: basta con borrar la
             // memoria, y así el reparto le da otro.
             if (poi.getType(sitio.get().pos()).isPresent()) {
@@ -3427,10 +3427,10 @@ public final class VillageManager {
 
     /**
      * Le da a ese aldeano su <b>puesto NUEVO</b> cuando la estación se ha <b>movido</b> (migración 64: el compostero
-     * del bancal pasa una celda más afuera).
+     * de la parcela pasa una celda más afuera).
      * <p>
      * Es mejor que soltarle el puesto y esperar a que el latido se lo vuelva a dar: la estación es <b>suya</b> (I36),
-     * así que no tiene por qué cambiar de bancal, y no se queda sin ella si el POI nuevo tarda en registrarse.
+     * así que no tiene por qué cambiar de parcela, y no se queda sin ella si el POI nuevo tarda en registrarse.
      * <b>Medido con el arnés</b>: soltando el puesto, de los tres granjeros <b>dos</b> lo recuperaron y la tercera se
      * quedó {@code SIN PUESTO} (con su faena y su etiqueta, pero sin estación: el cerebro no le registra la actividad
      * de trabajar, I23).
@@ -3508,7 +3508,7 @@ public final class VillageManager {
      * titular legítimo no puede reclamarla y el oficio se queda sin puesto de trabajo (sin {@code JOB_SITE} vanilla
      * no le registra la actividad de trabajar y el aldeano cae a IDLE).
      * <p>
-     * Medido en el guardado del jugador (aldea 2): el <b>compostero del tercer bancal</b> tenía {@code free_tickets=0}
+     * Medido en el guardado del jugador (aldea 2): el <b>compostero del tercer parcela</b> tenía {@code free_tickets=0}
      * y nadie con él en la memoria —ni {@code JOB_SITE} ni {@code POTENTIAL_JOB_SITE}—, así que el <b>tercer
      * granjero</b> (su titular) no podía reclamarlo. La consulta es general (por el tipo de puesto del oficio, con
      * {@code heldJobSite}), así que vale para cualquier oficio del pueblo, sin listas de coordenadas.
@@ -3574,7 +3574,7 @@ public final class VillageManager {
             }
             if (villager.getBrain().hasMemoryValue(MemoryModuleType.JOB_SITE)) {
                 // UN PUESTO QUE YA NO ESTÁ NO SE QUEDA COGIDO (I23): si la estación que tiene en la memoria ya no es
-                // un punto de interés (se la movieron —el compostero del bancal, migración 64— o se la quitó el
+                // un punto de interés (se la movieron —el compostero de la parcela, migración 64— o se la quitó el
                 // jugador), se le suelta aquí mismo y este mismo latido le da otra. Sin esto el aldeano se queda con
                 // una memoria que apunta al aire y **no vuelve a reclamar nunca** (porque el reparto solo mira a los
                 // que NO tienen puesto). Medido con el arnés: al mover el compostero, una de las tres granjeras se
@@ -3596,9 +3596,9 @@ public final class VillageManager {
             //   2) si no hay, una OCUPADA **SIN DUEÑO** (el ticket perdido: alguien lo cogió y ya no está),
             //   3) y solo si no hay otra cosa, la ocupada más cercana (y el `deOtro` de abajo decide).
             // OJO CON EL PASO 2, que es el que estaba mal: antes se cogía **la ocupada más cercana** y, si era de
-            // otro aldeano, se abandonaba. Con el compostero del BANCAL 0 con el ticket perdido y el del bancal 1
+            // otro aldeano, se abandonaba. Con el compostero de la PARCELA 0 con el ticket perdido y el de la parcela 1
             // (más cerca del centro, de donde salía la búsqueda) en manos de otro granjero, el TERCER granjero se
-            // quedaba **SIN PUESTO PARA SIEMPRE** y su bancal sin cosechar: medido con el arnés, el bancal 0 se
+            // quedaba **SIN PUESTO PARA SIEMPRE** y su parcela sin cosechar: medido con el arnés, la parcela 0 se
             // quedaba con **37 plantas maduras** que no bajaban ni una en cuatro minutos, con el compostero libre
             // (`poi=SI`, `dueño: NADIE`) y la granjera con `job=SIN PUESTO`. Es el reporte del jugador: *"otra vez
             // los granjeros están dejando demasiadas parcelas sin cosechar... ya no hay verduras para comer"*.
@@ -3758,18 +3758,18 @@ public final class VillageManager {
     }
 
     /**
-     * <b>AL QUE ESTÁ ENCERRADO EN SU BANCAL, LE ABRE LA COMPUERTA</b> (28-sep-2026; lo reportó el jugador: *"hay un
+     * <b>AL QUE ESTÁ ENCERRADO EN SU PARCELA, LE ABRE LA COMPUERTA</b> (28-sep-2026; lo reportó el jugador: *"hay un
      * granjero que se atoró en una de las parcelas. dice que va a la cama, ya se hizo de noche pero no puede ir"*).
      * <p>
      * <b>POR QUÉ HACE FALTA, medido</b> (`tools/arnes/medidas-granjero-noche.txt`, arnés en modo NOCHE): al anochecer
-     * el granjero se queda dentro del bancal **de pie y sin destino** —**19 de 38 muestras** con
+     * el granjero se queda dentro de la parcela **de pie y sin destino** —**19 de 38 muestras** con
      * {@code destino=SIN DESTINO} y {@code goals=[VillageGateGoal]}— porque su goal (el que tiene la tarea de SALIR)
      * **no llega ni a arrancar**: pegado a la valla, el {@code VillageGateGoal} está corriendo, los dos piden el flag
      * de movimiento {@code MOVE} y el del portón tiene más prioridad, así que le roba el control. Y el aviso que
      * daba el latido —*"el goal del granjero lo saca por la compuerta al anochecer"*— **no se cumplía**: abrirla
      * **desde el goal** no sirve (probado: no cambia ni una muestra, porque ese goal no corre).
      * <p>
-     * El latido **sí** corre siempre: le abre la compuerta de SU bancal (el mismo mecanismo que usa el granjero al
+     * El latido **sí** corre siempre: le abre la compuerta de SU parcela (el mismo mecanismo que usa el granjero al
      * **entrar**, {@link #abrirLaCompuertaDeAlLado}) y el aldeano sale solo y se va a la cama. Y solo mientras está
      * dentro y en su hora de descanso, así que la compuerta se queda abierta lo que tarda en cruzar.
      */
@@ -3827,7 +3827,7 @@ public final class VillageManager {
      * Por eso la cama que se le da tiene que ser <b>suya de verdad</b>: entera (las dos mitades), <b>sin nadie
      * durmiendo</b>, <b>sin compañero de cama</b> (que la otra mitad no sea de otro aldeano) y <b>a la que puede
      * llegar</b> —se comprueba con la ruta de la navegación, como hace la adquisición de vanilla, que exige
-     * {@code path.canReach()}: así un granjero del bancal no se queda con una cama del desván de la posada a 52
+     * {@code path.canReach()}: así un granjero de la parcela no se queda con una cama del desván de la posada a 52
      * bloques—. Y se busca <b>desde el aldeano</b>, no desde la plaza.
      * <p>
      * Es el mismo mecanismo que {@link #reclamarEstacionesDelPueblo} para los puestos (I23): se respeta la cama que
@@ -3873,13 +3873,13 @@ public final class VillageManager {
      * entera, sin nadie durmiendo y sin compañero de cama} y <b>alcanzable</b> (ruta de verdad).
      * <p>
      * <b>Y SI NINGUNA RUTA LLEGA, SE LE DA LA QUE MÁS SE ACERCA</b> ({@code mejorSinLlegar}). Hace falta de verdad y
-     * es el caso del jugador: un <b>granjero dentro de su bancal</b> —cercado con valla y con las <b>compuertas
+     * es el caso del jugador: un <b>granjero dentro de su parcela</b> —cercado con valla y con las <b>compuertas
      * cerradas</b>— no puede planificar la salida, porque <b>el juego no deja que un aldeano abra una puerta de
      * valla</b> (por eso el pueblo tiene su propio {@code VillagerGateGoal}). Medido con el arnés: la ruta de Isidoro
-     * (bancal 2) a su cama acababa en {@code 1394,120,1452}, <b>la propia compuerta</b>, a 15 bloques del destino
+     * (parcela 2) a su cama acababa en {@code 1394,120,1452}, <b>la propia compuerta</b>, a 15 bloques del destino
      * ({@code alcance=NO}), y lo mismo con TODAS las camas libres de la aldea: sin llegar a ninguna, el aldeano se
      * quedaba sin cama —y vanilla tampoco se la daba, que exige {@code path.canReach()}—. Es un <b>abrazo mortal</b>:
-     * sin cama no sale del bancal, y desde el bancal no alcanza ninguna cama. Dándole la cama a la que más se acerca,
+     * sin cama no sale de la parcela, y desde la parcela no alcanza ninguna cama. Dándole la cama a la que más se acerca,
      * en cuanto pisa la compuerta el portón se abre y la ruta se completa.
      */
     @Nullable
@@ -3890,9 +3890,9 @@ public final class VillageManager {
                 .map(par -> par.getSecond())
                 .limit(CAMAS_A_PROBAR)
                 .toList();
-        // ¿Está METIDO en un bancal (cercado con valla y compuertas cerradas)? Entonces vale la cama a la que su ruta
+        // ¿Está METIDO en una parcela (cercado con valla y compuertas cerradas)? Entonces vale la cama a la que su ruta
         // más se acerque: el goal del granjero lo saca por la compuerta al anochecer (`Tarea.SALIR`) y la alcanza.
-        // FUERA de un bancal no: una cama a la que NO llega no le sirve de nada y además le cuesta el HOME, porque
+        // FUERA de una parcela no: una cama a la que NO llega no le sirve de nada y además le cuesta el HOME, porque
         // vanilla se lo borra a los 60 s de no poder llegar (`SetWalkTargetFromBlockMemory`). Medido con el arnés: el
         // herrero de herramientas recibía una cama del dormitorio de la barraca que está AL OTRO LADO de un muro de
         // adoquín (su ruta acababa a 2,11 bloques de ella, y para dormir hay que estar a ≤2,0): no se dormía nunca,
@@ -3931,7 +3931,7 @@ public final class VillageManager {
                         espera.toShortString());
                 return cama;
             }
-            // Encerrado en un bancal: se guarda la que MÁS se acerca, medida por dónde acaba su ruta.
+            // Encerrado en una parcela: se guarda la que MÁS se acerca, medida por dónde acaba su ruta.
             double distanciaAlFinal = camino.getEndNode() == null ? Double.MAX_VALUE
                     : camino.getEndNode().asBlockPos().distSqr(cama);
             if (distanciaAlFinal < mejorDistanciaAlFinal) {
@@ -3946,8 +3946,8 @@ public final class VillageManager {
             // `VillageGateGoal` está corriendo, los dos goals piden el flag de movimiento `MOVE` y el del portón tiene
             // más prioridad, así que el goal del granjero **no llega ni a arrancar** y su tarea de SALIR no se ejecuta
             // (MEDIDO con el arnés en modo NOCHE, `build/medida-noche-antes.log`: **19 de 38 muestras** de pie dentro
-            // del bancal con `destino=SIN DESTINO` y `goals=[VillageGateGoal]`, ~38 s hasta que el portón se abría por
-            // su cuenta). El latido SÍ corre siempre: abre la compuerta de su bancal y el aldeano sale solo.
+            // de la parcela con `destino=SIN DESTINO` y `goals=[VillageGateGoal]`, ~38 s hasta que el portón se abría por
+            // su cuenta). El latido SÍ corre siempre: abre la compuerta de su parcela y el aldeano sale solo.
             int cota = VillageGenerator.cotaDeLaPlaza(level, center);
             for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
                 if (!VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
@@ -3957,7 +3957,7 @@ public final class VillageManager {
                         VillageGenerator.salidaDeLaParcela(center, i, cota, villager.blockPosition()));
                 break;
             }
-            DevilRpg.LOGGER.info("[Village] {} esta encerrado en un bancal: ninguna cama libre esta a su alcance, se le"
+            DevilRpg.LOGGER.info("[Village] {} esta encerrado en una parcela: ninguna cama libre esta a su alcance, se le"
                             + " da la que MAS se acerca, {} (a {} bloque(s) del final de su ruta): el goal del granjero"
                             + " lo saca por la compuerta al anochecer",
                     villager.getUUID(), mejorSinLlegar.toShortString(),
@@ -4171,7 +4171,7 @@ public final class VillageManager {
         }
     }
 
-    /** ¿Ese aldeano está <b>metido en un bancal</b> (cercado con valla y con las compuertas cerradas)? */
+    /** ¿Ese aldeano está <b>metido en una parcela</b> (cercado con valla y con las compuertas cerradas)? */
     private static boolean estaEnUnBancal(ServerLevel level, Villager villager, BlockPos center) {
         int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
@@ -4206,7 +4206,7 @@ public final class VillageManager {
                 return false; // COMPARTIDA: esa mitad es de otro aldeano (vanilla le borraría el HOME)
             }
             // Y ADEMÁS: si el TICKET de la otra mitad está COGIDO, esa mitad es de alguien aunque a su dueño no se le
-            // vea alrededor de la cama (va andando hacia ella, está en su bancal...). Medido con el arnés (aldea 2):
+            // vea alrededor de la cama (va andando hacia ella, está en su parcela...). Medido con el arnés (aldea 2):
             // dos aldeanos acabaron con **media cama cada uno** (`1452,125,1429` y su mitad `1452,125,1430`), que es
             // el bucle que I43 describe —vanilla le borra el HOME al que comparte y no duerme—.
             if (level.getPoiManager().getCountInRange(h -> h.is(PoiTypes.HOME), pareja, 1,
@@ -4231,7 +4231,7 @@ public final class VillageManager {
     /**
      * ¿Esa cama la tiene en el cerebro <b>otro</b> aldeano? Se mira a los aldeanos que hay <b>alrededor de la CAMA</b>
      * (no a la lista del censo, que se arma alrededor de la plaza): el dueño de una cama puede estar lejos del centro
-     * —un granjero en su bancal, un leñador en la arboleda— y entonces la lista no lo ve, la cama parece «libre» y se
+     * —un granjero en su parcela, un leñador en la arboleda— y entonces la lista no lo ve, la cama parece «libre» y se
      * le acaba dando a otro. Medido: dos aldeanos con la misma cama en memoria y el ticket en uno solo, con el
      * consiguiente borrado del HOME de vanilla.
      */
@@ -4287,7 +4287,7 @@ public final class VillageManager {
                     // sube andando: I26/I95). OJO: antes esto era "a menos de 4 bloques de la cota", y con una casa
                     // cuyo suelo queda a 2 o 3 bloques de la calle el aldeano atrapado DENTRO de ella —en la
                     // escalera, con la cama en el piso de arriba— quedaba EXENTO y no lo rescataba nadie. Medido con
-                    // el arnés: la granjera Ursula congelada en 428,65,669 (cota 63), su bancal sin cosechar y sin
+                    // el arnés: la granjera Ursula congelada en 428,65,669 (cota 63), su parcela sin cosechar y sin
                     // poder llegar a su puesto (`no consigue llegar a 440,63,668` cada 5 min), con 36 plantas
                     // maduras esperando. Con el criterio de la altura de los pies, a los 30 s se le baja a la plaza.
                     || villager.getY() <= cota + 0.6D) {
@@ -4299,9 +4299,9 @@ public final class VillageManager {
             // `blockPosition()` en cada bote, así que el contador se le reiniciaba en cada salto y **no lo rescataba
             // nunca**. Medido con el arnés (MEDIR_HUERTA, 23-sep-2026): la granjera **Ursula** llevaba **40 barridos**
             // (más de 80 s, y así toda la corrida) en la misma columna (428,669) botando entre **y=65 y y=67** en la
-            // escalera de su casa —su bancal 0 con **29 plantas maduras** que no bajaban—, con la etiqueta puesta y sin
+            // escalera de su casa —su parcela 0 con **29 plantas maduras** que no bajaban—, con la etiqueta puesta y sin
             // un solo `estaba atascado dentro de una casa` en el log: el rescate no disparaba por los botes. Con la
-            // celda horizontal se le rescata a los 30 s (ATRAPADO_TICKS) y el bancal se cosecha.
+            // celda horizontal se le rescata a los 30 s (ATRAPADO_TICKS) y la parcela se cosecha.
             BlockPos celdaAhora = villager.blockPosition();
             long celda = BlockPos.asLong(celdaAhora.getX(), 0, celdaAhora.getZ());
             long ahora = level.getGameTime();
@@ -4452,7 +4452,7 @@ public final class VillageManager {
      * <p>
      * Se usa para ir al <b>almacén</b> desde lejos o desde fuera de la muralla: medido con el arnés, el leñador se
      * quedaba pegado al muro en `527,63,672` intentando llegar a `517,63,666` (no le salía la ruta y empujaba la pared),
-     * y con la madera en el zurrón no talaba nada. Con el tirón va por pasos y sí llega.
+     * y con la madera en el inventario no talaba nada. Con el tirón va por pasos y sí llega.
      * <p>
      * Lo <b>primero</b> que se mira es <b>la muralla</b>: si el destino está al otro lado, el tirón es <b>el portón</b>
      * ({@link #pasoParaCruzarElMuro}), que no se memoriza porque es geometría pura de cuatro puertas.
@@ -4643,7 +4643,7 @@ public final class VillageManager {
     /**
      * <b>Lo que se puede pisar a la altura de los pies</b> (27-sep-2026): aire y, además, <b>los cultivos y la
      * hierba</b>. Un aldeano <b>anda y se queda de pie encima</b> de un trigo o unas zanahorias —es lo que hace al
-     * cosechar— pero la regla pedía {@code isAir()} y dejaba al bancal <b>sin ninguna casilla de pie</b>.
+     * cosechar— pero la regla pedía {@code isAir()} y dejaba a la parcela <b>sin ninguna casilla de pie</b>.
      * <p>
      * <b>MEDIDO</b> en los avisos de rendición: un granjero con los pies <b>DENTRO de la farmland</b>
      * ({@code pies=farmland cabeza=wheat suelo=dirt}) rendido con {@code ruta=1 nodos … alcanza=NO} —no tenía <b>a
@@ -4677,8 +4677,8 @@ public final class VillageManager {
      * <p>
      * El golem de hierro de la aldea lo pone el <b>juego</b>, no el mod: el aldeano que junta suficientes quejas
      * <b>convoca</b> uno y lo crea <b>a su lado</b> ({@code Villager.spawnGolemIfNeeded}), así que si el que lo convoca
-     * es un granjero dentro de su bancal, <b>el golem nace en la huerta</b> — y ahí la tierra de cultivo pisada se
-     * vuelve tierra y el bancal se pierde. El reparto de spawn lo corta en el acto
+     * es un granjero dentro de su parcela, <b>el golem nace en la huerta</b> — y ahí la tierra de cultivo pisada se
+     * vuelve tierra y la parcela se pierde. El reparto de spawn lo corta en el acto
      * ({@code CommonForgeGolemEventSubscriber}); esto es la <b>red de seguridad</b>: al golem que ya estaba dentro, o
      * al que se cuele por una compuerta abierta, se le saca a la calle en el siguiente latido.
      */
@@ -5274,7 +5274,7 @@ public final class VillageManager {
         CompoundTag datos = villager.getPersistentData();
         BlockPos pies = villager.blockPosition();
         // I159 (30-sep-2026) · EL FRENO ES CONTRA LA **MISMA** CELDA, NO CONTRA EL RELOJ. Medido: el granjero metido
-        // en el bancal (`pies=farmland`) tiene el planificador **roto de salida** — devuelve `ruta=1 nodos … alcanza=NO`
+        // en la parcela (`pies=farmland`) tiene el planificador **roto de salida** — devuelve `ruta=1 nodos … alcanza=NO`
         // **incluso a 33 bloques** (`de 576, 62, 578 a 543, 62, 603`)—, es decir: mientras esté encajado, NINGÚN
         // destino tiene ruta, y su goal se rinde. Con el freno por reloj (200 ticks) se pasaba hasta **10 s** encajado
         // en cada episodio, rindiéndose (`Sembrando`/`Cosechando`, 17 avisos en 4 corridas). Ahora: si está encajado en
@@ -5330,7 +5330,7 @@ public final class VillageManager {
      * <b>forma</b> (no se exige {@code isSolid}: encima de una losa o de tablones tambien se esta de pie).
      * <p>
      * <b>Y "LIBRE" ES LO MISMO QUE EN {@link #esCeldaDePie}</b> (27-sep-2026): aire <b>o un cultivo</b>, porque dentro de
-     * un bancal <b>no hay ni una celda de aire</b>. Medido: un granjero hundido en la farmland de su bancal
+     * una parcela <b>no hay ni una celda de aire</b>. Medido: un granjero hundido en la farmland de su parcela
      * ({@code pies=farmland cabeza=wheat}) no tenia <b>a donde salir</b> — el desatasco disparaba y
      * {@code casillaPisableCercaDe} devolvia {@code null} por exigir aire— y se quedaba en bucle (7 avisos del mismo
      * aldeano y la misma celda, cada ~13 s, justo por encima del freno de 200 ticks del desatasco).
@@ -5394,9 +5394,9 @@ public final class VillageManager {
      * El juego <b>no deja</b> que un aldeano abra una puerta de valla —y una cerrada <b>no es navegable</b>—, así que
      * el pueblo tiene que abrírsela (<b>la abre el goal de los portones</b>) o se queda encerrado.
      * <p>
-     * Lo usan el <b>granjero</b> (para entrar y salir de su bancal) y la <b>recolectora</b> (que entra a los bancales a
+     * Lo usan el <b>granjero</b> (para entrar y salir de su parcela) y la <b>recolectora</b> (que entra a las parcelas a
      * por lo que se cae y luego <b>no podía salir</b>: medido el 26-sep-2026, 19 rendiciones con `Volviendo a la
-     * plaza`, `ruta=1 nodos … alcanza=NO` desde dentro de un bancal).
+     * plaza`, `ruta=1 nodos … alcanza=NO` desde dentro de una parcela).
      */
     public static boolean abrirLaCompuertaDeAlLado(ServerLevel level, BlockPos celda) {
         for (BlockPos p : new BlockPos[]{celda, celda.north(), celda.south(), celda.east(), celda.west(),

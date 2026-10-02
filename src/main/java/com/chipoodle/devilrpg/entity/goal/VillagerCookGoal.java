@@ -437,7 +437,7 @@ public class VillagerCookGoal extends Goal {
         stuckLena = 0;
     }
 
-    /** ¿Lleva leña encima (troncos en el zurrón)? */
+    /** ¿Lleva leña encima (troncos en el inventario)? */
     private boolean llevaLena() {
         var mochila = villager.getInventory();
         for (int i = 0; i < mochila.getContainerSize(); i++) {
@@ -465,7 +465,7 @@ public class VillagerCookGoal extends Goal {
         return false;
     }
 
-    /** Guarda en el zurrón del cocinero (lo que no quepa se devuelve). */
+    /** Guarda en el inventario del cocinero (lo que no quepa se devuelve). */
     private ItemStack guardarEnInventario(ItemStack stack) {
         ItemStack resto = stack.copy();
         var mochila = villager.getInventory();

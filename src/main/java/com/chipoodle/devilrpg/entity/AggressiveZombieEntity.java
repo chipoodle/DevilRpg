@@ -721,7 +721,7 @@ public class AggressiveZombieEntity extends Zombie {
         int pepitas = 1 + level.random.nextInt(2);
         // EL QUE MATA, LOOTEA (lo pidió el jugador: *"así se siente más real el guardia, que es como un jugador que
         // sube de experiencia y lootea"*). Si quien lo ha matado es un aldeano del pueblo —la guardia—, las pepitas
-        // van a SU ZURRÓN en el acto, como cuando un jugador recoge lo que mata. Medido el 26-sep-2026: dejándolas en
+        // van a SU INVENTARIO en el acto, como cuando un jugador recoge lo que mata. Medido el 26-sep-2026: dejándolas en
         // el suelo, las que el recolector no alcanzaba **desaparecían a los 5 minutos** y el almacén no llegaba a
         // juntar las 27 que pide un pico de hierro (`en el ALMACEN=1` corrida tras corrida). Si al aldeano no le
         // caben, se caen al suelo como siempre (nunca se borra nada del pueblo).
@@ -1126,7 +1126,7 @@ public class AggressiveZombieEntity extends Zombie {
                         }
                         BlockState bs = zombie.level().getBlockState(candidate);
                         // ¿ESTORBA? Se pregunta por la FORMA DE COLISIÓN, no por `isSolid()`: `isSolid()` deja fuera la
-                        // valla —su forma no es un cubo— y la valla es justo lo que cierra los bancales y la aldea.
+                        // valla —su forma no es un cubo— y la valla es justo lo que cierra las parcelas y la aldea.
                         // Medido con el arnés: el asaltante se quedó de bruces contra una valla de roble, sin picarla,
                         // con el objetivo (el jugador de pega) al otro lado.
                         if (!bs.isAir() && !bs.getCollisionShape(zombie.level(), candidate).isEmpty() && canBreak(bs)) {

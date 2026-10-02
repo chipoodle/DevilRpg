@@ -68,7 +68,7 @@ public class VillagerFarmGoal extends Goal {
     /**
      * Unidades (trigo + vegetales) que lleva encima antes de ir a la despensa: cada 16 cosechas baja a guardarlas.
      * <p>
-     * Eran <b>4</b>, y con la despensa en la taberna (a 40-55 bloques de los bancales) eso es un paseo de ida y vuelta
+     * Eran <b>4</b>, y con la despensa en la taberna (a 40-55 bloques de las parcelas) eso es un paseo de ida y vuelta
      * por cada 4 puntos de comida: con 9-12 bocas comiendo 1 punto por minuto, la aldea vivía al filo (medido en el
      * guardado del jugador: ratos de "comida 0 puntos, 0 raciones"). El jugador pidió subirlo ("los granjeros deben
      * cosechar más rápido o mayor cantidad"): con 8 se entrega el doble por viaje y sigue bajando a menudo (la parcela
@@ -77,7 +77,7 @@ public class VillagerFarmGoal extends Goal {
      * <p>
      * Y el jugador lo volvió a pedir, ya con el pan en manos del cocinero: *"que los granjeros lleven de una vez
      * {@code LLEVAR_TRIGO = 16}"*. Con 16 el viaje a la taberna rinde el doble (16 puntos de comida por paseo en vez
-     * de 8) y el bancal se queda menos veces a medias: el hueco de trigo aguanta 64, así que 16 no compromete la
+     * de 8) y la parcela se queda menos veces a medias: el hueco de trigo aguanta 64, así que 16 no compromete la
      * barrida de la parcela (ver {@code SEMILLAS_PARA_COMPOSTAR}, que es lo que se la cortaba).
      */
     private static final int LLEVAR_TRIGO = 16;
@@ -85,14 +85,14 @@ public class VillagerFarmGoal extends Goal {
     private static final int SEMILLAS_MAX = 8;
     /**
      * Semillas de SOBRA que guarda para el <b>compostero</b> (además de las que necesita para sembrar). Antes eran
-     * <b>64</b> —y por eso se guardaba hasta 72 semillas, o sea <b>dos huecos del zurrón</b>—, que es lo que le
-     * <b>cortaba la barrida del bancal</b>: con los huecos llenos de semillas, `leCabeLaCosecha` decía que no y el
-     * granjero se iba a la despensa a media parcela (medido con el arnés: entregas de 8-11 unidades y el bancal
+     * <b>64</b> —y por eso se guardaba hasta 72 semillas, o sea <b>dos huecos del inventario</b>—, que es lo que le
+     * <b>cortaba la barrida de la parcela</b>: con los huecos llenos de semillas, `leCabeLaCosecha` decía que no y el
+     * granjero se iba a la despensa a media parcela (medido con el arnés: entregas de 8-11 unidades y la parcela
      * quedándose en 12-15 plantas maduras para siempre).
      * <p>
      * Con <b>8</b> le basta: al compostero se va en cuanto tiene {@link #SEMILLAS_MINIMAS_PARA_COMPOSTAR} de sobra
      * (el paso 5 de {@code canUse}) y el tope sigue siendo {@link #SEMILLAS_MAX} para sembrar, así que las que pasan
-     * de 16 se caen al suelo (son el abono) y el zurrón queda libre para la cosecha, que es lo que pidió el jugador:
+     * de 16 se caen al suelo (son el abono) y el inventario queda libre para la cosecha, que es lo que pidió el jugador:
      * *"revisa TODA la parcela y cosecha TODAS las que ya están maduras; si llegan a sobrar, que pare cuando llegue a
      * su límite de capacidad"*.
      */
@@ -108,7 +108,7 @@ public class VillagerFarmGoal extends Goal {
     private static final int COMPOSTAR_MAX = 64;
     /**
      * Si la despensa tiene MÁS semillas que esto, se lleva unas cuantas para el compostero: es la <b>reserva de
-     * siembra</b> (los tres bancales necesitan ~27 semillas), así que todo lo que pase de aquí acaba en <b>composta</b>
+     * siembra</b> (los tres parcelas necesitan ~27 semillas), así que todo lo que pase de aquí acaba en <b>composta</b>
      * —que es justo lo que pidió el jugador: que la mayor parte de las semillas las gasten los granjeros—.
      */
     private static final int SEMILLAS_SOBRANTES_EN_DESPENSA = 32;
@@ -134,7 +134,7 @@ public class VillagerFarmGoal extends Goal {
      * pidió el jugador: *"los granjeros tampoco nunca deben olvidar de hacer polvo de hueso además de cultivar,
      * cosechar y entregar vegetales"*.
      * <p>
-     * Hace falta una regla así porque el compostero era el paso que <b>no se alcanzaba nunca</b>: con los tres bancales
+     * Hace falta una regla así porque el compostero era el paso que <b>no se alcanzaba nunca</b>: con los tres parcelas
      * (216 celdas) siempre hay algo maduro, así que el turno no llegaba al paso 5 (el mismo fallo que tuvo la siembra,
      * que iba detrás de las dos faenas de la tierra). Medido en la partida del jugador (aldea 0, cota 63): <b>0 de
      * polvo de hueso en toda la aldea</b> y los tres composteros a nivel <b>1, 1 y 5</b> de 8 —sin haber producido ni
@@ -148,7 +148,7 @@ public class VillagerFarmGoal extends Goal {
      */
     private static final int SEMILLAS_MINIMAS_PARA_COMPOSTAR = 4;
     /**
-     * A qué distancia de la compuerta de su bancal el granjero <b>se la abre él mismo</b> (el juego no deja que un
+     * A qué distancia de la compuerta de su parcela el granjero <b>se la abre él mismo</b> (el juego no deja que un
      * aldeano abra una puerta de valla). Un poco más que el 2,6 con el que la abre {@code VillagerGateGoal}, para que
      * esté abierta <b>antes</b> de llegar y la ruta nueva cruce de verdad.
      */
@@ -204,13 +204,13 @@ public class VillagerFarmGoal extends Goal {
     /** Cuántas cosechas seguidas antes de una faena de tierra. */
     private static final int COSECHAS_POR_TIERRA = 2;
     /**
-     * <b>El bancal de ESTE granjero</b> (índice en {@code FARM_PLOTS}), o {@code -1} si todavía no se ha calculado en
-     * esta salida. Sale de su <b>puesto de trabajo</b> (el compostero de su bancal: ver {@link #miParcela}).
+     * <b>La parcela de ESTE granjero</b> (índice en {@code FARM_PLOTS}), o {@code -1} si todavía no se ha calculado en
+     * esta salida. Sale de su <b>puesto de trabajo</b> (el compostero de su parcela: ver {@link #miParcela}).
      */
     private int miParcela = -1;
-    /** En qué bancal está <b>lo que va a hacer ahora</b> (lo pone {@link #buscarEnLasParcelas}), o {@code -1}. */
+    /** En qué parcela está <b>lo que va a hacer ahora</b> (lo pone {@link #buscarEnLasParcelas}), o {@code -1}. */
     private int parcelaDelObjetivo = -1;
-    /** Lo más cerca que ha estado de la <b>puerta</b> por la que entra al bancal, aparte del objetivo (I38). */
+    /** Lo más cerca que ha estado de la <b>puerta</b> por la que entra a la parcela, aparte del objetivo (I38). */
     private double mejorDistanciaEntrada = Double.MAX_VALUE;
     /** Ticks sin acercarse a esa puerta. */
     private int stuckEntrada;
@@ -238,11 +238,11 @@ public class VillagerFarmGoal extends Goal {
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex)) {
             return false;
         }
-        // EL QUE SE QUEDA ENCERRADO AL ANOCHECER CON SU CAMA (O SU NOCHE) FUERA DEL BANCAL: se le manda a la
+        // EL QUE SE QUEDA ENCERRADO AL ANOCHECER CON SU CAMA (O SU NOCHE) FUERA DE LA PARCELA: se le manda a la
         // COMPUERTA. El juego NO deja que un aldeano abra una puerta de valla —por eso el pueblo tiene su
-        // `VillageGateGoal`, que se la abre al tenerlo al lado—, así que desde dentro del bancal el aldeano no puede
+        // `VillageGateGoal`, que se la abre al tenerlo al lado—, así que desde dentro de la parcela el aldeano no puede
         // PLANIFICAR la salida: su ruta a la cama se corta en la valla. Medido con el arnés: la ruta de Isidoro
-        // (bancal 2) a su cama acababa en la propia compuerta, `alcance=NO`, y con TODAS las camas libres de la
+        // (parcela 2) a su cama acababa en la propia compuerta, `alcance=NO`, y con TODAS las camas libres de la
         // aldea igual. Se quedaba de pie en la huerta toda la noche (lo que vio el jugador: "Sin cama" con la aldea
         // llena de camas). Y hay algo peor, medido a resolución de tick: vanilla, cuando un aldeano lleva 1200 ticks
         // (60 s) sin poder llegar a su cama, se la BORRA (`SetWalkTargetFromBlockMemory`: `releasePoi` + `erase`
@@ -282,7 +282,7 @@ public class VillagerFarmGoal extends Goal {
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
         }
-        // 1b) SIN HUECO EN EL ZURRÓN, A LA DESPENSA: si no le cabe nada más de lo que cosecha (ni un hueco libre ni una
+        // 1b) SIN HUECO EN EL INVENTARIO, A LA DESPENSA: si no le cabe nada más de lo que cosecha (ni un hueco libre ni una
         //     pila a medias de trigo o verdura), seguir cosechando es TIRAR la cosecha al suelo, que es justo lo que el
         //     jugador veía ("los granjeros están dejando muchos vegetales en el suelo cuando cosechan"). Va a
         //     descargar (y de paso trae recambios) antes de seguir con la huerta.
@@ -291,15 +291,15 @@ public class VillagerFarmGoal extends Goal {
             target = VillagePantry.puntoDeApoyo(level, center);
             return true;
         }
-        // 1c) LO QUE SE HA CAÍDO EN SU BANCAL, AL ZURRÓN. Hace falta porque no todo lo que cae al suelo lo tira este
+        // 1c) LO QUE SE HA CAÍDO EN SU PARCELA, AL INVENTARIO. Hace falta porque no todo lo que cae al suelo lo tira este
         //     goal: el propio CEREBRO del aldeano también tiene su faena de granjero (`HarvestFarmland`) y recoge el
         //     cultivo con el `destroyBlock(..., true)` del juego, que suelta los vegetales al suelo para que él los
         //     pise y los recoja. Con el pueblo llevando al aldeano a lo suyo (o a la despensa), esos vegetales se
-        //     quedaban ahí hasta pudrirse: medido con el arnés, con el zurrón a MEDIO llenar (2 huecos libres de 8) y
-        //     sin que este goal hubiera tirado nada —así que no eran suyos— había 8 objetos en el bancal 2 (patatas y
+        //     quedaban ahí hasta pudrirse: medido con el arnés, con el inventario a MEDIO llenar (2 huecos libres de 8) y
+        //     sin que este goal hubiera tirado nada —así que no eran suyos— había 8 objetos en la parcela 2 (patatas y
         //     zanahorias de 5 a 50 s). Y el RECOLECTOR no puede entrar: las parcelas están cercadas y las compuertas
         //     de valla no las abre un aldeano (por eso el granjero tiene su propia tarea de salir, `Tarea.SALIR`). El
-        //     granjero es el único que puede barrer su bancal, así que lo barre él.
+        //     granjero es el único que puede barrer su parcela, así que lo barre él.
         if (parcelaDondeEsta(level) >= 0 && hayHuecoParaLaCosecha()) {
             BlockPos caido = buscarCaidoEnElBancal(level);
             if (caido != null) {
@@ -322,14 +322,14 @@ public class VillagerFarmGoal extends Goal {
         //     polvo de hueso además de cultivar, cosechar y entregar vegetales"*) — pero VA DESPUÉS DE LA TIERRA (ver
         //     el paso 3 de abajo). Estaba antes y era el tapón de la cosecha: con la despensa con poca harina de huesos
         //     (< HARINA_MINIMA, lo normal, porque el leñador también la gasta en la arboleda) y **una** semilla de
-        //     sobra, el granjero se iba al compostero con esa semilla —y volvía— una y otra vez, mientras el bancal se
+        //     sobra, el granjero se iba al compostero con esa semilla —y volvía— una y otra vez, mientras la parcela se
         //     llenaba de plantas maduras.
         BlockPos maduro = buscarCultivo(level, true);
         BlockPos calva = buscarCalva(level);
         // COSECHAR MANDA, y la rotación es solo para lo demás (labrar y sembrar). Lo pidió el jugador: *"también están
         // tardando mucho en cosechar; hay campos llenos"*. Antes el turno rotaba SIEMPRE, así que con los tres
-        // bancales llenos solo se cosechaba uno de cada tres turnos: la cosecha se quedaba atrás y el trigo se pasaba
-        // de maduro. Lo que la rotación protegía (que se sembraran las celdas vacías) no se pierde: cuando el bancal
+        // parcelas llenos solo se cosechaba uno de cada tres turnos: la cosecha se quedaba atrás y el trigo se pasaba
+        // de maduro. Lo que la rotación protegía (que se sembraran las celdas vacías) no se pierde: cuando la parcela
         // no tiene nada maduro —que es la mitad del ciclo de un campo sano— siguen labrando y sembrando.
         if (maduro != null) {
             target = maduro;
@@ -424,7 +424,7 @@ public class VillagerFarmGoal extends Goal {
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
         abonadas.clear();
-        miParcela = -1; // se vuelve a mirar cuál es su bancal (su puesto puede haber cambiado)
+        miParcela = -1; // se vuelve a mirar cuál es su parcela (su puesto puede haber cambiado)
         parcelaDelObjetivo = -1;
         mejorDistanciaEntrada = Double.MAX_VALUE;
         stuckEntrada = 0;
@@ -434,7 +434,7 @@ public class VillagerFarmGoal extends Goal {
     @Override
     public boolean canContinueToUse() {
         if (tarea == Tarea.SALIR) {
-            // La pierna de SALIR dura hasta que PISA FUERA del bancal, y a propósito NO se corta por descansar: es
+            // La pierna de SALIR dura hasta que PISA FUERA de la parcela, y a propósito NO se corta por descansar: es
             // justo lo que está haciendo, irse a dormir. Si se atasca en la compuerta, el tope de siempre (I33).
             if (!(villager.level() instanceof ServerLevel level)) {
                 return false;
@@ -453,7 +453,7 @@ public class VillagerFarmGoal extends Goal {
                 && !VillageManager.estaDescansando(villager);
     }
 
-    /** El índice del bancal en el que está <b>metido</b> el granjero ahora mismo, o {@code -1} si está fuera de todos. */    private int parcelaDondeEsta(ServerLevel level) {
+    /** El índice de la parcela en el que está <b>metido</b> el granjero ahora mismo, o {@code -1} si está fuera de todos. */    private int parcelaDondeEsta(ServerLevel level) {
         int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
             if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, villager.blockPosition())) {
@@ -469,12 +469,12 @@ public class VillagerFarmGoal extends Goal {
             return;
         }
         villager.getLookControl().setLookAt(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D);
-        // LA SALIDA DEL BANCAL (la pierna espejo de la de entrar): a la compuerta, y en cuanto la pisa el portón se
+        // LA SALIDA DE LA PARCELA (la pierna espejo de la de entrar): a la compuerta, y en cuanto la pisa el portón se
         // abre (`VillageGateGoal`, a 2,6). Cuando está fuera, el goal se corta (`canContinueToUse`) y el cerebro de
         // vanilla —con su cama ya alcanzable— se encarga de llevarlo a dormir.
         if (tarea == Tarea.SALIR) {
             if (parcelaDondeEsta(level) != parcelaDelObjetivo) {
-                return; // ya está fuera del bancal: a dormir (lo lleva el cerebro)
+                return; // ya está fuera de la parcela: a dormir (lo lleva el cerebro)
             }
             // Y TAMBIÉN A PASO EXACTO (es el mismo caso: al salir hay que pisar la celda de la compuerta, y con la
             // tolerancia de 1 bloque se quedaba plantado dentro).
@@ -496,16 +496,16 @@ public class VillagerFarmGoal extends Goal {
             }
             return;
         }
-        // LAS FAENAS DE LA HUERTA SE HACEN DENTRO DEL BANCAL. El alcance de la faena son 3 bloques, así que un
+        // LAS FAENAS DE LA HUERTA SE HACEN DENTRO DE LA PARCELA. El alcance de la faena son 3 bloques, así que un
         // granjero parado FUERA de la valla alcanzaba las matas de la primera fila y las cosechaba A TRAVÉS de la reja:
         // no le hacía falta entrar (lo reportó el jugador: "los granjeros no están entrando a la granja") y las matas
-        // del centro se quedaban sin cosechar. Si el objetivo está en un bancal y él está fuera, se le manda a la
+        // del centro se quedaban sin cosechar. Si el objetivo está en una parcela y él está fuera, se le manda a la
         // PUERTA más cercana: al ponerse a su lado, `VillagerGateGoal` se la abre (a 2,6) y entra.
         boolean faenaDeHuerta = tarea == Tarea.COSECHAR || tarea == Tarea.LABRAR
                 || tarea == Tarea.PLANTAR || tarea == Tarea.FERTILIZAR;
         // I160 (30-sep-2026) · LA COTA LA DICE EL PUEBLO, NO EL OBJETIVO. Aquí se le pasaba `target.getY()` como cota a
-        // la geometría del bancal: si el objetivo caía en una celda **un nivel por encima** (bajo un techo, encima de
-        // una losa, o una mata que el plano pone alta), la salida y las compuertas del bancal se calculaban **a esa
+        // la geometría de la parcela: si el objetivo caía en una celda **un nivel por encima** (bajo un techo, encima de
+        // una losa, o una mata que el plano pone alta), la salida y las compuertas de la parcela se calculaban **a esa
         // altura** y el granjero se rendía con destinos inalcanzables. Medido (corrida 83): **42 de 60 destinos** de esa
         // corrida estaban en **y=63 mientras todos los aldeanos andan a y=62** y la cota del pueblo es 62. Y el resto
         // del fichero ya usa `cotaDeLaPlaza` para lo mismo: esto era el único sitio que se la pedía al objetivo.
@@ -540,10 +540,10 @@ public class VillagerFarmGoal extends Goal {
             } else if (++stuckEntrada >= STUCK_LIMIT) {
                 // NO SE PUEDE ENTRAR POR AQUÍ: SE APARCA LA ENTRADA, NO LA MATA. Antes se aparcaba la mata que quería
                 // cosechar (con `stuckTicks = STUCK_LIMIT` el `canContinueToUse` aparcaba el OBJETIVO), así que cada
-                // intento fallido se llevaba por delante una planta del borde y el bancal se quedaba sin cosechar
+                // intento fallido se llevaba por delante una planta del borde y la parcela se quedaba sin cosechar
                 // "sin que se supiera por qué". Medido en su partida: `no consigue llegar a 440,63,668` cada 14 s con
-                // las matas del borde aparcadas una detrás de otra — y el bancal tiene CUATRO compuertas.
-                DevilRpg.LOGGER.info("[Village] El granjero no consigue entrar al bancal {} por {}: lo deja por un"
+                // las matas del borde aparcadas una detrás de otra — y la parcela tiene CUATRO compuertas.
+                DevilRpg.LOGGER.info("[Village] El granjero no consigue entrar a la parcela {} por {}: lo deja por un"
                         + " rato y probara otra compuerta", parcelaDelObjetivo, entrada.toShortString());
                 VillageManager.marcarPuntoFallido(villager, entrada);
                 mejorDistanciaEntrada = Double.MAX_VALUE;
@@ -589,7 +589,7 @@ public class VillagerFarmGoal extends Goal {
         workTicks = 0;
         switch (tarea) {
             case COSECHAR -> {
-                // I166 · SE COSECHA **SIEMPRE**, aunque al zurrón no le quepa: lo que sobra va al almacén de la aldea
+                // I166 · SE COSECHA **SIEMPRE**, aunque al inventario no le quepa: lo que sobra va al almacén de la aldea
                 // (ver `guardarEnElAlmacen`), no al suelo. Antes esta puerta frenaba la cosecha entera —«no se cosecha
                 // lo que no le cabe»— y era la razón de que la parcela se quedara a medias y de que quedaran vegetales
                 // por el suelo. `despensaNoTraga` se sigue respetando: si la despensa no acepta nada, el granjero para
@@ -597,25 +597,25 @@ public class VillagerFarmGoal extends Goal {
                 if (despensaNoTraga) {
                     tarea = Tarea.DESPENSA;
                     target = VillagePantry.puntoDeApoyo(level, center);
-                    VillageManager.ponerActividad(villager, "La despensa no traga: a mirar");
+                    VillageManager.ponerActividad(villager, "La despensa esta llena: a mirar");
                     return; // el goal sigue vivo con el viaje
                 }
                 despensaNoTraga = false;
                 VillageManager.ponerActividad(villager, "Cosechando");
                 boolean segada = cosechar(level);
-                // LA BARRIDA DEL BANCAL (lo pidió el jugador: *"una vez que un granjero está en una parcela, revise
+                // LA BARRIDA DE LA PARCELA (lo pidió el jugador: *"una vez que un granjero está en una parcela, revise
                 // TODA y coseche TODAS las que ya están maduras; si llegan a sobrar, que pare cuando llegue a su
                 // límite de capacidad y deje sin cosechar las que sobran, entonces es cuando ya puede ir a la despensa
-                // a dejar todo"*). Mientras esté DENTRO del bancal y le quepa otra madura, SIGUE con ella sin soltar
-                // la faena: así el bancal se limpia de una pasada y no se va a la despensa cada 8 unidades —que era
+                // a dejar todo"*). Mientras esté DENTRO de la parcela y le quepa otra madura, SIGUE con ella sin soltar
+                // la faena: así la parcela se limpia de una pasada y no se va a la despensa cada 8 unidades —que era
                 // lo que dejaba el resto a medias—. Solo para cuando no queda ninguna madura, cuando la siguiente ya
-                // no le cabe (entonces el zurrón está lleno: a la despensa) o cuando se le acaba el tiempo.
+                // no le cabe (entonces el inventario está lleno: a la despensa) o cuando se le acaba el tiempo.
                 if (segada) {
                     cosechasSeguidas++;
                     // I166 · LA BARRIDA NO SE CORTA POR CAPACIDAD: se cosecha **TODA** la parcela (lo pidió el jugador:
                     // *"que el granjero coseche TODA su parcela, cada una de las tierras sembradas cuando ya esté
-                    // madura"*). Antes se paraba en cuanto la siguiente mata no le cabía en el zurrón y dejaba el
-                    // bancal a medias hasta el viaje siguiente; ahora el sobrante va al almacén (ver
+                    // madura"*). Antes se paraba en cuanto la siguiente mata no le cabía en el inventario y dejaba el
+                    // parcela a medias hasta el viaje siguiente; ahora el sobrante va al almacén (ver
                     // `guardarEnElAlmacen`), así que la única razón para parar es que **no quede ninguna madura**.
                     BlockPos siguiente = buscarCultivoEnLaParcela(level, parcelaDelObjetivo);
                     if (siguiente != null) {
@@ -667,8 +667,8 @@ public class VillagerFarmGoal extends Goal {
             case RECOGER -> {
                 VillageManager.ponerActividad(villager, "Recogiendo lo que se cayo");
                 recoger(level);
-                // Y SIGUE CON EL SIGUIENTE: si en su bancal queda otro objeto caído y le cabe, no se va a otra faena
-                // entre medias. Barriendo de una pasada el bancal se queda limpio de verdad (midiendo, con el barrido
+                // Y SIGUE CON EL SIGUIENTE: si en su parcela queda otro objeto caído y le cabe, no se va a otra faena
+                // entre medias. Barriendo de una pasada la parcela se queda limpio de verdad (midiendo, con el barrido
                 // de uno en uno los objetos vivían hasta 54 s; el que se cae lo recoge él enseguida).
                 if (hayHuecoParaLaCosecha()) {
                     BlockPos siguiente = buscarCaidoEnElBancal(level);
@@ -697,7 +697,7 @@ public class VillagerFarmGoal extends Goal {
 
     /**
      * Cosecha la mata del objetivo (y la deja sembrada en el sitio). Devuelve {@code true} si de verdad la ha
-     * cosechado: es lo que deja seguir con la <b>barrida del bancal</b> (ver {@code tick}) sin riesgo de quedarse
+     * cosechado: es lo que deja seguir con la <b>barrida de la parcela</b> (ver {@code tick}) sin riesgo de quedarse
      * dando vueltas sobre la misma celda si el cultivo no estaba maduro.
      */
     private boolean cosechar(ServerLevel level) {
@@ -729,8 +729,8 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * La mata <b>MADURA más cercana dentro de ese bancal</b> (y solo en ese), o {@code null}. Es la <b>barrida del
-     * bancal</b>: una vez dentro, el granjero no sale hasta acabar con lo maduro —o hasta que no le quepa más—, que
+     * La mata <b>MADURA más cercana dentro de esa parcela</b> (y solo en ese), o {@code null}. Es la <b>barrida del
+     * parcela</b>: una vez dentro, el granjero no sale hasta acabar con lo maduro —o hasta que no le quepa más—, que
      * es lo que pidió el jugador (*"una vez que un granjero está en una parcela, revise TODA y coseche TODAS las que
      * ya están maduras"*).
      */
@@ -767,14 +767,14 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * La casilla de <b>ENTRADA</b> al bancal (la de dentro, un paso del portón hacia el centro: ver
+     * La casilla de <b>ENTRADA</b> a la parcela (la de dentro, un paso del portón hacia el centro: ver
      * {@code VillageGenerator.entradaDeLaParcela}) más cercana que <b>no esté aparcada</b> (I33), o {@code null} si lo
      * están las cuatro.
      * <p>
-     * El bancal tiene <b>cuatro compuertas</b>: si una no se puede cruzar (un animal pegado, el jugador delante, un
+     * La parcela tiene <b>cuatro compuertas</b>: si una no se puede cruzar (un animal pegado, el jugador delante, un
      * escalón, un bloque puesto ahí...), lo que hay que hacer es <b>probar otra</b>, no rendirse con la mata. Medido en
      * su partida: el granjero se quedaba en una sola compuerta, aparcaba la mata del borde que quería cosechar y el
-     * bancal se quedaba sin cosechar con las otras tres compuertas libres.
+     * parcela se quedaba sin cosechar con las otras tres compuertas libres.
      */
     @Nullable
     private BlockPos mejorEntradaLibre(ServerLevel level, int parcela, int cota) {
@@ -817,8 +817,8 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * <b>Recoge UN objeto del suelo del bancal</b> (lo que se cayó al cosechar: lo que el juego suelta con su propia
-     * faena de granjero, lo que no le cupo a él, o las semillas que sobran) y lo mete en el zurrón.
+     * <b>Recoge UN objeto del suelo de la parcela</b> (lo que se cayó al cosechar: lo que el juego suelta con su propia
+     * faena de granjero, lo que no le cupo a él, o las semillas que sobran) y lo mete en el inventario.
      * <p>
      * Se coge solo el de la <b>celda a la que ha ido</b> (el objetivo), no todo lo que haya alrededor: así el granjero
      * no se queda pegado a un montón y va eligiendo el más cercano en cada pasada. Lo que no le quepa <b>se queda en el
@@ -848,10 +848,10 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * El objeto que se ha caído <b>en el bancal en el que está el granjero</b> y que le vale (trigo, zanahoria, patata,
+     * El objeto que se ha caído <b>en la parcela en el que está el granjero</b> y que le vale (trigo, zanahoria, patata,
      * betabel, y las semillas si no lleva ya de sobra —las de más son del compostero—), el más cercano.
      * <p>
-     * No se sale de su bancal a propósito: barrer el pueblo es del <b>recolector</b>; aquí solo se recoge lo que el
+     * No se sale de su parcela a propósito: barrer el pueblo es del <b>recolector</b>; aquí solo se recoge lo que el
      * granjero mismo dejó atrás al cosechar, que es lo que nadie más puede alcanzar (la parcela está cercada).
      */
     @Nullable
@@ -901,7 +901,7 @@ public class VillagerFarmGoal extends Goal {
         return false;
     }
 
-    /** ¿Le cabe algo más de cosecha en el zurrón? (un hueco libre, o una pila a medias de trigo o verdura) */
+    /** ¿Le cabe algo más de cosecha en el inventario? (un hueco libre, o una pila a medias de trigo o verdura) */
     private boolean hayHuecoParaLaCosecha() {
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
@@ -916,7 +916,7 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * ¿Le cabe en el zurrón <b>todo</b> lo que va a soltar ese cultivo al cosecharlo? Se mira lo que el cultivo suelta
+     * ¿Le cabe en el inventario <b>todo</b> lo que va a soltar ese cultivo al cosecharlo? Se mira lo que el cultivo suelta
      * ({@code Block.getDrops}) <b>antes</b> de romperlo: si algo no cabe, no se cosecha todavía y el granjero se va
      * antes a la despensa a descargar.
      * <p>
@@ -939,7 +939,7 @@ public class VillagerFarmGoal extends Goal {
         return true;
     }
 
-    /** ¿Ese objeto cabe en el zurrón tal como está (en una pila igual a medias o en un hueco libre)? */
+    /** ¿Ese objeto cabe en el inventario tal como está (en una pila igual a medias o en un hueco libre)? */
     private boolean leCabe(ItemStack stack) {
         int restante = stack.getCount();
         for (int i = 0; i < villager.getInventory().getContainerSize() && restante > 0; i++) {
@@ -968,7 +968,7 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * Vuelve a <b>labrar</b> la calva en la que está parado: la tierra (o el césped) de una celda del bancal pasa a
+     * Vuelve a <b>labrar</b> la calva en la que está parado: la tierra (o el césped) de una celda de la parcela pasa a
      * ser <b>tierra de cultivo</b>. Se pone <b>regada</b> como la pondría el juego ({@code tierraDeCultivo} mira el
      * agua de al lado), no seca.
      * <p>
@@ -1136,13 +1136,13 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * <b>El bancal de ESTE granjero.</b> Su <b>puesto de trabajo</b> es el compostero de un bancal (vanilla: la
-     * estación del granjero es el compostero, y la aldea pone <b>uno por bancal</b>: ver
-     * {@code VillageGenerator.composteroDeLaParcela} e I36), así que el puesto <b>dice cuál es su bancal</b>.
+     * <b>La parcela de ESTE granjero.</b> Su <b>puesto de trabajo</b> es el compostero de una parcela (vanilla: la
+     * estación del granjero es el compostero, y la aldea pone <b>uno por parcela</b>: ver
+     * {@code VillageGenerator.composteroDeLaParcela} e I36), así que el puesto <b>dice cuál es su parcela</b>.
      * <p>
      * Es lo que hace que los tres granjeros <b>no se amontonen en el mismo huerto</b> (lo reportó el jugador: *"los
      * granjeros cosechan los 3 en un solo huerto, cuando lo ideal es que cosechen cada uno en el suyo"*). Antes nadie
-     * miraba el puesto: los tres barrían la lista de bancales <b>en el mismo orden</b> y el primero con algo maduro se
+     * miraba el puesto: los tres barrían la lista de parcelas <b>en el mismo orden</b> y el primero con algo maduro se
      * llevaba a los tres.
      * <p>
      * Si no se le reconoce el puesto (una aldea a medio migrar, un granjero recién ascendido), se reparte por
@@ -1159,7 +1159,7 @@ public class VillagerFarmGoal extends Goal {
             for (int i = 0; i < VillageGenerator.parcelasDeGranja(); i++) {
                 BlockPos comp = VillageGenerator.composteroDeLaParcela(center, i, cota);
                 // Su compostero, esté ya en su sitio o todavía donde estaba antes de la migración 64 (una celda al
-                // lado, mismo z): las dos cosas valen para saber de qué bancal es.
+                // lado, mismo z): las dos cosas valen para saber de qué parcela es.
                 if (p.getZ() == comp.getZ() && Math.abs(p.getX() - comp.getX()) <= 1
                         && Math.abs(p.getY() - cota) <= 2) {
                     miParcela = i;
@@ -1167,7 +1167,7 @@ public class VillagerFarmGoal extends Goal {
                 }
             }
         }
-        // SIN PUESTO RECONOCIDO: primero el bancal que NO tenga dueño (para no pisarse con un compañero y dejar otro
+        // SIN PUESTO RECONOCIDO: primero la parcela que NO tenga dueño (para no pisarse con un compañero y dejar otro
         // sin nadie) y, si están todos cogidos, el reparto por UUID (estable, y reparte igual).
         int libre = bancalSinDueno(level);
         miParcela = libre >= 0 ? libre
@@ -1176,14 +1176,14 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * <b>El bancal que NO tiene dueño</b> (ninguno de los otros granjeros lo tiene como puesto de trabajo), o
+     * <b>La parcela que NO tiene dueño</b> (ninguno de los otros granjeros lo tiene como puesto de trabajo), o
      * {@code -1} si están todos cogidos.
      * <p>
      * Es la red de seguridad de {@link #miParcela}: si a un granjero se le perdió la estación (o nunca llegó a
-     * reclamarla), el reparto por <b>UUID</b> puede mandarlo al bancal de <b>otro</b> compañero —los dos al mismo— y
-     * dejar <b>otro bancal sin nadie</b>, que es exactamente lo que el jugador vio: *"otra vez los granjeros están
+     * reclamarla), el reparto por <b>UUID</b> puede mandarlo a la parcela de <b>otro</b> compañero —los dos al mismo— y
+     * dejar <b>otro parcela sin nadie</b>, que es exactamente lo que el jugador vio: *"otra vez los granjeros están
      * dejando demasiadas parcelas sin cosechar"*. Medido con el arnés: la tercera granjera, con `job=SIN PUESTO` y el
-     * compostero del bancal 0 libre (`poi=SI`, dueño NADIE), trabajaba el bancal de una compañera y el bancal 0 se
+     * compostero de la parcela 0 libre (`poi=SI`, dueño NADIE), trabajaba la parcela de una compañera y la parcela 0 se
      * quedaba con <b>37 plantas maduras</b> que no bajaban ni una en cuatro minutos.
      */
     private int bancalSinDueno(ServerLevel level) {
@@ -1216,7 +1216,7 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * Los bancales <b>en el orden en que ESTE granjero los trabaja</b>: <b>el suyo primero</b> y después los demás
+     * Las parcelas <b>en el orden en que ESTE granjero los trabaja</b>: <b>el suyo primero</b> y después los demás
      * <b>por cercanía</b>, dejando para el final los que ya está trabajando <b>otro</b> granjero (así, si el suyo no
      * tiene nada que hacer, ayuda en otro en vez de pisarse con el compañero).
      */
@@ -1248,7 +1248,7 @@ public class VillagerFarmGoal extends Goal {
         return orden;
     }
 
-    /** ¿Hay <b>otro</b> granjero trabajando en ese bancal? (se mira si está dentro de su valla, o encima de ella) */
+    /** ¿Hay <b>otro</b> granjero trabajando en esa parcela? (se mira si está dentro de su valla, o encima de ella) */
     private boolean otroGranjeroTrabajandoEn(ServerLevel level, int parcela, int cota) {
         BlockPos e = VillageGenerator.esquinaDeLaParcela(center, parcela, cota);
         AABB caja = new AABB(e.getX() - 2, e.getY() - 3, e.getZ() - 2,
@@ -1265,7 +1265,7 @@ public class VillagerFarmGoal extends Goal {
         return false;
     }
 
-    /** Lo que se busca en cada columna de un bancal: la celda a la que ir, o {@code null} si ahí no hay nada. */
+    /** Lo que se busca en cada columna de una parcela: la celda a la que ir, o {@code null} si ahí no hay nada. */
     @FunctionalInterface
     private interface Candidata {
         @Nullable
@@ -1273,17 +1273,17 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * <b>Busca en los bancales en el orden de este granjero</b> ({@link #parcelasEnOrden}) y, dentro de cada bancal,
+     * <b>Busca en las parcelas en el orden de este granjero</b> ({@link #parcelasEnOrden}) y, dentro de cada parcela,
      * <b>la celda MÁS CERCANA</b> que cumpla lo pedido.
      * <p>
      * Dos cosas que antes no se hacían y que son la mitad del arreglo:
      * <ul>
-     *   <li><b>El bancal suyo manda</b>: si en el suyo hay faena, no se va a otro. Y solo mira los demás si el suyo no
+     *   <li><b>La parcela suyo manda</b>: si en el suyo hay faena, no se va a otro. Y solo mira los demás si el suyo no
      *       tiene nada (entonces ayuda, que es lo que pidió el jugador).</li>
-     *   <li><b>La más cercana, no la primera de la lista</b>: la búsqueda recorría el bancal en orden fijo (dx, dz) y
+     *   <li><b>La más cercana, no la primera de la lista</b>: la búsqueda recorría la parcela en orden fijo (dx, dz) y
      *       devolvía la primera mata, así que el granjero cruzaba el huerto entero para coger una del rincón y dejaba
      *       sin cosechar las de al lado (el jugador: *"para cosechar está poco optimizado... dejan sin cosechar unos y
-     *       dejan otros cosechando"*). Yendo a la de al lado, el bancal se limpia de dentro hacia fuera.</li>
+     *       dejan otros cosechando"*). Yendo a la de al lado, la parcela se limpia de dentro hacia fuera.</li>
      * </ul>
      * Las celdas <b>aparcadas</b> (I33) se siguen saltando.
      */
@@ -1498,7 +1498,7 @@ public class VillagerFarmGoal extends Goal {
     }
 
     /**
-     * La <b>calva</b> del bancal a la que ir a labrar, o {@code null} si no hay ninguna: una celda que debería ser
+     * La <b>calva</b> de la parcela a la que ir a labrar, o {@code null} si no hay ninguna: una celda que debería ser
      * <b>tierra de cultivo</b> y ahora es tierra o césped (alguien la pisó), con la <b>acequia a mano</b> y el hueco
      * de arriba <b>libre</b>.
      * <p>
@@ -1506,14 +1506,14 @@ public class VillagerFarmGoal extends Goal {
      * que se navega, igual que en {@link #buscarTierraVacia}.
      * <p>
      * El aire encima no es un detalle: es lo que garantiza que <b>no se arranca ningún cultivo</b> ni se toca nada de
-     * lo que crece dentro del bancal (I11).
+     * lo que crece dentro de la parcela (I11).
      */
     @Nullable
     private BlockPos buscarCalva(ServerLevel level) {
         return buscarEnLasParcelas(level, (parcela, dx, dz) -> {
             BlockPos tierra = parcela.offset(dx, -1, dz);
             if (!VillageGenerator.esCeldaDeCultivo(center, parcela.getY(), tierra)) {
-                return null; // la acequia no se labra (y fuera del bancal no se toca nada)
+                return null; // la acequia no se labra (y fuera de la parcela no se toca nada)
             }
             return VillageGenerator.esCalvaDeBancal(level, tierra) ? tierra.above() : null;
         });
@@ -1620,9 +1620,9 @@ public class VillagerFarmGoal extends Goal {
      * I166 · LO QUE LE SOBRA AL GRANJERO VA AL <b>ALMACÉN DE LA ALDEA</b> — al suelo, <b>jamás</b>.
      * <p>
      * Antes, el sobrante de una cosecha (semillas por encima del tope del compostero, o la parte que no le cabía en el
-     * zurrón) se soltaba como {@code ItemEntity} <b>en la celda de la mata</b>: eso es lo que el jugador veía como
+     * inventario) se soltaba como {@code ItemEntity} <b>en la celda de la mata</b>: eso es lo que el jugador veía como
      * <b>ítems flotando sobre la superficie de la parcela</b>, y no se los llevaba nadie porque el recojo del pueblo no
-     * puede entrar al bancal (valla y compuerta). Un aldeano del pueblo <b>no tira la comida</b>: lo que le sobra va al
+     * puede entrar a la parcela (valla y compuerta). Un aldeano del pueblo <b>no tira la comida</b>: lo que le sobra va al
      * almacén, que es donde el pueblo guarda y de donde reparte.
      */
     private void guardarEnElAlmacen(ServerLevel level, ItemStack stack) {
@@ -1632,7 +1632,7 @@ public class VillagerFarmGoal extends Goal {
         }
     }
 
-    /** Y lo que no traga ni el almacén se lo queda <b>en la mano</b> hasta la próxima visita (al suelo, jamás). */
+    /** Y lo que esta llena ni el almacén se lo queda <b>en la mano</b> hasta la próxima visita (al suelo, jamás). */
     private void guardarElSobrante(ServerLevel level, ItemStack stack) {
         ItemStack sobra = VillageStorage.guardar(level, center, stack);
         if (sobra.isEmpty() || stack.isEmpty()) {

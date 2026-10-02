@@ -145,13 +145,13 @@ public final class VillageGenerator {
     private static final int PLOT_WATER_ROW = PLOT_DEPTH / 2;
     /**
      * A cuántos bloques de la <b>esquina oeste</b> de la parcela va el <b>compostero</b> (el puesto de trabajo del
-     * granjero), <b>fuera</b> de la valla del bancal.
+     * granjero), <b>fuera</b> de la valla de la parcela.
      * <p>
      * Eran <b>2</b> y es un error de <b>una celda</b> con consecuencias: la valla está en {@code corner.x-1}, así que
      * el compostero quedaba <b>pegado</b> a ella y su tapa (un bloque entero) queda a {@code cota+1}: desde ahí, subir
      * al lomo de la valla (1,5) es un paso de <b>0,5</b>, por debajo del {@code maxUpStep} del juego (0,6), así que el
      * granjero <b>trepaba la valla</b> en vez de entrar por la compuerta (lo reportó el jugador: *"siguen subiendo a
-     * la valla para poder entrar en vez de usar las compuertas"*; medido en su guardado: los <b>tres</b> bancales
+     * la valla para poder entrar en vez de usar las compuertas"*; medido en su guardado: los <b>tres</b> parcelas
      * tenían ese escalón, y era el compostero). Con <b>3</b>, entre el compostero y la valla queda una celda de aire y
      * el escalón desaparece (I40).
      */
@@ -266,10 +266,10 @@ public final class VillageGenerator {
         // levantar todo ENCIMA: las casas pierden lo que tengan dentro y, sobre todo, la huerta se queda en brotes
         // con los vegetales tirados por la parcela (medido en el banco de pruebas, que llamaba a generate dos veces:
         // 90 cultivos de 216 y 207 pilas de vegetales por el suelo). El testigo es el BANCO DE CULTIVO: solo lo
-        // planta el generador y se planta al final, así que si hay bancal la aldea se construyó entera.
+        // planta el generador y se planta al final, así que si hay parcela la aldea se construyó entera.
         if (bancalHecho(level, center.offset(FARM_PLOTS[0][0], 0, FARM_PLOTS[0][1]),
                 cotaDeLaPlaza(level, center))) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: ya estaba construida (hay bancal): no se vuelve a generar",
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: ya estaba construida (hay parcela): no se vuelve a generar",
                     center);
             return captureBlueprint(level, center);
         }
@@ -294,7 +294,7 @@ public final class VillageGenerator {
         // LA COTA DE LA ALDEA QUEDA FIJADA AQUÍ, y esta es la buena (29-sep-2026). Es la que acaba de usar el
         // generador para nivelar el terreno, así que TIENE que ser la que usen después el latido y los goals. Sin
         // esto, `cotaDeLaPlaza` devolvía la medida que se hubiera tomado ANTES del despeje y del nivelado (la del
-        // guardia del bancal, al principio de este mismo método), que en una ladera NO es la misma: medido en el
+        // guardia de la parcela, al principio de este mismo método), que en una ladera NO es la misma: medido en el
         // guardado del jugador, la aldea 1 se construyó a la 74 y el latido levantó el kiosco, el almacén y el
         // corral a la 103. En llano coinciden; en pendiente, no.
         fijarLaCotaDeLaAldea(level, center, nivelVilla);
@@ -325,7 +325,7 @@ public final class VillageGenerator {
         // El herrero de HERRAMIENTAS necesita su mesa de herrería: la plantilla del de armas solo trae el muelle.
         puestoDeTrabajo(level, baseDeHerreria(center), nivelVilla, Blocks.SMITHING_TABLE);
         // BARRACA de la milicia (donde viven los guardias): va DESPUÉS de las casas, para que su solar no pise
-        // ninguno de sus solares ni el bancal, y ANTES de los caminos, para que su puerta tenga el suyo.
+        // ninguno de sus solares ni la parcela, y ANTES de los caminos, para que su puerta tenga el suyo.
         puertas[6] = barraca(level, baseDeBarraca(center), nivelVilla);
 
         // Caminos DESPUÉS, del centro a la puerta de cada construcción (ya se sabe dónde está).
@@ -598,7 +598,7 @@ public final class VillageGenerator {
 
     /**
      * La esquina de la parcela {@code i} de esa aldea (a la capa que se pisa). Es la MISMA cuenta que
-     * {@link #parcelasDe}, para el que necesite una sola parcela (el granjero, al repartirse los bancales).
+     * {@link #parcelasDe}, para el que necesite una sola parcela (el granjero, al repartirse las parcelas).
      */
     public static BlockPos esquinaDeLaParcela(BlockPos center, int i, int cota) {
         return new BlockPos(center.getX() + FARM_PLOTS[i][0], cota, center.getZ() + FARM_PLOTS[i][1]);
@@ -608,8 +608,8 @@ public final class VillageGenerator {
      * Dónde va el <b>compostero</b> de la parcela {@code i} (el puesto de trabajo del granjero): fuera de su valla,
      * {@link #COMPOSTERO_DX} bloques al oeste de su esquina, a la capa que se pisa.
      * <p>
-     * Vive en <b>un solo sitio</b> (I4): lo usan el constructor del bancal, la migración que lo mueve y el granjero
-     * para encontrar su compostero y para saber <b>cuál es su bancal</b> (su puesto de trabajo es su compostero, I36).
+     * Vive en <b>un solo sitio</b> (I4): lo usan el constructor de la parcela, la migración que lo mueve y el granjero
+     * para encontrar su compostero y para saber <b>cuál es su parcela</b> (su puesto de trabajo es su compostero, I36).
      */
     public static BlockPos composteroDeLaParcela(BlockPos center, int i, int cota) {
         return new BlockPos(center.getX() + FARM_PLOTS[i][0] - COMPOSTERO_DX, cota, center.getZ() + FARM_PLOTS[i][1]);
@@ -623,13 +623,13 @@ public final class VillageGenerator {
         return new BlockPos(center.getX() + FARM_PLOTS[i][0] - 2, cota, center.getZ() + FARM_PLOTS[i][1]);
     }
 
-    /** Códigos de {@link #tipoDeCeldaDeLaHuerta}: fuera de los bancales, celda de cultivo o fila de la acequia. */
+    /** Códigos de {@link #tipoDeCeldaDeLaHuerta}: fuera de las parcelas, celda de cultivo o fila de la acequia. */
     private static final int FUERA_DE_LA_HUERTA = 0;
     private static final int CELDA_DE_CULTIVO = 1;
     private static final int CELDA_DE_ACEQUIA = 2;
 
     /**
-     * ¿Qué es esa casilla dentro de los <b>bancales</b> de la granja? La huerta es <b>geometría fija</b> —las tres
+     * ¿Qué es esa casilla dentro de los <b>parcelas</b> de la granja? La huerta es <b>geometría fija</b> —las tres
      * parcelas de {@link #FARM_PLOTS}, de {@code PLOT_WIDTH}×{@code PLOT_DEPTH}, con la acequia en
      * {@code PLOT_WATER_ROW}— y su capa de tierra va <b>una por debajo de la cota</b> (los cultivos van a la cota:
      * ver {@link #plot}). Vive en <b>un solo sitio</b> para que el plano, el obrero y el granjero no tengan cada uno
@@ -655,20 +655,20 @@ public final class VillageGenerator {
      * <p>
      * El motivo está <b>medido con el arnés</b>: la acequia va <b>tapada con una losa</b> (para que el agua no se
      * congele y para que los aldeanos no se caigan dentro), la losa <b>se pisa</b> a {@code cota+0,5} y las compuertas
-     * del bancal caen justo en la fila del medio, así que desde la losa del extremo el aldeano <b>saltaba la valla</b>
+     * de la parcela caen justo en la fila del medio, así que desde la losa del extremo el aldeano <b>saltaba la valla</b>
      * (de 120,5 a 121,5 hay 1,0, y un mob salta 1,25) en vez de entrar por la compuerta: es la segunda causa del
      * <i>"siguen subiendo a la valla para poder entrar"</i> —medida en el arnés con la granjera Cesarea, que venía por
      * la acequia y saltó por encima de la compuerta este—. Con los extremos como celdas de cultivo (tapa a 119,94) el
-     * salto ya no llega (I40). De paso el bancal gana <b>dos celdas plantables</b> por parcela.
+     * salto ya no llega (I40). De paso la parcela gana <b>dos celdas plantables</b> por parcela.
      */
     private static boolean esFilaDeAcequia(int dx, int dz) {
         return dz == PLOT_WATER_ROW && dx > 0 && dx < PLOT_WIDTH - 1;
     }
 
     /**
-     * ¿Esa casilla es una <b>celda de cultivo</b> de un bancal (la capa de tierra, sin contar la acequia)? Es la
+     * ¿Esa casilla es una <b>celda de cultivo</b> de una parcela (la capa de tierra, sin contar la acequia)? Es la
      * casilla que el pueblo tiene que mantener <b>labrada</b>: vanilla convierte la tierra de cultivo en <b>tierra</b>
-     * en cuanto alguien salta encima ({@code FarmBlock.fallOn}) y, sin reponerla, el bancal se queda con calvas que
+     * en cuanto alguien salta encima ({@code FarmBlock.fallOn}) y, sin reponerla, la parcela se queda con calvas que
      * nadie vuelve a labrar (el jugador las describió como <i>"dos espacios que no tienen cultivo y nadie los está
      * reparando"</i>).
      */
@@ -677,12 +677,12 @@ public final class VillageGenerator {
     }
 
     /**
-     * El estado <b>bueno</b> de una casilla de bancal (su tierra de cultivo, o la acequia), o {@code null} si esa
+     * El estado <b>bueno</b> de una casilla de parcela (su tierra de cultivo, o la acequia), o {@code null} si esa
      * casilla no es de la huerta. Es lo que el <b>plano</b> tiene que pedir en esas celdas: la huerta la construyó
      * el pueblo, así que entra en el plano <b>aunque el mundo la tenga pisoteada</b> (tierra o césped) en el momento
      * de capturarlo. Hace falta de verdad, y está medido: el plano de una aldea migrada es un <b>escaneo</b> del
      * mundo, y las celdas que ya estaban pisoteadas al capturarlo se descartaban como "terreno natural", así que el
-     * obrero <b>no tenía nada que reponer</b> en ellas (aldea 2 del jugador: 2 calvas de césped en el bancal oeste).
+     * obrero <b>no tenía nada que reponer</b> en ellas (aldea 2 del jugador: 2 calvas de césped en la parcela oeste).
      * <p>
      * La <b>humedad</b> no va aquí: es estado transitorio, ver {@link #estadoDelPlano} y {@link #tierraDeCultivo}.
      */
@@ -723,7 +723,7 @@ public final class VillageGenerator {
     }
 
     /**
-     * ¿Esa celda de bancal es una <b>calva</b>: debería ser tierra de cultivo y ahora es tierra o césped, con la
+     * ¿Esa celda de parcela es una <b>calva</b>: debería ser tierra de cultivo y ahora es tierra o césped, con la
      * acequia a mano y el hueco de arriba <b>libre</b>? Se exige agua cerca (labrar en seco no sirve de nada) y aire
      * encima: así <b>no se toca nada de lo que crece dentro</b> (I11). Lo usan el granjero (que la labra en su
      * faena) y el reparador de la migración.
@@ -750,10 +750,10 @@ public final class VillageGenerator {
     }
 
     /**
-     * Vuelve a <b>labrar</b> las calvas de los bancales de esa aldea (la tierra de cultivo que alguien pisó y el
+     * Vuelve a <b>labrar</b> las calvas de las parcelas de esa aldea (la tierra de cultivo que alguien pisó y el
      * juego convirtió en tierra o césped) y devuelve cuántas labró.
      * <p>
-     * Es <b>idempotente</b> y conservador: solo toca celdas de bancal, solo si ahora son tierra o césped, solo si
+     * Es <b>idempotente</b> y conservador: solo toca celdas de parcela, solo si ahora son tierra o césped, solo si
      * tienen agua cerca y solo si el hueco de arriba está <b>libre</b> —nunca arranca un cultivo ni toca el agua, el
      * compostero, la valla ni lo que haya puesto el jugador (I11)—. Lo llama la <b>migración</b> para las aldeas ya
      * guardadas, cuyo plano se capturó con las calvas dentro; después lo mantiene el <b>granjero</b>.
@@ -767,14 +767,14 @@ public final class VillageGenerator {
                     if (!esCeldaDeCultivo(center, parcela.getY(), tierra) || !esCalvaDeBancal(level, tierra)) {
                         continue;
                     }
-                    // Se pone con `colocar`, igual que cuando el bancal se construye (ver `plot`).
+                    // Se pone con `colocar`, igual que cuando la parcela se construye (ver `plot`).
                     colocar(level, tierra, tierraDeCultivo(level, tierra), Block.UPDATE_ALL);
                     labradas++;
                 }
             }
         }
         if (labradas > 0) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: vueltas a labrar {} celda(s) pisoteada(s) de los bancales",
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: vueltas a labrar {} celda(s) pisoteada(s) de las parcelas",
                     center, labradas);
         }
         return labradas;
@@ -1173,7 +1173,7 @@ public final class VillageGenerator {
 
     /**
      * Solar de la <b>BARRACA</b> de la milicia, relativo al centro: al <b>oeste</b> del pueblo (a 26,13), que es el
-     * cuadrante que queda libre (entre la casa del noroeste, el bancal de la granja y la puerta oeste del muro) y
+     * cuadrante que queda libre (entre la casa del noroeste, la parcela de la granja y la puerta oeste del muro) y
      * deja el edificio entero dentro de la valla.
      */
     public static BlockPos baseDeBarraca(BlockPos center) {
@@ -2302,7 +2302,7 @@ public final class VillageGenerator {
 
     /**
      * Dónde está la <b>pesquera</b> (el centro de su lago), relativa al centro: en el campo del <b>sureste</b>, que es
-     * el cuadrante que queda libre (la taberna está al este-norte, el almacén y el corral al este, los bancales al
+     * el cuadrante que queda libre (la taberna está al este-norte, el almacén y el corral al este, las parcelas al
      * oeste y al suroeste). Es lo que pidió el jugador: <i>"el pescador tendrá su edificio y su lago más adelante"</i>.
      * <p>
      * El sitio <b>vive en {@link #TRAZADO}</b> (índice 7) como el de cualquier otro edificio de planta: antes tenía
@@ -2715,7 +2715,7 @@ public final class VillageGenerator {
         return sueltaPeces(level, baseDeLaPesquera(center), nivel, 1);
     }
 
-    /** El <b>camino</b> del pueblo a la pesquera: de la plaza al lado oeste de la caseta (no cruza ningún bancal). */
+    /** El <b>camino</b> del pueblo a la pesquera: de la plaza al lado oeste de la caseta (no cruza ningún parcela). */
     public static void caminoALaPesquera(ServerLevel level, BlockPos center) {
         BlockPos base = baseDeLaPesquera(center);
         line(level, center, new BlockPos(base.getX() - 4, cotaDeLaPlaza(level, center), base.getZ() - 8));
@@ -5519,7 +5519,7 @@ public final class VillageGenerator {
                 // (0,-15) caía DENTRO de la iglesia nueva (x -12..0, z -25..-13): el farol salía en su tejado.
                 {5, 0, -12},
                 // (12,12) y (-19,8) caían dentro de las parcelas de la granja al agrandarlas a 9x9 (4 carriles por
-                // lado): el farol salía plantado entre los cultivos. Se corren a fuera del bancal.
+                // lado): el farol salía plantado entre los cultivos. Se corren a fuera de la parcela.
                 {22, 0, 10},
                 {-13, 0, -6},
                 {5, 0, 14},
@@ -6377,7 +6377,7 @@ public final class VillageGenerator {
      * Esto era <b>la raíz del bucle de reconstrucción y de que las construcciones salieran «elevadas»</b>: se medía
      * con {@link #groundY} (el bloque MÁS ALTO de la columna, tejados incluidos), así que en cuanto la aldea tenía
      * una pasada construida encima, la medida devolvía <b>su propio tejado</b> en vez del terreno. Medido en el log
-     * del jugador: el testigo «¿ya está construida?» buscaba el bancal a la cota <b>74</b> (el tejado de la pasada
+     * del jugador: el testigo «¿ya está construida?» buscaba la parcela a la cota <b>74</b> (el tejado de la pasada
      * anterior) mientras la aldea se construía a la <b>51</b> (el terreno pelado) → no se reconocía nunca, y cada
      * reconstrucción dejaba escombros más altos que volvían a subir la medida. La cota se estaba midiendo a sí misma.
      * <p>
@@ -6872,7 +6872,7 @@ public final class VillageGenerator {
      * pueblo entero se reconstruye (casas, muro, huerta y lo que repone el latido) a la cota de la plaza.
      */
     /**
-     * ¿ESTÁ LA ALDEA A SU COTA? Mira los <b>dos testigos</b> que usa el propio pueblo —la <b>huerta</b> (el bancal) y el
+     * ¿ESTÁ LA ALDEA A SU COTA? Mira los <b>dos testigos</b> que usa el propio pueblo —la <b>huerta</b> (la parcela) y el
      * <b>kiosco</b> (su plataforma de ladrillo a {@code KIOSCO_RADIO} del centro)— y contesta si los dos están donde
      * toca.
      * <p>
@@ -7175,8 +7175,8 @@ public final class VillageGenerator {
      * ha llevado al doble para que el centro no quede apelotonado.)
      * <p>
      * Los últimos puestos <b>no</b> van en ese anillo, porque viven donde trabajan: el ganadero en el corral, el
-     * cocinero junto a la plaza (y desde la taberna, en su cocina), el segundo granjero entre los bancales del sur, el
-     * pescador junto a su pesquera, el TERCER granjero junto al tercer bancal y el LEÑADOR al lado de su taller (en la
+     * cocinero junto a la plaza (y desde la taberna, en su cocina), el segundo granjero entre las parcelas del sur, el
+     * pescador junto a su pesquera, el TERCER granjero junto al tercer parcela y el LEÑADOR al lado de su taller (en la
      * arboleda). Ninguno puede caer <b>bajo un tejado</b> (el del cobertizo del corral, el del kiosco o el del taller):
      * {@code groundY} devolvería la altura del TEJADO y el aldeano aparecería <b>encima</b> de él.
      */
@@ -7190,12 +7190,12 @@ public final class VillageGenerator {
             // El COCINERO (etapa E) junto a la plaza; desde la taberna (etapa F) vive en su cocina.
             new BlockPos(6, 0, 6),
             // El SEGUNDO GRANJERO (etapa F, lo pidió el jugador: "una 3ª parcela con su granjero porque hay poca
-            // comida"): entre los dos bancales del sur, en patio abierto.
+            // comida"): entre los dos parcelas del sur, en patio abierto.
             new BlockPos(-22, 0, 30),
             // El PESCADOR (etapa G): en patio abierto al norte de su pesquera (el lago está al sur, en (20,44)).
             new BlockPos(20, 0, 30),
             // El TERCER GRANJERO (etapa H, lo pidió el jugador: "necesitamos un 3er granjero que vaya a la granja que
-            // está vacía"): al oeste del TERCER bancal (el de (-28,34), que tenía su compostero sin dueño), en patio
+            // está vacía"): al oeste del TERCER parcela (el de (-28,34), que tenía su compostero sin dueño), en patio
             // abierto y a la misma altura que el segundo.
             new BlockPos(-34, 0, 30),
             // El LEÑADOR (etapa H): al lado de su taller, en la arboleda (el taller está en (-52..-48, -26..-22)), y
@@ -7211,8 +7211,8 @@ public final class VillageGenerator {
      * {@link #VILLAGER_SPOTS}):
      * <ol>
      *   <li><b>Granjero</b>: cultiva, cosecha, fertiliza y hornea el pan en la despensa. Desde la etapa F hay
-     *       <b>dos</b> y desde la etapa H <b>tres</b> (uno por bancal de los tres: con dos, la comida no daba para el
-     *       pueblo y el tercer bancal se quedaba sin nadie).</li>
+     *       <b>dos</b> y desde la etapa H <b>tres</b> (uno por parcela de los tres: con dos, la comida no daba para el
+     *       pueblo y el tercer parcela se quedaba sin nadie).</li>
      *   <li><b>Herrero de armas</b> y <b>clérigo</b>: los oficios "de oficio" de la aldea.</li>
      *   <li><b>Herrero de herramientas</b>.</li>
      *   <li><b>Holgazán</b> (nitwit) = el <b>RECOLECTOR</b>: no tiene oficio propio a propósito, así no reclama
@@ -7254,7 +7254,7 @@ public final class VillageGenerator {
      * <b>siete</b> puestos (los de la etapa E) y cuando llegaron el <b>segundo granjero</b> (etapa F) y el
      * <b>pescador</b> (etapa G) nadie la subió, así que para el reparto esos dos oficios eran "gente de sobra": la
      * milicia se llevaba al pescador y al segundo granjero (medido en el guardado del jugador, aldea 2: los 4
-     * espadachines eran los dos pescadores, el segundo granjero y un aldeano sin oficio) y la pesquera y un bancal se
+     * espadachines eran los dos pescadores, el segundo granjero y un aldeano sin oficio) y la pesquera y una parcela se
      * quedaban sin nadie. Contándolos, la lista no puede volver a quedarse atrás.
      */
     public static Map<VillagerProfession, Integer> puestosPorOficio() {
@@ -7326,7 +7326,7 @@ public final class VillageGenerator {
      * <p>
      * OJO con los oficios REPETIDOS (hay <b>dos granjeros</b> desde la etapa F): se miran por <b>número</b>, no por
      * "está o no está". Con la comprobación vieja, en cuanto había un granjero el segundo puesto se daba por cubierto
-     * y el pueblo se quedaba con un solo bancal trabajado para siempre.
+     * y el pueblo se quedaba con un solo parcela trabajado para siempre.
      */
     public static int slotDeProfesionFaltante(java.util.Collection<VillagerProfession> vivas) {
         List<VillagerProfession> restantes = new ArrayList<>(vivas);
@@ -7448,7 +7448,7 @@ public final class VillageGenerator {
                     // estén pisoteadas (tierra o césped), vaciadas o con el agua congelada. Sin esto el obrero no
                     // tenía NADA que reponer en ellas, porque el plano de una aldea migrada es un ESCANEO del mundo
                     // y la tierra o el césped se descartan como "terreno natural": medido en el guardado del jugador
-                    // (aldea 2, cota 120), el bancal oeste tenía 2 calvas de césped en (1384,1430) y (1384,1434) que
+                    // (aldea 2, cota 120), la parcela oeste tenía 2 calvas de césped en (1384,1430) y (1384,1434) que
                     // NO estaban en el plano — las "dos manchas de tierra" que el jugador veía sin reparar.
                     BlockState state = estadoDeLaHuerta(center, nivel, pos);
                     if (state == null) {
@@ -7604,8 +7604,8 @@ public final class VillageGenerator {
      * cultivo van a la <b>misma altura</b> y las columnas bajas se rellenan de tierra hasta ese nivel.
      */
     /**
-     * ¿Está ya hecho ese bancal? Se mira el <b>suelo</b>: con varias celdas de <b>tierra de cultivo</b> a la capa de
-     * abajo, el bancal está construido y <b>no hay que volver a nivelarlo</b>.
+     * ¿Está ya hecho esa parcela? Se mira el <b>suelo</b>: con varias celdas de <b>tierra de cultivo</b> a la capa de
+     * abajo, la parcela está construido y <b>no hay que volver a nivelarlo</b>.
      * <p>
      * Existe por un fallo medido: el <b>nivelado de la huella</b> ({@link #nivelarHuella}) <b>recorta</b> el terreno
      * que sobresale de la cota y, en una parcela en <b>cuesta</b> (una aldea de montaña), ese recorte se llevaba por
@@ -7615,7 +7615,7 @@ public final class VillageGenerator {
      * con sus 71 cultivos puestos pero casi todos de edad 0-1 y semillas de trigo y de remolacha tiradas por el suelo.
      * <p>
      * La tierra de cultivo <b>sí</b> está en el plano, así que si alguien la pisotea la repone el obrero: no hace
-     * falta rehacer el bancal entero (y rehacerlo es lo que rompía la huerta).
+     * falta rehacer la parcela entero (y rehacerlo es lo que rompía la huerta).
      */
     private static boolean bancalHecho(ServerLevel level, BlockPos corner, int nivel) {
         int tierra = 0;
@@ -7631,8 +7631,8 @@ public final class VillageGenerator {
     }
 
     /**
-     * ¿Queda algún <b>cultivo vivo</b> en ese bancal? Es la segunda capa de protección de la huerta: aunque el
-     * bancal no esté "hecho" (le falte tierra de cultivo en algunas celdas, por ejemplo porque alguien la pisoteó),
+     * ¿Queda algún <b>cultivo vivo</b> en esa parcela? Es la segunda capa de protección de la huerta: aunque el
+     * parcela no esté "hecho" (le falte tierra de cultivo en algunas celdas, por ejemplo porque alguien la pisoteó),
      * si hay plantas dentro <b>no se nivela nada</b> —el nivelado recorta el terreno y se llevaría por delante los
      * cultivos de las celdas altas, que acabarían tirados por la parcela como objetos—.
      */
@@ -7649,7 +7649,7 @@ public final class VillageGenerator {
     }
 
     private static void plot(ServerLevel level, BlockPos corner, int nivel) {
-        // SI EL BANCAL YA ESTÁ, NO SE NIVELA NI SE REPLANTA: solo se asegura lo que NO toca los cultivos (el
+        // SI LA PARCELA YA ESTÁ, NO SE NIVELA NI SE REPLANTA: solo se asegura lo que NO toca los cultivos (el
         // compostero del granjero y la valla con sus faroles). Ver `bancalHecho`.
         if (bancalHecho(level, corner, nivel)) {
             composteroDelBancal(level, corner, nivel);
@@ -7657,7 +7657,7 @@ public final class VillageGenerator {
             return;
         }
         Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES, Blocks.BEETROOTS};
-        // SEGUNDA CAPA: si el bancal todavía tiene cultivos (le falta tierra en algunas celdas, pero hay plantas),
+        // SEGUNDA CAPA: si la parcela todavía tiene cultivos (le falta tierra en algunas celdas, pero hay plantas),
         // NO SE NIVELA NADA. El nivelado de la huella RECORTA el terreno que sobresale de la cota y, en una parcela
         // en cuesta (una aldea de montaña), ese recorte se lleva por delante los cultivos de las celdas altas: salen
         // como OBJETOS tirados por toda la parcela (lo que el jugador vio dos veces: "las granjas todavía spawnnean
@@ -7718,7 +7718,7 @@ public final class VillageGenerator {
             }
         }
         composteroDelBancal(level, corner, nivel);
-        // 4) LA VALLA DEL BANCAL, con sus PORTONES y sus FAROLES (lo pidió el jugador: "todas las parcelas deben
+        // 4) LA VALLA DE LA PARCELA, con sus PORTONES y sus FAROLES (lo pidió el jugador: "todas las parcelas deben
         //    estar rodeadas de vallas con varias fence gates y que tengan mucha iluminación para que los plantíos
         //    crezcan rápido"). La luz no es decorativa: un cultivo solo crece con luz 9 o más, así que con faroles
         //    en los postes la huerta sigue creciendo DE NOCHE (sin luz, la mitad del día se pierde).
@@ -7726,9 +7726,9 @@ public final class VillageGenerator {
     }
 
     /**
-     * El <b>compostero</b> del bancal (el puesto de trabajo del granjero), a dos bloques de su esquina y fuera de su
-     * valla. Se separa del resto del bancal porque es lo único que hay que <b>asegurar</b> en un bancal ya hecho: si
-     * se rehiciera el bancal entero, el nivelado se llevaría por delante los cultivos (ver {@link #bancalHecho}).
+     * El <b>compostero</b> de la parcela (el puesto de trabajo del granjero), a dos bloques de su esquina y fuera de su
+     * valla. Se separa del resto de la parcela porque es lo único que hay que <b>asegurar</b> en una parcela ya hecho: si
+     * se rehiciera la parcela entero, el nivelado se llevaría por delante los cultivos (ver {@link #bancalHecho}).
      */
     private static void composteroDelBancal(ServerLevel level, BlockPos corner, int nivel) {
         // Tres cosas, en este orden (importa):
@@ -7743,7 +7743,7 @@ public final class VillageGenerator {
         int compX = corner.getX() - COMPOSTERO_DX; // FUERA de la valla y sin pegarse a ella (ver COMPOSTERO_DX, I40)
         int compZ = corner.getZ();
         // SI EL COMPOSTERO YA ESTÁ DONDE TIENE QUE ESTAR, NO SE TOCA NADA. Esto corre en el latido (10 s) para cada
-        // bancal ya hecho, y quitar el compostero para volverlo a poner **tira su punto de interés** cada vez: el
+        // parcela ya hecho, y quitar el compostero para volverlo a poner **tira su punto de interés** cada vez: el
         // puesto se queda con el ticket cogido y sin dueño (`free_tickets=0`, I23) y **nadie puede reclamarlo**.
         // Medido con el arnés: de los tres granjeros, dos reclamaron su compostero y la tercera se quedó
         // `SIN PUESTO` (su etiqueta y su faena sí, pero sin estación: el cerebro no le registra el trabajo).
@@ -7754,7 +7754,7 @@ public final class VillageGenerator {
         }
         // Se quita el compostero de la columna nueva Y el de la VIEJA (`corner.x-2`, pegada a la valla: la colocación
         // vieja, que es lo que le servía de escalón al granjero para saltarla). Solo composteros: lo del jugador se
-        // queda. Así el bancal de una aldea ya construida se corrige aunque `farm` no vuelva a pasar (migración 64).
+        // queda. Así la parcela de una aldea ya construida se corrige aunque `farm` no vuelva a pasar (migración 64).
         for (int cx : new int[]{compX, corner.getX() - 2}) {
             for (int y = nivel - PROFUNDIDAD_SOLAR - 2; y <= nivel + 6; y++) {
                 BlockPos p = new BlockPos(cx, y, compZ);
@@ -7778,12 +7778,12 @@ public final class VillageGenerator {
     }
 
     /**
-     * <b>Mueve el compostero de cada bancal UNA celda más afuera</b> (migración 64): de {@code corner.x-2} —pegado a
+     * <b>Mueve el compostero de cada parcela UNA celda más afuera</b> (migración 64): de {@code corner.x-2} —pegado a
      * la valla— a {@code corner.x-3} ({@link #COMPOSTERO_DX}).
      * <p>
      * Por qué: pegado a la valla, la tapa del compostero ({@code cota+1}) queda a un paso de <b>0,5</b> del lomo de la
      * valla (1,5), por debajo del {@code maxUpStep} (0,6), así que el granjero <b>subía a la valla</b> para entrar al
-     * bancal en vez de usar las compuertas (lo reportó el jugador; medido: los <b>tres</b> bancales de la aldea 2
+     * parcela en vez de usar las compuertas (lo reportó el jugador; medido: los <b>tres</b> parcelas de la aldea 2
      * tenían ese escalón, y era el compostero). Una celda más afuera ya no hay desde dónde subir.
      * <p>
      * Es <b>conservador</b>: solo actúa si el compostero viejo <b>sigue siendo un compostero</b> (lo que haya puesto el
@@ -7808,7 +7808,7 @@ public final class VillageGenerator {
             boolean libre = level.getBlockState(nuevo).isAir() && level.getBlockState(nuevo.above()).isAir()
                     && !level.getBlockState(nuevo.below()).getCollisionShape(level, nuevo.below()).isEmpty();
             if (!libre) {
-                DevilRpg.LOGGER.info("[Village] Bancal {} de {}: no se mueve su compostero (la celda nueva {} no está"
+                DevilRpg.LOGGER.info("[Village] Parcela {} de {}: no se mueve su compostero (la celda nueva {} no está"
                         + " libre): el granjero podrá seguir subiendo a la valla por ahí", i, center.toShortString(),
                         nuevo.toShortString());
                 continue;
@@ -7818,7 +7818,7 @@ public final class VillageGenerator {
             movidos.add(new BlockPos[]{viejo, nuevo});
         }
         if (!movidos.isEmpty()) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} compostero(s) de bancal movidos una celda fuera de la valla"
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} compostero(s) de parcela movidos una celda fuera de la valla"
                     + " (pegados a ella eran el escalón para saltarla, I40)", center.toShortString(), movidos.size());
         }
         return movidos;
@@ -7829,15 +7829,15 @@ public final class VillageGenerator {
      * <p>
      * <b>El fallo, medido en el mundo guardado</b>:
      * <pre>
-     * (533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero del bancal 0
-     * (534, 580)  y=61 grass  y=62 air           y=63 air         ← el bancal, un bloque MÁS BAJO
+     * (533, 580)  y=61 dirt   y=62 GRASS_BLOCK   y=63 COMPOSTER   ← el compostero de la parcela 0
+     * (534, 580)  y=61 grass  y=62 air           y=63 air         ← la parcela, un bloque MÁS BAJO
      * </pre>
-     * Al oeste del bancal 0 el <b>suelo natural está en y=62</b> (un bloque por encima de la cota, que es el nivel por
+     * Al oeste de la parcela 0 el <b>suelo natural está en y=62</b> (un bloque por encima de la cota, que es el nivel por
      * el que se anda) y el compostero se colocó <b>encima</b>, así que queda en <b>y=63</b>. El granjero camina a su
      * puesto y <b>no puede subir</b>: un aldeano no sube un bloque entero (el juego le da <b>0,6</b>). Y como el
      * compostero es su estación, **todos** sus recados acaban apuntando a esa altura: medido, <b>42 de 60 destinos de
      * una corrida en y=63</b> con todos los aldeanos en y=62 y la cota en 62, y el censo del arnés delatándolo:
-     * {@code puesto=533, 63, 580} en unos bancales y {@code puesto=573, 62, 570} en otros (por eso el bucle solo salía
+     * {@code puesto=533, 63, 580} en unos parcelas y {@code puesto=573, 62, 570} en otros (por eso el bucle solo salía
      * en algunas corridas).
      * <p>
      * La migración de {@link #moverComposterosDelBancal} no puede arreglarlo: exige que la celda nueva esté <b>libre</b>
@@ -7855,18 +7855,18 @@ public final class VillageGenerator {
             BlockPos destino = composteroDeLaParcela(center, i, cota);
             BlockPos actual = buscarComposteroEnLaColumna(level, destino);
             if (actual != null && actual.getY() == cota) {
-                // I164 · Y SI YA ESTÁ BIEN, SE QUITAN LOS DE MÁS. Medido en el mundo del arnés: la columna del bancal 1
+                // I164 · Y SI YA ESTÁ BIEN, SE QUITAN LOS DE MÁS. Medido en el mundo del arnés: la columna de la parcela 1
                 // tenía **DOS** composteros, uno en la cota (el bueno) y **otro un bloque por encima** —resto de la
                 // migración, que colocó el nuevo y no se llevó el viejo—, y como el compostero es un **POI**, el
                 // granjero reclamaba **el de arriba** en unas corridas y el de la cota en otras: el censo salía con
-                // `puesto=573, 63, 570` en **408-448 muestras** de ~3.250. Un pueblo tiene **una** estación por bancal,
+                // `puesto=573, 63, 570` en **408-448 muestras** de ~3.250. Un pueblo tiene **una** estación por parcela,
                 // y a la cota.
                 for (int dy = 1; dy <= 3; dy++) {
                     BlockPos extra = destino.above(dy);
                     if (level.getBlockState(extra).is(Blocks.COMPOSTER)) {
                         colocar(level, extra, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                         asentados.add(new BlockPos[]{extra, destino}); // y el PUESTO del granjero, al bueno
-                        DevilRpg.LOGGER.info("[Village] Bancal {} de {}: quitado un compostero DE MÁS en {} (el puesto"
+                        DevilRpg.LOGGER.info("[Village] Parcela {} de {}: quitado un compostero DE MÁS en {} (el puesto"
                                 + " bueno está a la cota, en {}): con dos, el granjero reclamaba el de arriba y no podía"
                                 + " subir (I164)", i, center.toShortString(), extra.toShortString(),
                                 destino.toShortString());
@@ -7881,7 +7881,7 @@ public final class VillageGenerator {
                 continue; // el caso medido es «uno por encima»; dos o más sería otra cosa y no se toca a ciegas
             }
             if (!level.getBlockState(destino).isAir() || !level.getBlockState(destino.above()).isAir()) {
-                DevilRpg.LOGGER.info("[Village] Bancal {} de {}: su compostero está un bloque alto en {} y la celda de"
+                DevilRpg.LOGGER.info("[Village] Parcela {} de {}: su compostero está un bloque alto en {} y la celda de"
                         + " la cota ({}) no está libre: no se asienta (el granjero tendrá su puesto cuesta arriba)",
                         i, center.toShortString(), actual.toShortString(), destino.toShortString());
                 continue;
@@ -7921,7 +7921,7 @@ public final class VillageGenerator {
      * se queda dando vueltas alrededor (es el mismo fallo que documenta {@code VillageStorage.puntoDeApoyo} con el
      * cenador del almacén y el ahumador del kiosco). <b>Medido con el arnés</b>: con el compostero como destino, la
      * granjera Cesarea —que lo tenía a 10 bloques, al otro lado de la valla— se perdió, <b>se subió a la valla</b> y
-     * acabó vagando lejos de su bancal.
+     * acabó vagando lejos de su parcela.
      */
     public static BlockPos puntoDeApoyoDelCompostero(ServerLevel level, BlockPos compostero) {
         for (BlockPos p : new BlockPos[]{compostero.north(), compostero.south(), compostero.west(), compostero.east()}) {
@@ -7936,7 +7936,7 @@ public final class VillageGenerator {
 
     /**
      * <b>Los dos extremos de la acequia, de vuelta a celdas de cultivo</b> (migración 65). La losa que tapa el canal
-     * en sus dos últimas celdas se pisa a {@code cota+0,5} y las compuertas del bancal caen justo en la fila del
+     * en sus dos últimas celdas se pisa a {@code cota+0,5} y las compuertas de la parcela caen justo en la fila del
      * medio: desde ahí el aldeano <b>saltaba la valla</b> (ver {@link #esFilaDeAcequia}). Se quita la losa y el agua
      * se convierte en <b>tierra de cultivo</b> (regada), así que la capa que se pisa vuelve a estar a la altura de la
      * tierra y desde ahí no se llega al lomo de la valla. Es <b>conservador</b> (solo si siguen siendo el agua y su
@@ -7967,19 +7967,19 @@ public final class VillageGenerator {
         }
         if (cambios > 0) {
             DevilRpg.LOGGER.info("[Village] Aldea en {}: los extremos de la acequia vuelven a ser celdas de cultivo ({}"
-                    + " celdas): desde su losa se saltaba la valla del bancal (I40)", center.toShortString(), cambios);
+                    + " celdas): desde su losa se saltaba la valla de la parcela (I40)", center.toShortString(), cambios);
         }
         return cambios;
     }
 
     /**
-     * <b>La valla del bancal</b>: un anillo de valla de roble alrededor de la parcela (1 bloque por fuera de la
+     * <b>La valla de la parcela</b>: un anillo de valla de roble alrededor de la parcela (1 bloque por fuera de la
      * tierra de cultivo), con <b>cuatro puertas de valla</b> —una en el centro de cada lado— y <b>faroles</b> en las
      * cuatro esquinas y en los cuatro medios lados, que es lo que deja crecer los cultivos de noche.
      * <p>
      * Las puertas las abre el <b>pueblo</b> con {@code VillagerGateGoal} (el juego no deja que un aldeano abra una
      * puerta de valla), así que el granjero entra y sale por ellas igual que por el portón del corral; y los faroles
-     * van <b>encima de los postes</b>, que es donde alumbran el bancal entero sin estorbar el paso.
+     * van <b>encima de los postes</b>, que es donde alumbran la parcela entero sin estorbar el paso.
      */
     private static void cercaDelBancal(ServerLevel level, BlockPos corner, int nivel) {
         int x0 = corner.getX() - 1;
@@ -8005,7 +8005,7 @@ public final class VillageGenerator {
                 }
                 colocar(level, new BlockPos(x, nivel, z), Blocks.OAK_FENCE.defaultBlockState(), Block.UPDATE_ALL);
                 if (esquina || medio) {
-                    // Farol en lo alto del poste: alumbra el bancal y los cultivos crecen también de noche.
+                    // Farol en lo alto del poste: alumbra la parcela y los cultivos crecen también de noche.
                     BlockPos alto = new BlockPos(x, nivel + 1, z);
                     if (level.getBlockState(alto).isAir()) {
                         colocar(level, alto, Blocks.LANTERN.defaultBlockState(), Block.UPDATE_ALL);
@@ -8016,7 +8016,7 @@ public final class VillageGenerator {
     }
 
     /**
-     * Las <b>puertas de valla de los bancales</b> (cuatro por parcela), para que {@code VillagerGateGoal} se las abra
+     * Las <b>puertas de valla de las parcelas</b> (cuatro por parcela), para que {@code VillagerGateGoal} se las abra
      * al granjero igual que el portón del corral: el juego no deja que un aldeano abra una puerta de valla.
      */
     public static List<BlockPos> portonesDeLosBancales(BlockPos center, int nivel) {
@@ -8028,7 +8028,7 @@ public final class VillageGenerator {
     }
 
     /**
-     * <b>TODOS los portones de valla de la aldea</b>: los doce de los bancales (el granjero los cruza para entrar y
+     * <b>TODOS los portones de valla de la aldea</b>: los doce de las parcelas (el granjero los cruza para entrar y
      * salir de su huerta) y los dos del anexo (el del corral y el del gallinero). Vive en <b>un solo sitio</b> (I4):
      * lo usan el goal que los abre ({@code VillagerGateGoal}), el despeje de su hueco y el filtro del plano (I54).
      */
@@ -8063,7 +8063,7 @@ public final class VillageGenerator {
         for (BlockPos porton : todosLosPortones(center, nivel)) {
             BlockState estado = level.getBlockState(porton);
             if (!(estado.getBlock() instanceof FenceGateBlock)) {
-                continue; // ahí no hay portón (una aldea vieja, un bancal movido): no hay hueco que despejar
+                continue; // ahí no hay portón (una aldea vieja, una parcela movido): no hay hueco que despejar
             }
             boolean enX = estado.getValue(FenceGateBlock.FACING).getAxis() == Direction.Axis.X;
             for (int d = -1; d <= 1; d++) {
@@ -8128,8 +8128,8 @@ public final class VillageGenerator {
     }
 
     /**
-     * La celda por la que ese aldeano <b>ENTRA</b> al bancal {@code i}: la de <b>dentro</b> del portón más cercano a
-     * él (un paso del portón hacia el centro del bancal).
+     * La celda por la que ese aldeano <b>ENTRA</b> a la parcela {@code i}: la de <b>dentro</b> del portón más cercano a
+     * él (un paso del portón hacia el centro de la parcela).
      * <p>
      * Hace falta porque las faenas de la huerta se hacen <b>dentro</b>: el alcance de la faena son 3 bloques, así que
      * un granjero parado <b>fuera</b> de la valla alcanzaba las matas de la primera fila y las cosechaba <b>a través de
@@ -8155,13 +8155,13 @@ public final class VillageGenerator {
     }
 
     /**
-     * La celda por la que ese aldeano <b>SALE</b> del bancal {@code i}: la de <b>FUERA</b> del portón más cercano a
+     * La celda por la que ese aldeano <b>SALE</b> de la parcela {@code i}: la de <b>FUERA</b> del portón más cercano a
      * él (un paso del portón hacia fuera, al revés que {@link #entradaDeLaParcela}).
      * <p>
      * Tiene que ser la de <b>fuera</b> y no la de dentro: {@code VillagerGateGoal} abre el portón solo si el destino
      * del aldeano está <b>al otro lado</b> ({@code vaACruzar}: el que solo pasa por delante no lo abre). Mandándolo a
      * la celda de dentro —la de entrar— el portón <b>no se abría</b> y el granjero se quedaba pegado a la valla toda
-     * la noche (medido con el arnés: Isidoro, con su cama ya reclamada, seguía dentro del bancal en `1394,119,1452`,
+     * la noche (medido con el arnés: Isidoro, con su cama ya reclamada, seguía dentro de la parcela en `1394,119,1452`,
      * la celda de dentro del portón este).
      */
     public static BlockPos salidaDeLaParcela(BlockPos center, int i, int cota, BlockPos desde) {
@@ -8181,7 +8181,7 @@ public final class VillageGenerator {
         return mejor != null ? mejor : esquina;
     }
 
-    /** ¿Ese aldeano está <b>dentro</b> del bancal {@code i}? (en su tierra de cultivo, no en la valla ni fuera) */
+    /** ¿Ese aldeano está <b>dentro</b> de la parcela {@code i}? (en su tierra de cultivo, no en la valla ni fuera) */
     public static boolean estaDentroDeLaParcela(BlockPos center, int i, int cota, BlockPos pos) {        BlockPos esquina = esquinaDeLaParcela(center, i, cota);
         int dx = pos.getX() - esquina.getX();
         int dz = pos.getZ() - esquina.getZ();
@@ -8189,7 +8189,7 @@ public final class VillageGenerator {
     }
 
     /**
-     * <b>¿Esa casilla cae sobre la huella de un bancal?</b> (su cuadrado de 9×9 <b>y su valla</b>). Mira solo X/Z y
+     * <b>¿Esa casilla cae sobre la huella de una parcela?</b> (su cuadrado de 9×9 <b>y su valla</b>). Mira solo X/Z y
      * <b>no necesita la cota</b>, así que es lo bastante barato para preguntarlo en un suceso de spawn: es la guarda
      * que impide que <b>nazca un golem dentro de la huerta</b> (lo pidió el jugador: *"hay un golem dentro de una de
      * las parcelas, quítalo de ahí y que ningún golem pueda spawnear dentro de parcelas"*).
@@ -8200,7 +8200,7 @@ public final class VillageGenerator {
             int bz = center.getZ() + FARM_PLOTS[i][1];
             if (pos.getX() >= bx - 1 && pos.getX() <= bx + PLOT_WIDTH
                     && pos.getZ() >= bz - 1 && pos.getZ() <= bz + PLOT_DEPTH) {
-                return true; // la huella (con la valla) de ese bancal
+                return true; // la huella (con la valla) de esa parcela
             }
         }
         return false;

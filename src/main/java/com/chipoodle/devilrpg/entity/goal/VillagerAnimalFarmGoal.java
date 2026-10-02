@@ -69,7 +69,7 @@ public class VillagerAnimalFarmGoal extends Goal {
      * fiabilidad (el juego no planifica a través de una puerta de valla cerrada, I96) ni conviene (por el portón se
      * escapan las gallinas). Lo medido: <b>en vivo con el arnés</b> (con el alcance en 2,5) los huevos de encima de la
      * paja —los que con 1,8 <b>no</b> se alcanzaban nunca— ya se los lleva (se ve desaparecer el huevo viejo y subir
-     * el zurrón), y con 1,8 los del corralillo llegaban a <b>2.000 ticks (100 s)</b> de edad sin recoger; y
+     * el inventario), y con 1,8 los del corralillo llegaban a <b>2.000 ticks (100 s)</b> de edad sin recoger; y
      * <b>celda a celda</b> (`build/gallinero_medida.py`, con la misma distancia que el goal) el corralillo
      * <b>entero</b> solo lo cubre 3,5.
      */
@@ -239,7 +239,7 @@ public class VillagerAnimalFarmGoal extends Goal {
      * {@code canContinueToUse} lo para — y <b>al arrancar había CANCELADO al goal de recogida</b> del aldeano
      * ({@code VillagerPickupGoal}, prioridad 6, las mismas banderas MOVE/LOOK). Con el punto de apoyo del almacén
      * inalcanzable (I95) eso pasaba <b>cada tres ticks</b>: medido en el guardado del jugador (aldea 0), el ganadero
-     * <b>Zacarias</b> tenía <b>4 huevos</b> en el zurrón, su {@code DevilRpgPuntoFallido} apuntaba justo a
+     * <b>Zacarias</b> tenía <b>4 huevos</b> en el inventario, su {@code DevilRpgPuntoFallido} apuntaba justo a
      * {@code (517,64,666)} con {@code DevilRpgPuntoFallidoHasta=80965} (el reloj del mundo en {@code 75127}) y su
      * etiqueta era la del <b>otro</b> goal ("Recogiendo lo suyo"): no podía entregar los huevos ni, con el goal de
      * recogida cancelándose cada pocos ticks, recoger más.

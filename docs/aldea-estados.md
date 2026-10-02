@@ -81,7 +81,7 @@ propósito (cava su mina):
 
 ```
         (no tiene pico)                 (tanda hecha: 64 adoquines, mineral crudo,
-              │                          sin antorchas o zurrón lleno)
+              │                          sin antorchas o inventario lleno)
               ▼                                     │
    ┌──► RECOGER ────(carga: pico, tablones, ──► CAVAR ──(una celda: hueco de paso, pieza,
    │    almacén      carbón, palos, leña)      mina    suelo, veta de al lado, marco, antorcha)
@@ -118,7 +118,7 @@ propósito (cava su mina):
 | **Siembra del Diario** | `sembrarElDiarioSiHaceFalta` (`:5008`) | una vez, en partidas ya empezadas | `[Village] Diario del Invocado sembrado para <jugador>: N aldea(s) que ya resolvio esta partida` |
 | **La MINA (etapa I)** | el latido: `VillageGenerator.asegurarLaMinaDelPueblo` | **idempotente** (testigo: el suelo de piedra labrada de la caseta); sube `CURRENT_LAYOUT` a **70** y el plano se vuelve a capturar | `[Village] Aldea en <pos>: caseta del minero y boca de la mina en <pos> (caracol de radio 4, fondo y=-58)` + `[Village] almacen: el pico del minero y 6 lingotes (la mina arranca: …)` |
 | **El minero, celda a celda** | `VillagerMinerGoal` (`PRIORIDAD` 4) | mira **el mundo**, no un contador: `progresoDeLaMina` / `progresoDeLaGaleria` (una celda que abre galería no cuenta hasta que la galería está entera) | `[Village] El minero: caracol paso N en <pos> (y=Y)` · `[Village] El minero: galeria <pos> (paso N, celda M de 24)` · `[Village] El minero: marco de la galeria <pos> (celda M)` |
-| **Sube a su taller** | el mismo goal (fases `RECOGER` → `CAVAR` → `TALLER` → `ENTREGAR`) | **tanda hecha**: mineral crudo, 64 adoquines, sin antorchas o zurrón lleno (y siempre al acabarse la mina) | `[Village] El minero: cuela 4 adoquines en la balsa y saca un pedernal` · `[Village] El minero: funde N en <lingote>` · `[Village] El minero: deja lo sacado en el almacen (pico …, tablones …, antorchas …)` |
+| **Sube a su taller** | el mismo goal (fases `RECOGER` → `CAVAR` → `TALLER` → `ENTREGAR`) | **tanda hecha**: mineral crudo, 64 adoquines, sin antorchas o inventario lleno (y siempre al acabarse la mina) | `[Village] El minero: cuela 4 adoquines en la balsa y saca un pedernal` · `[Village] El minero: funde N en <lingote>` · `[Village] El minero: deja lo sacado en el almacen (pico …, tablones …, antorchas …)` |
 | **La mina se topa con un mar** | `VillagerMinerGoal.cerrarLaMina` | más de `SELLOS_MAXIMOS` (**12**) celdas **seguidas** de agua o lava (una bolsa se sella y el túnel sigue) | `[Village] El minero: sella agua/lava en <pos> (N seguidas)` y `[Village] El minero: la mina se PARA en <pos> (N celdas de agua/lava seguidas): piedra labrada de tope` |
 | **El pico se rompe** | `VillagerMinerGoal.gastarElPico` | una unidad de uso por celda; 250 el de hierro | `[Village] El minero: se le ha roto el pico (N usos): va a por otro al almacen` |
 | **La mina está tapada** | `VillagerMinerGoal.prepararElPicado` | la celda que le toca tiene algo del **pueblo** (el minero no lo cava: I24/I27 y I102) | `[Village] El minero: la mina esta tapada en <pos>` |
