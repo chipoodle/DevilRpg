@@ -5106,8 +5106,14 @@ public final class VillageManager {
         if (villager.getBrain().getMemory(MemoryModuleType.WALK_TARGET).isPresent()) {
             return; // tiene rumbo: no se toca nada
         }
-        if (level.getGameTime() - datos.getLong(RUMBO_TICK) > RUMBO_CADUCA) {
-            datos.remove(RUMBO_POS); // el recado ya no lo pide: caduca (no se le manda a un sitio viejo)
+        // ¿SIGUE EN PIE EL RECADO? (30-sep-2026, segunda iteración de I171, medida). La primera versión caducaba el
+        // apunte a los 6 segundos de la última petición… y resultó que **los goals solo piden el rumbo al empezar el
+        // tramo**, no en cada tick: a los 6 s el apunte caducaba, el cerebro seguía vacío (`cerebro=-` en el aviso) y el
+        // aldeano se quedaba parado hasta rendirse. Así que lo que decide no es el tiempo, sino **si el goal del mod
+        // sigue activo**: mientras lo esté, se le devuelve el rumbo; cuando el goal termina (o llama a `parar`, que
+        // borra el apunte), deja de devolvérsele.
+        if (!tieneUnGoalDelModActivo(villager)) {
+            datos.remove(RUMBO_POS); // ya no hay faena: el apunte se va con ella
             return;
         }
         BlockPos destino = BlockPos.of(datos.getLong(RUMBO_POS));
@@ -5116,11 +5122,20 @@ public final class VillageManager {
             return;
         }
         float velocidad = datos.contains(RUMBO_VEL) ? datos.getFloat(RUMBO_VEL) : 0.5F;
-        // OJO: NO se renueva la marca de tiempo al devolverlo. Así el rumbo dura como mucho 6 segundos desde la ÚLTIMA
-        // vez que el goal lo pidió, y un recado terminado no deja al aldeano caminando a un sitio que ya no toca.
         villager.getBrain().setMemory(MemoryModuleType.WALK_TARGET,
                 new net.minecraft.world.entity.ai.memory.WalkTarget(
                         new net.minecraft.world.entity.ai.behavior.BlockPosTracker(destino), velocidad, 1));
+    }
+
+    /** ¿Tiene el aldeano algún goal del mod en marcha? (los de {@code com.chipoodle.devilrpg.entity.goal}). */
+    private static boolean tieneUnGoalDelModActivo(Villager villager) {
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.isRunning()
+                    && wrapped.getGoal().getClass().getName().startsWith("com.chipoodle.devilrpg.entity.goal.")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Escribe el destino en el cerebro del aldeano ({@code WALK_TARGET}/{@code LOOK_TARGET}), sin más. */
@@ -5652,6 +5667,9 @@ public final class VillageManager {
         // sitio al que iba, el paseo lo devolvía a esa misma casilla — que al llegar es SU PROPIA CASILLA, que es
         // "dar vueltas sobre sí mismo". Parar es dejar de caminar Y de mirar a un sitio ya resuelto.
         villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET);
+        // Y el apunte del rumbo (I171): parar es parar. Si no se borra, el latido le devolvería el destino en cuanto el
+        // goal lo pida otra vez en el mismo tick, y el aldeano seguiría yendo a un sitio ya resuelto.
+        villager.getPersistentData().remove(RUMBO_POS);
         villager.getNavigation().stop();
     }
 

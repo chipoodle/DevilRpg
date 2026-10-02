@@ -4715,6 +4715,53 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I171 · SI AL ALDEANO **SE LE PIERDE EL RUMBO**, SE LE DEVUELVE (30-sep-2026)
+
+**La causa real de lo que quedaba estaba escrita en el propio aviso: `cerebro=-`.**
+
+Se vio con el **banco rápido** (ver abajo), en la corrida de 3 minutos número 5, y los **tres** avisos lo decían igual:
+
+```
+Anselmo (Granjero) no consigue llegar a 545, 78, 601 desde 548, 78, 601   etiqueta="… / Guardando lo suyo"  cerebro=-
+Ximeno  (Minero)   no consigue llegar a 614, 78, 587 desde 628, 78, 566   etiqueta="… / Guardando lo suyo"  cerebro=-
+Anselmo (Granjero) no consigue llegar a 545, 78, 602 desde 548, 78, 602   etiqueta="… / Labrando la huerta" cerebro=-
+```
+
+`cerebro=-` significa **`WALK_TARGET` vacío**: el aldeano **no es que camine mal, es que se quedó sin sitio al que ir** ✗.
+Alguien se lo borra —el cerebro del juego usa ese recuerdo para su **paseo** y lo limpia al terminar una actividad, y algún
+goal del mod lo escribe **una sola vez** al empezar la faena, no en cada tick— y el goal se queda esperando a que llegue
+**hasta rendirse**.
+
+**ARREGLO**: `ponerRumbo` apunta **a dónde** y **cuándo** en los datos del propio aldeano, y el **latido** se lo devuelve
+si no tiene rumbo y el apunte es **reciente**. Es **pasivo** (nunca pelea con el goal ni le cambia el destino: solo
+rellena un hueco) y el apunte **caduca en 6 segundos** desde la última vez que el goal lo pidió, así que un recado
+terminado no deja al aldeano caminando a un sitio que ya no toca.
+
+### I170 · LA CLASE B: **LA RUTA ES LA QUE MANDA** (30-sep-2026)
+
+La última familia que sobrevivía al cuadro por etiqueta: la ruta **alcanza** y el goal **se rinde igual**
+(`ruta=23 nodos hasta 615, 78, 587 alcanza=SI`), medida con el **minero yendo al almacén desde dentro del corral**
+(`Ximeno (Minero) / Guardando lo suyo`): el aldeano estaba **rodeando** la valla sin acercarse **en línea recta** y el
+contador de atasco lo tomaba por atascado hasta rendirse. Ahora se mide **si la ruta avanza** —el índice del nodo de la
+navegación, `VillageManager.avanzaPorLaRuta`, lo mismo que ya usaban la taberna y el obrero— y si avanza, **no hay
+atasco** (contador a cero).
+
+### EL BANCO RÁPIDO (30-sep-2026): de **80 minutos por pregunta a 3**
+
+Lo pidió el jugador: *«¿por qué tardas tanto en hacer mediciones?»*. **Tenía razón: el cuello de botella no era el código,
+era el instrumento** — cada pregunta costaba **4 corridas de 20 minutos**.
+
+`build/tanda-rapida.ps1` arranca el pueblo, lo deja **3 minutos** y devuelve el **recuento por etiqueta** (que es lo que
+dice **qué** falla) más las trazas de la reparación. Deja el mundo en `run/world`, así que después se **corta el terreno**
+con `build/slice_mina.py` para comprobar lo que el registro dice. **Regla**: aquí se itera; las **4 corridas largas** son
+para **confirmar** lo que ya salió bien aquí.
+
+**Lo que hizo posible encontrar en minutos** lo que llevaba cuatro intentos fallidos: con el corte del mundo se vio que el
+cimiento rellenaba **el eje** de la choza del minero y dejaba **su borde** hueco, y la causa era **mi propio margen** de
+±1 al anillo de la mina (el anillo está en ±4 y el margen hacia dentro se comía el ±3, que es justo el borde de la choza
+de 7×7). **Margen 0**, y verificado con el corte: el hueco (aire y el agua del fondo) pasa a piedra y **el caracol sigue
+abierto**.
+
 ### I169 · SI PARA LLEGAR HAY QUE CRUZAR UNA PUERTA CERRADA, **SE ABRE** (30-sep-2026)
 
 La **última familia** que quedaba en el registro, y la más tonta de todas: destinos que **sí son casillas de pie** pero
