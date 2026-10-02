@@ -27,3 +27,28 @@ El cambio se hizo con un script (`build/glosario.py`) que sustituye **solo en co
 
 **Al escribir texto nuevo en este proyecto**: si dudas, mira esta tabla; y si una palabra no la entendería alguien que
 no haya leído el código, se cambia.
+
+## Corregido el 30-sep-2026: **lo «hundido» que veía el jugador era el VACÍO de debajo**
+
+El jugador dijo: *«varias construcciones están hundidas un bloque y **alrededor está hueco y da a un pozo** porque
+**abajo de la villa está hueco y debería ser sólido**: chequea **alrededor de la choza del minero**»*. Medido en su
+guardado (`build/slice_mina.py`), alrededor de la choza del minero:
+
+```
+y=77  G G . . B B B B B B B . . G G     <- el suelo de la choza (bien: cota−1)
+y=76  . . . . . . . . . . . . . . .     <- AIRE
+y=75  . . . . . . . . . . W . . . .     <- AIRE (y la columna del pozo de la mina)
+y=74  . . . . . . . . . . . . . . .     <- AIRE
+```
+
+La choza **no está hundida** —su suelo está a `cota − 1`, que es lo correcto—: **está sobre el vacío**. Debajo y alrededor
+no hay terreno, y solo el **pozo de la mina** (hueco a propósito) tiene algo. Eso es lo que hace que se vea «hundida» y lo
+que un día se abre en socavón. **Lo tapa el CIMIENTO de I166** (radio 86 desde el centro del pueblo; la choza está a 44,
+así que entra de sobra): rellena de piedra **24 bloques hacia abajo** todo hueco y **respeta el pozo de la mina**.
+
+**Y una corrección mía, dicha sin adornos**: supuse que era **la huerta** la que estaba un bloque hundida (por una
+rendición con `destino=farmland` en `y=77` y los aldeanos en `y=78`)… y **la medición dice que no**: como **la cota es el
+nivel de los pies y el suelo va en `cota − 1`**, el cultivo en `y=77` con el pueblo andando en `y=78` es **lo correcto**
+(el corte del mundo lo confirma en las dos parcelas). Aquella rendición era la clase A de siempre —el destino es un
+cultivo, que no se pisa—, que ya arregla I154. **I167** (`asentarLaHuertaALaCota`, trazado 80) se queda como **red de
+seguridad** para cuando una migración cambie la cota y el plano se quede con la vieja: **no** era el fallo que se veía.
