@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
+import com.chipoodle.devilrpg.world.VillageErrands;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
 import com.chipoodle.devilrpg.world.VillageStorage;
@@ -194,8 +195,12 @@ public class VillagerAnimalFarmGoal extends Goal {
         if (presa != null) {
             fase = Fase.SACRIFICAR;
             especie = (EntityType<? extends Animal>) presa.getType();
-            target = presa.blockPosition();
-            return true;
+            // I168: se camina a la **casilla de pie al lado del animal** (no a la celda del animal, que suele estar
+            // debajo del cobertizo o pegada a la valla y no se pisa).
+            target = VillageErrands.casillaPosible(level, presa.blockPosition());
+            if (target != null) {
+                return true;
+            }
         }
         // 3) CRÍA. Dos motivos, y el primero NO se salta nunca:
         //    a) REPONER LA PAREJA (lo pidió el jugador): si una especie se ha quedado con menos de dos animales, se
@@ -217,7 +222,10 @@ public class VillagerAnimalFarmGoal extends Goal {
             }
             fase = Fase.CRIAR;
             especie = tipo;
-            target = pareja.blockPosition();
+            // I168: a criar también se va a una **casilla de pie al lado** de la pareja (mismo motivo que el
+            // sacrificio). Aquí, si no la hay, se usa la celda de la pareja: criar no puede pararse.
+            BlockPos alLado = VillageErrands.casillaPosible(level, pareja.blockPosition());
+            target = alLado != null ? alLado : pareja.blockPosition();
             return true;
         }
         // 4) SIN FAENA: se va <b>con el rebaño</b>. El corral es su casa y su puesto de trabajo (allí tiene la cama y
@@ -547,7 +555,22 @@ public class VillagerAnimalFarmGoal extends Goal {
         if (elegida == null) {
             return null;
         }
-        return adultoDe(level, elegida);
+        // I168 (30-sep-2026) · SE ELIGE UN ANIMAL QUE TENGA UNA **CASILLA DE PIE AL LADO**, no uno cualquiera.
+        // Medido en el mejor lote de la sesión (corridas 105 y 106, siete avisos en total): **cinco eran del
+        // ganadero** y todos con la misma forma — `destino=air encima=oak_planks` (el animal metido debajo del
+        // cobertizo) y `destino=oak_fence encima=oak_fence` (contra la valla)—, o sea apuntando **a la celda del
+        // animal**, que no se pisa. El sacrificio no puede costar una rendición: para ir a por un animal, el
+        // ganadero necesita un sitio donde ponerse a su lado, así que se busca el primero que lo tenga.
+        for (Animal animal : corral) {
+            if (animal.getType() == elegida && !animal.isBaby()
+                    // Ni a los que ya se intentó llegar hace poco (el sitio queda APARCADO con caducidad, I33): el
+                    // ganadero no vuelve a por el mismo animal que no pudo alcanzar.
+                    && !VillageManager.esPuntoFallido(villager, animal.blockPosition())
+                    && VillageErrands.casillaPosible(level, animal.blockPosition()) != null) {
+                return animal;
+            }
+        }
+        return null; // no hay ninguno al que se pueda llegar de pie: no se sacrifica (ya se hará)
     }
 
     /**
@@ -604,26 +627,6 @@ public class VillagerAnimalFarmGoal extends Goal {
     }
 
     // --- búsquedas ----------------------------------------------------------------------------------
-
-    @Nullable
-    private Animal adultoDe(ServerLevel level, EntityType<? extends Animal> tipo) {
-        Animal mejor = null;
-        double mejorDist = Double.MAX_VALUE;
-        for (Animal animal : VillageGenerator.animalesDelCorral(level, center)) {
-            if (animal.getType() != tipo || animal.isBaby()) {
-                continue;
-            }
-            if (VillageManager.esPuntoFallido(villager, animal.blockPosition())) {
-                continue; // a ese animal no llegó hace poco: se prueba con el siguiente (I33)
-            }
-            double d = villager.distanceToSqr(animal);
-            if (d < mejorDist) {
-                mejorDist = d;
-                mejor = animal;
-            }
-        }
-        return mejor;
-    }
 
     /** Un adulto de esa especie que <b>pueda</b> enamorarse (para no gastar comida en uno que ya está en ello). */
     @Nullable

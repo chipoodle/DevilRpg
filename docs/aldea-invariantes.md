@@ -4715,6 +4715,38 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I168 · EL GANADERO VA A UNA **CASILLA DE PIE AL LADO DEL ANIMAL** (30-sep-2026)
+
+Medido en el **mejor lote de la sesión** (corridas 105 y 106: siete avisos entre las dos): **cinco eran del ganadero**, y
+los cinco con la misma forma:
+
+```
+Sacrificando un animal   ruta=2 nodos hasta 612, 78, 556 alcanza=NO   destino=air encima=oak_planks
+Sacrificando un animal   ruta=1 nodos hasta 611, 78, 561 alcanza=NO   destino=oak_fence encima=oak_fence
+```
+
+O sea: el ganadero apuntaba **a la celda del propio animal**, que no se pisa — debajo del **cobertizo** de tablones, o
+pegada a la **valla** del corral. Es la clase A de siempre (el destino no es una casilla de pie), esta vez en el corral.
+
+**ARREGLO (patrón del nivel 3, completo)**: al elegir a qué animal va, se exige que tenga **una casilla de pie al lado**
+(`VillageErrands.casillaPosible`), se apunta **a esa casilla** y se respeta el **aparcado con caducidad**
+(`esPuntoFallido`, I33) para no volver a por el mismo animal que no se alcanzó. **Si no hay ningún animal al que se pueda
+llegar de pie, no se sacrifica** (ya se hará): el sacrificio no puede costar una rendición. Lo mismo para **criar** (allí,
+si no hay casilla al lado, se usa la de la pareja: criar no puede pararse). Se retiró `adultoDe`, que se quedó sin uso.
+
+### I167 · LA HUERTA, A LA COTA (red de seguridad) (30-sep-2026)
+
+`asentarLaHuertaALaCota` (trazado 80) pone cada celda de cultivo y de acequia **en la capa que se pisa**, por si una
+migración cambia el nivel del pueblo y el **plano** se queda con el viejo (el plano apunta las celdas de la huerta con la
+cota de cuando se capturó, así que el obrero las repondría a la altura vieja).
+
+**Y la verdad medida, que corrige una suposición mía**: creí que era **la huerta** la que se veía un bloque hundida (por
+una rendición con `destino=farmland` en `y=77` y los aldeanos en `y=78`), y **no lo es**: como **el nivel del pueblo es
+el de los pies y el suelo va uno por debajo**, el cultivo en 77 con el pueblo andando en 78 es **lo correcto** (el corte
+del mundo lo confirma en las dos parcelas). Aquella rendición era la clase A de siempre. Lo «hundido» que veía el jugador
+es **el hueco de debajo** (la choza del minero es una plataforma sobre 5 bloques de aire con agua al fondo), y eso lo
+tapa el **cimiento** de I166. Ver `docs/glosario.md`.
+
 ### I166 · **A LA PARCELA NO SE TIRA NADA**, Y SE COSECHA ENTERA (30-sep-2026)
 
 Lo pidió el jugador, y con razón, tras ver **semillas y vegetales flotando sobre la superficie del parcela**:
