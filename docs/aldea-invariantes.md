@@ -4715,6 +4715,24 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I172 · **RETIRADA** (30-sep-2026): el atasco «por tiempo» empeoró
+
+**Lo que se probó**: cambiar el contador de atasco del recojo de «un tick sin avanzar» a «**no ha avanzado en 140
+ticks**» (`VillageManager.laRutaAvanzoHacePoco`), porque `avanzaPorLaRuta` devuelve `true` **solo en el tick en que cambia
+el nodo** y parecía que el contador sumaba atasco mientras el aldeano andaba.
+
+**Lo que midió el banco rápido**: **1 · 2 · 4** (media **2,3**) contra **1 · 1 · 0** (media **0,67**) de la versión
+anterior → **se retira** y el recojo vuelve a la versión de I170. El intento queda escrito en el propio código y aquí.
+
+**Y DOS COSAS QUE SÍ SE APRENDIERON en esta ronda** (con la traza de diagnóstico `RUMBO: … moveTo=false`):
+
+1. **La navegación nunca falla**: en dos corridas la traza **no saltó ni una vez** → cuando el relleno actúa, el
+   `moveTo` **encuentra camino**. Los aldeanos **no** están atascados de verdad.
+2. **El `cerebro=-` era POST-MORTEM**: el goal, al rendirse, **borra el rumbo y para la navegación** (`parar`), así que el
+   aviso imprime el estado **después** de limpiar. Perseguí ese `-` durante dos rondas creyendo que era la causa, y no lo
+   era: **el aviso de rendición no fotografía el momento del fallo, sino el después**. Es una trampa del instrumento y
+   queda escrita para no volver a caer en ella.
+
 ### I171 · SI AL ALDEANO **SE LE PIERDE EL RUMBO**, SE LE DEVUELVE (30-sep-2026)
 
 **La causa real de lo que quedaba estaba escrita en el propio aviso: `cerebro=-`.**
