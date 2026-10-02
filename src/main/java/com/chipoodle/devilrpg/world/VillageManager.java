@@ -2186,6 +2186,14 @@ public final class VillageManager {
         VillageGenerator.asegurarTalud(level, center);
         VillageGenerator.criarRebanoInicial(level, center);
         VillageGenerator.reponerPecesDelLago(level, center);
+        // I166 · EL CIMIENTO, **AL FINAL Y OTRA VEZ** (30-sep-2026, medido). Puesto antes de reconstruir no servía de
+        // nada: encontraba el terreno sólido, ponía **cero bloques**, y **la propia reconstrucción excavaba el hueco
+        // después** — `asegurarLaMinaDelPueblo` (que cava el caracol) y `asegurarTalud` (que rebaja el borde) mueven
+        // tierra DESPUÉS de ese punto—. El corte del mundo del propio arnés lo enseñó: la choza del minero seguía sobre
+        // su hueco de cinco bloques con la charca al fondo. Es idempotente, así que se repite aquí, ya con todo
+        // construido y **justo antes de capturar el plano** (que así apunta el suelo ya rellenado).
+        VillageGenerator.afianzarElSuelo(level, center, VillageGenerator.FENCE_RADIUS + 24,
+                VillageGenerator.cotaDeLaPlaza(level, center));
         VillageGenerator.captureBlueprint(level, center); // el plano vuelve a ser lo que el pueblo es ahora
         saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
         saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
