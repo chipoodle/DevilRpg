@@ -5133,7 +5133,18 @@ public final class VillageManager {
         // desvíe y el camino para que ande— el aldeano se mueve aunque le borren el recuerdo.
         var nav = villager.getNavigation();
         if (nav.getPath() == null || nav.getPath().isDone()) {
-            nav.moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D, velocidad);
+            boolean va = nav.moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D, velocidad);
+            // TRAZA DE DIAGNÓSTICO (30-sep-2026): la pregunta que queda es si el aldeano está ATASCADO DE VERDAD o si
+            // su goal se rinde antes de tiempo, y eso se contesta con dos datos: ¿se le devolvió el rumbo? y ¿la
+            // navegación encontró camino? Se apunta como mucho una vez cada 2 segundos por aldeano para no inundar.
+            CompoundTag traza = villager.getPersistentData();
+            long ahora = level.getGameTime();
+            if (!va && ahora - traza.getLong("DevilRpgRumboAviso") > 40L) {
+                traza.putLong("DevilRpgRumboAviso", ahora);
+                DevilRpg.LOGGER.info("[Village] RUMBO: {} no tiene camino a {} desde {} (moveTo=false; el cerebro le"
+                                + " borró el rumbo y la navegación tampoco encuentra camino libre)",
+                        villager.getUUID(), destino, villager.blockPosition());
+            }
         }
     }
 
