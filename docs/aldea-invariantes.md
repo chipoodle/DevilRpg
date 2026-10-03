@@ -4715,6 +4715,33 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I173 · EL AVISO DE RENDICIÓN DICE **CUÁNTO SE HA MOVIDO** (30-sep-2026)
+
+**La pregunta que faltaba**, y el aviso no la contestaba: se apuntaba el estado del aldeano **después** de rendirse
+(rumbo borrado, navegación parada: una **autopsia**) y así perseguí dos rondas un `cerebro=-` que no era la causa. Ahora
+`ponerRumbo` apunta **dónde y cuándo arranca cada tramo** y el aviso imprime **cuántos bloques ha recorrido**:
+
+```
+Remigio (Granjero) / Sembrando         ruta=7 nodos hasta 545, 78, 602 alcanza=SI    tramo=[recorridos 4.6 bloques en 264 ticks]
+Ximeno  (Minero)   / Guardando lo suyo ruta=23 nodos hasta 615, 78, 587 alcanza=SI   tramo=[recorridos 0.5 bloques en 176 ticks]
+```
+
+**Lo que dice ese dato**: hay **ruta** (7 y 23 nodos, `alcanza=SI`) y el aldeano recorre **4,6 bloques en 13 segundos** y
+**0,5 bloques en 9 segundos**. O sea: **casi no avanza teniendo camino**. No está bloqueado (la traza de «sin camino» no
+salta nunca); **no le empujan**.
+
+### I174 · **RETIRADA** (30-sep-2026): poner la mirada en el recado no ayudó
+
+Se probó a poner también el `LOOK_TARGET` en el destino (para que el «andar hacia donde mira» del cerebro no tirara en
+contra). **Medido**: **2 · 1 · 2** (media 1,67) contra **1 · 1 · 0** (media 0,67) → **se retira**.
+
+**Y LA LECCIÓN DEL INSTRUMENTO, que es lo que importa**: **contar rendiciones en 3 minutos es demasiado ruidoso** (salen
+de 0 a 4) para distinguir un arreglo de otro. El banco rápido imprime ahora **el trabajo del pueblo** (sucesos de cada
+oficio), que tiene cuentas más altas y por tanto más señal — pero también es pequeño a los 3 minutos (granja 2,
+herrería 24-33, minero 7-11): **para decidir hace falta o más corridas rápidas o la tanda larga de 4**. El banco rápido
+sirve sobre todo para **encontrar** el fallo (etiqueta + tramo), no para confirmar la mejora. Y el script estaba en
+`build/` (que está en `.gitignore`), así que **no estaba versionado**: ahora vive en `tools/arnes/tanda-rapida.ps1`.
+
 ### I172 · **RETIRADA** (30-sep-2026): el atasco «por tiempo» empeoró
 
 **Lo que se probó**: cambiar el contador de atasco del recojo de «un tick sin avanzar» a «**no ha avanzado en 140
