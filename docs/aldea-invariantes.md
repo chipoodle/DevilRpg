@@ -4715,6 +4715,33 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I177 · EL RELLENO DEL RUMBO **SOLO ENTRA SI EL ALDEANO ESTÁ PARADO** (30-sep-2026)
+
+**Ésta era una regresión mía**, y la destapó el lote largo. La tanda con **solo I168** dio **1 · 2 · 4 · 1** (media 2,0) y
+la tanda con I169+I170+I171 dio **5 · 4 · 1** (media ~3,3). Con cuatro corridas y esta varianza el número **no es
+concluyente** —y así queda dicho—, pero el **mecanismo** sí encaja: el relleno de I171 devolvía el rumbo a **cualquier**
+aldeano con la faena en marcha y sin destino en el cerebro, y eso incluye al que **ya había llegado** y estaba
+**trabajando** ✗. El goal lo daba por bueno (el navegador tiene **un bloque** de tolerancia) y el relleno, al ver la celda
+a más de un bloque, **lo arrancaba de su faena y lo mandaba a caminar otra vez** ✗✗ — que es exactamente lo que se midió:
+aldeanos que **andan 35-46 bloques** con ruta válida y aun así se rinden (`Labrando la huerta` 36,4; `Trajo del almacén a
+la despensa` 46,7; `Buscando recambios` 45,3; `Volviendo a la caseta` 34,9).
+
+**ARREGLO**: se apunta **cuándo se movió por última vez** y el relleno **solo entra si lleva 2 segundos quieto**. Si anda
+o trabaja, no se le toca. La condición es **estrictamente más estrecha** que la anterior, así que no puede hacer más de lo
+que ya hacía: solo **menos**.
+
+### I176 · EL AVISO DICE **CUÁNTOS DESTINOS** LE HA DADO EL GOAL (30-sep-2026)
+
+Para distinguir «va de un sitio a otro» (muchos destinos) de «da vueltas alrededor del mismo» (un destino y muchos
+bloques), que es lo que apunta el navegador cuando da por **LLEGADO** con **un bloque** de tolerancia y el goal dice que
+aún no.
+
+### I175 · EL AVISO DICE EL CAMINO **ANDADO**, NO SOLO EL NETO (30-sep-2026)
+
+El neto desde que arranca el tramo **no distingue** «parado» de «dando vueltas» (el «dar vueltas sobre sí mismo» que ya
+está escrito en `parar()`): un aldeano que va y vuelve tiene neto **cero** y recorrido **mucho**. El latido suma el camino
+andado tick a tick (descartando saltos imposibles) y el aviso imprime los dos.
+
 ### I173 · EL AVISO DE RENDICIÓN DICE **CUÁNTO SE HA MOVIDO** (30-sep-2026)
 
 **La pregunta que faltaba**, y el aviso no la contestaba: se apuntaba el estado del aldeano **después** de rendirse
