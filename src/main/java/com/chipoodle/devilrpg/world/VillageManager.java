@@ -2715,6 +2715,9 @@ public final class VillageManager {
                     // décimas de bloque por tick.
                     if (d > 0.001D && d < 1.0D) {
                         paso.putDouble("DevilRpgAndado", paso.getDouble("DevilRpgAndado") + d);
+                        // I177: y se apunta CUÁNDO se movió por última vez: el relleno del rumbo solo entra si lleva 2
+                        // segundos quieto, para no arrancar de su faena al que ya está trabajando donde quería.
+                        paso.putLong("DevilRpgUltimoMovimiento", level.getGameTime());
                     }
                 }
                 paso.putDouble("DevilRpgUltimoX", x);
@@ -5139,6 +5142,16 @@ public final class VillageManager {
         if (!tieneUnGoalDelModActivo(villager)) {
             datos.remove(RUMBO_POS); // ya no hay faena: el apunte se va con ella
             return;
+        }
+        // I177 · Y SOLO SI DE VERDAD ESTÁ PARADO (30-sep-2026, medido). La versión anterior devolvía el rumbo a
+        // cualquier aldeano con la faena en marcha y sin recuerdo de destino… y eso incluía al que **ya había llegado** y
+        // estaba trabajando: el goal lo daba por bueno (el navegador tiene **un bloque** de tolerancia) y el relleno, al
+        // ver la celda a más de un bloque, **lo arrancaba de su faena y lo mandaba a caminar otra vez**. El resultado es
+        // exactamente lo que midió el lote largo: aldeanos que **andan 35-46 bloques** con ruta válida y se rinden
+        // («Labrando la huerta» 36,4; «Trajo del almacén a la despensa» 46,7; «Buscando recambios» 45,3). Ahora el
+        // relleno solo entra si el aldeano **no se ha movido** en los últimos 40 ticks: si anda o trabaja, no se le toca.
+        if (villager.level().getGameTime() - datos.getLong("DevilRpgUltimoMovimiento") < 40L) {
+            return; // se está moviendo (o acaba de moverse): no hay nada que rellenar
         }
         BlockPos destino = BlockPos.of(datos.getLong(RUMBO_POS));
         if (villager.blockPosition().distSqr(destino) <= 2.0D) {
