@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.world;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.block.DoorBlock;
@@ -130,22 +131,23 @@ public final class VillageErrands {
         if (recado == null) {
             return;
         }
-        BlockPos yo = villager.blockPosition();
-        int dx = Integer.signum(recado.getX() - yo.getX());
-        int dz = Integer.signum(recado.getZ() - yo.getZ());
-        if (dx == 0 && dz == 0) {
-            return; // ya está encima del recado
+        // I178 · SE MIRAN TODAS LAS PUERTAS DE ALREDEDOR, NO SOLO LAS DEL CAMINO RECTO (30-sep-2026, medido). El sondeo
+        // por la línea al recado **fallaba justo en el caso que importa**: el aldeano pegado a la valla de **su parcela**
+        // con el destino a un bloque y `rutaViva=3 nodos alcanzaba=NO` —la compuerta que estorba está en el **punto medio
+        // del lado**, no en la recta—, así que no la encontraba y el pueblo se quedaba fuera. Ahora se mira un cuadro
+        // alrededor del aldeano (radio 8, que cubre de sobra una parcela de 9×9) y se abre la que **separa** de verdad.
+        // El coste se paga **una vez cada 10 ticks por aldeano** (no en cada tick): el barrido completo de 9×9×5 en cada
+        // tick fue lo que ya me mordió antes.
+        CompoundTag datos = villager.getPersistentData();
+        long ahora = level.getGameTime();
+        if (ahora - datos.getLong("DevilRpgPuertasMiradas") < 10L) {
+            return;
         }
-        // SE SONDEA EL CAMINO, NO EL VECINDARIO: una L de 6 pasos hacia el recado (y la casilla de encima, que es
-        // donde está la hoja de la puerta). Un barrido de 9×9×5 por aldeano y por tick serían ~400 consultas cada
-        // tick; esto son 24, y la compuerta que estorba está justo ahí, en el camino.
-        for (int paso = 1; paso <= 6; paso++) {
-            for (int altura = 0; altura <= 1; altura++) {
-                if (!mirarYQuizáAbrir(level, yo.offset(dx * paso, altura, 0), yo, recado)
-                        && !mirarYQuizáAbrir(level, yo.offset(0, altura, dz * paso), yo, recado)) {
-                    continue;
-                }
-                return; // con una que se abra, ya se sigue caminando; si hace falta otra, se abrirá en el siguiente tramo
+        datos.putLong("DevilRpgPuertasMiradas", ahora);
+        BlockPos yo = villager.blockPosition();
+        for (BlockPos p : BlockPos.betweenClosed(yo.offset(-8, -2, -8), yo.offset(8, 2, 8))) {
+            if (mirarYQuizáAbrir(level, p.immutable(), yo, recado)) {
+                return; // con una que se abra, ya se sigue caminando
             }
         }
     }
