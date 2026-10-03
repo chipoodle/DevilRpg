@@ -810,9 +810,17 @@ public final class VillageManager {
      *       se capturó, así que tras una migración el obrero reponía la huerta <b>un bloque hundida</b> (medido en el
      *       registro del jugador: la parcela en {@code y=77} y el pueblo andando en {@code y=78}) y el granjero no
      *       podía pisarla. Esta versión <b>asienta cada celda de cultivo y de acequia en la capa que se pisa</b>.</li>
+     *   <li><b>81:</b> <b>EL CIMIENTO, TAMBIÉN EN LAS ALDEAS NUEVAS</b> (I182). El jugador reportó que <b>el fondo de la
+     *       aldea seguía hueco</b> («hay un boquete cerca de una de las parcelas donde se ve lo hueco») y tenía razón:
+     *       `afianzarElSuelo` <b>solo</b> se llamaba desde el camino de <b>reparación</b> (aldeas migradas), así que una
+     *       aldea <b>recién generada</b> nacía <b>sin cimiento</b> — en su propio registro se ve la aldea migrada con
+     *       {@code CIMIENTO … puestos 73612 bloques} y la nueva sin ninguna línea de cimiento. Ahora el cimiento se pone
+     *       <b>al construir</b> (al final del terreno y otra vez al final de la construcción, porque <b>la mina cava
+     *       después</b>) y este trazado hace que las aldeas <b>ya generadas</b> pasen una vez por la reparación y lo
+     *       reciban también.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 80;
+    public static final int CURRENT_LAYOUT = 81;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
