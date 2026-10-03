@@ -171,6 +171,33 @@ por corrida**, con el recuento **por etiqueta** y las trazas de la reparación),
    también **el trabajo del pueblo** (sucesos por oficio), que tiene más señal; pero a 3 minutos también es pequeño. **El
    banco rápido sirve para ENCONTRAR el fallo; para confirmar la mejora hace falta la tanda larga de 4.**
 
+#### 8.bis.0.ter · **SE QUEDAN A LAS PUERTAS** (30-sep-2026, la pista que cierra el círculo)
+
+Sacado **gratis** de los registros del lote largo 115-118 (sin lanzar nada): de **18 rendiciones**, **15** se producen con
+el aldeano a **3-8 bloques** de su destino y **todas con `dy=0`** (la altura está bien, no es la cota). O sea: **no se
+pierden por el camino: se quedan a las puertas.**
+
+Y el portón que abre el mod lo dice con nombre y apellidos:
+
+```
+Isidoro (Granjero) / Sembrando: abro el porton 545, 78, 584 · destino=544, 78, 585   rutaViva=3 nodos alcanzaba=NO
+```
+
+**Destino a UN bloque y «no alcanza»** ✗: está pegado a la valla de **su parcela** y la compuerta que estorba está en el
+**punto medio del lado**, no en la recta que yo sondeaba ✗ (I169 miraba solo la línea hacia el recado, y por eso **no la
+encontraba**). **I178** mira ahora **toda la puertas de alrededor** (radio 8, que cubre de sobra una parcela de 9×9) y
+abre la que **de verdad separa**; el coste se paga **una vez cada 10 ticks** por aldeano.
+
+**Y DOS COSAS MÁS, medidas, que evitan seguir dando vueltas**:
+
+- **La navegación nunca falla** (`moveTo=false` **0** veces en dos corridas) y **`PARAR` salta ~2.500 veces por corrida**:
+  los goals paran la navegación para **trabajar en el sitio**. Eso es legítimo, pero es lo que mi relleno del rumbo
+  (I171) estaba deshaciendo: **arrancaba de su faena al que ya había llegado y estaba trabajando** (el navegador da por
+  llegado con **un bloque** de tolerancia) y lo mandaba a caminar otra vez → **andaban 35-46 bloques y se rendían**.
+  **I177** lo corta: el relleno **solo entra si el aldeano lleva 2 segundos quieto**.
+- **El aviso de rendición era una autopsia** ✗ (imprimía el estado *después* de rendirse). Ya dice el **tramo**: neto,
+  **ANDADO** y **cuántos destinos** (I173/I175/I176).
+
 ### 8.bis. SESIÓN DEL 29-sep-2026 (tarde): **el nivel 3, medido y cerrado por clases** — ACTA
 
 El jugador mandó **reescribir el cerebro de los aldeanos** («si es necesario hay que cambiar toda la arquitectura…
