@@ -146,6 +146,31 @@ en **1**), contra las etiquetas que el objetivo pedía cerrar:
 y el goal se rinde igual—, que es la única forma que sobrevive en el mejor registro (`ruta=23 nodos … alcanza=SI` desde
 dentro del corral, con el minero yendo al almacén: el caso de I169); (c) el acta del cuadro de arriba con su media.
 
+#### 8.bis.0.bis · **EL BANCO RÁPIDO Y LO QUE ENSEÑÓ** (30-sep-2026, continuación)
+
+El jugador cortó por lo sano: *«¿por qué tardas tanto en hacer mediciones?»*. **Tenía razón y el cuello de botella era el
+instrumento**: cada pregunta costaba **80 minutos** (4 corridas). Se construyó `tools/arnes/tanda-rapida.ps1` (**3 minutos
+por corrida**, con el recuento **por etiqueta** y las trazas de la reparación), y con él:
+
+| arreglo | corridas rápidas | media | veredicto |
+|---|---|---|---|
+| **cimiento: anillo sin holgura** | verificado **en el terreno** | — | **el hueco se cierra y el caracol sigue abierto** ✓ |
+| I170 (la ruta manda) | 1 · 1 · 0 | **0,67** | se queda ✓ |
+| I172 (atasco «por tiempo») | 1 · 2 · 4 | 2,33 | **RETIRADO** ✗ |
+| I174 (mirada en el recado) | 2 · 1 · 2 | 1,67 | **RETIRADO** ✗ |
+| I171 (devolver el rumbo) | 1 · 1 · 0 | **0,67** | se queda ✓ |
+
+**Y las tres verdades que salieron del instrumento** (más valiosas que los arreglos, porque evitan perder más tiempo):
+
+1. **El aviso de rendición era una autopsia** ✗: imprimía el estado **después** de rendirse (rumbo borrado, navegación
+   parada). Perseguí un `cerebro=-` dos rondas creyendo que era la causa. Ya dice el **tramo** (`recorridos N bloques en
+   M ticks`, I173).
+2. **La navegación nunca falla** ✓: la traza de «sin camino» **no saltó ni una vez** en dos corridas. Los aldeanos **no**
+   están bloqueados: **tienen ruta y casi no avanzan** (medido: 4,6 bloques en 13 s; **0,5 en 9 s**) → **no les empujan**.
+3. **Contar rendiciones en 3 minutos es ruido** (0 a 4) ✗: no distingue un arreglo de otro. El banco rápido imprime ahora
+   también **el trabajo del pueblo** (sucesos por oficio), que tiene más señal; pero a 3 minutos también es pequeño. **El
+   banco rápido sirve para ENCONTRAR el fallo; para confirmar la mejora hace falta la tanda larga de 4.**
+
 ### 8.bis. SESIÓN DEL 29-sep-2026 (tarde): **el nivel 3, medido y cerrado por clases** — ACTA
 
 El jugador mandó **reescribir el cerebro de los aldeanos** («si es necesario hay que cambiar toda la arquitectura…
