@@ -2699,6 +2699,27 @@ public final class VillageManager {
             // avisos que quedaban decían `cerebro=-`, o sea el aldeano PARADO con el recado en pie porque alguien le
             // había borrado el destino del cerebro. Ver `devolverElRumboSiSeLePerdio`.
             devolverElRumboSiSeLePerdio(villager, level);
+            // I175 · ¿CUÁNTO HA ANDADO DE VERDAD? (30-sep-2026). El aviso mide el **neto** desde que arrancó el tramo, y
+            // con eso no se distingue «parado» de «dando vueltas» (el «dar vueltas sobre sí mismo» que ya está escrito
+            // en `parar()`): un aldeano que va y vuelve tiene neto **cero** y recorrido **mucho**. Aquí se suma el
+            // camino andado tick a tick, y el aviso imprime los dos.
+            CompoundTag paso = villager.getPersistentData();
+            if (paso.contains(TRAMO_POS)) {
+                double x = villager.getX();
+                double z = villager.getZ();
+                if (paso.contains("DevilRpgUltimoX")) {
+                    double dx = x - paso.getDouble("DevilRpgUltimoX");
+                    double dz = z - paso.getDouble("DevilRpgUltimoZ");
+                    double d = Math.sqrt(dx * dx + dz * dz);
+                    // Se descartan los saltos imposibles (teletransportes del juego, cambio de dimensión): andar son
+                    // décimas de bloque por tick.
+                    if (d > 0.001D && d < 1.0D) {
+                        paso.putDouble("DevilRpgAndado", paso.getDouble("DevilRpgAndado") + d);
+                    }
+                }
+                paso.putDouble("DevilRpgUltimoX", x);
+                paso.putDouble("DevilRpgUltimoZ", z);
+            }
         }
         // I164 · Y EL COMPOSTERO —el PUESTO del granjero— SE VIGILA EN EL LATIDO (30-sep-2026). La pasada de
         // `prepareRepairs` (I163) corre **una vez**, pero el compostero puede quedar —o **volver a quedar**— un bloque
@@ -5216,6 +5237,10 @@ public final class VillageManager {
         if (!datos.contains(RUMBO_POS) || datos.getLong(RUMBO_POS) != objetivo.asLong()) {
             datos.putLong(TRAMO_POS, villager.blockPosition().asLong());
             datos.putLong(TRAMO_TICK, villager.level().getGameTime());
+            // I175: y el camino ANDADO del tramo arranca de cero (el neto se mide desde TRAMO_POS, el total se suma aquí).
+            datos.putDouble("DevilRpgAndado", 0.0D);
+            datos.putDouble("DevilRpgUltimoX", villager.getX());
+            datos.putDouble("DevilRpgUltimoZ", villager.getZ());
         }
         datos.putLong(RUMBO_POS, objetivo.asLong());
         datos.putFloat(RUMBO_VEL, velocidad);
@@ -5674,18 +5699,20 @@ public final class VillageManager {
         // así se rinde, el fallo está en cómo el goal mide el avance; si no se ha movido **nada**, está encajado.
         double recorridos = -1.0D;
         long ticksDelTramo = -1L;
+        double andado = -1.0D;
         CompoundTag datosTraza = villager.getPersistentData();
         if (datosTraza.contains(TRAMO_POS)) {
             BlockPos inicioDelTramo = BlockPos.of(datosTraza.getLong(TRAMO_POS));
             recorridos = Math.sqrt(inicioDelTramo.distToCenterSqr(villager.position()));
             ticksDelTramo = villager.level().getGameTime() - datosTraza.getLong(TRAMO_TICK);
+            andado = datosTraza.getDouble("DevilRpgAndado"); // I175: el camino ANDADO (neto vs total distingue «parado» de «dando vueltas»)
         }
         DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}) etiqueta=\"{}\" cerebro={}"
-                        + " nav=[{}] goals=[{}] tramo=[recorridos {} bloques en {} ticks]: lo deja por {} min y sigue"
-                        + " con lo demas",
+                        + " nav=[{}] goals=[{}] tramo=[neto {} bloques, ANDADO {} bloques, en {} ticks]: lo deja por {}"
+                        + " min y sigue con lo demas",
                 villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde, etiqueta, cerebro, navegacion,
-                goalsCorriendo.toString().trim(), String.format("%.1f", recorridos), ticksDelTramo,
-                PUNTO_FALLIDO_TICKS / (60 * 20));
+                goalsCorriendo.toString().trim(), String.format("%.1f", recorridos), String.format("%.1f", andado),
+                ticksDelTramo, PUNTO_FALLIDO_TICKS / (60 * 20));
     }
 
     /** El nombre corto (sin {@code Block{minecraft:...}}) del bloque de una celda, para los avisos del log. */
