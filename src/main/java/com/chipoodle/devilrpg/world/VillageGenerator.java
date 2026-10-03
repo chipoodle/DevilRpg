@@ -388,6 +388,13 @@ public final class VillageGenerator {
         // AUTOCOMPROBACIÓN (guardia del bug de los faroles flotantes): si algo quedó colgado del aire, sale en el log.
         auditarFarolesFlotantes(level, center);
 
+        // I182 · Y EL CIMIENTO, TAMBIÉN AL FINAL DE LA CONSTRUCCIÓN (30-sep-2026, medido en el registro del jugador).
+        // Va aquí y no antes porque **la mina** se cava en esta misma pasada y **vuelve a excavar** lo que se rellenara
+        // antes —es el mismo problema de orden que ya hubo que arreglar en la reparación—. Con esto, una aldea **nueva**
+        // (no solo una migrada) nace con el fondo sólido: era el «boquete junto a la parcela» que el jugador veía en su
+        // mundo nuevo, mientras el arnés —que mide sobre su guardado viejo, y ése sí migra— lo daba por arreglado.
+        afianzarElSuelo(level, center, FENCE_RADIUS + 24, cotaDeLaPlaza(level, center));
+
         return terminarGrabacion();
     }
 
