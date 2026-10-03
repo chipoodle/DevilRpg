@@ -1011,6 +1011,15 @@ public final class VillageManager {
             // que recibirla también —y sobre todo— la noche del asedio (ver `atenderCamasDelPueblo`).
             if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i)) {
                 atenderCamasDelPueblo(level, target, i);
+                // I183 · Y LOS NOMBRES, TAMBIÉN EN EL ASEDIO (30-sep-2026 — lo reportó el jugador: *«no aparece arriba
+                // el nombre y profesión de los aldeanos»*). El nombrado (y con él la MARCA de «gente del pueblo», que
+                // es lo que da derecho a la etiqueta) vivía dentro de `tickVillageLife`, y esa función solo corre con
+                // la aldea **en paz**: ni bajo asedio ni con enemigos dentro. Como una aldea **nueva nace con su asedio
+                // inicial**, se quedaba **sin nombres y sin etiquetas** hasta ganarlo — y con los asaltantes que ahora
+                // corren y van a por los aldeanos, eso puede tardar mucho. Es el mismo criterio que las camas (arriba) y
+                // que el jugador ya dejó escrito: el nombre no es un privilegio de la paz. Es idempotente y barato (cada
+                // 10 s, y solo pone nombre a quien no lo tiene).
+                nombrarLaGenteDelPueblo(level, target);
             }
             if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)) {
                 if (saved.isSiegeResolved(i)) {
@@ -6042,6 +6051,21 @@ public final class VillageManager {
      * llamaba de una manera la conserva casi siempre) y se le <b>guarda</b> en sus datos: el nombre viaja con él en la
      * partida y no vuelve a cambiar. Los nombres ya asignados no se tocan.
      */
+    /**
+     * I183 · <b>Marca y nombra a la gente del pueblo</b>, aunque la aldea esté bajo asedio. Es idempotente: solo pone
+     * nombre a quien no lo tiene, y la marca ({@code DEL_PUEBLO_TAG}) es lo que da derecho a la etiqueta de la cabeza
+     * (nombre, oficio y lo que está haciendo). Existe separado de {@code tickVillageLife} porque esa función —y con ella
+     * el nombrado— solo corre con la aldea <b>en paz</b>, y una aldea nueva nace con su asedio inicial.
+     */
+    private static void nombrarLaGenteDelPueblo(ServerLevel level, BlockPos center) {
+        List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class,
+                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 16));
+        if (!aldeanos.isEmpty()) {
+            repartirNombres(aldeanos);
+        }
+    }
+
+    /** Marca a los aldeanos del pueblo y les reparte un nombre libre (idempotente: a quien ya tiene, no se le toca). */
     private static void repartirNombres(List<Villager> aldeanos) {
         // ADOPCIÓN: los aldeanos que el latido ve en un pueblo del mod quedan MARCADOS como gente del pueblo, y esa
         // marca es la que les da derecho a la etiqueta (nombre y oficio). Un aldeano de una aldea de vanilla no pasa
