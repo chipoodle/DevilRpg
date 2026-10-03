@@ -134,6 +134,12 @@ public final class VillageGenerator {
 
     /** Esquinas de las <b>tres</b> parcelas de la granja (relativas al centro) y tamaño de cada parcela. */
     private static final int[][] FARM_PLOTS = {{-30, 14}, {10, 4}, {-28, 34}};
+
+    /** <b>Cuántas parcelas de cultivo tiene el pueblo</b> (I179): lo necesita quien tiene que recorrer sus compuertas
+     *  sin poder ver la tabla de parcelas, que es privada. */
+    public static int numeroDeParcelas() {
+        return FARM_PLOTS.length;
+    }
     /** Ancho de la parcela (columnas de cultivo). */
     public static final int PLOT_WIDTH = 9;
     /**

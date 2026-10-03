@@ -2695,6 +2695,14 @@ public final class VillageManager {
         for (Villager villager : level.getEntitiesOfClass(Villager.class,
                 new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 16))) {
             desatascarSiEstaEncajado(villager);
+            // I179 · EL CENTRO DEL PUEBLO, APUNTADO EN EL ALDEANO (30-sep-2026). Es lo que permite abrir sus portones
+            // CONOCIDOS (el del corral y los de las tres parcelas) cuando le separan de su recado, sin adivinar ni
+            // barrer medio pueblo: medido, el minero puede quedarse DENTRO del corral (628, 78, 566) con su destino en el
+            // almacén y el portón a 21 bloques, fuera de cualquier cuadro razonable. Se escribe una vez (o si cambia de
+            // aldea), no en cada tick.
+            if (villager.getPersistentData().getLong(CENTRO_TAG) != center.asLong()) {
+                villager.getPersistentData().putLong(CENTRO_TAG, center.asLong());
+            }
             // I171 · Y SI SE LE HA PERDIDO EL RUMBO, SE LE DEVUELVE (30-sep-2026). Medido con el banco rápido: los
             // avisos que quedaban decían `cerebro=-`, o sea el aldeano PARADO con el recado en pie porque alguien le
             // había borrado el destino del cerebro. Ver `devolverElRumboSiSeLePerdio`.
@@ -5877,6 +5885,8 @@ public final class VillageManager {
      * aldeanos de las aldeas de vanilla (y los que andan sueltos) <b>no</b> la llevan y se quedan como siempre.
      */
     public static final String DEL_PUEBLO_TAG = "DevilRpgDelPueblo";
+    /** El centro del pueblo al que pertenece el aldeano (I179): sirve para abrir sus portones conocidos. */
+    public static final String CENTRO_TAG = "DevilRpgCentro";
     private static final String ACTIVIDAD_HORA_TAG = "DevilRpgActividadTick";
     /** Cuándo fue lo último que <b>hizo</b> el aldeano (un suceso), para dejar verlo unos segundos. */
     private static final String SUCESO_HORA_TAG = "DevilRpgSucesoTick";

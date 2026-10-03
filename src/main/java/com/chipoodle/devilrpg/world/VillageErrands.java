@@ -145,6 +145,29 @@ public final class VillageErrands {
         }
         datos.putLong("DevilRpgPuertasMiradas", ahora);
         BlockPos yo = villager.blockPosition();
+        // I179 · PRIMERO LOS PORTONES **CONOCIDOS** DEL PUEBLO (30-sep-2026, medido). El aldeano puede estar encerrado
+        // lejos de la puerta que le estorba: medido, el minero DENTRO del corral (628, 78, 566) con su recado en el
+        // almacén, y el portón del corral a **21 bloques** (fuera de cualquier cuadro). Pero la geometría es conocida —el
+        // portón del corral y los de las tres parcelas— así que se prueban ESOS primero: barato (una docena de celdas) y
+        // completo. Es el patrón de «conjunto de candidatas» que pide el diseño del nivel 3, en vez de adivinar.
+        long centroGuardado = datos.getLong(com.chipoodle.devilrpg.world.VillageManager.CENTRO_TAG);
+        if (centroGuardado != 0L) {
+            BlockPos centro = BlockPos.of(centroGuardado);
+            int nivel = VillageGenerator.cotaDeLaPlaza(level, centro);
+            BlockPos portonDelCorral = VillageGenerator.portonDelCorral(centro, nivel);
+            if (portonDelCorral != null && mirarYQuizáAbrir(level, portonDelCorral, yo, recado)) {
+                return;
+            }
+            for (int i = 0; i < VillageGenerator.numeroDeParcelas(); i++) {
+                for (BlockPos compuerta : VillageGenerator.portonesDeLaParcela(centro, i, nivel)) {
+                    if (mirarYQuizáAbrir(level, compuerta, yo, recado)) {
+                        return;
+                    }
+                }
+            }
+        }
+        // Y DESPUÉS, LAS PUERTAS DE ALREDEDOR (las casas, la taberna, el almacén): un cuadro de radio 8 que cubre de
+        // sobra una parcela de 9×9.
         for (BlockPos p : BlockPos.betweenClosed(yo.offset(-8, -2, -8), yo.offset(8, 2, 8))) {
             if (mirarYQuizáAbrir(level, p.immutable(), yo, recado)) {
                 return; // con una que se abra, ya se sigue caminando
