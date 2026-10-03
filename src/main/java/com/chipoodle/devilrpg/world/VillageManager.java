@@ -4384,6 +4384,13 @@ public final class VillageManager {
             villager.getNavigation().stop();
             villager.teleportTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D);
             villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            // I181 · Y EL RESCATE CUENTA COMO AVANCE (30-sep-2026, medido). El rescate baja al aldeano a la plaza, pero
+            // su goal **no se enteraba** y seguía sumando atasco con el aldeano ya en la calle: se rendía igual y
+            // aparcaba su recado (medido con el minero: `Ximeno (Minero) / Guardando lo suyo`, atascado dentro de una
+            // casa en 605, 79, 586, rescatado a la plaza… y rendición). Aquí se apunta el rescate y los ayudantes de
+            // progreso (`avanzaPorLaRuta`, `laRutaAvanzoHacePoco`) lo cuentan como movimiento durante unos segundos, así
+            // que el goal le da tiempo a rehacer el camino en vez de darse por vencido en el mismo tick.
+            villager.getPersistentData().putLong(RESCATE_TICK, villager.level().getGameTime());
             DevilRpg.LOGGER.info("[Village] {} estaba atascado dentro de una casa en {}: lo bajo a la plaza ({})",
                     villager.getUUID(), estaba.toShortString(), destino.toShortString());
         }
@@ -5221,6 +5228,10 @@ public final class VillageManager {
 
     /** Cuándo avanzó por última vez su ruta (I172). */
     private static final String AVANCE_TICK_TAG = "DevilRpgAvanceTick";
+    /** Cuándo se le rescató de dentro de una casa (I181). */
+    private static final String RESCATE_TICK = "DevilRpgRescateTick";
+    /** Cuánto cuenta el rescate como «está avanzando» (5 s, para que le dé tiempo a rehacer el camino). */
+    private static final long RESCATE_CUENTA = 100L;
 
     /**
      * I172 · <b>¿ESTÁ ANDANDO O ESTÁ ATASCADO?</b> — «la ruta no ha avanzado en los últimos N ticks» (30-sep-2026).
@@ -5238,6 +5249,10 @@ public final class VillageManager {
     public static boolean laRutaAvanzoHacePoco(Villager villager, int ticks) {
         CompoundTag datos = villager.getPersistentData();
         long ahora = villager.level().getGameTime();
+        // I181: el rescate de dentro de una casa cuenta como avance (mismo motivo que en `avanzaPorLaRuta`).
+        if (ahora - datos.getLong(RESCATE_TICK) < RESCATE_CUENTA) {
+            return true;
+        }
         var ruta = villager.getNavigation().getPath();
         if (ruta != null && !ruta.isDone()
                 && (!datos.contains(AVANCE_TAG) || ruta.getNextNodeIndex() > datos.getInt(AVANCE_TAG))) {
@@ -5447,6 +5462,11 @@ public final class VillageManager {
      */
     public static boolean avanzaPorLaRuta(Villager villager) {
         CompoundTag datos = villager.getPersistentData();
+        // I181: si acaban de RESCATARLE (le bajaron a la plaza desde dentro de una casa), eso cuenta como avance: el
+        // goal no debe rendirse en el mismo tick en que le han puesto en la calle.
+        if (villager.level().getGameTime() - datos.getLong(RESCATE_TICK) < RESCATE_CUENTA) {
+            return true;
+        }
         var ruta = villager.getNavigation().getPath();
         if (ruta == null || ruta.isDone()) {
             datos.remove(AVANCE_TAG);
