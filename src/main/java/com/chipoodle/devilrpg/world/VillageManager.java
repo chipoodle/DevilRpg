@@ -5241,6 +5241,12 @@ public final class VillageManager {
             datos.putDouble("DevilRpgAndado", 0.0D);
             datos.putDouble("DevilRpgUltimoX", villager.getX());
             datos.putDouble("DevilRpgUltimoZ", villager.getZ());
+            // I176 · ¿EL DESTINO VA CAMBIANDO, O ES SIEMPRE EL MISMO? (30-sep-2026). El lote largo dio el dato que
+            // faltaba: los aldeanos que se rinden **andan 35-46 bloques** (netos) con ruta válida, o sea que no es que
+            // no les empujen: **caminan mucho y no llegan**. Con esto se distingue «va de un sitio a otro» (muchos
+            // destinos) de «da vueltas alrededor del mismo» (un destino y muchos bloques), que es lo que apunta el
+            // navegador cuando da por LLEGADO con un bloque de tolerancia y el goal dice que aún no.
+            datos.putInt("DevilRpgDestinos", datos.getInt("DevilRpgDestinos") + 1);
         }
         datos.putLong(RUMBO_POS, objetivo.asLong());
         datos.putFloat(RUMBO_VEL, velocidad);
@@ -5700,19 +5706,21 @@ public final class VillageManager {
         double recorridos = -1.0D;
         long ticksDelTramo = -1L;
         double andado = -1.0D;
+        int destinos = -1;
         CompoundTag datosTraza = villager.getPersistentData();
         if (datosTraza.contains(TRAMO_POS)) {
             BlockPos inicioDelTramo = BlockPos.of(datosTraza.getLong(TRAMO_POS));
             recorridos = Math.sqrt(inicioDelTramo.distToCenterSqr(villager.position()));
             ticksDelTramo = villager.level().getGameTime() - datosTraza.getLong(TRAMO_TICK);
             andado = datosTraza.getDouble("DevilRpgAndado"); // I175: el camino ANDADO (neto vs total distingue «parado» de «dando vueltas»)
+            destinos = datosTraza.getInt("DevilRpgDestinos"); // I176: cuántos destinos distintos le ha dado el goal
         }
         DevilRpg.LOGGER.info("[Village] {} no consigue llegar a {} desde {} (ruta={}; {}) etiqueta=\"{}\" cerebro={}"
-                        + " nav=[{}] goals=[{}] tramo=[neto {} bloques, ANDADO {} bloques, en {} ticks]: lo deja por {}"
-                        + " min y sigue con lo demas",
+                        + " nav=[{}] goals=[{}] tramo=[neto {} bloques, ANDADO {} bloques, {} destinos, en {} ticks]:"
+                        + " lo deja por {} min y sigue con lo demas",
                 villager.getUUID(), p.toShortString(), desde.toShortString(), ruta, donde, etiqueta, cerebro, navegacion,
                 goalsCorriendo.toString().trim(), String.format("%.1f", recorridos), String.format("%.1f", andado),
-                ticksDelTramo, PUNTO_FALLIDO_TICKS / (60 * 20));
+                destinos, ticksDelTramo, PUNTO_FALLIDO_TICKS / (60 * 20));
     }
 
     /** El nombre corto (sin {@code Block{minecraft:...}}) del bloque de una celda, para los avisos del log. */
