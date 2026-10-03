@@ -5143,17 +5143,26 @@ public final class VillageManager {
         var nav = villager.getNavigation();
         if (nav.getPath() == null || nav.getPath().isDone()) {
             boolean va = nav.moveTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D, velocidad);
-            // TRAZA DE DIAGNÓSTICO (30-sep-2026): la pregunta que queda es si el aldeano está ATASCADO DE VERDAD o si
-            // su goal se rinde antes de tiempo, y eso se contesta con dos datos: ¿se le devolvió el rumbo? y ¿la
-            // navegación encontró camino? Se apunta como mucho una vez cada 2 segundos por aldeano para no inundar.
+            // ¿SE LE CAE EL CAMINO UNA Y OTRA VEZ? (I175, 30-sep-2026). Si el relleno tiene que volver a pedir camino en
+            // ticks seguidos, es que alguien se lo para entre medias: eso explicaría que un aldeano con ruta de 23 nodos
+            // recorra medio bloque en 9 segundos. Se cuentan los rellenos seguidos y se avisa al pasar de 40 (2 s).
             CompoundTag traza = villager.getPersistentData();
             long ahora = level.getGameTime();
+            int seguidos = traza.getInt("DevilRpgRellenosSeguidos") + 1;
+            traza.putInt("DevilRpgRellenosSeguidos", seguidos);
+            if (seguidos == 40 || seguidos % 200 == 0) {
+                DevilRpg.LOGGER.info("[Village] RUMBO: a {} se le ha caido el camino {} ticks seguidos (destino {},"
+                                + " desde {}; moveTo={})", villager.getUUID(), seguidos, destino,
+                        villager.blockPosition().toShortString(), va);
+            }
             if (!va && ahora - traza.getLong("DevilRpgRumboAviso") > 40L) {
                 traza.putLong("DevilRpgRumboAviso", ahora);
                 DevilRpg.LOGGER.info("[Village] RUMBO: {} no tiene camino a {} desde {} (moveTo=false; el cerebro le"
                                 + " borró el rumbo y la navegación tampoco encuentra camino libre)",
                         villager.getUUID(), destino, villager.blockPosition());
             }
+        } else {
+            villager.getPersistentData().putInt("DevilRpgRellenosSeguidos", 0); // tiene camino: no se le cae
         }
     }
 
@@ -5747,6 +5756,16 @@ public final class VillageManager {
         // sitio al que iba, el paseo lo devolvía a esa misma casilla — que al llegar es SU PROPIA CASILLA, que es
         // "dar vueltas sobre sí mismo". Parar es dejar de caminar Y de mirar a un sitio ya resuelto.
         villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET);
+        // TRAZA DE DIAGNÓSTICO (I175, 30-sep-2026): ¿quién le para el camino a un aldeano que TIENE recado? La
+        // pregunta que queda es por qué uno con ruta de 23 nodos recorre medio bloque en 9 segundos, y el único sitio
+        // del mod que para la navegación es éste. Si un goal llama a `parar` con su faena en marcha, aquí se ve (y con
+        // el goal que lo pidió, en el aviso). Se limita a una traza cada 2 s por aldeano.
+        if (tieneUnGoalDelModActivo(villager)
+                && villager.level().getGameTime() - villager.getPersistentData().getLong("DevilRpgPararAviso") > 40L) {
+            villager.getPersistentData().putLong("DevilRpgPararAviso", villager.level().getGameTime());
+            DevilRpg.LOGGER.info("[Village] PARAR: {} para su camino en {} con la faena EN MARCHA (goal del mod activo)",
+                    villager.getUUID(), villager.blockPosition().toShortString());
+        }
         // Y el apunte del rumbo (I171): parar es parar. Si no se borra, el latido le devolvería el destino en cuanto el
         // goal lo pida otra vez en el mismo tick, y el aldeano seguiría yendo a un sitio ya resuelto.
         villager.getPersistentData().remove(RUMBO_POS);
