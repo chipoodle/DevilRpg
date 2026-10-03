@@ -4715,23 +4715,30 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
-### I180 · **UN SOLO DESTINO POR TICK: EL PRIMERO QUE ESCRIBE, MANDA** (30-sep-2026)
+### I180 · **RETIRADA** (30-sep-2026): «un destino por tick», montada sobre una lectura mía equivocada
 
-**La encontró el instrumento de la ronda anterior**, en la mejor corrida con todo puesto (123, **1 aviso**), con el dato
-que añade I176:
+**La premisa era falsa** ✗: leí «**36 destinos en 8 ticks**» como *4-5 cambios por tick* y construí encima un candado
+(«el primero que escribe manda»). Pero **el contador no se reinicia con el tramo**: son los destinos de **toda la faena**
+y «8 ticks» es solo **cuándo cambió el último** → eran ~**0,1 por tick**, no 4-5 ✗.
 
-```
-tramo: neto 0.5 bloques, ANDADO 0.0 bloques, 36 destinos, en 8 ticks
-```
+**Medido**: tanda 127 (con I180) = **2 avisos**, con la referencia de la tanda buena en **2,0** → **sin evidencia de
+mejora** ✗; y con un **daño plausible** y real: si el primer destino del tick es un **paso intermedio** (el «tirón» hacia
+el almacén), el destino de verdad **se ignora** y el aldeano va a donde no debe. **Se retira**, y el código lo dice.
 
-**36 destinos distintos en 8 ticks y CERO bloques andados** ✗: **4-5 destinos por tick**. Es la **clase E** (dos jefes para
-el mismo rumbo) pasando **dentro del mismo tick**: varios goals del mod —el del recojo, el de la faena, el de los
-portones— **y** el «tirón» hacia el almacén le escriben el destino a la vez, cada uno con su celda, y el aldeano se queda
-**clavado sin poder dar un paso**.
+**Lo que sí salió de esa ronda** (y se queda): **I181**, que ataca la causa que los datos sí sostenían —el aldeano
+**atascado dentro de una casa** (a `y=79`, con el pueblo andando a 78), **rescatado** por el mod a la plaza, y su goal
+**rindiéndose igual** porque el rescate no contaba como avance.
 
-**ARREGLO**: en `ponerRumbo`, si ya se le ha dicho a dónde ir **en este tick**, los demás se ignoran hasta el siguiente.
-Sin despachador, sin prioridades y sin estado nuevo: **una línea** (es la versión mínima y robusta de «un solo dueño del
-rumbo», la que **no** pelea con nada — a diferencia del despachador M1, que se probó y midió peor).
+### I181 · **EL RESCATE DE DENTRO DE UNA CASA CUENTA COMO AVANCE** (30-sep-2026)
+
+Medido con el minero (`Ximeno (Minero) / Guardando lo suyo`): se queda **dentro de una casa en 605, 79, 586** ✗ (el
+pueblo anda a 78), el mod lo **rescata** y lo baja a la plaza ✓… y su goal **se rendía igual** ✗, porque seguía sumando
+atasco con el aldeano **ya en la calle** y aparcaba el recado en el mismo tick.
+
+**ARREGLO**: el rescate se apunta (`RESCATE_TICK`) y los ayudantes de progreso (`avanzaPorLaRuta`,
+`laRutaAvanzoHacePoco`) lo cuentan como **avance durante 5 segundos**, para que el goal tenga tiempo de **rehacer el
+camino** en vez de darse por vencido. Es la pieza que faltaba del «desatasco por encajamiento» del diseño: **el desatasco
+tiene que contarle al goal**, o el goal tira la toalla justo después de que le salven.
 
 ### I179 · LOS PORTONES **CONOCIDOS** DEL PUEBLO, PRIMERO (30-sep-2026)
 
