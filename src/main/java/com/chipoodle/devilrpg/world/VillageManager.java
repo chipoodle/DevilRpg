@@ -5250,9 +5250,21 @@ public final class VillageManager {
 
     /** Escribe el destino en el cerebro del aldeano ({@code WALK_TARGET}/{@code LOOK_TARGET}), sin más. */
     private static void ponerRumbo(Villager villager, BlockPos objetivo, float velocidad) {
+        CompoundTag datos = villager.getPersistentData();
+        // I180 · UN SOLO DESTINO POR TICK: EL PRIMERO QUE ESCRIBE, MANDA (30-sep-2026, medido).
+        // Medido con el aviso nuevo (I176): un aldeano que se rinde tenía **36 destinos distintos en 8 ticks** y **CERO
+        // bloques andados** — porque varios goals del mod (el del recojo, el de la faena, el de los portones…) y el
+        // «tirón» hacia el almacén le escriben el destino **en el mismo tick**, cada uno con su celda, y el aldeano se
+        // queda clavado sin poder dar un paso (es la clase E: dos jefes para el mismo rumbo). Aquí se corta en el sitio
+        // más barato: **el primero que escribe en un tick manda**, y los demás se ignoran hasta el tick siguiente. No
+        // hay despachador, ni prioridades, ni estado nuevo: una línea y el destino deja de bailar.
+        long ahora = villager.level().getGameTime();
+        if (datos.getLong(RUMBO_TICK) == ahora && datos.contains(RUMBO_POS)
+                && datos.getLong(RUMBO_POS) != objetivo.asLong()) {
+            return; // ya le han dicho a dónde ir en este tick: no se le cambia
+        }
         // I171: se apunta a dónde y cuándo, para poder DEVOLVERLE el rumbo si el cerebro se lo borra (ver
         // `devolverElRumboSiSeLePerdio`). El apunte es del propio aldeano y caduca solo.
-        CompoundTag datos = villager.getPersistentData();
         // I173: y si el destino es NUEVO (otro tramo), se apunta desde dónde arranca ese tramo. Es lo que permite
         // contestar «¿se movió?» cuando el goal se rinde, que es la pregunta que el aviso no sabía responder.
         if (!datos.contains(RUMBO_POS) || datos.getLong(RUMBO_POS) != objetivo.asLong()) {
