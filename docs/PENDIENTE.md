@@ -215,6 +215,43 @@ tanda es un build distinto, y eso es lo que hace comparable la tabla):
 **Y lo que NO queda cerrado, dicho sin adornos**: la etiqueta `Guardando lo suyo` (1-3 por corrida), cuya causa ya está
 medida (clase E dentro del tick) y arreglada (I180), **pendiente de la medición de 127-130**.
 
+#### 8.bis.0.quinquies · **CIERRE DE LA SESIÓN** (30-sep-2026, ronda 24)
+
+**Lo medido, y lo que se retiró por medirse mal** (las tres retiradas están escritas, con sus números, en
+`docs/aldea-invariantes.md`):
+
+| intento | corridas | media | veredicto |
+|---|---|---|---|
+| I168 (ganadero a una casilla de pie al lado) | 1 · 2 · 4 · 1 | **2,0** | se queda ✓ |
+| I169+I170+I171 (puertas, ruta, rumbo) | 5 · 4 · 1 · 8 | 4,5 | I171 se estrechó con I177 ✓ |
+| I172 (atasco «por tiempo») | 1 · 2 · 4 | 2,33 | **RETIRADA** ✗ |
+| I174 (mirada en el recado) | 2 · 1 · 2 | 1,67 | **RETIRADA** ✗ |
+| I180 («un destino por tick») | 2 · 6 | ~4 | **RETIRADA** ✗ |
+| I177+I178+I179 (rumbo solo si está parado, puertas conocidas) | 123 | **1** | se queda ✓ |
+| **I181** (el rescate cuenta como avance) | — | — | **medido con el banco rápido** ✓ |
+
+**La medición del BUILD FINAL** (con I181 dentro y I180 fuera), banco rápido, cuatro corridas de 3 minutos:
+**0 · 1 · 1 · 1** → **media 0,75** ✓ (la mejor de la sesión), con las etiquetas **rotando** (`Guardando lo suyo` ×2,
+`Recogiendo el corral` ×1) y el pueblo trabajando (granja 2-6, ganado 3-5, pescador 2, **herrería 22-33**, cocina 4,
+minero 9-16, leñador 0-5 por 3 minutos).
+
+**Lo que queda abierto, con nombre y sin adornos**:
+
+1. **`Guardando lo suyo`** (1-3 por corrida de 20 min): la causa está medida —el aldeano se queda **dentro de una casa a
+   `y=79`**, el mod lo **rescata** a la plaza y su goal **se rendía igual**— y el arreglo (**I181**) está dentro y
+   medido con el banco rápido. **No hay 4 corridas largas de I181**: el tiempo de esta sesión llegó hasta aquí.
+2. **El residuo general**: 1-2 avisos por corrida de 20 minutos sobre **cientos de recados** (≈1 %) y con las etiquetas
+   **rotando** de una corrida a otra — no familias sistemáticas, sino tropiezos sueltos. **El pueblo trabaja**: 44-57
+   labores de granja, 47-50 de ganado, 174-265 de herrería y 618-666 de guardia por corrida.
+3. **Lo que el jugador reportó, todo cerrado**: los ítems de la parcela (el mod los tiraba ✗, I166), el hueco de la choza
+   del minero (**verificado en el terreno** ✓, I166), los zombis lentos y que no atacaban aldeanos (0,071 → 0,23 y
+   prioridad 0 ✓, I165) y los aldeanos que no huían (el pánico no podía moverlos ✗, `VillagerFleeGoal` ✓).
+
+**Y la lección que más vale de todo esto**: durante dos semanas el instrumento costaba **80 minutos por pregunta** y el
+aviso de rendición **fotografiaba el después** en vez del fallo. Con el **banco rápido** (3 min) y los tres datos nuevos
+del aviso (**neto**, **ANDADO** y **destinos**), lo que llevaba cuatro intentos fallidos se encontró en minutos — y tres
+de mis propios arreglos cayeron en cuanto se midieron.
+
 Sacado **gratis** de los registros del lote largo 115-118 (sin lanzar nada): de **18 rendiciones**, **15** se producen con
 el aldeano a **3-8 bloques** de su destino y **todas con `dy=0`** (la altura está bien, no es la cota). O sea: **no se
 pierden por el camino: se quedan a las puertas.**
