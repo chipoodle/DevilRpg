@@ -4715,6 +4715,45 @@ el `gradlew` no mata el servidor) y los **dos** servidores escribieron en el **m
 asustaron eran del **código viejo** de la otra corrida. El trámite de medida ya lleva el paso obligatorio: **cero
 servidores vivos antes de lanzar**, y borrar el `latest.log` **sin** silenciar el error.
 
+### I180 · **UN SOLO DESTINO POR TICK: EL PRIMERO QUE ESCRIBE, MANDA** (30-sep-2026)
+
+**La encontró el instrumento de la ronda anterior**, en la mejor corrida con todo puesto (123, **1 aviso**), con el dato
+que añade I176:
+
+```
+tramo: neto 0.5 bloques, ANDADO 0.0 bloques, 36 destinos, en 8 ticks
+```
+
+**36 destinos distintos en 8 ticks y CERO bloques andados** ✗: **4-5 destinos por tick**. Es la **clase E** (dos jefes para
+el mismo rumbo) pasando **dentro del mismo tick**: varios goals del mod —el del recojo, el de la faena, el de los
+portones— **y** el «tirón» hacia el almacén le escriben el destino a la vez, cada uno con su celda, y el aldeano se queda
+**clavado sin poder dar un paso**.
+
+**ARREGLO**: en `ponerRumbo`, si ya se le ha dicho a dónde ir **en este tick**, los demás se ignoran hasta el siguiente.
+Sin despachador, sin prioridades y sin estado nuevo: **una línea** (es la versión mínima y robusta de «un solo dueño del
+rumbo», la que **no** pelea con nada — a diferencia del despachador M1, que se probó y midió peor).
+
+### I179 · LOS PORTONES **CONOCIDOS** DEL PUEBLO, PRIMERO (30-sep-2026)
+
+Medido en la corrida 119: los dos avisos de `Ximeno (Minero) / Guardando lo suyo` eran el minero **dentro del corral**
+(628, 78, 566) con su recado en el almacén (614, 78, 587) — y el **portón del corral a 21 bloques**, fuera del cuadro de
+radio 8 de I178. Pero la geometría es **conocida**: el portón del corral y los de las tres parcelas. Ahora se prueban
+**esos primero** (una docena de celdas) y se abre el que de verdad separa al aldeano de su recado; el cuadro de radio 8 se
+queda después, para las puertas de las **casas** (taberna, almacén). El centro del pueblo se apunta en el aldeano **una
+sola vez** (`CENTRO_TAG`), no en cada tick. Es el patrón de **«conjunto de candidatas»** del diseño del nivel 3.
+
+**Y un dato de la misma corrida que conviene no perder**: los depósitos en el almacén **funcionan** (37 líneas de
+`el minero guardo N cosa(s) de su oficio en el almacen`) — el problema era **salir del corral**, no el depósito.
+
+### I178 · SE MIRAN **TODAS** LAS PUERTAS DE ALREDEDOR, NO SOLO LAS DEL CAMINO RECTO (30-sep-2026)
+
+El sondeo por la **línea** al recado fallaba **justo en el caso que importa**: el aldeano pegado a la valla de **su
+parcela** con el destino **a un bloque** y `rutaViva=3 nodos alcanzaba=NO` (medido en el portón que abre el mod:
+*«Isidoro (Granjero) / Sembrando: abro el porton 545, 78, 584 · destino=544, 78, 585»*), porque la compuerta que estorba
+está en el **punto medio del lado**, no en la recta. Ahora se mira un cuadro de **radio 8** alrededor del aldeano (cubre de
+sobra una parcela de 9×9) y se abre la que **de verdad separa**. El coste se paga **una vez cada 10 ticks** por aldeano —
+el barrido completo en **cada** tick fue lo que ya me mordió antes.
+
 ### I177 · EL RELLENO DEL RUMBO **SOLO ENTRA SI EL ALDEANO ESTÁ PARADO** (30-sep-2026)
 
 **Ésta era una regresión mía**, y la destapó el lote largo. La tanda con **solo I168** dio **1 · 2 · 4 · 1** (media 2,0) y
