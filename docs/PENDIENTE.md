@@ -171,7 +171,49 @@ por corrida**, con el recuento **por etiqueta** y las trazas de la reparación),
    también **el trabajo del pueblo** (sucesos por oficio), que tiene más señal; pero a 3 minutos también es pequeño. **El
    banco rápido sirve para ENCONTRAR el fallo; para confirmar la mejora hace falta la tanda larga de 4.**
 
-#### 8.bis.0.ter · **SE QUEDAN A LAS PUERTAS** (30-sep-2026, la pista que cierra el círculo)
+#### 8.bis.0.quater · **ACTA DE CIERRE DE LAS ETIQUETAS** (30-sep-2026)
+
+**Lo que pedía el objetivo, etiqueta a etiqueta, con la evidencia de las tandas de 4 corridas de 20 minutos** (cada
+tanda es un build distinto, y eso es lo que hace comparable la tabla):
+
+| etiqueta del objetivo | referencia | **estado medido** | quién lo arregló |
+|---|---|---|---|
+| `Yendo a la cocina` | 26 | **0** ✓ | I156/I161 + el patrón de casilla de pie |
+| `Labro/Labrando la huerta` | 14 | **0-1** ✓ | I154 (a una celda que no se pisa, no se camina) + I167 |
+| `Sembrando` | 11 | **0-1** ✓ | I154 + la cosecha entera (I166) |
+| `Guardo lo suyo` / `Trajo … del almacén a la despensa` | 3 | **0** ✓ | I166 (el sobrante al almacén, nunca al suelo) |
+| `Buscando recambios` | 3 | **0-2** ✓ | I154 + I169/I178/I179 (las puertas) |
+| `Yendo a la arboleda` | — | **0** ✓ | el leñador por tramos (I112) |
+| `Bajando lo del corral` | 35 | **0** ✓ | I154 + el ganadero a una casilla de pie al lado (I168) |
+| `Recogiendo lo suyo` | 40 | **0** ✓ | I154 + la ruta manda (I170) |
+| `Yendo a la taberna` | 29 | **0** ✓ | I158 (el atasco se mide contra el escalón) |
+| `Sacrificando un animal` | 15 | **5 → 0** ✓ | I168 (casilla de pie al lado del animal) |
+| `Guardando lo suyo` | 5 | **1-3** ✗ | I179/I180 (en medición) |
+
+**Totales por tanda** (4 corridas de 20 minutos cada una, misma aldea y mismo arnés):
+
+| tanda | qué llevaba | total | media/corrida |
+|---|---|---|---|
+| 111-114 | I168 | 1 · 2 · 4 · 1 | **2,0** |
+| 115-118 | + I169 + I170 + I171 | 5 · 4 · 1 · 8 | 4,5 ✗ (la regresión de mi relleno, I177) |
+| 123 | todo menos I180 | **1** | — |
+
+**Las cinco verdades que dejó esta sesión** (valen más que los arreglos, porque evitan repetir el camino):
+
+1. **El aviso de rendición era una autopsia** ✗: imprimía el estado **después** de rendirse. Se persiguió un
+   `cerebro=-` durante dos rondas creyendo que era la causa. Ya dice el **tramo** (neto, **ANDADO** y **destinos**).
+2. **La navegación nunca falla** ✓: la traza de «sin camino» **no saltó ni una vez** en dos corridas.
+3. **«Anda mucho y no llega»** ✓: 15 de 18 rendiciones ocurrían a **3-8 bloques** del destino y **todas con `dy=0`** —
+   se quedan **a las puertas**, y la compuerta que estorba suele estar en el **punto medio del lado**, no en la recta.
+4. **La clase E estaba pasando dentro del mismo tick** ✗: un aldeano con **36 destinos en 8 ticks** y **0 bloques
+   andados** — varios goals y el «tirón» escribiéndole el destino a la vez. **I180**: el primero que escribe manda.
+5. **El cuello de botella era el instrumento** ✓: **80 minutos por pregunta** convertían cada intento en una tarde. Con
+   `tools/arnes/tanda-rapida.ps1` (3 minutos, con etiquetas y trazas) y el corte del mundo (`slice_mina.py`) se
+   encontraron en minutos cosas que llevaban cuatro intentos: **la holgura de ±1 del anillo** que dejaba el borde de la
+   choza del minero hueco, y que **el aviso no fotografiaba el fallo sino el después**.
+
+**Y lo que NO queda cerrado, dicho sin adornos**: la etiqueta `Guardando lo suyo` (1-3 por corrida), cuya causa ya está
+medida (clase E dentro del tick) y arreglada (I180), **pendiente de la medición de 127-130**.
 
 Sacado **gratis** de los registros del lote largo 115-118 (sin lanzar nada): de **18 rendiciones**, **15** se producen con
 el aldeano a **3-8 bloques** de su destino y **todas con `dy=0`** (la altura está bien, no es la cota). O sea: **no se
