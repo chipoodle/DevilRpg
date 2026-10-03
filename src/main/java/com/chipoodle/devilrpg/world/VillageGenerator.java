@@ -6182,6 +6182,13 @@ public final class VillageGenerator {
         // Y, por último, se TAPAN los huecos del suelo (ver sellarSuelo): con el terreno llano, un barranco o una
         // cueva justo debajo dejan agujeros en la plaza por los que se caen los aldeanos.
         sellarSuelo(level, center, radius, baseY);
+        // I182 · Y EL CIMIENTO, TAMBIÉN AL CONSTRUIR LA ALDEA DE CERO (30-sep-2026, medido en el registro del jugador).
+        // `afianzarElSuelo` solo se llamaba desde el camino de REPARACIÓN (aldeas migradas), así que **una aldea nueva
+        // se generaba sin cimiento** y su fondo quedaba hueco: en su propio registro se ve la aldea migrada con
+        // `CIMIENTO ... puestos 73612 bloques` y la **aldea nueva** (566, 65, 598) con `tapados 28 bloques de huecos del
+        // suelo` y **ninguna** línea de cimiento — y el jugador veía el boquete junto a la parcela. Va aquí, al final del
+        // terreno (después del talud y del sellador), para que nada lo vuelva a excavar.
+        afianzarElSuelo(level, center, FENCE_RADIUS + 24, baseY);
     }
 
     /**
