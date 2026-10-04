@@ -287,6 +287,57 @@ y **no había regresión** alguna de I182/I183 ✓. El coste real de la mudanza 
    (`Sacrificando un animal` en la 46) → tropiezos sueltos, no familias.
 3. **Documentar** en el `LEEME` que el banco **exige** el cierre limpio (hecho: es el paso 0 del protocolo).
 
+### 8.bis.0.septies · **LAS 4 CORRIDAS LARGAS DEL PUEBLO ASENTADO, y la ráfaga del minero (I185)**
+
+Hechas con `tools/arnes/tanda-larga.ps1 47 48 49 50 -Conservar`, cuatro corridas de **20 minutos** sobre el pueblo
+**ya asentado** (sin migración ✓, con cierre limpio ✓ confirmado en cada registro):
+
+| corrida | 47 | 48 | 49 | 50 | media |
+|---|---|---|---|---|---|
+| avisos | **1** ✓ | **13** ✗ | **9** ✗ | **12** ✗ | **8,75** ✗ |
+
+**Y el residuo NO son tropiezos sueltos** ✗ — **es UN aldeano atrapado soltando ráfaga** ✓, que es lo que había que
+descubrir aquí:
+
+```
+corrida 48:  9x  Ximeno (Minero) / Volviendo a la caseta   desde 603, 76, 537  (y=76, calle a 78: DOS por debajo)
+             2x  Zacarias (Ganadero) / Cuidando el ganado
+             2x  guardias / Yendo a entrenar
+```
+
+**El patrón es el de SIEMPRE**, y se ve comparando con **todos** los lotes guardados en `build/medida-tanda*.log`:
+en cada lote hay **un dominante** (`Eufemia (Ganadero)` en docenas de corridas viejas, con **30 · 50 · 80 · hasta 238**
+avisos ✗; hoy `Ximeno (Minero)`) y domina **`alcanza=NO`** ✗ (destino inalcanzable). Los lotes viejos daban **62 · 64 ·
+72 · 80 · 110 · 238**; los buenos de la sesión, **1 · 2 · 4 · 1 · 5 · 4 · 1 · 8**. O sea: **el trabajo de estas semanas
+se ve**, y lo que queda es **un atrapado por tanda**, no una familia de fallos por todas partes.
+
+**La causa raíz eran UNA línea** ✗ (en `rescatarAldeanosAtrapados`): la exención decía
+`getY() <= cota + 0.6` = **«por debajo de la calle = está en la calle»**, así que al minero metido en la **zanja de la
+boca de su mina** (`603, 76, 537`, calle 78 = **dos bloques por debajo**) **ninguna red lo rescataba** ✗ y su errand se
+reintentaba 9-13 veces ✗. **Verificado en el terreno**: la zanja es **idéntica en el guardado original del jugador** ✓
+(`run/saves/New World`, misma ranura 1×1 en `x=603`, mismo escalón), así que **no la causó el cimiento** ✓.
+
+**ARREGLO (I185)**: la exención es ahora una **banda** de un bloque por debajo de la calle (más el medio escalón de las
+losas por arriba), y quien esté más abajo cuenta como atrapado; el minero que **trabaja** abajo sigue igual, porque se
+mueve y además se exige que **no sepa volver** a la plaza.
+
+| mismo mundo asentado | antes | después (I185) |
+|---|---|---|
+| avisos por corrida de 3 min | **1 · 13 · 9 · 12** ✗ (largas) | **1 · 2 · 1** ✓ |
+| ráfaga del minero | **9-13** ✗ | **1** ✓ |
+| rescates | 0 | **2 · 0 · 1** ✓ (`estaba atascado (sin poder salir) en 520, 79, 594`) |
+
+**Lo que sigue abierto ahora**:
+
+1. **El único aviso que queda** es el minero **bajando a su mina** (`603, 75, 537` → `603, 61, 526`, ruta de 33 nodos):
+   se rinde **una vez** y ya no hay ráfaga ✓. Para quitarlo haría falta que el rescate dispare **antes** que el
+   presupuesto del errand (~16 s), o una red propia para «no consigo bajar»; **no medido todavía**.
+2. **`Guardando lo suyo` (I181)** sigue sin sus 4 corridas largas propias: en estas cuatro **no apareció ni una vez** ✓
+   (la etiqueta no salió en 47-50), así que o está cerrada de hecho o le toca otra tanda.
+3. **La zanja de la mina** (`x=603`, boca de la mina de la aldea, **1×1 y 2 de fondo**): es un problema de **mundo** ✗
+   (el aldeano no puede subir un escalón de 2). El rescate lo tapa ✓, pero lo suyo es **dejar un escalón** al construir
+   la mina. Anotado, sin medir.
+
 **Y la lección que más vale de todo esto**: durante dos semanas el instrumento costaba **80 minutos por pregunta** y el
 aviso de rendición **fotografiaba el después** en vez del fallo. Con el **banco rápido** (3 min) y los tres datos nuevos
 del aviso (**neto**, **ANDADO** y **destinos**), lo que llevaba cuatro intentos fallidos se encontró en minutos — y tres

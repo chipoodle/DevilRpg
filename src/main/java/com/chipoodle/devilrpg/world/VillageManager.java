@@ -4361,7 +4361,18 @@ public final class VillageManager {
                     // el arnés: la granjera Ursula congelada en 428,65,669 (cota 63), su parcela sin cosechar y sin
                     // poder llegar a su puesto (`no consigue llegar a 440,63,668` cada 5 min), con 36 plantas
                     // maduras esperando. Con el criterio de la altura de los pies, a los 30 s se le baja a la plaza.
-                    || villager.getY() <= cota + 0.6D) {
+                    //
+                    // I185 · Y POR DEBAJO DE LA CALLE TAMBIÉN SE ATRAPA (3-oct-2026, MEDIDO). Antes esto era
+                    // `getY() <= cota + 0.6`, es decir «por debajo de la calle = está en la calle», y por ahí se
+                    // escapaba JUSTO el caso medido: el minero Ximeno metido en la ZANJA de la boca de su mina
+                    // (`603, 76, 537`, con la calle a 78 = DOS bloques por debajo), con `alcanza=NO` a la caseta y a
+                    // la mina, `ANDADO 0.0` y **nueve** rendiciones seguidas en la corrida 48 (y 8 en la 49, y 3 en
+                    // la 50): ninguna red lo rescataba porque esta condición lo declaraba «en la calle». Ahora la
+                    // exención es una BANDA alrededor de la calle —el medio escalón de las losas por arriba y un
+                    // bloque por abajo— y quien esté más abajo que eso cuenta como atrapado como cualquier otro.
+                    // El minero que TRABAJA abajo no se ve afectado, y por dos razones: se mueve (su contador de
+                    // quieto no llega a ATRAPADO_TICKS) y además se exige que NO sepa volver a la plaza.
+                    || (villager.getY() <= cota + 0.6D && villager.getY() > cota - 1.6D)) {
                 ATRAPADOS.remove(villager.getUUID()); // en la calle (o descansando): no hay nada que rescatar
                 continue;
             }
@@ -4408,7 +4419,7 @@ public final class VillageManager {
             // progreso (`avanzaPorLaRuta`, `laRutaAvanzoHacePoco`) lo cuentan como movimiento durante unos segundos, así
             // que el goal le da tiempo a rehacer el camino en vez de darse por vencido en el mismo tick.
             villager.getPersistentData().putLong(RESCATE_TICK, villager.level().getGameTime());
-            DevilRpg.LOGGER.info("[Village] {} estaba atascado dentro de una casa en {}: lo bajo a la plaza ({})",
+            DevilRpg.LOGGER.info("[Village] {} estaba atascado (sin poder salir) en {}: lo bajo a la plaza ({})",
                     villager.getUUID(), estaba.toShortString(), destino.toShortString());
         }
     }

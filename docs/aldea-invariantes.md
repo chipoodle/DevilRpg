@@ -5657,3 +5657,35 @@ mundo**, cierre limpio, **sin línea `REPARADA`** (el trazado 81 quedó guardado
 los 5-7 avisos eran la mudanza, el pueblo asentado vuelve al mejor registro de la sesión y **no había regresión** de
 I182/I183. **Lección de método**: un instrumento que no deja guardar el mundo convierte **cada medida** en una
 **migración**, y luego uno se cree que el arreglo ha empeorado el pueblo.
+
+### I185 · **EL ATRAPADO POR DEBAJO DE LA CALLE TAMBIÉN SE RESCATA** (3-oct-2026) — la ráfaga del minero
+
+**Lo que se midió primero, y que cambia cómo se lee el residuo**: el residuo **no son tropiezos sueltos** ✗. El lote
+largo del pueblo asentado dio **1 · 13 · 9 · 12** ✗ y, mirando **quién** fallaba, en **cada** corrida había **un solo
+aldeano** con casi todos los avisos: **`Ximeno (Minero) / Volviendo a la caseta`, 9 de 13** ✗, siempre **desde el
+mismo sitio** (`603, 76, 537`) y alternando **dos** destinos (`615, 79, 575` y `609, 78, 572`), con `alcanza=NO` y
+`ANDADO 0.0`. Y comparando con **todos** los lotes guardados: el patrón es el de **siempre** —en docenas de corridas
+viejas el dominante era `Eufemia (Ganadero)`, con 30, 50, 80 y hasta **238** avisos ✗—, así que un atrapado suelta
+**ráfagas**, y la media de una tanda depende de **si le toca a uno**.
+
+**La causa raíz era UNA línea** ✗, en el rescate de atrapados:
+
+```java
+|| villager.getY() <= cota + 0.6D)   // «por debajo de la calle = está en la calle» ✗
+```
+
+El minero estaba en la **zanja de la boca de su mina** (`603, 76, 537`), con la calle a **78** = **dos bloques por
+debajo** → esa condición lo declaraba «en la calle» y **ninguna red lo rescataba** ✗. **Verificado en el terreno**: la
+zanja es **idéntica en el guardado original del jugador** ✓ (misma ranura de 1×1 en `x=603`, mismo escalón en `y=77`),
+así que **no la causó el cimiento de I182** ✓.
+
+**ARREGLO**: la exención pasa a ser una **banda** alrededor de la calle —el medio escalón de las losas por arriba y
+**un bloque** por abajo—, y quien esté **más abajo** que eso cuenta como atrapado como cualquier otro. El minero que
+**trabaja** abajo no se ve afectado, y por dos razones: **se mueve** (su contador de quieto no llega a
+`ATRAPADO_TICKS`) y además se exige que **no sepa volver** a la plaza (`canReach`). El aviso del rescate ya no dice
+«dentro de una casa» (ahora también saca de zanjas).
+
+**MEDIDO, mismo mundo asentado** (`-Conservar`): **antes 1 · 13 · 9 · 12** ✗ → **después 1 · 2 · 1** ✓ (media
+**1,33** ✓) con el rescate disparando (2 y 1 veces por corrida: `estaba atascado (sin poder salir) en 520, 79, 594`).
+El aviso que queda es **uno**: el minero bajando a su mina (`603, 75, 537` → `603, 61, 526`, ruta de 33 nodos), ya
+**sin ráfaga** ✓.
