@@ -12,17 +12,28 @@ $ErrorActionPreference = 'Continue'
 $env:GRADLE_USER_HOME = 'C:\Users\Christian\Documents\DevilRpg\.gradle-home'
 Set-Location 'C:\Users\Christian\Documents\DevilRpg'
 $MINUTOS = 3
+# CONSERVAR EL MUNDO (3-oct-2026): con -Conservar NO se restaura `run\world` del guardado del jugador entre corridas.
+# Hace falta porque la primera corrida PAGA LA MIGRACION (el trazado sube y el pueblo se rehace) y esa migracion ensucia
+# la medida con sus avisos de rendicion: con -Conservar, la primera corrida deja el mundo ya migrado y las siguientes
+# miden el pueblo ASENTADO. La partida del jugador NO se toca (siempre se trabaja sobre la copia `run\world`).
+$Conservar = $false
+$numeros = @()
+foreach ($a in $args) { if ("$a" -eq '-Conservar') { $Conservar = $true } else { $numeros += $a } }
 
 $arnes = 'src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java'
 if (-not (Test-Path $arnes)) { Write-Output 'ABORTADO: falta el arnes (copiar tools\arnes\GuardHarness.java)'; exit 1 }
 
-foreach ($i in $args) {
+foreach ($i in $numeros) {
     Write-Output "=== CORRIDA RAPIDA $i : $(Get-Date -Format 'HH:mm:ss') ==="
     $vivos = (Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
         Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' }).Count
     if ($vivos -gt 0) { Write-Output "ABORTADO en la corrida ${i}: $vivos servidor(es) vivo(s)"; exit 1 }
-    Remove-Item run\world -Recurse -Force -ErrorAction SilentlyContinue
-    Copy-Item 'run\saves\New World' run\world -Recurse
+    if (-not $Conservar -or -not (Test-Path run\world\level.dat)) {
+        Remove-Item run\world -Recurse -Force -ErrorAction SilentlyContinue
+        Copy-Item 'run\saves\New World' run\world -Recurse
+    } else {
+        Write-Output "   (mundo conservado: el pueblo ya no migra, se mide asentado)"
+    }
     Remove-Item run\logs\latest.log -Force -ErrorAction SilentlyContinue
     $p = Start-Process -FilePath '.\gradlew.bat' -ArgumentList 'runServer','--console=plain' -PassThru -NoNewWindow `
         -RedirectStandardOutput "build\runserver-rapida$i.txt" -RedirectStandardError "build\runserver-rapida$i.err"
