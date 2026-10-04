@@ -10,10 +10,10 @@
 #   - El modelo local PROPONE; la verdad la da COMPILAR + LINT + MEDIR con el arnés. Nada se commitea sin eso.
 #   - No se le delega lo que hay que medir: las corridas del arnés son EN SERIE (un JVM, el .jar y una sola copia
 #     de run/world). Lo que se le delega es leer, resumir, reseñar, y BORRAR código acotado que yo reviso.
-#   - La primera llamada tras cargar el modelo tarda ~95 s (8,3 GB a la VRAM); luego ~3-7 s por respuesta corta.
+#   - MODELO POR DEFECTO: qwen2.5-coder:14b-instruct (lo pidio el jugador el 3-oct-2026; el deepseek-coder-v2:16b\n#     sigue disponible con -Modelo deepseek-coder-v2:16b).\n#   - La primera llamada tras cargar el modelo tarda ~95 s (8,3 GB a la VRAM); luego ~3-7 s por respuesta corta.
 param(
     [Parameter(Mandatory = $true)][string]$Ficha,
-    [string]$Modelo = 'deepseek-coder-v2:16b',
+    [string]$Modelo = 'qwen2.5-coder:14b-instruct',
     [int]$TimeoutSeg = 900
 )
 
