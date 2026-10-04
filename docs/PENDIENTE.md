@@ -1301,3 +1301,24 @@ con cierre limpio), agrupando los avisos de rendición por etiqueta:
 se cerraron** en esta sesión (caseta por I188, taberna por I191, ganadero y almacén sin avisos en las dos últimas).
 Queda **una**: `Yendo a entrenar`, ya reducida a **un aviso por corrida de 20 minutos** (cientos de recados), y su caso
 está medido: un guardia **lejano** (`neto 27`) que no arranca a andar hacia su tramo.
+
+### 8.bis.0.quaterdecies · **Ronda 32: el caso vivo (`Yendo a entrenar`) queda localizado, y su arreglo en borrador (I195)**
+
+**El caso, medido** (corrida larga 85, el único aviso): un guardia **lejano** (`neto 27`) con **`alcanza=SI`** y
+**`ANDADO 0.0`** — tiene camino y no da un paso.
+
+**Dónde se pierde, leído en su goal** (`VillagerGuardGoal.entrenar`): el troceador del pueblo
+(`VillageManager.elPuntoDeAhora` → `tironConMemoria`) devuelve el **puesto mismo** cuando hay ruta directa (el
+`alcanza=SI` medido lo confirma), y el guardia camina con `caminarHaciaExacto` (I193). Pero **antes** de caminar hay
+una comprobación —«¿el cerebro va al paso?»— y, si en ese tick su cerebro apunta a otra parte (el paseo del juego, su
+ronda, otro recado), el goal **se rinde y vuelve a la ronda sin volver a mandarle** ✗. Eso encaja con `ANDADO 0.0`:
+**nunca llegó a caminar**.
+
+**I195 (borrador, sin aplicar)**: en esa comprobación, si **hay ruta viva** pero el cerebro va a otra parte, **no se
+rinde**: se le **vuelve a mandar** el paso (el `caminarHaciaExacto` reescribe `WALK_TARGET` **y** pide la ruta, así que
+basta con llegar a esa llamada) y se le da un **tope de reafirmaciones**, que es exactamente el patrón que el guardia
+**ya usa** en su ronda (`reafirmaciones < REAFIRMACIONES_DE_RONDA`, I125). Solo se vuelve a la ronda si **no hay ruta
+viva** o si se agotan las reafirmaciones.
+
+**Por qué no se aplica ya**: el **lote de 4 corridas largas** (`86 · 87 · 88 · 89`) está midiendo **este mismo build**
+y cada corrida recompila al empezar; un cambio a mitad las haría inconsistentes. Se aplica cuando acabe.
