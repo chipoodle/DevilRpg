@@ -70,30 +70,20 @@ public class VillagerTavernGoal extends Goal {
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
-    /** La mesa de este aldeano: una de las de la taberna, repartidas por su UUID (así no se apilan en la misma). */
+    /**
+     * La mesa de este aldeano: una de las de la taberna, repartidas por su UUID (así no se apilan en la misma).
+     * <p>
+     * I189 · <b>RETIRADA</b> (3-oct-2026): se intentó devolver aquí la <b>casilla de pie</b> de al lado en vez del
+     * centro de la mesa, porque la mesa es de ladrillo y los avisos traían `neto` 0,6-0,8 con `alcanza=SI`. **No hacía
+     * falta** ✗: el `tick` de este goal <b>ya</b> camina a `VillageManager.casillaDePieCercaDe(level, destino)` desde
+     * I158 (su comentario lo dice: *«la mesa es un mueble que NO SE PISA»*), así que el aldeano nunca intentó pisar la
+     * mesa. La causa real de aquellos avisos es otra y vive en el despachador: el aldeano <b>no se mueve nada</b>
+     * (`ANDADO` 0,0-0,9) con la ruta llegando, y el recado se abandonaba sin haberle dado un empujón (ver I190).
+     */
     private BlockPos mesaDeEsteAldeano(ServerLevel level) {
         if (mesa == null) {
-            // I189 · LA MESA ES DONDE COME, NO DONDE SE PONE (3-oct-2026, MEDIDO en el lote largo). Antes se cogía el
-            // **centro de la mesa** (`puntosDeLaTaberna`) y la mesa es de **ladrillo**: el aldeano intentaba ponerse
-            // DENTRO del bloque, no se movía y se rendía **con la ruta llegando** (`alcanza=SI`) y a menos de un bloque
-            // (`neto` 0,6-0,8). Medido: `Isidoro / Yendo a la taberna` a `606, 78, 587` (ladrillo), `Josefa` al mismo,
-            // y `Anselmo` y `Casimiro` a `600, 78, 583` y `600, 78, 590` (también ladrillo). Ahora se elige la
-            // **casilla pisable de al lado** de la mesa —el mismo contrato de casilla de pie que usa el ganadero con
-            // sus animales— y se descartan las mesas que no tengan una.
-            BlockPos[] mesas = VillageGenerator.puntosDeLaTaberna(center,
-                    VillageGenerator.cotaDeLaPlaza(level, center));
-            int inicio = Math.floorMod(villager.getUUID().hashCode(), mesas.length);
-            for (int salto = 0; salto < mesas.length; salto++) {
-                BlockPos candidata = mesas[(inicio + salto) % mesas.length];
-                BlockPos pie = com.chipoodle.devilrpg.world.VillageErrands.casillaPosible(level, candidata);
-                if (pie != null) {
-                    mesa = pie;
-                    break;
-                }
-            }
-            if (mesa == null) {
-                mesa = mesas[inicio]; // ninguna mesa con casilla al lado (no debería): se deja la de siempre
-            }
+            BlockPos[] mesas = VillageGenerator.puntosDeLaTaberna(center, VillageGenerator.cotaDeLaPlaza(level, center));
+            mesa = mesas[Math.floorMod(villager.getUUID().hashCode(), mesas.length)];
         }
         return mesa;
     }

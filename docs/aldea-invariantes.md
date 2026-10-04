@@ -5762,15 +5762,60 @@ su caseta y **10 de los 13 avisos** de aquella corrida eran suyos ✗.
 de la calle, y solo entonces la plaza. Así al minero se le deja **en su mina** ✓ (que es donde estaba trabajando)
 en vez de al otro lado del pueblo.
 
-### I189 · **LA MESA ES DONDE COME, NO DONDE SE PONE** (3-oct-2026) — la taberna
+### I189 · **RETIRADA** (3-oct-2026, ronda 27): la mesa de la taberna **ya** se trataba bien
 
-**Medido en el lote largo**: `Yendo a la taberna` salía **4 veces** ✗ (`Isidoro`, `Josefa`, `Anselmo`, `Casimiro`) y en
-**las cuatro** el aldeano estaba **pegado** al destino (`neto` 0,6-0,8), con **la ruta llegando** (`alcanza=SI`) y
-**sin moverse** (`ANDADO ≈ 0`) — la firma de «el destino no es una casilla». **La comprobación en el terreno** lo
-cerró: los tres destinos (`606, 78, 587`, `600, 78, 583`, `600, 78, 590`) son **ladrillo** ✗ (`D` en el mapa del
-sector). Y la causa está en el generador: `puntosDeLaTaberna` devuelve **«el centro de cada una de las seis mesas»**
-✗… y **la mesa es de ladrillo**.
+**Lo que creí medir** ✗: que el goal mandaba al aldeano **al centro de la mesa** (ladrillo) y de ahí los avisos de
+`Yendo a la taberna` con `neto` 0,6-0,8, `alcanza=SI` y `ANDADO ≈ 0`. Cambié la elección de la mesa por la **casilla
+pisable de al lado** con `casillaPosible`.
 
-**ARREGLO**: el goal elige la **casilla pisable de al lado** de la mesa (el mismo contrato de casilla de pie que usa
-el ganadero con sus animales, `VillageErrands.casillaPosible`) y **descarta las mesas** que no tengan una; si ninguna
-la tiene (no debería), se deja la de siempre para no empeorar nada.
+**Y era innecesario** ✗, por dos razones que se vieron al mirar el goal entero y el terreno **bien medido**:
+1. El `tick` de `VillagerTavernGoal` **ya** camina a `VillageManager.casillaDePieCercaDe(level, destino)` desde
+   **I158**, y su propio comentario lo dice: *«la mesa es un mueble que NO SE PISA»*. El aldeano **nunca** intentó
+   pisar la mesa.
+2. Mi lectura del corte del mundo **estaba mal contada** ✗: en una ventana estrecha con coordenadas, `605, 78, 586`
+   es **aire** ✓ y **ladrillo está debajo** (`y=77`) ✓ — o sea, **es una casilla de pie** ✓ y `casillaPosible` tenía
+   razón ✓. El error fue mío, contando columnas en un mapa ancho ✗.
+
+**Queda retirado** ✓ (el código vuelve a lo que estaba, con la nota de por qué **no** hay que tocarlo) y el aviso
+real —el aldeano que **no se mueve** con la ruta llegando— se ataca donde vive, en el despachador: ver **I190**.
+
+### I190 · **EL EMPUJÓN ANTES DE RENDIRSE** (3-oct-2026)
+
+**La firma común de TODO el residuo que queda**, medida en el lote largo y en las corridas 64-67: el aldeano **no se
+mueve nada** (`ANDADO` entre **0,0 y 0,9** bloques) y **con la ruta llegando** (`alcanza=SI`):
+
+```
+Isidoro (Granjero)  / Yendo a la taberna   neto 0.6   ANDADO 0.0   alcanza=SI   ← a un bloque de su casilla de pie
+Nicasio (Guardia)   / Yendo a entrenar     neto 20.9  ANDADO 0.0   alcanza=NO   ← atrapado en el patio de tiro
+Zacarias (Ganadero) / Cuidando el ganado   neto 0.8   ANDADO 0.8   alcanza=NO
+```
+
+Y en **todos** el recado se **abandonaba** (aviso de rendición) **sin haber intentado nada**: parar la navegación y
+volver a mandar el rumbo. Eso es lo que ya hace el guardia en su ronda («se reafirma el destino y se sigue», I125) y
+lo que el proyecto aplica en el desatasco.
+
+**ARREGLO**: el despachador da hasta **3 empujones** (uno cada **40 ticks** sin avanzar) antes de abandonar: en cada
+uno **para la navegación** y **vuelve a escribir el rumbo del recado**. El presupuesto de M4 (`RECADO_PRESUPUESTO`)
+sigue siendo el que decide el abandono, así que un recado imposible **se sigue soltando** — pero ahora **después** de
+haberle dado tres oportunidades. Cada empujón queda en el registro con nombre y coordenadas.
+
+**MEDIDO, y no sirvió** ✗ (corrida 72, 20 minutos, pueblo asentado): **8 avisos** y **los empujones saltaron CERO
+veces** ✗. El motivo es el dato importante de esta ronda: **`avanzaPorLaRuta` contesta que SÍ avanza mientras el
+aldeano no se mueve** (`ANDADO 0.0`). Es el **oráculo de progreso compartido** —lo usan el despachador **y** los
+goals—, así que con él diciendo «avanza» ni se prodiga (I190) ni los goals ven el atasco como tal: los avisos los
+acaba poniendo **el cronómetro del goal**. Arreglar el oráculo es el siguiente paso, y es **uno solo** para todo el
+residuo.
+
+### I191 · **EL GOAL PIDE MÁS PRECISIÓN QUE EL NAVEGADOR, Y POR ESO NADIE LLEGA NUNCA** (3-oct-2026) — causa raíz medida
+
+**El dato que lo cierra**: en **todos** los avisos de «no se mueve» el aldeano está a **menos de un bloque** de su
+destino —`neto` **0,6 · 0,8 · 0,9**— y con **`ANDADO ≈ 0`**. Esa combinación tiene una explicación exacta: **el
+navegador del juego da por terminado un camino cuando está a ~1 bloque** ✓, así que **ya no lo mueve**; pero el goal
+considera que ha llegado solo si `distancia <= 0.8` ✗ (el valor medido en `VillagerTavernGoal.tick`). Resultado: el
+aldeano se queda **quieto a 0,8-1,0 bloques**, el goal no lo da por llegado, **no vuelve a caminar** y su contador de
+atasco sube hasta rendirse ✗✗.
+
+**El arreglo que toca (no medido todavía)**: la llegada se mide contra **el navegador**, no contra un número propio —
+si `villager.getNavigation().isDone()` y está a menos de un par de bloques, **ha llegado** ✓. Y hay que barrer los
+goals que usan tolerancias del mismo orden (la taberna 0,8; el guardia `REACH`; el ganadero...) porque el patrón se
+repite: **el goal pide más precisión que el que mueve al aldeano** ✗.
