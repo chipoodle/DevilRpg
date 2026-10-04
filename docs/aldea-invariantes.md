@@ -5819,3 +5819,15 @@ atasco sube hasta rendirse ✗✗.
 si `villager.getNavigation().isDone()` y está a menos de un par de bloques, **ha llegado** ✓. Y hay que barrer los
 goals que usan tolerancias del mismo orden (la taberna 0,8; el guardia `REACH`; el ganadero...) porque el patrón se
 repite: **el goal pide más precisión que el que mueve al aldeano** ✗.
+
+**Y RESUELTO EN UNA LÍNEA, con la prueba dentro del propio fichero** ✓✓ (3-oct-2026): el barrido de tolerancias mostró
+que **todos** los goals del pueblo usan su constante `REACH` (2,0 · 2,5 · 3,0 · 3,5 · 4,5 · 5,0)… y
+`VillagerTavernGoal` **define `REACH = 1.8`** pero su `tick` comparaba con **`0.8` a pelo** ✗ — **más fino que el
+navegador**, que da el camino por terminado a ~1 bloque. Así que el aldeano se plantaba a 0,8-1,0, el goal **no lo
+daba por llegado**, no volvía a caminar y el contador subía hasta rendirse. Ahora usa su propia `REACH` ✓ (1,8), como
+los demás.
+
+**VERIFICADO (corrida 75, 20 minutos, pueblo asentado)**: **0 avisos de rendición** ✓✓ —el **primer cero en una
+corrida larga** de toda la sesión— y **344 líneas de aldeanos `Comiendo en la taberna`** ✓✓ (antes se rendían sin
+llegar). Sin migración (`REPARADA` 0 veces ✓) y con cierre limpio ✓. El pueblo trabajando: herrería 218 ✓, ganadería
+12 ✓, pesca 8 ✓.

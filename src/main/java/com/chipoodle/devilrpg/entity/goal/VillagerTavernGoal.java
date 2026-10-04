@@ -157,7 +157,13 @@ public class VillagerTavernGoal extends Goal {
         BlockPos puesto = VillageManager.casillaDePieCercaDe(level, destino);
         double distancia = Math.sqrt(villager.distanceToSqr(puesto.getX() + 0.5D, puesto.getY() + 0.5D,
                 puesto.getZ() + 0.5D));
-        if (distancia > 0.8D && espera == 0) {
+        // I191 · AQUÍ ESTABA LA CAUSA RAÍZ DE TODO EL RESIDUO DE «NO SE MUEVE» (3-oct-2026, MEDIDO). Esta línea
+        // comparaba con **0.8** a pelo, aunque el goal tiene su propia `REACH = 1.8` —como todos los demás goals del
+        // pueblo, que usan 2,0-5,0—. Y el navegador del juego **da por terminado un camino a ~1 bloque** y ya no mueve
+        // al aldeano: se plantaba a 0,8-1,0 bloques, el goal no lo daba por llegado (0,8 es MÁS fino que el
+        // navegador), **no volvía a caminar** y su contador de atasco subía hasta rendirse. Medido en el lote largo y
+        // en las corridas 64-72: `Isidoro / Yendo a la taberna` con `neto` **0,6-0,8**, `alcanza=SI` y `ANDADO 0.0`.
+        if (distancia > REACH && espera == 0) {
             // SE CAMINA A UNA CASILLA DE PIE, no a la mesa (regla de I114, la que arregló al ganadero en I131): la
             // celda de la mesa puede no ser pisable —o estar un nivel más arriba— y entonces el planificador devuelve
             // una ruta de UN nodo que no alcanza y el aldeano empuja hasta rendirse. MEDIDO (26-sep-2026): con la
