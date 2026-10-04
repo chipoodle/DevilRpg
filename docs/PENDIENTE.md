@@ -369,6 +369,43 @@ O sea: **la despensa está vacía** ✗ y hay un **granjero sin puesto de trabaj
 (¿el compostero no está, o `reclamarEstacionesDelPueblo` no lo ve?), y (b) por qué la despensa queda a **0 puntos**
 (¿se cosecha y no se guarda, o no se cosecha?).
 
+### 8.bis.0.nonies · **I186 e I187: la rendición no es siempre del sitio, y «un puesto, un dueño»**
+
+**(a) I186 — «antes de culpar al sitio, mira si el que no se mueve es el aldeano».** El aviso dice «no consigue llegar
+a X» y se lee como «X es inalcanzable», pero **el 100 % de los avisos traía `ANDADO` ≈ 0** ✗ (0,0-0,8 bloques),
+**incluso con `alcanza=SI`** y `neto` de 30 bloques. Y los relojes estaban al revés ✗: el recado se rinde a los **10 s**,
+el goal del oficio a los **16 s** y el rescate necesitaba **30 s** → llegaba **siempre tarde**. Arreglado: el embudo
+`marcarPuntoFallido` **no marca nada** si el aldeano está atrapado (quieto ≥ 4 s fuera de la banda de la calle, de eso
+se encarga el rescate) y `ATRAPADO_TICKS` baja de **30 s a 12 s**.
+
+| mundo asentado, banco rápido | avisos |
+|---|---|
+| antes (lote largo) | **1 · 13 · 9 · 12** ✗ |
+| I185 (el rescate, banda de la calle) | 1 · 2 · 1 ✓ |
+| **I186 (el embudo + los relojes)** | **0 · 0 · 0** ✓✓ |
+
+**(b) I187 — «un puesto, un dueño».** En las corridas 47-49 había **exactamente 3 granjeros** ✓, cada uno con su
+compostero ✓ y todo sano. En la **50** (aldea de 20 aldeanos) aparecieron **cuatro** ✗ y dos se **turnaban el mismo
+compostero** (`535, 78, 600`: 37 muestras uno, 63 el otro) con uno en `SIN PUESTO` **48 muestras** ✗. Causa: el reclamo
+tenía un tercer paso —«no hay otra: la más cercana»— que cogía una estación **ocupada**, y el filtro (`deOtro`) solo
+mira a los aldeanos **de esa pasada** → si el dueño no estaba en la lista, **los dos se creían dueños**. Fuera el paso
+3: quien no encuentra estación **libre** ni una ocupada **sin dueño** se queda sin puesto ese latido y lo reintenta.
+
+**VERIFICADO en la corrida larga 59** ✓: **tres granjeros, cada uno con SU compostero** (`991470fd→533,78,580`,
+`6b437808→535,78,600`, `05821ff2→573,78,570`), **cero `SIN PUESTO`** ✓ y **cero reclamos** ✓ → el turno ha desaparecido.
+
+**(c) Y UNA CORRECCIÓN DE MI PROPIA MEDIDA** ✗: la cuenta de labranza que usé buscaba `Guardo` (mayúscula) y la línea
+real es **`el granjero guardo`** (minúscula), así que **estaba midiendo de menos** ✗. Con la cuenta bien hecha:
+**16 · 21 · 23 · 9** en las cuatro corridas del lote (no 16·15·15·5) y **3** en la 59 ✗. La referencia sigue siendo
+**40-57** ✓.
+
+**(d) Lo que la 59 sí dice, y hay que leerlo con cuidado** ✗: sus avisos son **6**, y **4 de ellos son el minero**
+(`Eufemia (Minero) / Volviendo a la caseta`) **desde la plaza a 50 bloques** ✗ — **efecto secundario de mi rescate**
+✓: al atrapado se le baja a la **plaza** y su recado (la mina) queda a 50 bloques ✗. Y la aldea bajó de **20 a 13**
+aldeanos ✗: **el mundo de la 59 llevaba 80 minutos pasando hambre** ✗, así que la granja no se puede juzgar ahí ✗.
+**En marcha**: corrida 60 (fresca + migración, 3 min, guarda el mundo) y **61 (fresca y asentada, 20 min)** para medir
+la granja en un **pueblo sano** y compararla de verdad con la referencia.
+
 **Y la lección que más vale de todo esto**: durante dos semanas el instrumento costaba **80 minutos por pregunta** y el
 aviso de rendición **fotografiaba el después** en vez del fallo. Con el **banco rápido** (3 min) y los tres datos nuevos
 del aviso (**neto**, **ANDADO** y **destinos**), lo que llevaba cuatro intentos fallidos se encontró en minutos — y tres
