@@ -1325,6 +1325,7 @@ public class VillagerGuardGoal extends Goal {
                 pasoDelEntreno = punto; // tramo nuevo: la paciencia se mide de cero
                 mejorEntreno = Double.MAX_VALUE;
                 stuckEntreno = 0;
+                reafirmacionesEntreno = 0; // I195: el tramo nuevo trae su propio cupo de reafirmaciones
             }
             double hastaElPuesto = Math.sqrt(villager.distanceToSqr(punto.getX() + 0.5D, punto.getY() + 0.5D,
                     punto.getZ() + 0.5D));
@@ -1349,10 +1350,31 @@ public class VillagerGuardGoal extends Goal {
                 boolean elCerebroVaAlPaso = villager.getBrain()
                         .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
                         .map(t -> t.getTarget().currentBlockPosition().equals(punto)).orElse(false);
-                if (!rutaViva || !elCerebroVaAlPaso) {
+                if (!rutaViva) {
+                    // SIN RUTA VIVA sí se vuelve a la ronda (I119): no se empuja la pared.
                     entrenoTicks = 0;
                     stuckEntreno = 0;
                     return false;
+                }
+                if (!elCerebroVaAlPaso) {
+                    // I195 · Y SI EL CEREBRO VA A OTRA PARTE, SE LE VUELVE A MANDAR (3-oct-2026, MEDIDO). Antes esto
+                    // rendía al guardia en el acto, y es el caso que quedaba vivo: en la corrida larga 85 el único
+                    // aviso era un guardia **lejano** (`neto 27`) con `alcanza=SI` y **`ANDADO 0.0`** — tenía camino y
+                    // no daba un paso, porque en el tick de la comprobación su cerebro miraba a otro sitio (el paseo
+                    // del juego o su ronda) y el goal **se rendía sin volver a mandarle**. Como `caminarHaciaExacto`
+                    // (I193) deja el destino en el cerebro **y** pide la ruta a mano, basta con llegar a esa llamada:
+                    // se le dan hasta REAFIRMACIONES_DE_ENTRENO intentos, que es el mismo patrón que el guardia ya
+                    // usa en su ronda (I125).
+                    reafirmacionesEntreno++;
+                    if (reafirmacionesEntreno > REAFIRMACIONES_DE_ENTRENO) {
+                        entrenoTicks = 0;
+                        stuckEntreno = 0;
+                        return false;
+                    }
+                    stuckEntreno = 0; // ventana nueva: se le da tiempo a andar el tramo
+                    DevilRpg.LOGGER.info("[Village] Guardia {}: reafirmo el paso del entreno {} ({}/{}), el cerebro iba "
+                            + "a otra parte", villager.getUUID(), punto.toShortString(), reafirmacionesEntreno,
+                            REAFIRMACIONES_DE_ENTRENO);
                 }
             } else if (stuckEntreno >= STUCK_LIMIT) {
                 entrenoTicks = 0;
@@ -1401,6 +1423,13 @@ public class VillagerGuardGoal extends Goal {
     /** Lo más cerca que ha estado de la diana en la sesión (y su paciencia), aparte de la del puesto. */
     private double mejorEntreno = Double.MAX_VALUE;
     private int stuckEntreno;
+    /**
+     * I195 · Reafirmaciones gastadas en el entrenamiento actual. Si el guardia va con ruta viva pero su cerebro apunta a
+     * otra parte (el paseo del juego, su ronda), **no se rinde**: se le vuelve a mandar el paso, hasta este tope.
+     */
+    private int reafirmacionesEntreno;
+    /** Tope de reafirmaciones del entrenamiento (ver {@link #reafirmacionesEntreno}). */
+    private static final int REAFIRMACIONES_DE_ENTRENO = 3;
     private int entrenoTicks;
     /**
      * El <b>punto de ahora</b> ({@link VillageManager#elPuntoDeAhora}) al que va el guardia a entrenar: el puesto del

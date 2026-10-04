@@ -5894,3 +5894,22 @@ cerrar si no hay nadie). Es el «conjunto de candidatas» del diseño del nivel 
 
 **MEDIDO**: banco rápido **0 · 0** ✓ (antes: 20 y 17 en las largas). La verificación en ventana larga va en la corrida
 92 — y si el portón ya se abre, en el registro tiene que aparecer **`[Gate]`** (que en el «antes» era **0**).
+
+### I195 · **SI EL CEREBRO DEL GUARDIA VA A OTRA PARTE, SE LE VUELVE A MANDAR (no se rinde)** (3-oct-2026)
+
+**El caso que quedaba vivo, medido** (corrida larga 85, el **único** aviso): un guardia **lejano** (`neto 27`) con
+**`alcanza=SI`** y **`ANDADO 0.0`** — tiene camino y **no da un paso**.
+
+**Dónde se perdía**: en `VillagerGuardGoal.entrenar`, después de andar un tramo se comprueba «¿la navegación tiene ruta
+viva **y** el cerebro va al paso?» y, si el cerebro apunta a otra parte (el paseo del juego, su ronda), el goal **se
+rendía en el acto y volvía a la ronda sin volver a mandarle** ✗. Como `caminarHaciaExacto` (I193) deja el destino en el
+cerebro **y** pide la ruta a mano, bastaba con **llegar a esa llamada** — y nunca se llegaba.
+
+**ARREGLO**: si **no hay ruta viva**, se vuelve a la ronda (eso sigue igual: no se empuja la pared, I119); si **hay
+ruta viva** pero el cerebro va a otra parte, **se reafirma el paso** y se le da una **ventana nueva**, con un tope de
+**3** reafirmaciones por tramo — el mismo patrón que el guardia ya usa en su ronda (`REAFIRMACIONES_DE_RONDA`, I125) — y
+cada reafirmación queda en el registro con nombre y coordenadas, para poder medirla.
+
+**MEDIDO**: banco rápido **0 · 0**, y el **lote final de 4 corridas largas** (`93 · 94 · 95 · 96`, 4 × 20 min, pueblo
+asentado) está corriendo con I195 **e** I196 dentro: sirve a la vez para cerrar el objetivo y para **probar I196** (si un
+ganadero vuelve a quedarse en el este del corral, el registro tiene que enseñar `[Gate]`, que en el «antes» era 0).
