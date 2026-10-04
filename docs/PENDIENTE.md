@@ -1246,3 +1246,20 @@ Get-Content run\logs\latest.log | Out-File -Encoding utf8 -Append $out
    borradores y segundas opiniones con los **datos exactos** en la ficha; nunca para decidir ni para medir (la
    calibración está en `tools/arnes/LEEME.md`).
 
+
+---
+
+### 8.bis.0.undecies · **Ronda 29 (en curso): el lote de 4 corridas largas, y el borrador de I192**
+
+**Corriendo**: lote largo `76 · 77 · 78 · 79` (4 × 20 min) sobre el pueblo **asentado** con el build de I191 ✓ — sus
+números van en la ronda siguiente. **No se toca el código Java mientras mide** (cada corrida recompila al empezar).
+
+**I192 · EL DESPACHADOR DEBE EXIGIR MOVIMIENTO DE VERDAD (borrador, sin aplicar).** Lo medido que lo pide: en la
+corrida 72 los **empujones de I190 saltaron 0 veces** ✗. La causa no está en `avanzaPorLaRuta` (que es cuidadoso: mira
+el índice de nodo y **no** cuenta los recálculos) sino en que **el contador del despachador se reinicia cada vez que el
+goal arranca** (`start()`) y el goal **arranca y para** a menudo → nunca llega a 40 ticks. El arreglo no es tocar el
+oráculo (lo usan muchos goals, y el proyecto ya evitó molestar al que trabaja en el sitio: I177), sino **añadirle al
+despachador la condición que no miente**: el pueblo ya apunta cuándo se movió por última vez
+(`DevilRpgUltimoMovimiento`, I177) y cuánto ha andado (`DevilRpgAndado`, I175), así que la supervisión pasa a
+«progresa = nodos de ruta **o** se ha movido en los últimos 2 s». Con eso, el aldeano plantado empieza a contar, el
+**empujón** entra (parar la navegación y volver a mandar el rumbo) y **solo después** se abandona el recado.
