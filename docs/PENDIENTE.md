@@ -406,6 +406,23 @@ aldeanos ✗: **el mundo de la 59 llevaba 80 minutos pasando hambre** ✗, así 
 **En marcha**: corrida 60 (fresca + migración, 3 min, guarda el mundo) y **61 (fresca y asentada, 20 min)** para medir
 la granja en un **pueblo sano** y compararla de verdad con la referencia.
 
+**(e) Y EL VEREDICTO DEL PUEBLO SANO (corrida 61, fresca y asentada, 20 minutos)** ✓:
+
+| | corrida 61 (fresca) | lote anterior (mundo degradado) |
+|---|---|---|
+| **avisos** | **3** ✓ — y de **tres aldeanos distintos** (`Teodoro/Recolector → Yendo al almacen`, `Zacarias/Ganadero → Sacrificando`, `Anselmo/Granjero → Sembrando`), **sin ráfagas** ✓ | **1 · 13 · 9 · 12** ✗ (media 8,75, con 20 de 35 en un solo minero) |
+| **despensa** | **34 · 48 · 28 · 16 puntos** ✓ con **13-16 aldeanos** ✓ | **0 puntos** y `pasa hambre` ✗ |
+| **granjeros** | **3, cada uno con SU compostero** ✓ (`991470fd`, `4d096c1c`, `05821ff2`) y **cero `SIN PUESTO`** ✓ | 4 turnándose el mismo ✗ |
+| otros oficios | ganado 45 ✓, pescador 9 ✓, herrería 161 ✓, cocina 22 ✓ | en rango |
+
+**Conclusiones que se sostienen con estos números** ✓: (1) **I186** deja el residuo en **3 avisos sueltos** ✗ (frente a
+la media de 8,75 ✓ y a los 62-238 de los lotes viejos ✓); (2) **I187** está verificado **dos veces** ✓ (tres granjeros
+con su compostero y nadie `SIN PUESTO` ✓); (3) **la granja no estaba rota** ✗ — el pueblo sano come (despensa 34-48 ✓)
+y el desplome era del mundo degradado ✓; y (4) **el efecto secundario del rescate queda anotado** ✗: al atrapado se le
+baja a la **plaza**, y desde ahí un recado lejano (la mina, 50 bloques) puede fallar ✓ — es el siguiente candidato,
+junto con **`Yendo a la taberna`** ✗ (que reapareció: 4 veces en el lote) y **`Yendo a entrenar`** ✗ (dos guardias al
+mismo punto inalcanzable, `520, 78, 595`).
+
 **Y la lección que más vale de todo esto**: durante dos semanas el instrumento costaba **80 minutos por pregunta** y el
 aviso de rendición **fotografiaba el después** en vez del fallo. Con el **banco rápido** (3 min) y los tres datos nuevos
 del aviso (**neto**, **ANDADO** y **destinos**), lo que llevaba cuatro intentos fallidos se encontró en minutos — y tres
