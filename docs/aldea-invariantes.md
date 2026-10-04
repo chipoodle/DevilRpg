@@ -5895,6 +5895,44 @@ cerrar si no hay nadie). Es el «conjunto de candidatas» del diseño del nivel 
 **MEDIDO**: banco rápido **0 · 0** ✓ (antes: 20 y 17 en las largas). La verificación en ventana larga va en la corrida
 92 — y si el portón ya se abre, en el registro tiene que aparecer **`[Gate]`** (que en el «antes» era **0**).
 
+**CORRECCIÓN DE ESA «PRUEBA», que era falsa** ✗ (dicho en la ronda siguiente): la línea `[Gate]` la escribe el **goal
+de los portones** (`VillagerGateGoal`, que es otro camino), **no** `abrirParaUnAldeano`, así que **`[Gate] = 0` no
+demuestra que I196 no actuara** ✗. Y de hecho **sí actuó** (el ganadero pasa por `caminarHacia`, que es el único sitio
+desde el que se llama al abridor) — pero **no bastaba**: véase I197.
+
+### I197 · **EL CORRAL NECESITA DOS PORTONES, NO UNO** (3-oct-2026) — el peor número de la sesión
+
+**Lo medido**: en la corrida **93** salieron **49 avisos**, **todos del mismo ganadero** ✗ (`Vicenta`), en `626, 78,
+568-569` —al **este** del corral— con su recado **dentro** (`622`) y **`alcanza=NO`**. Y el generador explica por qué:
+la valla del corral se construía con el **hueco del portón solo en el OESTE** (`dx == -r && dz == 0`), porque el
+**cobertizo del ganadero está pegado a la valla ESTE** (`bx + r - 5 … bx + r - 1`). Con **una sola puerta**, quien está
+al este tiene que dar la vuelta entera al corral: **40+ bloques** a velocidad de aldeano, y su recado se rinde a los
+**16 s**. Abrir el portón oeste (I196) era correcto pero **insuficiente** ✗.
+
+**ARREGLO (tres piezas)**:
+1. **Segundo portón en el ESTE**, mirando al cobertizo (que está abierto por los lados), tanto en la construcción
+   (`granjaAnexa`) como en el helper `portonDelCorralEste`.
+2. **Y se asegura en las partidas que YA tienen corral**: `asegurarElPortonEsteDelCorral` se llama en
+   `asegurarGranjaAnexa` **antes** de su salida por «ya está construido» (que si no sale por ahí y las partidas viejas
+   —la del jugador incluida— se quedarían con una puerta). Es idempotente: una celda, y no toca nada si ahí no hay
+   valla. Por eso **no** hace falta subir `CURRENT_LAYOUT`, y queda dicho en el código con `// lint:ok I9 porque …`
+   (el guardián lo pidió y aquí la excepción está justificada).
+3. Y el abridor (`VillageErrands`) prueba **los dos** portones cuando el aldeano y su recado están en lados opuestos
+   del recinto, empezando por el del lado en el que está el aldeano.
+
+**MEDIDO Y DEMOSTRADO** ✓ (esta vez sí, con una prueba que controlo yo): en la corrida 97 el registro dice
+**`[Village] Aldea: porton del ESTE del corral puesto en 625, 78, 566 (I197)`** —exactamente el sitio predicho— y en
+la 98 **no vuelve a decirlo** (idempotente ✓). Y el fallo desaparece:
+
+| | antes | después (I197) |
+|---|---|---|
+| corrida larga | **20** ✗ (86) · **17** ✗ (87) · **49** ✗ (93) | **1** ✓ (99) |
+| banco rápido | — | **0 · 0** ✓ |
+
+El aviso que queda en la 99 es **otra variante** (`Bajando lo del corral` desde el este, `alcanza=SI`, `ANDADO 0.3`):
+un aldeano que apenas se mueve con la ruta viva — la familia de I190/I192, que sigue pendiente de que el despachador
+vea el no-movimiento.
+
 ### I195 · **SI EL CEREBRO DEL GUARDIA VA A OTRA PARTE, SE LE VUELVE A MANDAR (no se rinde)** (3-oct-2026)
 
 **El caso que quedaba vivo, medido** (corrida larga 85, el **único** aviso): un guardia **lejano** (`neto 27`) con

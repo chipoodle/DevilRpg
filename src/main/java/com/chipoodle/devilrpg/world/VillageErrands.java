@@ -167,8 +167,18 @@ public final class VillageErrands {
             boolean yoDentro = dentroDe(baseAnexo, VillageGenerator.ANEXO_RADIO, yo);
             boolean recadoDentro = dentroDe(baseAnexo, VillageGenerator.ANEXO_RADIO, recado);
             if (yoDentro != recadoDentro) {
-                BlockPos porton = VillageGenerator.portonDelCorral(centro, nivel);
-                if (porton != null && abrirSinMirarElEje(level, porton)) {
+                // I197: el corral tiene DOS portones (oeste y este), así que se prueba el que separa de verdad: si el
+                // aldeano está al este y su recado dentro, el portón del este es el suyo (el del oeste le deja a 40
+                // bloques de vuelta). Se abre el que esté entre los dos y, si ninguno lo está, el del lado del recado.
+                BlockPos este = VillageGenerator.portonDelCorralEste(centro, nivel);
+                BlockPos oeste = VillageGenerator.portonDelCorral(centro, nivel);
+                boolean yoAlEste = yo.getX() > centro.getX();
+                BlockPos primero = yoAlEste ? este : oeste;
+                BlockPos segundo = yoAlEste ? oeste : este;
+                if (primero != null && abrirSinMirarElEje(level, primero)) {
+                    return;
+                }
+                if (segundo != null && abrirSinMirarElEje(level, segundo)) {
                     return;
                 }
             }

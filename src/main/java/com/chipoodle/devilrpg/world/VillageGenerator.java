@@ -2029,6 +2029,36 @@ public final class VillageGenerator {
         return new BlockPos(base.getX() - ANEXO_RADIO, nivel, base.getZ());
     }
 
+    /**
+     * I197 · El <b>portón del ESTE</b> del corral (mirando a su cobertizo, que está abierto por los lados). Existe
+     * porque el ganadero puede estar al este y su recado dentro: con una sola puerta, la vuelta son 40+ bloques y su
+     * recado se rinde antes (medido: 49 avisos en una corrida, el peor de la sesión).
+     */
+    public static BlockPos portonDelCorralEste(BlockPos center, int nivel) {
+        BlockPos base = baseDeAnexo(center);
+        return new BlockPos(base.getX() + ANEXO_RADIO, nivel, base.getZ());
+    }
+
+    /**
+     * I197 · Pone el portón del este del corral <b>si falta</b> (idempotente). Lo llama {@link #asegurarGranjaAnexa}
+     * <b>antes</b> de su salida por «ya está construido», para que lo reciban también los corrales que ya existían.
+     */
+    private static void asegurarElPortonEsteDelCorral(ServerLevel level, BlockPos base, int nivel) {
+        BlockPos este = new BlockPos(base.getX() + ANEXO_RADIO, nivel, base.getZ());
+        BlockState estado = level.getBlockState(este);
+        if (estado.getBlock() instanceof FenceGateBlock) {
+            return; // ya está puesto
+        }
+        if (!estado.is(Blocks.OAK_FENCE)) {
+            return; // ahí no hay valla del corral (trazado distinto): no se toca
+        }
+        colocar(level, este, Blocks.OAK_FENCE_GATE.defaultBlockState()
+                .setValue(FenceGateBlock.FACING, Direction.EAST)
+                .setValue(FenceGateBlock.OPEN, false)
+                .setValue(FenceGateBlock.IN_WALL, false), 3);
+        DevilRpg.LOGGER.info("[Village] Aldea: porton del ESTE del corral puesto en {} (I197)", este.toShortString());
+    }
+
     /** El <b>portón del gallinero</b> (en su pared sur, mirando al corral). */
     public static BlockPos portonDelGallinero(BlockPos center, int nivel) {
         BlockPos base = baseDeAnexo(center);
@@ -3917,6 +3947,11 @@ public final class VillageGenerator {
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
         }
+        // I197 · EL PORTÓN DEL ESTE VA **ANTES** DE LA SALIDA POR «YA ESTÁ CONSTRUIDO» (3-oct-2026, medido). Si se
+        // pusiera solo en la construcción, las partidas que ya tienen corral —la del jugador, sin ir más lejos— se
+        // quedarían con **una sola puerta**, que es el fallo que costó 49 avisos en una corrida: el ganadero al este
+        // del corral con su recado dentro y `alcanza=NO`. Es idempotente (una celda) y no toca nada si ahí no hay valla.
+        asegurarElPortonEsteDelCorral(level, baseDeAnexo(center), nivel);
         if (anexoConstruido(level, center)) {
             return; // el corral ya está: no se vuelve a construir
         }
@@ -4060,14 +4095,30 @@ public final class VillageGenerator {
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 boolean borde = Math.abs(dx) == r || Math.abs(dz) == r;
-                if (!borde || (dx == -r && dz == 0)) {
-                    continue; // interior, o el hueco del portón
+                // I197 · DOS PORTONES, NO UNO (3-oct-2026, MEDIDO). Antes el hueco era solo el OESTE y la valla ESTE
+                // quedaba entera… justo donde está el COBERTIZO del ganadero. Medido en las corridas 86, 87 y 93: el
+                // ganadero al ESTE del corral (`626, 78, 565-569`) con su recado dentro (`622`), `alcanza=NO` y hasta
+                // **49 avisos en una sola corrida** — la peor de la sesión. Abrir el portón oeste (I196) no basta: la
+                // vuelta son 40+ bloques y su recado se rinde a los 16 s. Con la compuerta del este, entra por su lado.
+                boolean huecoOeste = dx == -r && dz == 0;
+                boolean huecoEste = dx == r && dz == 0;
+                if (!borde || huecoOeste || huecoEste) {
+                    continue; // interior, o el hueco de uno de los dos portones
                 }
                 colocar(level, new BlockPos(bx + dx, nivel, bz + dz), Blocks.OAK_FENCE.defaultBlockState(), 3);
             }
         }
         colocar(level, new BlockPos(bx - r, nivel, bz), Blocks.OAK_FENCE_GATE.defaultBlockState()
                 .setValue(FenceGateBlock.FACING, Direction.WEST)
+                .setValue(FenceGateBlock.OPEN, false)
+                .setValue(FenceGateBlock.IN_WALL, false), 3);
+        // Y EL PORTÓN DEL ESTE, mirando al cobertizo (que está abierto por los lados): por ahí entra y sale el ganadero
+        // cuando viene del este, sin dar la vuelta al corral entero.
+        // lint:ok I9 porque este portón NO necesita subir CURRENT_LAYOUT: `asegurarElPortonEsteDelCorral` lo pone en
+        // `asegurarGranjaAnexa` ANTES de la salida por «ya está construido», así que las partidas que ya tienen corral
+        // lo reciben solas en el siguiente latido (idempotente, una celda) sin rehacer la aldea.
+        colocar(level, new BlockPos(bx + r, nivel, bz), Blocks.OAK_FENCE_GATE.defaultBlockState()
+                .setValue(FenceGateBlock.FACING, Direction.EAST)
                 .setValue(FenceGateBlock.OPEN, false)
                 .setValue(FenceGateBlock.IN_WALL, false), 3);
         // 3) COBERTIZO (al este, pegado a la valla): suelo de piedra, cuatro postes, tejado de tablones y SIN
