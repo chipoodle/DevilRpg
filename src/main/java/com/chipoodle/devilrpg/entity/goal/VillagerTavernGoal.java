@@ -73,8 +73,27 @@ public class VillagerTavernGoal extends Goal {
     /** La mesa de este aldeano: una de las de la taberna, repartidas por su UUID (así no se apilan en la misma). */
     private BlockPos mesaDeEsteAldeano(ServerLevel level) {
         if (mesa == null) {
-            BlockPos[] mesas = VillageGenerator.puntosDeLaTaberna(center, VillageGenerator.cotaDeLaPlaza(level, center));
-            mesa = mesas[Math.floorMod(villager.getUUID().hashCode(), mesas.length)];
+            // I189 · LA MESA ES DONDE COME, NO DONDE SE PONE (3-oct-2026, MEDIDO en el lote largo). Antes se cogía el
+            // **centro de la mesa** (`puntosDeLaTaberna`) y la mesa es de **ladrillo**: el aldeano intentaba ponerse
+            // DENTRO del bloque, no se movía y se rendía **con la ruta llegando** (`alcanza=SI`) y a menos de un bloque
+            // (`neto` 0,6-0,8). Medido: `Isidoro / Yendo a la taberna` a `606, 78, 587` (ladrillo), `Josefa` al mismo,
+            // y `Anselmo` y `Casimiro` a `600, 78, 583` y `600, 78, 590` (también ladrillo). Ahora se elige la
+            // **casilla pisable de al lado** de la mesa —el mismo contrato de casilla de pie que usa el ganadero con
+            // sus animales— y se descartan las mesas que no tengan una.
+            BlockPos[] mesas = VillageGenerator.puntosDeLaTaberna(center,
+                    VillageGenerator.cotaDeLaPlaza(level, center));
+            int inicio = Math.floorMod(villager.getUUID().hashCode(), mesas.length);
+            for (int salto = 0; salto < mesas.length; salto++) {
+                BlockPos candidata = mesas[(inicio + salto) % mesas.length];
+                BlockPos pie = com.chipoodle.devilrpg.world.VillageErrands.casillaPosible(level, candidata);
+                if (pie != null) {
+                    mesa = pie;
+                    break;
+                }
+            }
+            if (mesa == null) {
+                mesa = mesas[inicio]; // ninguna mesa con casilla al lado (no debería): se deja la de siempre
+            }
         }
         return mesa;
     }

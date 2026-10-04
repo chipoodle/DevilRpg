@@ -4434,7 +4434,35 @@ public final class VillageManager {
             }
             ATRAPADOS.remove(villager.getUUID());
             BlockPos estaba = villager.blockPosition();
-            BlockPos destino = casillaLibreDeLaPlaza(level, center, cota);
+            // I188 · SE LE BAJA CERCA DE DONDE IBA, NO SIEMPRE A LA PLAZA (3-oct-2026, medido). Ver
+            // `casillaLibreCercaDe`: bajar siempre a la plaza dejaba al minero rescatado a 50 bloques de su mina.
+            BlockPos recado = elRecadoDeAhora(villager);
+            // I188 · Y EL ANCLA ES SU PUESTO DE TRABAJO, que es lo que SIEMPRE tiene (corrida 67, MEDIDO): al
+            // rescatarlo su goal ya se ha rendido, así que **no hay recado** al que mirar y el rescate caía a la plaza
+            // otra vez —7 de 7 rescates en la plaza, y el minero quedaba a **54 bloques** de su caseta: 5 de los 14
+            // avisos de aquella corrida—. Su `JOB_SITE` (la caseta del minero, el compostero del granjero...) está al
+            // lado de su faena, así que dejándolo ahí el recado siguiente le queda a dos pasos.
+            BlockPos destino = null;
+            var puesto = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+            if (puesto.isPresent()) {
+                BlockPos sitio = puesto.get().pos();
+                destino = casillaLibreCercaDe(level, sitio, sitio.getY(), 4);
+                if (destino == null) {
+                    destino = casillaLibreCercaDe(level, sitio, cota, 4);
+                }
+            }
+            // Y SI NO, la casilla libre junto a su recado, a la altura del recado y, si no, a la de la calle: se buscaba
+            // a la cota 78 y el recado del minero está en `603, 61, 526` (el fondo de la mina), así que a y=78 no había
+            // nada cerca y caía al plan B.
+            if (destino == null && recado != null) {
+                destino = casillaLibreCercaDe(level, recado, recado.getY(), 6);
+            }
+            if (destino == null && recado != null) {
+                destino = casillaLibreCercaDe(level, recado, cota, 6);
+            }
+            if (destino == null) {
+                destino = casillaLibreDeLaPlaza(level, center, cota);
+            }
             // Y NO SE LE BAJA SI SABE IRSE SOLO: llevar 30 s en la misma columna **no** es estar atrapado si el aldeano
             // TIENE CAMINO hasta la plaza (está esperando, trabajando o mirando el paisaje). Sin este filtro se baja a
             // la plaza a quien se vale por sí mismo, y en el **kiosco** —que va un bloque por encima de la calle, con
@@ -4519,13 +4547,26 @@ public final class VillageManager {
 
     /** Una celda con <b>sitio para pararse</b> a la altura de la calle, cerca de la plaza (anillos desde el centro). */
     private static BlockPos casillaLibreDeLaPlaza(ServerLevel level, BlockPos center, int cota) {
-        for (int r = 2; r <= 12; r++) {
+        return casillaLibreCercaDe(level, center, cota, 12);
+    }
+
+    /**
+     * I188 · Una celda <b>pisable</b> cerca de un punto, a la altura que se le diga: anillos desde ahí hacia fuera.
+     * <p>
+     * Existe por un efecto secundario <b>medido</b> del rescate (corrida 59, aldea 0): al aldeano atrapado se le bajaba
+     * <b>siempre a la plaza</b>, y con eso su recado podía quedar a <b>50 bloques</b> —el minero rescatado de la zanja
+     * de su mina aparecía en la plaza y ya no llegaba a la mina: **4 de los 6 avisos de aquella corrida eran suyos**,
+     * `Eufemia (Minero) / Volviendo a la caseta` con `neto 50`. Ahora el rescate busca la celda libre <b>cerca de su
+     * recado</b> (donde iba) y solo si no la encuentra baja a la plaza.
+     */
+    private static BlockPos casillaLibreCercaDe(ServerLevel level, BlockPos anchor, int cota, int radio) {
+        for (int r = 1; r <= radio; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
                         continue; // el interior ya se miró en los anillos anteriores
                     }
-                    BlockPos p = new BlockPos(center.getX() + dx, cota, center.getZ() + dz);
+                    BlockPos p = new BlockPos(anchor.getX() + dx, cota, anchor.getZ() + dz);
                     if (level.getBlockState(p).getCollisionShape(level, p).isEmpty()
                             && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
                             && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty()) {
@@ -4534,7 +4575,7 @@ public final class VillageManager {
                 }
             }
         }
-        return new BlockPos(center.getX(), cota, center.getZ());
+        return null;
     }
 
     /**

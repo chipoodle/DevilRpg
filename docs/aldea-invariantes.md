@@ -5746,3 +5746,31 @@ reparta pan de más ✗ — `darPanDeLaDespensa` **no da nada** si el barril no 
 libre** ✓. El pueblo creció **antes** (cuando la despensa tenía 29 puntos y había **31 camas**) y ahora **20 bocas**
 comen lo que dan **3 parcelas**: es la cuenta, no un descuido. Lo que **sí** era un fallo es el granjero de más
 compartiendo puesto (I187), porque ese aldeano come y no produce.
+
+### I188 · **EL RESCATE DEJA AL ALDEANO CERCA DE SU RECADO, Y A LA ALTURA DEL RECADO** (3-oct-2026)
+
+**El efecto secundario, medido**: al aldeano atrapado se le bajaba **siempre a la plaza** ✗ y con eso su recado podía
+quedar **a 50 bloques**. Corrida 59: **4 de los 6 avisos** eran del minero (`Eufemia (Minero) / Volviendo a la
+caseta`, `neto 50`). Es el precio de una red que salva al aldeano pero lo deja **lejos de su faena**.
+
+**PRIMER INTENTO, y falló por la altura** ✗ (corrida 64, y hay que dejarlo escrito): se buscó la casilla libre **cerca
+del recado pero a la cota de la calle (78)**, y el recado del minero está en `603, 61, 526` —**el fondo de la mina**—,
+así que a `y=78` no había ninguna casilla junto a él → **plan B: la plaza** ✗ → el minero otra vez a **41 bloques** de
+su caseta y **10 de los 13 avisos** de aquella corrida eran suyos ✗.
+
+**ARREGLO (definitivo)**: el rescate busca la casilla pisable **a la altura del propio recado** y, si ahí no hay, a la
+de la calle, y solo entonces la plaza. Así al minero se le deja **en su mina** ✓ (que es donde estaba trabajando)
+en vez de al otro lado del pueblo.
+
+### I189 · **LA MESA ES DONDE COME, NO DONDE SE PONE** (3-oct-2026) — la taberna
+
+**Medido en el lote largo**: `Yendo a la taberna` salía **4 veces** ✗ (`Isidoro`, `Josefa`, `Anselmo`, `Casimiro`) y en
+**las cuatro** el aldeano estaba **pegado** al destino (`neto` 0,6-0,8), con **la ruta llegando** (`alcanza=SI`) y
+**sin moverse** (`ANDADO ≈ 0`) — la firma de «el destino no es una casilla». **La comprobación en el terreno** lo
+cerró: los tres destinos (`606, 78, 587`, `600, 78, 583`, `600, 78, 590`) son **ladrillo** ✗ (`D` en el mapa del
+sector). Y la causa está en el generador: `puntosDeLaTaberna` devuelve **«el centro de cada una de las seis mesas»**
+✗… y **la mesa es de ladrillo**.
+
+**ARREGLO**: el goal elige la **casilla pisable de al lado** de la mesa (el mismo contrato de casilla de pie que usa
+el ganadero con sus animales, `VillageErrands.casillaPosible`) y **descarta las mesas** que no tengan una; si ninguna
+la tiene (no debería), se deja la de siempre para no empeorar nada.

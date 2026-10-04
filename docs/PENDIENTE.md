@@ -423,6 +423,40 @@ baja a la **plaza**, y desde ahí un recado lejano (la mina, 50 bloques) puede f
 junto con **`Yendo a la taberna`** ✗ (que reapareció: 4 veces en el lote) y **`Yendo a entrenar`** ✗ (dos guardias al
 mismo punto inalcanzable, `520, 78, 595`).
 
+### 8.bis.0.decies · **Ronda 26: I188 e I189, y tres cosas que quedan localizadas con coordenadas**
+
+**(a) I188 — el rescate deja al aldeano JUNTO A SU PUESTO, no en la plaza.** Medido en la corrida 64: **13 avisos y 10
+del minero** ✗ (`Ximeno / Volviendo a la caseta`, `neto 36-41`, `alcanza=NO`) porque el rescate lo dejaba en la plaza y
+su recado quedaba a **54 bloques**. El primer intento (buscar la casilla libre junto al **recado**, a la altura del
+recado) **no bastó** ✗ —corrida 67: **7 de 7 rescates seguían en la plaza**— porque **al rescatarlo su goal ya se ha
+rendido y no hay recado** ✗. El ancla que **siempre** existe es su **`JOB_SITE`**. Con eso, verificado en las corridas
+68-69: el minero cae en **`597, 78, 536`** ✓, a **dos bloques** de su caseta ✓ (antes a 54 ✗).
+
+| mundo asentado | avisos |
+|---|---|
+| corrida 64 (rescate a la plaza) | **13** ✗ (10 del minero) |
+| corrida 67 (rescate junto al recado) | **14** ✗ (7 rescates, todos a la plaza ✗) |
+| **68-69 (rescate junto al PUESTO)** | **0 · 0** ✓✓ |
+
+**(b) I189 — la mesa de la taberna es donde come, no donde se pone.** Los cuatro avisos de `Yendo a la taberna` del
+lote tenían la firma de «destino que no es casilla»: `neto` 0,6-0,8 ✗, `alcanza=SI` ✓ y `ANDADO ≈ 0` ✗. En el terreno,
+los tres destinos (`606, 78, 587`, `600, 78, 583`, `600, 78, 590`) son **ladrillo** ✗, y el generador da **«el centro de
+cada mesa»** ✗ — la mesa **es** de ladrillo. Arreglado: se elige la **casilla pisable de al lado** de la mesa (el
+contrato que ya usa el ganadero) y se descartan las mesas sin casilla. **PERO SIGUE FALLANDO UNA VEZ** ✗ (corrida 67:
+`Isidoro / Yendo a la taberna` con destino `605, 78, 586`, que el corte del mundo da como **ladrillo** ✗ y que
+`casillaPosible` **aceptó** ✓ hmm — **contradicción sin resolver** ✗, y es el siguiente paso: o `esCeldaDePie` acepta
+una celda maciza, o el corte y el destino no son la misma celda. **Anotado con las dos coordenadas.**
+
+**(c) Y `Yendo a entrenar` queda LOCALIZADO** ✗: los dos guardias rescatados en la corrida 69 estaban atrapados en
+**`519, 79, 594`** y **`520, 79, 595`** ✓ — o sea, **dentro del patio de tiro** ✗ (valla con una compuerta en
+`z=591`), a **y=79** (un bloque por encima de la calle, fuera de la banda que exime). El rescate los saca ✓, pero
+desde la plaza no vuelven ✗ (su puesto no tiene casilla libre cerca) → **el candidato es la compuerta del patio y el
+destino del entrenamiento** (la diana es un bloque macizo, como la mesa de la taberna).
+
+**(d) Y el pozo de la mina sigue siendo la trampa** ✗ (mundo, no código): el minero se cae en la zanja de `x=603`
+(1×1 y 2 de fondo) y **cada rescate es un aviso menos pero un problema que sigue ahí**. Lo suyo es **dejar un escalón**
+al construir la boca de la mina.
+
 **Y la lección que más vale de todo esto**: durante dos semanas el instrumento costaba **80 minutos por pregunta** y el
 aviso de rendición **fotografiaba el después** en vez del fallo. Con el **banco rápido** (3 min) y los tres datos nuevos
 del aviso (**neto**, **ANDADO** y **destinos**), lo que llevaba cuatro intentos fallidos se encontró en minutos — y tres
