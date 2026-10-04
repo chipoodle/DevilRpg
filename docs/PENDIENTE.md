@@ -1281,3 +1281,23 @@ una línea.
 **Lo que sí se ha hecho esta ronda**: lanzar el **lote de 4 corridas largas** (`86 · 87 · 88 · 89`, 4 × 20 min) sobre
 el **build final** (I191 + I192 + I193) y el pueblo asentado, que es la verificación que pide el objetivo. Sus números
 van en la ronda siguiente.
+
+### 8.bis.0.terdecies · **ACTA DE CIERRE POR ETIQUETA** (ronda 31, sobre todas las corridas largas medidas)
+
+Barrido sobre **todas** las corridas largas del arnés (`build/medida-tanda*.log`, 20 minutos cada una, pueblo asentado,
+con cierre limpio), agrupando los avisos de rendición por etiqueta:
+
+| etiqueta del objetivo | apariciones | veredicto |
+|---|---|---|
+| `Yendo a la cocina` · `Labrando la huerta` · `Guardo lo suyo` · `Buscando recambios` · `Yendo a la arboleda` · `Recogiendo lo suyo` · `Guardando lo suyo` · `Encendiendo la mina` | **0** ✅ | **cerradas**: no aparecen en ninguna corrida larga |
+| `Volviendo a la caseta` (el minero) | 30 ✗ | **todas** en las corridas **49-67**; **cero** desde la 72 → cerrada por **I188** |
+| `Yendo a la taberna` | 10 ✗ | todas hasta la 76; **cero** en 82 y 85 → cerrada por **I191** |
+| `Cuidando el ganado` · `Bajando lo del corral` · `Sacrificando un animal` (el ganadero) | 11 · 3 · 3 ✗ | **cero** en 82 y 85 |
+| `Yendo al almacen` · `Volviendo al almacen` | 5 · 1 ✗ | **cero** en 82 y 85 |
+| `Sembrando` · `Entrando a la huerta` · `Abono la huerta` · `Trajo … a la despensa` · `Comiendo en la taberna` | 1 cada una | sueltas y **en el build viejo** |
+| **`Yendo a entrenar`** (los guardias) | 11 ✗ | **el único que sigue vivo**: **1 por corrida larga** (era 2-4 antes de **I193**) |
+
+**Lectura**: de las etiquetas que el objetivo pide cerrar, **ocho no aparecen en ninguna corrida larga** y **cinco más
+se cerraron** en esta sesión (caseta por I188, taberna por I191, ganadero y almacén sin avisos en las dos últimas).
+Queda **una**: `Yendo a entrenar`, ya reducida a **un aviso por corrida de 20 minutos** (cientos de recados), y su caso
+está medido: un guardia **lejano** (`neto 27`) que no arranca a andar hacia su tramo.
