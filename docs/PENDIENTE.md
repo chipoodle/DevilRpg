@@ -1322,3 +1322,24 @@ viva** o si se agotan las reafirmaciones.
 
 **Por qué no se aplica ya**: el **lote de 4 corridas largas** (`86 · 87 · 88 · 89`) está midiendo **este mismo build**
 y cada corrida recompila al empezar; un cambio a mitad las haría inconsistentes. Se aplica cuando acabe.
+
+### 8.bis.0.quindecies · **Ronda 33: el corral, localizado (el portón queda a 19 bloques del que lo necesita)**
+
+**El caso, medido** (corrida larga 86, la ráfaga de 20): `Segismunda (Ganadero)` **fuera del corral** (`626, 78, 566`)
+queriendo entrar (`622, 78, 566`, **dentro**) con **`alcanza=NO`** y `ANDADO` 0,0-1,1.
+
+**Dónde está el portón, leído en el generador**: `VillageGenerator.portonDelCorral` = `baseDeAnexo(center).getX() -
+ANEXO_RADIO`, `z = base.getZ()` → **`607, 78, 566`**, el **centro de la valla OESTE** (comprobado en el terreno: la
+línea `O` de `x=607` recorre todo el corral, y la valla **este** (`x=625`) está **entera, sin hueco**). O sea: **la
+única entrada al corral está en el lado oeste**, y quien la necesita puede estar en el **este**, a **19 bloques**.
+
+**Por qué falla**: el abridor del pueblo (`VillageErrands`, con `mirarYQuizáAbrir`) abre lo que le cierra el paso
+**cerca** de él (radio 8, y mirando la cara y su eje) — a 19 bloques **no llega** ✗, así que el portón sigue cerrado,
+el planificador no encuentra entrada y el aldeano se rinde (`alcanza=NO`), vuelve a intentarlo y suelta ráfaga.
+
+**I196 (borrador, sin aplicar)**: cuando la ruta de un aldeano **no alcanza** su destino y ese destino está **dentro
+del corral** (o del gallinero), el pueblo **abre el portón conocido** de ese recinto —la celda ya está calculada,
+`portonDelCorral`, y la apertura es idempotente y barata— **sin exigir cercanía**: es el único paso, y el que está
+lejos es justo el que no puede abrirlo. Con el portón abierto la ruta existe y el aldeano entra.
+
+**Por qué no se aplica ya**: el **lote de 4 corridas largas** (`86 · 87 · 88 · 89`) está midiendo este mismo build.
