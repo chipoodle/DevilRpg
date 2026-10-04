@@ -5831,3 +5831,27 @@ los demás.
 corrida larga** de toda la sesión— y **344 líneas de aldeanos `Comiendo en la taberna`** ✓✓ (antes se rendían sin
 llegar). Sin migración (`REPARADA` 0 veces ✓) y con cierre limpio ✓. El pueblo trabajando: herrería 218 ✓, ganadería
 12 ✓, pesca 8 ✓.
+
+### I192 · **EL DESPACHADOR TIENE QUE MIRAR SI EL ALDEANO SE MUEVE, NO SOLO SI LA RUTA AVANZA** (3-oct-2026)
+
+**El dato que lo pide**: en la corrida 72 los **empujones de I190 saltaron 0 veces** ✗ en 20 minutos. Y no es que no
+hubiera atascos: había avisos. La causa **no** está en `avanzaPorLaRuta` (que es cuidadoso: mira el **índice de nodo**
+de la ruta y **no** cuenta los recálculos, que es justo el bucle que I3 evita) sino en que el contador del despachador
+**se reinicia cada vez que el goal arranca** (`start()`) y el despachador **arranca y para** a menudo: nunca llegaba a
+los 40 ticks del primer empujón ✗.
+
+**La medida que no miente ya existía**: el latido apunta `DevilRpgUltimoMovimiento` (cuándo anduvo por última vez,
+I177, con los teletransportes descartados) y `DevilRpgAndado` (I175). Y **el aviso de rendición imprime justo eso**:
+**todos** los avisos que quedaban traen **`ANDADO` entre 0,0 y 0,9 bloques** con la ruta viva (`alcanza=SI`),
+incluidos los de la taberna, los guardias y el ganadero.
+
+**ARREGLO**: la supervisión del despachador pasa a **«progresa = nodos de ruta **o** se ha movido de verdad en los
+últimos 2 s»** (`VillageManager.seHaMovidoHacePoco`, y sin dato contesta que sí: no se acusa a nadie sin pruebas). No
+se toca el oráculo compartido, porque lo usan muchos goals y el proyecto ya evitó molestar al que trabaja en el sitio
+(I177).
+
+**MEDIDO HASTA AHORA**: banco rápido **0 · 0** ✓. La verificación en ventana larga (donde vive el residuo) va en la
+corrida 82. Y el **lote largo del build anterior** (`76 · 77 · 78 · 79`, 4 × 20 min sobre el pueblo asentado) queda
+registrado como la referencia a batir: **3 · 2 · 10 · 5** (media **5,0**) frente al lote del pueblo asentado anterior
+(**1 · 13 · 9 · 12**, media **8,75**) y a los lotes viejos (**62 · 64 · 72 · 80 · 110 · 238**). Su residuo, medido
+etiqueta por etiqueta, es **un solo fenómeno**: `ANDADO ≈ 0` con ruta válida.

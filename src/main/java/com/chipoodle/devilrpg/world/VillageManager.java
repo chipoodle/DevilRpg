@@ -4351,6 +4351,23 @@ public final class VillageManager {
     private static final int ATRAPADO_TICKS_AVISO = 4 * 20;
 
     /**
+     * I192 · <b>¿SE HA MOVIDO DE VERDAD HACE POCO?</b> El latido apunta en {@code DevilRpgUltimoMovimiento} cuándo anduvo
+     * por última vez (I177, con los saltos imposibles descartados), así que esto es la única medida que <b>no</b>
+     * miente sobre si el aldeano avanza. Hace falta porque el índice de nodo de la ruta puede subir sin que el aldeano
+     * se mueva ni un bloque: medido, **todos** los avisos que quedan traen {@code ANDADO} entre 0,0 y 0,9 bloques con
+     * la ruta viva, y el despachador no lo veía (0 empujones en 20 minutos, corridas 72 y 76-78).
+     * <p>
+     * Sin dato (aldeano recién visto, o mundo recién cargado) contesta {@code true}: no se acusa a nadie sin pruebas.
+     */
+    public static boolean seHaMovidoHacePoco(Villager villager, int ticks) {
+        long ultimo = villager.getPersistentData().getLong("DevilRpgUltimoMovimiento");
+        if (ultimo == 0L) {
+            return true;
+        }
+        return villager.level().getGameTime() - ultimo < ticks;
+    }
+
+    /**
      * I186 · <b>¿Está este aldeano ATRAPADO de verdad?</b> (quieto en una celda fuera de la banda de la calle desde
      * hace {@link #ATRAPADO_TICKS_AVISO}). Lo usa {@link #marcarPuntoFallido} para <b>no</b> culpar al sitio: si el que
      * no se mueve es el aldeano, el que tiene que actuar es el <b>rescate</b>, no el aparcado de puntos.

@@ -78,7 +78,12 @@ public class VillageDispatcherGoal extends Goal {
         VillageManager.escribirElRumboDelRecado(villager, recado);
         // 2) LA SUPERVISIÓN (M4): ¿está avanzando por su ruta? Si no, se le da un presupuesto y, agotado, se ABANDONA
         //    el recado (el punto queda aparcado y el oficio elegirá otro). Nunca se queda rondando.
-        if (VillageManager.avanzaPorLaRuta(villager)) {
+        if (VillageManager.avanzaPorLaRuta(villager) || VillageManager.seHaMovidoHacePoco(villager, 40)) {
+            // I192 · PROGRESO = nodos de ruta **O** haberse movido de verdad en los últimos 2 s (3-oct-2026, MEDIDO).
+            // El índice de nodo puede subir con el aldeano plantado: **todos** los avisos que quedan traen `ANDADO`
+            // entre 0,0 y 0,9 bloques con la ruta viva (`alcanza=SI`) y el despachador no lo veía — los empujones de
+            // I190 saltaron **0 veces** en 20 minutos (corridas 72 y 76-78). Con esto el aldeano plantado sí empieza a
+            // contar, entra el empujón (parar la navegación y volver a mandar el rumbo) y solo después se abandona.
             ticksSinAvanzar = 0;
             empujonesDeEsteRecado = 0;
         } else {
