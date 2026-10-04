@@ -1362,7 +1362,14 @@ public class VillagerGuardGoal extends Goal {
                         villager.getUUID(), diana.toShortString(), objectiveIndex);
                 return false;
             }
-            VillageManager.caminarHacia(villager, punto, VELOCIDAD);
+            // I193 · AL PUESTO SE VA CON LA TOLERANCIA CERO (3-oct-2026, MEDIDO). Aquí se usaba `caminarHacia`, que pone
+            // el destino con tolerancia **1 bloque**: con el guardia a ~3 bloques del puesto (justo por encima de
+            // `REACH`, que es el borde que decide si camina o entrena) el navegador daba el camino por terminado, el
+            // guardia **no daba un paso** (`ANDADO 0.0`) y su contador subía hasta rendirse: medido en las corridas 78
+            // y 82, `Vicenta`/`Ramona` con destino `520, 78, 595` y `neto` **exactamente 3.0**. El proyecto ya tiene la
+            // herramienta para este caso exacto (I114, creada para el granjero en la compuerta): `caminarHaciaExacto`
+            // pide la ruta **a la celda**, sin tolerancia, así que el guardia se mueve de verdad y el tramo avanza.
+            VillageManager.caminarHaciaExacto(villager, punto, VELOCIDAD);
             VillageManager.ponerActividad(villager, "Yendo a entrenar");
             return true;
         }

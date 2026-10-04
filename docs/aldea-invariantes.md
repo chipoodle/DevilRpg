@@ -5855,3 +5855,20 @@ corrida 82. Y el **lote largo del build anterior** (`76 · 77 · 78 · 79`, 4 ×
 registrado como la referencia a batir: **3 · 2 · 10 · 5** (media **5,0**) frente al lote del pueblo asentado anterior
 (**1 · 13 · 9 · 12**, media **8,75**) y a los lotes viejos (**62 · 64 · 72 · 80 · 110 · 238**). Su residuo, medido
 etiqueta por etiqueta, es **un solo fenómeno**: `ANDADO ≈ 0` con ruta válida.
+
+### I193 · **AL PUESTO DE ENTRENAMIENTO SE VA CON LA TOLERANCIA CERO** (3-oct-2026) — la última etiqueta viva
+
+**Lo medido**: tras I191 e I192, el residuo quedó en **una sola etiqueta y un solo sitio**: los **guardias** en su
+puesto de entrenamiento (`520, 78, 595`), con `ANDADO 0.0` y `alcanza` unas veces `SI` y otras `NO`. En la corrida 82,
+las dos únicas rendiciones eran guardias y una de ellas traía **`neto` exactamente 3.0** — **el borde** de la decisión
+(la rama se elige con `distancia > REACH = 3.0`).
+
+**Y el puesto NO es el problema**: comprobado en el terreno, `520, 78, 595` es **aire con suelo sólido** (pisable ✓) y
+las dianas están a `y=78`, a un bloque. El problema es **cómo se camina hasta él**: se usaba `caminarHacia`, que pone
+el destino con la tolerancia de **1 bloque**; con el guardia a ~3 bloques (justo por encima de `REACH`), el navegador
+daba el camino por terminado, el guardia **no daba un paso** y su contador subía hasta rendirse.
+
+**ARREGLO**: se camina con `VillageManager.caminarHaciaExacto` — la herramienta que el proyecto **ya** tenía para este
+caso exacto (I114, nacida del granjero en la compuerta): pide la ruta **a la celda**, sin tolerancia, así que el
+guardia se mueve de verdad y el tramo avanza. Es la **tercera vez** en la sesión que la causa es la misma familia:
+**el goal pide más precisión que el que mueve al aldeano** (I191 en la taberna, I192 en el despachador, I193 aquí).
