@@ -35,9 +35,17 @@ foreach ($i in $numeros) {
         Write-Output "   (mundo conservado: el pueblo ya no migra, se mide asentado)"
     }
     Remove-Item run\logs\latest.log -Force -ErrorAction SilentlyContinue
+    # CIERRE LIMPIO: se le dice al arnes a que tick parar (20 ticks/s, con 10 s de margen). Asi el servidor GUARDA el
+    # mundo y el trazado nuevo de la aldea queda en disco: las corridas siguientes, con -Conservar, miden el pueblo
+    # ASENTADO. Sin esto el banco mataba el proceso y el mundo no se guardaba (y cada corrida volvia a migrar).
+    [int]$tickParar = [int]($MINUTOS * 60 * 20 * 0.85)
+    Set-Content -Path run\arnes-parar.txt -Value $tickParar -Encoding ascii
     $p = Start-Process -FilePath '.\gradlew.bat' -ArgumentList 'runServer','--console=plain' -PassThru -NoNewWindow `
         -RedirectStandardOutput "build\runserver-rapida$i.txt" -RedirectStandardError "build\runserver-rapida$i.err"
     Start-Sleep -Seconds ($MINUTOS * 60)
+    # Y SE LE ESPERA: si cierra solo, el mundo esta guardado. Solo se mata si no ha cerrado.
+    $espera = 0
+    while (-not $p.HasExited -and $espera -lt 120) { Start-Sleep -Seconds 5; $espera += 5 }
     Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
         Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
@@ -45,6 +53,9 @@ foreach ($i in $numeros) {
     Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
     $log = "build\rapida-$i.log"
     Copy-Item run\logs\latest.log $log -Force
+    $cierre = (Get-Content $log | Select-String -Pattern 'CIERRE LIMPIO').Count
+    if ($cierre -gt 0) { Write-Output "   (cierre limpio: el mundo quedo guardado)" }
+    else { Write-Output "   (AVISO: no hubo cierre limpio; el mundo NO se guardo)" }
 
     $avisos = Get-Content $log | Select-String -Pattern 'no consigue llegar'
     Write-Output "corrida rapida $i : $($avisos.Count) avisos de rendicion"

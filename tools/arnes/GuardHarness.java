@@ -245,6 +245,40 @@ public class GuardHarness {
     /** Cuantas veces se ha visto a un granjero SUBIDO a la valla de su bancal (el bug que se mide). */
     private static int subidasALaValla = 0;
 
+    /**
+     * Si {@code build\arnes-parar.txt} dice un tick y ya se ha llegado, cierra el servidor <b>limpiamente</b> (como el
+     * comando {@code /stop}): guarda el mundo y sale solo. Es lo que permite que una corrida deje el trazado nuevo de
+     * la aldea EN DISCO, para que las siguientes midan el pueblo ya asentado en vez de rehacerlo cada vez.
+     */
+    private static void pararSiToca(net.minecraft.server.MinecraftServer server) {
+        // OJO CON LA RUTA (fallo medido el 3-oct-2026): el servidor corre con el DIRECTORIO DEL JUEGO en `run/`, asi
+        // que un `build\arnes-parar.txt` relativo apuntaba a `run\build\...` y no lo encontraba nunca (la corrida 43 no
+        // cerro y el mundo no se guardo). Se miran los dos sitios para que valga mire desde donde mire.
+        java.nio.file.Path ficha = null;
+        for (java.nio.file.Path candidato : new java.nio.file.Path[] {
+                java.nio.file.Path.of("arnes-parar.txt"),
+                java.nio.file.Path.of("build", "arnes-parar.txt"),
+                java.nio.file.Path.of("..", "build", "arnes-parar.txt") }) {
+            if (java.nio.file.Files.isRegularFile(candidato)) {
+                ficha = candidato;
+                break;
+            }
+        }
+        if (ficha == null) {
+            return;
+        }
+        try {
+            long objetivo = Long.parseLong(java.nio.file.Files.readString(ficha).trim());
+            if (objetivo > 0L && ticks >= objetivo) {
+                DevilRpg.LOGGER.info("[Arnes] CIERRE LIMPIO a los {} ticks (lo pide {}): guardo el mundo y paro el "
+                        + "servidor", ticks, ficha);
+                server.halt(false); // deja el bucle de ticks: el juego guarda y el proceso sale solo
+            }
+        } catch (Exception e) {
+            DevilRpg.LOGGER.warn("[Arnes] no pude leer {}: {}", ficha, e.toString());
+        }
+    }
+
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         ServerLevel level = event.getServer().overworld();
@@ -256,6 +290,15 @@ public class GuardHarness {
             pega = FakePlayerFactory.getMinecraft(level);
         }
         ticks++;
+        // CIERRE LIMPIO (3-oct-2026). El banco rapido y el lote largo MATAN el servidor de golpe (`Stop-Process`), y asi
+        // el mundo NO se guarda: el trazado nuevo de la aldea no llega a disco y la corrida siguiente VUELVE A MIGRAR
+        // (medido: 5-6 avisos de rendicion con migracion contra 2-4 sin ella, y el pueblo rehaciendose cada vez). Con
+        // `build\arnes-parar.txt` (una sola linea: el tick en el que hay que parar) el arnes CIERRA EL SERVIDOR COMO SE
+        // DEBE, que es lo que guarda el mundo y deja salir el proceso solo (lo mismo que hace el comando /stop). Si el
+        // fichero no esta, no cambia absolutamente nada: el banco sigue matando el proceso como hasta ahora.
+        if (ticks % 200 == 0) {
+            pararSiToca(event.getServer());
+        }
         // A los 15 s (chunks ya cargados) se le deja al almacen lo que el pueblo NO puede fabricar, para medir la
         // cadena del CLERIGO: verruga del Nether, polvo de blaze y BOTELLAS DE CRISTAL (para que tenga que ir al agua
         // a llenarlas: ver SEMBRAR_AGUA_EMBOTELLADA); y el botin que ya barre el recolector (pepitas de oro,
