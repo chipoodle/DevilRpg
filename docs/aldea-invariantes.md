@@ -5719,3 +5719,30 @@ pescador 7-9 ✓, cocina 4-24 ✓). **La causa, medida en el mismo registro**: `
 racion y **0 punto(s) en la despensa**` ✗ (4 veces), un granjero con **`puesto=SIN PUESTO`** ✗ y **39** líneas de
 `El granjero: Trajo 8 del almacen a la despensa` ✗ (yendo al almacén en vez de cosechar). **No es la rendición: es la
 despensa vacía y un granjero sin puesto.** Queda abierto, con nombre y coordenadas.
+
+### I187 · **UN PUESTO, UN DUEÑO** (3-oct-2026) — el turno de composteros
+
+**Lo medido, y hay que separarlo bien**: en las corridas 47-49 hay **exactamente 3 granjeros** ✓, cada uno con su
+compostero (`991470fd`, `4d096c1c`, `05821ff2`, 102 muestras cada uno) y **todo sano** ✓. En la corrida **50** —la de
+la aldea con **20 aldeanos**— aparecen **cuatro** ✗ y dos de ellos, `4d096c1c` (37 muestras) y `6b437808` (63),
+**se turnan el MISMO compostero** (`535, 78, 600`) ✗, con uno de ellos en `SIN PUESTO` **48 muestras** ✗.
+
+**La causa raíz, en el reclamo de estaciones** ✗: había un tercer paso —«no hay otra: la más cercana»— que cogía una
+estación **ocupada** aunque fuera de otro, y el filtro que debía impedirlo (`deOtro`) solo mira a los aldeanos **que esa
+pasada se han visto**: si el dueño no estaba en la lista (en su parcela, lejos, o el chunk sin cargar), el recién
+llegado se llevaba el compostero y **los dos se creían dueños** ✓✓.
+
+**ARREGLO**: fuera el paso 3. Quien no encuentra estación **libre** ni una ocupada **sin dueño** se queda sin puesto
+**este latido** y lo reintenta en el siguiente (el latido es cada 10 s): es mejor que dos granjeros compartiendo
+parcela. Los otros dos pasos se quedan igual (libre primero ✓, y la ocupada con **ticket perdido** después ✓, que es
+lo que arregló I23).
+
+**MEDIDO (banco rápido, mundo asentado)**: **0 · 1** ✓ — sin regresión en las rendiciones ✓. **Y la verificación del
+turno necesita 20 minutos** (es un fenómeno de aldeas grandes y ventanas largas), así que la comprobación de la granja
+va en la corrida larga posterior, no aquí.
+
+**Y LO QUE NO ES UN FALLO, para no confundir**: la despensa a **0 puntos** con **20 aldeanos** no es que el mod
+reparta pan de más ✗ — `darPanDeLaDespensa` **no da nada** si el barril no tiene pan ✓ y `feedVillagers` exige **cama
+libre** ✓. El pueblo creció **antes** (cuando la despensa tenía 29 puntos y había **31 camas**) y ahora **20 bocas**
+comen lo que dan **3 parcelas**: es la cuenta, no un descuido. Lo que **sí** era un fallo es el granjero de más
+compartiendo puesto (I187), porque ese aldeano come y no produce.

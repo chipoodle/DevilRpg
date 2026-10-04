@@ -3701,11 +3701,16 @@ public final class VillageManager {
                     }
                 }
             }
-            if (puesto == null && !estaciones.isEmpty()) {
-                puesto = estaciones.get(0); // no hay otra: la más cercana
-            }
+            // I187 · UN PUESTO, UN DUEÑO (3-oct-2026, MEDIDO). Aquí había un tercer paso: «no hay otra: la más
+            // cercana», que cogía una estación OCUPADA aunque fuera de otro. Se bloqueaba con `deOtro`, pero `deOtro`
+            // solo mira a los aldeanos **que esta pasada se han visto**: si el dueño no estaba en la lista (lejos, en
+            // su parcela, o el chunk sin cargar), el recién llegado se llevaba el compostero y **los dos se creían
+            // dueños**. Medido en el lote largo de la aldea con 20 aldeanos: dos granjeros turnándose el MISMO
+            // compostero (`535, 78, 600`) —37 muestras uno y 63 el otro— y uno de ellos con `SIN PUESTO` 48 veces.
+            // Quien no encuentra estación LIBRE ni una ocupada **sin dueño** se queda sin puesto este latido y lo
+            // reintenta en el siguiente: es mejor que dos granjeros compartiendo parcela.
             if (puesto == null) {
-                continue; // su oficio no tiene estación construida (todavía): no hay nada que reclamar
+                continue; // su oficio no tiene estación libre (todavía): se reintenta en el latido siguiente
             }
             boolean deOtro = false;
             for (Villager otro : aldeanos) {
