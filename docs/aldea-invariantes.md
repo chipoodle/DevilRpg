@@ -5872,3 +5872,25 @@ daba el camino por terminado, el guardia **no daba un paso** y su contador subí
 caso exacto (I114, nacida del granjero en la compuerta): pide la ruta **a la celda**, sin tolerancia, así que el
 guardia se mueve de verdad y el tramo avanza. Es la **tercera vez** en la sesión que la causa es la misma familia:
 **el goal pide más precisión que el que mueve al aldeano** (I191 en la taberna, I192 en el despachador, I193 aquí).
+
+### I196 · **SI UNO ESTÁ DENTRO DEL CORRAL Y EL OTRO FUERA, LA COMPUERTA QUE SEPARA ES LA DEL RECINTO** (3-oct-2026)
+
+**El fallo, medido en las corridas 86 y 87** (las peores del lote: **20 y 17 avisos**, y **15-20 de ellos el mismo
+ganadero**): `Segismunda (Ganadero)` en `626, 78, 565` queriendo entrar a `622, 78, 565` (dentro del corral), con
+`alcanza=NO`, `ANDADO` 0,0-1,1 y **`[Gate]` = 0** en las tres corridas revisadas: **el mod no abrió nada**.
+
+**Mi primer diagnóstico estaba a medias** ✗ (y se dice): creí que el abridor no llegaba por distancia. **No es eso**: el
+abridor prueba **primero** el portón conocido del corral (I179) y el aldeano puede estar a 19 bloques — eso funciona.
+Lo que falla es **la prueba de eje**: `mirarYQuizáAbrir` abre la puerta solo si **separa** al aldeano de su recado (uno
+a cada lado del eje de la puerta), y aquí `Segismunda` (`626`) y su recado (`622`) están **los dos al ESTE** del portón
+del corral (`607, 78, 566`, el centro de la valla **oeste**). O sea: **el criterio es correcto** ✓, y el problema es
+**geométrico**: la valla que los separa es la **este** (`x=625`)… y **esa no tiene compuerta** — el corral tiene **una
+sola entrada, en el oeste**. Cerrada, el planificador no puede cruzar y el aldeano se rinde una y otra vez.
+
+**ARREGLO**: cuando el aldeano y su recado están en **lados opuestos del recinto** (uno dentro y otro fuera — el mod ya
+sabe calcularlo, `dentroDe(base, ANEXO_RADIO, …)`, que ya usaba para otras cosas), la compuerta del recinto **es** la
+que hay que abrir, así que se abre **sin la prueba de eje** (abrir de más es barato: el goal de los portones la vuelve a
+cerrar si no hay nadie). Es el «conjunto de candidatas» del diseño del nivel 3 aplicado a las compuertas.
+
+**MEDIDO**: banco rápido **0 · 0** ✓ (antes: 20 y 17 en las largas). La verificación en ventana larga va en la corrida
+92 — y si el portón ya se abre, en el registro tiene que aparecer **`[Gate]`** (que en el «antes» era **0**).

@@ -154,6 +154,24 @@ public final class VillageErrands {
         if (centroGuardado != 0L) {
             BlockPos centro = BlockPos.of(centroGuardado);
             int nivel = VillageGenerator.cotaDeLaPlaza(level, centro);
+            // I196 · Y SI UNO ESTÁ DENTRO DEL CORRAL Y EL OTRO FUERA, LA COMPUERTA QUE SEPARA ES **LA DEL RECINTO**
+            // (3-oct-2026, MEDIDO). Aquí estaba el fallo de la ráfaga del ganadero: `Segismunda`, en `626, 78, 565`
+            // (justo al ESTE de la valla), con su recado en `622, 78, 565` (dentro) — los dos al **mismo lado** del
+            // portón del corral (`607, 78, 566`, el centro de la valla OESTE), así que la prueba de eje decía «esta
+            // puerta no los separa» y **no se abría**; y la valla que SÍ los separa es la ESTE (`x=625`), que **no
+            // tiene compuerta**. Cerrada la única entrada, el planificador no puede cruzar y el aldeano se rinde con
+            // `alcanza=NO` una y otra vez (20 y 17 avisos en las corridas 86 y 87, `[Gate]` = 0: nunca se abrió nada).
+            // Cuando uno está dentro y el otro fuera, la compuerta del recinto **es** la que hay que abrir: se abre
+            // sin la prueba de eje (abrir de más es barato; el goal de los portones la vuelve a cerrar si no hay nadie).
+            BlockPos baseAnexo = VillageGenerator.baseDeAnexo(centro);
+            boolean yoDentro = dentroDe(baseAnexo, VillageGenerator.ANEXO_RADIO, yo);
+            boolean recadoDentro = dentroDe(baseAnexo, VillageGenerator.ANEXO_RADIO, recado);
+            if (yoDentro != recadoDentro) {
+                BlockPos porton = VillageGenerator.portonDelCorral(centro, nivel);
+                if (porton != null && abrirSinMirarElEje(level, porton)) {
+                    return;
+                }
+            }
             BlockPos portonDelCorral = VillageGenerator.portonDelCorral(centro, nivel);
             if (portonDelCorral != null && mirarYQuizáAbrir(level, portonDelCorral, yo, recado)) {
                 return;
@@ -173,6 +191,25 @@ public final class VillageErrands {
                 return; // con una que se abra, ya se sigue caminando
             }
         }
+    }
+
+    /**
+     * I196 · Abre esa compuerta <b>sin la prueba de eje</b>: se usa cuando se sabe que <b>es</b> la que separa (el
+     * aldeano dentro del corral y su recado fuera, o al revés). Devuelve {@code true} si la abrió.
+     */
+    private static boolean abrirSinMirarElEje(ServerLevel level, BlockPos p) {
+        BlockState estado = level.getBlockState(p);
+        boolean esPuerta = estado.getBlock() instanceof DoorBlock;
+        boolean esCompuerta = estado.getBlock() instanceof FenceGateBlock;
+        if (!esPuerta && !esCompuerta) {
+            return false;
+        }
+        boolean abierta = esPuerta ? estado.getValue(DoorBlock.OPEN) : estado.getValue(FenceGateBlock.OPEN);
+        if (abierta) {
+            return false;
+        }
+        VillagerGateGoal.abrirParaUnAldeano(level, p.immutable());
+        return true;
     }
 
     /** Mira esa casilla: si es una puerta/compuerta cerrada que <b>separa</b> al aldeano de su recado, la abre. */
