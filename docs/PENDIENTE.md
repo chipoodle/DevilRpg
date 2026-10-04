@@ -1263,3 +1263,21 @@ despachador la condición que no miente**: el pueblo ya apunta cuándo se movió
 (`DevilRpgUltimoMovimiento`, I177) y cuánto ha andado (`DevilRpgAndado`, I175), así que la supervisión pasa a
 «progresa = nodos de ruta **o** se ha movido en los últimos 2 s». Con eso, el aldeano plantado empieza a contar, el
 **empujón** entra (parar la navegación y volver a mandar el rumbo) y **solo después** se abandona el recado.
+
+### 8.bis.0.duodecies · **Ronda 31: la zanja de la mina se deja como está, y por qué (medido)**
+
+**La geometría, medida en el terreno**: el paso que atrapaba al minero es el **acceso 1×1 del taller del minero**
+(`x=603`, de `z=533` a `541`) y su suelo está **2 bloques por debajo** de la calle (y=76 con el pueblo a 78) — de ahí
+que un aldeano (que sube **un** bloque) no pueda salir. **Es preexistente**: está **idéntico** en el guardado original
+del jugador (`run/saves/New World`), así que **no lo causó el cimiento** de I182.
+
+**Por qué NO se toca (aunque parezca lo obvio)**: un escalón o una losa en un paso de **1 bloque de ancho** que además
+es la **entrada a la mina** puede **bloquear la mina entera** (es el único acceso al caracol), y el beneficio ya no
+existe: con **I188** el rescate deja al minero rescatado **junto a su caseta** (`597, 78, 536`, a dos bloques ✓) y las
+corridas largas del pueblo asentado dan **0-1 avisos** ✓ — la trampa **ya no cuesta avisos** ✓. Queda como **pulido de
+mundo** (hacer el paso de 2 de ancho con un escalón, un cambio de trazado con su migración) y **no** como arreglo de
+una línea.
+
+**Lo que sí se ha hecho esta ronda**: lanzar el **lote de 4 corridas largas** (`86 · 87 · 88 · 89`, 4 × 20 min) sobre
+el **build final** (I191 + I192 + I193) y el pueblo asentado, que es la verificación que pide el objetivo. Sus números
+van en la ronda siguiente.
