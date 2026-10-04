@@ -1343,3 +1343,25 @@ del corral** (o del gallinero), el pueblo **abre el portón conocido** de ese re
 lejos es justo el que no puede abrirlo. Con el portón abierto la ruta existe y el aldeano entra.
 
 **Por qué no se aplica ya**: el **lote de 4 corridas largas** (`86 · 87 · 88 · 89`) está midiendo este mismo build.
+
+### 8.bis.0.sedecies · **Ronda 36: el despachador NO ESTÁ CABLEADO (y por eso I190/I192 no actúan), y se lanza el lote de cierre**
+
+**El hallazgo, leído en el propio código** (no medido, pero es concluyente): `VillageManager.caminarHacia` lleva el
+comentario *«El **despachador (M1)** —el que apuntaba el recado aquí y lo defendía— **se probó y se retiró**: ver acta
+en `docs/aldea-cerebro.md` §5. El módulo (`VillageDispatcherGoal`) y `apuntarElRecado` **se quedan sin cablear** como
+base del nivel 3»*. O sea: **el `VillageDispatcherGoal` no se ejecuta nunca** ✗ — y ahí es donde puse **I190** (los
+empujones) y **I192** (que la supervisión mire si el aldeano se mueve) ✗. **Por eso los empujones salieron 0 en todas
+las corridas** ✓: no es que no hubiera atascos, es que **ese código está muerto**.
+
+**Qué queda por tanto**: los casos de «no se mueve» los cierran los **cronómetros de cada goal** (de ahí los avisos),
+y una red central tiene que vivir donde **sí** corre: el **latido** (`VillageManager`, que ya mantiene el rumbo y los
+desatasco por latido).
+
+**I198 (borrador, para la ronda siguiente)**: en el latido, para cada aldeano del pueblo con un goal del mod activo
+que **no se haya movido en 2 s** (el dato ya existe: `DevilRpgUltimoMovimiento`, I177) y que no esté descansando, se le
+**para la navegación** (una vez cada 40 ticks, con tope). Como los goals vuelven a pedir el camino **cada tick**
+(`caminarHacia`), parar la navegación le obliga a **recalcular** y le saca del estancamiento sin tocar ningún goal. Es
+el mismo remedio de I190/I192, pero **en un sitio que se ejecuta**.
+
+**En marcha**: lote de cierre `100 · 101 · 102 · 103` (4 × 20 min, pueblo asentado) sobre el build con I197 — el
+primero sin el fallo del corral (20 · 17 · 49 → 1 en la larga 99).
