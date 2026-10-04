@@ -247,6 +247,46 @@ minero 9-16, leñador 0-5 por 3 minutos).
    del minero (**verificado en el terreno** ✓, I166), los zombis lentos y que no atacaban aldeanos (0,071 → 0,23 y
    prioridad 0 ✓, I165) y los aldeanos que no huían (el pánico no podía moverlos ✗, `VillagerFleeGoal` ✓).
 
+### 8.bis.0.sexies · **SESIÓN DEL 30-sep (noche) y 3-oct-2026**: los dos reportes nuevos, y el instrumento que mentía
+
+**Los dos reportes del jugador, cerrados — y uno de ellos destapó un fallo de MÉTODO mío.**
+
+| reporte del jugador | causa medida | arreglo | medido |
+|---|---|---|---|
+| *«la parte de abajo de la aldea está hueco, hay un boquete cerca de una parcela»* | `afianzarElSuelo` **solo** se llamaba desde la **reparación**, así que **una aldea nueva nacía sin cimiento** ✗ | **I182**: cimiento al final del terreno **y** al final de `generate` (la mina cava después ✗) + **trazado 81** para las ya generadas | dos líneas `CIMIENTO` (11200 y 11188 bloques) en cada corrida ✓ |
+| *«¿por qué no aparece arriba el nombre y profesión de los aldeanos?»* | el nombrado vive en `tickVillageLife`, que **solo corre con la aldea EN PAZ** (puerta del **12-sep**, `b4d04af`) y **una aldea nueva nace bajo asedio** ✗ | **I183**: la marca y el reparto de nombres corren **también con asedio** (junto a las camas, cada 10 s, idempotente) | `etiqueta=Bartolo (Herrero de armas)` ✓ 242 líneas con nombre y oficio en 3 min |
+
+**Y la parte que era mía, dicha sin adornos**: al hacer a los asaltantes **rápidos** y **que vayan a por los aldeanos**
+(I165), el **asedio puede durar mucho más** ✗ — y con él la aldea se queda «sin vida» (sin nombres, sin etiquetas). **No
+miré qué dependía de que la aldea estuviera en paz antes de tocar a los zombis** ✗.
+
+**El fallo de método del cimiento, que es el que más vale**: durante la sesión di el hueco por arreglado porque **el
+arnés decía 0 avisos** ✓ — pero **el arnés mide sobre el guardado viejo del jugador, que SÍ migra** y por tanto
+**siempre** pasaba por el cimiento ✓, mientras su **partida nueva** no ✗. *Lo que solo se prueba por el camino de la
+migración no está probado para una partida nueva.*
+
+**El instrumento mentía, y también está arreglado (I184)**: los bancos **mataban el servidor de golpe** ✗, el mundo **no
+se guardaba** y, como el trazado **se guarda en el mundo**, **cada corrida volvía a migrar** ✗: el pueblo se rehacía
+entero y la medida se llenaba de **5-7 avisos** ✗ que **no eran del arnés sino de la mudanza**. Ahora el arnés para a
+un tick pedido con `server.halt(false)` (lo mismo que `/stop`: **guarda y sale**) y `-Conservar` sirve de verdad:
+
+```
+corrida 45 (CON migración)     → cierre limpio ✓ · 7 avisos ✗  (la mudanza)
+corrida 46 (mundo CONSERVADO)  → cierre limpio ✓ · SIN línea REPARADA ✓ · 1 aviso ✓
+```
+
+**Conclusión medida**: los 5-7 avisos **eran la mudanza**, el pueblo asentado vuelve al **mejor registro de la sesión**
+y **no había regresión** alguna de I182/I183 ✓. El coste real de la mudanza es **+3 a +6 avisos UNA VEZ** por partida
+(al pasar al trazado 81), y eso hay que decírselo al jugador antes de que lo vea ✗.
+
+**Lo que sigue abierto**:
+
+1. **`Guardando lo suyo` con I181**: **4 corridas largas** del pueblo **asentado** (ya medibles ✓, con
+   `tools/arnes/tanda-larga.ps1 N -Conservar`), que es lo que cierra el único pendiente de etiqueta que queda.
+2. **El residuo**: con el mundo asentado, **1 aviso por 3 minutos** sobre cientos de recados (≈1 %), etiqueta rotando
+   (`Sacrificando un animal` en la 46) → tropiezos sueltos, no familias.
+3. **Documentar** en el `LEEME` que el banco **exige** el cierre limpio (hecho: es el paso 0 del protocolo).
+
 **Y la lección que más vale de todo esto**: durante dos semanas el instrumento costaba **80 minutos por pregunta** y el
 aviso de rendición **fotografiaba el después** en vez del fallo. Con el **banco rápido** (3 min) y los tres datos nuevos
 del aviso (**neto**, **ANDADO** y **destinos**), lo que llevaba cuatro intentos fallidos se encontró en minutos — y tres

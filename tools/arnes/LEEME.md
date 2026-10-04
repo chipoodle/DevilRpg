@@ -1,5 +1,27 @@
 # Arnés de la aldea (servidor headless)
 
+## PASO 0 · EL CIERRE LIMPIO (obligatorio desde el 3-oct-2026)
+
+Los dos bancos —el rápido (`tanda-rapida.ps1`, 3 min) y el **largo** (`tanda-larga.ps1`, 20 min, ya versionado)—
+**piden al arnés que cierre el servidor limpiamente** a un tick dado (`run\arnes-parar.txt`) y **esperan** a que salga
+solo. Es lo que hace que el mundo **se guarde**: antes **mataban el servidor de golpe** ✗, el trazado nuevo de la aldea
+**no llegaba a disco** y, como el trazado **se guarda en el mundo**, **cada corrida volvía a migrar** ✗ — el pueblo se
+rehacía entero y la medida se llenaba de **5-7 avisos** que **no eran del juego sino de la mudanza** (I184).
+
+**Regla**: una tanda que no diga `CIERRE LIMPIO` en su registro **no vale**; se repite. Y para medir el pueblo **ya
+asentado** (lo que ve el jugador tras la primera carga) se usa `-Conservar`, que **no** restaura `run\world`: la primera
+corrida paga la migración y las siguientes miden el pueblo con su trazado ya guardado.
+
+```powershell
+.\tools\arnes\tanda-rapida.ps1 45                      # paga la migracion (una vez) y GUARDA el mundo
+.\tools\arnes\tanda-rapida.ps1 46 47 -Conservar        # el pueblo asentado: la medida que vale
+.\tools\arnes\tanda-larga.ps1 48 49 50 51 -Conservar   # las 4 corridas de 20 min del acta
+```
+
+**Y una regla de convivencia con el modelo local**: **no se lanza ninguna consulta al modelo mientras hay una corrida
+midiendo** ✗. El modelo carga 8,3 GB y come CPU/GPU; si el servidor late más despacio, **hace menos recados** y los
+avisos **bajan solos** ✗ → la medida sale **optimista y falsa**. El modelo se usa **antes o después**, nunca durante.
+
 ## Apoyo local en paralelo (el modelo del jugador)
 
 El jugador tiene **Ollama** en `127.0.0.1:11434` con `deepseek-coder-v2:16b` y `deepseek-r1:14b`, y pidió usarlo como

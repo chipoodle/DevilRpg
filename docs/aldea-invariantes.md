@@ -5589,3 +5589,71 @@ Los goals de las etapas B-E (`VillagerAnimalFarmGoal`, `VillagerCookGoal`, `Vill
 los tres goals viejos, y son justo los que más caminan por el pueblo (I3, I6). Una excepción **justificada** se marca
 en la propia línea o en las dos anteriores con `// lint:ok <clave> porque ...`: así se calla un aviso legítimo sin
 apagar la regla para el resto del archivo.
+
+### I182 · **EL CIMIENTO, TAMBIÉN AL CONSTRUIR LA ALDEA** (30-sep-2026, sesión de la noche)
+
+**Lo reportó el jugador**: *«todavía la parte de abajo de la aldea está hueco. Hay un boquete cerca de una de las
+parcelas donde se ve lo hueco»*. Y **la causa estaba en su propio registro** ✗, que enseñaba **dos** aldeas: la
+**migrada** con `CIMIENTO … puestos 73612 bloques solidos` ✓ y la **nueva** (`566, 65, 598`) con
+`tapados 28 bloques de huecos del suelo` y **ninguna** línea de cimiento ✗.
+
+**La causa**: `afianzarElSuelo` **solo** se llamaba desde el camino de **reparación** (aldeas migradas), así que
+una aldea **recién generada nacía sin cimiento** y su fondo quedaba hueco. Y explica por qué mi arnés decía
+«arreglado» mientras el jugador lo veía roto: **el arnés mide sobre su guardado viejo, que sí migra** y por tanto
+**siempre** pasaba por el cimiento ✗. Es un modo de fallo del método, no del código: *lo que solo se prueba en el
+camino de la migración no está probado para una partida nueva*.
+
+**ARREGLO** (tres piezas, y las tres hacen falta):
+1. El cimiento **al final del terreno** de la construcción (`limpiarTerrenoYConstruir`, junto al sellador de huecos).
+2. **Otra vez al final de `generate`**, porque **la mina se cava después** y **vuelve a excavar** lo rellenado: es
+   exactamente el problema de orden que ya hubo que arreglar en la reparación ✗.
+3. **Trazado 81**, para que las aldeas **ya generadas** pasen **una vez** por la reparación y reciban el cimiento
+   también (si no, la partida del jugador —trazado 80— se quedaba con el boquete para siempre).
+
+**MEDIDO**: en cada corrida salen las **dos** líneas `CIMIENTO … puestos 11200` y `… 11188 bloques solidos` ✓, y la
+reparación del trazado 81 se ve una vez (`REPARADA … quitados 5499 bloques de restos…`) ✓.
+
+### I183 · **LOS NOMBRES, TAMBIÉN EN EL ASEDIO** (30-sep-2026)
+
+**Lo reportó el jugador**: *«¿por qué no aparece arriba el nombre y profesión de los aldeanos arriba de su cabeza?»*
+
+**El dato, primero, porque importa**: la puerta que lo impedía **no la puse yo**. El nombrado (y con él la **marca**
+`DEL_PUEBLO_TAG`, que es lo que da derecho a la etiqueta) vive dentro de `tickVillageLife`, y esa función **solo corre
+con la aldea EN PAZ** (`!isUnderAttack` y **sin enemigos dentro**); esa condición es del **12-sep-2026** (`b4d04af`,
+`34a0ee9`), tres semanas antes de esta sesión. Y una aldea **nueva nace con su asedio inicial** ✗, así que se quedaba
+**sin nombres y sin etiquetas** hasta ganarlo.
+
+**PERO UNA PARTE SÍ ERA MÍA, y por eso esta invariante existe**: al hacer a los asaltantes **rápidos** (I165) y **que
+vayan a por los aldeanos**, ese asedio **puede durar mucho más** ✗, y con él la aldea se queda «sin vida». No miré
+**qué dependía de estar en paz** antes de tocar a los zombis.
+
+**ARREGLO**: `nombrarLaGenteDelPueblo` (marca + reparto de nombre, **idempotente**, cada 10 s) se llama **también con
+asedio**, en el mismo sitio donde ya se reparten **las camas** — y el propio código tenía escrito el criterio:
+*«Un aldeano sin cama tiene que recibirla también —y sobre todo— la noche del asedio»*. **El nombre no es un
+privilegio de la paz.**
+
+**VERIFICADO** (leyendo el código, no por el modelo): los únicos que leen la marca son la **etiqueta** (`esDelPueblo`
+en `etiqueta`/`refrescarEtiquetas`, justo lo que se quiere arreglar) y la **interacción del clérigo**
+(`CommonForgeInteractionEventSubscriber`) → ponerla antes **no rompe nada, lo arregla** ✓. Y los nombres se reparten:
+en los registros salen `etiqueta=Bartolo (Herrero de armas)`, `etiqueta=Leocadia (Cocinero)` (242 líneas con nombre
+y oficio en una corrida de 3 minutos).
+
+### I184 · **EL BANCO TIENE QUE CERRAR EL SERVIDOR LIMPIAMENTE** (3-oct-2026) — invariante del INSTRUMENTO
+
+Los dos bancos (`tanda-rapida.ps1`, `tanda-larga.ps1`) **mataban el servidor de golpe** (`Stop-Process`), así que el
+mundo **no se guardaba**; y como el **trazado de la aldea se guarda en el mundo**, **cada corrida volvía a migrar**:
+el pueblo se rehacía entero (`REPARADA` + dos `CIMIENTO`) y la medida se llenaba de avisos **que no eran del arnés sino
+de la mudanza**: **5-7 por corrida de 3 minutos**, casi todos `Recogiendo el corral` ✗.
+
+**ARREGLO**: el arnés lee `run\arnes-parar.txt` (una línea: el tick) y llama a `server.halt(false)`, que es **lo mismo
+que hace `/stop`**: guarda el mundo y el proceso sale solo. Dos fallos por el camino, los dos medidos: (a) la primera
+versión buscaba `build\arnes-parar.txt` **relativo**, y el servidor corre con el directorio del juego en `run/`, así
+que apuntaba a `run\build\…` y **no lo encontraba nunca** (corrida 43: «no hubo cierre limpio», y el mundo sin
+guardar); ahora mira `run\`, `build\` y `..\build\`. Y (b) el margen de ticks era muy justo y el servidor va con
+retraso, así que ahora para al **85 %** del tiempo.
+
+**MEDIDO, banco rápido**: corrida 45 **con** migración, cierre limpio, **7 avisos** ✗; corrida 46 **conservando el
+mundo**, cierre limpio, **sin línea `REPARADA`** (el trazado 81 quedó guardado ✓) y **1 solo aviso** ✓. **Conclusión**:
+los 5-7 avisos eran la mudanza, el pueblo asentado vuelve al mejor registro de la sesión y **no había regresión** de
+I182/I183. **Lección de método**: un instrumento que no deja guardar el mundo convierte **cada medida** en una
+**migración**, y luego uno se cree que el arreglo ha empeorado el pueblo.
