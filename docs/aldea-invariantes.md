@@ -5689,3 +5689,33 @@ así que **no la causó el cimiento de I182** ✓.
 **1,33** ✓) con el rescate disparando (2 y 1 veces por corrida: `estaba atascado (sin poder salir) en 520, 79, 594`).
 El aviso que queda es **uno**: el minero bajando a su mina (`603, 75, 537` → `603, 61, 526`, ruta de 33 nodos), ya
 **sin ráfaga** ✓.
+
+### I186 · **ANTES DE CULPAR AL SITIO, MIRA SI EL QUE NO SE MUEVE ES EL ALDEANO** (3-oct-2026)
+
+**El dato que lo decidió, sacado de las 4 corridas largas**: el aviso de rendición dice «no consigue llegar a X» y eso
+se lee como «X es inalcanzable»… pero **el 100 % de los avisos traía `ANDADO` ≈ 0** ✗ (entre **0,0 y 0,8 bloques**),
+**incluso cuando la ruta SÍ llegaba** (`alcanza=SI`, con `neto` de hasta 30 bloques). El aldeano **no andaba nada**.
+Marcar el punto como fallido ahí es **una mentira que además arrastra**: aparca un sitio del pueblo que está perfecto.
+
+**Y los dos relojes estaban mal ordenados** ✗: el recado se rinde a los **10 s** (`RECADO_PRESUPUESTO = 200`) y el goal
+del oficio ronda los **16 s**, pero el rescate necesitaba **30 s** (`ATRAPADO_TICKS = 30 * 20`) — así que **el rescate
+llegaba siempre tarde** y el aviso ya estaba escrito. Por eso el rescate solo cortaba **las repeticiones** (20 avisos →
+1), no el **primero**.
+
+**ARREGLO (tres piezas, todas del mismo embudo)**:
+1. `marcarPuntoFallido` **no marca nada** si el aldeano está **atrapado** (`estaAtrapadoSinSalida`): quieto desde hace
+   `ATRAPADO_TICKS_AVISO` = **4 s** en una celda **fuera de la banda de la calle**. De eso se encarga el rescate.
+2. `ATRAPADO_TICKS` baja de **30 s a 12 s**, para que el rescate llegue **antes** de que el goal se rinda.
+3. El libro de cuentas es el mismo del rescate (`ATRAPADOS`), que **solo apunta a quien está fuera de la calle**: al
+   que anda por la calle no se le toca (ahí «quieto» puede ser legítimo: está trabajando en el sitio).
+
+**MEDIDO, mismo mundo asentado, banco rápido**: **1 · 2 · 1** ✓ → **0 · 0 · 0** ✓✓ (media **0,0**, el mejor registro
+de toda la sesión; el anterior mejor era **0 · 1 · 1 · 1**, media 0,75). **Y con el pueblo trabajando**: herrería
+46-49, minero 7-9, guardia 397-480, pescador 1-2 por **3 minutos**.
+
+**PERO SE DESTAPÓ OTRA COSA, y se dice aquí**: en las 4 corridas **largas** la **granja** rinde **16 · 15 · 15 · 5**
+frente a la referencia de **40-57** ✗ (el resto de oficios está en rango: ganado 56-90 ✓, herrería 199-231 ✓,
+pescador 7-9 ✓, cocina 4-24 ✓). **La causa, medida en el mismo registro**: `La aldea 0 pasa hambre: 2 boca(s) sin su
+racion y **0 punto(s) en la despensa**` ✗ (4 veces), un granjero con **`puesto=SIN PUESTO`** ✗ y **39** líneas de
+`El granjero: Trajo 8 del almacen a la despensa` ✗ (yendo al almacén en vez de cosechar). **No es la rendición: es la
+despensa vacía y un granjero sin puesto.** Queda abierto, con nombre y coordenadas.

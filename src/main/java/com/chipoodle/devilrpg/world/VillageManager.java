@@ -4330,8 +4330,40 @@ public final class VillageManager {
 
     /** Dónde y desde cuándo lleva quieto cada aldeano que está metido en un piso (para el rescate). */
     private static final java.util.Map<UUID, long[]> ATRAPADOS = new java.util.concurrent.ConcurrentHashMap<>();
-    /** Sin moverse de celda este tiempo, dentro de un piso, se le baja a la plaza (30 s). */
-    private static final int ATRAPADO_TICKS = 30 * 20;
+    /**
+     * Sin moverse de celda este tiempo, fuera de la banda de la calle, se le baja a la plaza. Estaba en <b>30 s</b> y
+     * se bajó a <b>12 s</b> el 3-oct-2026 (I186) por una razón medida: el recado se rinde a los <b>10 s</b>
+     * ({@link #RECADO_PRESUPUESTO}) y el goal del oficio ronda los <b>16 s</b>, así que con 30 s el rescate llegaba
+     * <b>siempre tarde</b> y el aviso de rendición ya estaba en el registro. Con 12 s el rescatado vuelve a la calle
+     * <b>antes</b> de que su goal se dé por vencido.
+     */
+    private static final int ATRAPADO_TICKS = 12 * 20;
+    /**
+     * I186 · Y ESTE ES EL UMBRAL DEL AVISO: si lleva <b>este</b> tiempo quieto fuera de la calle, ya no se le marca el
+     * sitio como inalcanzable (ver {@link #estaAtrapadoSinSalida}). Es corto a propósito: en 3-4 s andando un aldeano
+     * habría salido de cualquier celda, así que estar ahí quieto ya significa que no puede.
+     */
+    private static final int ATRAPADO_TICKS_AVISO = 4 * 20;
+
+    /**
+     * I186 · <b>¿Está este aldeano ATRAPADO de verdad?</b> (quieto en una celda fuera de la banda de la calle desde
+     * hace {@link #ATRAPADO_TICKS_AVISO}). Lo usa {@link #marcarPuntoFallido} para <b>no</b> culpar al sitio: si el que
+     * no se mueve es el aldeano, el que tiene que actuar es el <b>rescate</b>, no el aparcado de puntos.
+     * <p>
+     * Se apoya en el mismo libro de cuentas que el rescate ({@link #ATRAPADOS}), que solo apunta a quien está
+     * <b>fuera de la banda de la calle</b>: al que anda por la calle no se le toca (y ahí el «quieto» puede ser
+     * legítimo: está trabajando en el sitio, esperando o mirando).
+     */
+    public static boolean estaAtrapadoSinSalida(Villager villager) {
+        long[] antes = ATRAPADOS.get(villager.getUUID());
+        if (antes == null) {
+            return false;
+        }
+        if (!(villager.level() instanceof ServerLevel nivel)) {
+            return false;
+        }
+        return nivel.getGameTime() - antes[1] >= ATRAPADO_TICKS_AVISO;
+    }
 
     /**
      * <b>Rescata al aldeano que se ha quedado atascado dentro de una casa</b> (en un piso, por encima de la capa de la
@@ -5712,6 +5744,16 @@ public final class VillageManager {
      */
     public static void marcarPuntoFallido(Villager villager, @Nullable BlockPos punto) {
         if (punto == null) {
+            return;
+        }
+        // I186 · ANTES DE CULPAR AL SITIO, MIRA SI EL QUE NO SE MUEVE ES EL ALDEANO (3-oct-2026, MEDIDO). El aviso de
+        // rendición dice «no consigue llegar a X», y eso se lee como «X es inalcanzable», pero en los lotes medidos
+        // **el 100 % de los avisos traía `ANDADO` ≈ 0** (0,0-0,8 bloques): el aldeano **no andaba nada**, ni siquiera
+        // cuando la ruta SÍ llegaba (`alcanza=SI`, con `neto` de 30 bloques). Marcar el punto como fallido en ese caso
+        // es una mentira que además arrastra: aparca un sitio del pueblo que está perfecto y el aldeano se queda donde
+        // está. Si el aldeano lleva unos segundos quieto en una celda FUERA de la calle, el problema es que está
+        // atrapado y de eso se encarga el rescate ({@link #rescatarAldeanosAtrapados}); aquí no se marca nada.
+        if (estaAtrapadoSinSalida(villager)) {
             return;
         }
         BlockPos p = punto.immutable();

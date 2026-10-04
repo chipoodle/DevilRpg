@@ -338,6 +338,37 @@ mueve y además se exige que **no sepa volver** a la plaza.
    (el aldeano no puede subir un escalón de 2). El rescate lo tapa ✓, pero lo suyo es **dejar un escalón** al construir
    la mina. Anotado, sin medir.
 
+### 8.bis.0.octies · **I186: la rendición no siempre es culpa del sitio** — y **0 · 0 · 0** ✓
+
+**El dato que lo decidió** (sacado de las 4 corridas largas, gratis): el aviso dice «no consigue llegar a X» y se lee
+como «X es inalcanzable», pero **el 100 % de los avisos traía `ANDADO` ≈ 0** ✗ (0,0-0,8 bloques), **incluso con
+`alcanza=SI`** y `neto` de 30 bloques ✗. El aldeano **no andaba nada**. Y los relojes estaban al revés ✗: el recado se
+rinde a los **10 s**, el goal del oficio a los **16 s**, y el rescate necesitaba **30 s** → llegaba **siempre tarde**.
+
+**ARREGLO (I186)**: `marcarPuntoFallido` **no marca nada** si el aldeano está **atrapado** (quieto ≥ 4 s en una celda
+fuera de la banda de la calle: de eso se encarga el rescate ✓), y `ATRAPADO_TICKS` baja de **30 s a 12 s** ✓.
+
+| mismo mundo asentado, banco rápido | 1 · 2 · 1 (I185) | **0 · 0 · 0** ✓ (I186) |
+|---|---|---|
+
+**El mejor registro de toda la sesión** ✓ (el anterior mejor era **0 · 1 · 1 · 1**, media 0,75), y el pueblo trabaja:
+herrería 46-49, minero 7-9, guardia 397-480 por 3 minutos.
+
+**Y LO QUE DESTAPÓ, que ahora es el pendiente nº 1**: en las 4 corridas **largas** la **granja** rinde **16 · 15 · 15 ·
+5** frente a la referencia **40-57** ✗ (los demás oficios en rango: ganado 56-90 ✓, herrería 199-231 ✓, pescador 7-9 ✓,
+cocina 4-24 ✓). La causa está **en el propio registro**:
+
+```
+[Village] La aldea 0 pasa hambre: 2 boca(s) sin su racion y 0 punto(s) en la despensa      ✗ (x4)
+[Arnes] GRANJERO ... puesto=SIN PUESTO ...                                                ✗ (un granjero sin puesto)
+[Village] El granjero: Trajo 8 del almacen a la despensa                                  ✗ (x39, al almacen en vez de cosechar)
+```
+
+O sea: **la despensa está vacía** ✗ y hay un **granjero sin puesto de trabajo** ✗, así que el granjero se pasa el día
+**trayendo del almacén** en vez de cosechar. **Pendiente con nombre**: (a) por qué un granjero se queda **sin puesto**
+(¿el compostero no está, o `reclamarEstacionesDelPueblo` no lo ve?), y (b) por qué la despensa queda a **0 puntos**
+(¿se cosecha y no se guarda, o no se cosecha?).
+
 **Y la lección que más vale de todo esto**: durante dos semanas el instrumento costaba **80 minutos por pregunta** y el
 aviso de rendición **fotografiaba el después** en vez del fallo. Con el **banco rápido** (3 min) y los tres datos nuevos
 del aviso (**neto**, **ANDADO** y **destinos**), lo que llevaba cuatro intentos fallidos se encontró en minutos — y tres
