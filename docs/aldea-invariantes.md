@@ -6172,3 +6172,35 @@ puerta cerrada I207) van **antes** de esta comprobación, así que siguen funcio
 
 **MEDIDA**: las líneas `estaba METIDO … (dentro de dark_oak_door / dark_oak_fence): lo saco a` deben desaparecer ✓ y
 quedarse solo las de verdad (escaleras/bloques llenos), con su `se la abro` cuando toque puerta ✓.
+
+### PROCESO · **NUNCA ENCADENAR `compilar` Y `commitear` SIN MIRAR EL RESULTADO** (5-oct-2026)
+
+Error mío, con daño real: lancé `gradlew compileJava ; lint ; git add ; git commit` todo con `;`, el build **falló**
+(`getXsize()` no existe en esta versión) y **el commit entró igual** ✗ → quedó un commit con el build roto (`8773e34`),
+enmendado después (`e504d1e`). Regla: **compilar y commitear van en pasos separados, y el commit solo corre si el
+`BUILD SUCCESSFUL` y el lint verde están comprobados de verdad** ✓ (con `if` sobre el resultado, no con `;`).
+
+### ESTADO DE LA AUDITORÍA (5-oct-2026, para retomar)
+
+**Cerrado y MEDIDO en la partida del jugador** (registro de 86 KB):
+- **La aldea no se reconstruye** ✓✓ (`construida en` / `REPARADA` = **0**): el desplazamiento al este está muerto.
+- **Ninguna rendición** ✓✓ (`no consigue llegar` = **0** en toda la sesión; antes eran decenas).
+- **96 % / 94,5 % de peticiones de rumbo ya iban andando** ✓ (I206), en dos sesiones seguidas.
+- **Parcelas limpias** ✓ (`[Huerta]` 0 sin sembrar, 0 pisoteadas) — el «196» era basura del mundo roto.
+- **Sin arnés** ✓ (`[Arnes]` = 0) y sin el aviso de que esté compilado.
+- I205 (traza + un goal sin MOVE no pisa camino ajeno + mi empujón ya no para a quien anda), I206 (el embudo no
+  reescribe el destino cada tick), I207 (abrir la puerta que los atrapa), I208 (`parar` idempotente por tick),
+  I209 (una celda de paso no es un encajamiento).
+
+**ABIERTO, por orden** (esto es lo que falta para cerrar el ciclo ANTES de abrir la rama nueva):
+1. **El asedio, EN VIVO** ✗ — no ha corrido ninguno en el mundo nuevo (0 líneas de `ASEDIO`/`OLEADA`). El arreglo está
+   (reintentos, no regalar la victoria con oleada vacía, segunda pasada de spawn) pero **no se ha visto**; la prueba es
+   `OLEADA de N asediados intentados, M colocados`.
+2. **Objetos caídos / agua en las parcelas** ✓/✗ — 0 y 0 en el mundo nuevo; queda vigilar que no aparezcan objetos
+   flotando y revisar los `repuso farmland en y=61` (una capa **por debajo** de los bancales).
+3. **El goal de reparar camina al bloque que repara** ✗ (`586,84,539` = aire sobre el tejado, medido): arreglo nombrado
+   (`casillaDePieCercaDe`) y **no aplicado** porque no producía avisos.
+4. **La zanja de la mina en `x=603`** (1×1, 2 de hondo, preexistente): pulido de mundo.
+5. **Métrica floja a corregir**: las líneas `PARAR` están **limitadas a una cada 2 s por aldeano**, así que **no** sirven
+   para medir el baile fino ✗ (salieron 160 en una sesión larga). La métrica buena para el caminar es `[Rumbo]`
+   (peticiones vs saltadas) y `no consigue llegar`.
