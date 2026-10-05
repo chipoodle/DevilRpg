@@ -2712,6 +2712,16 @@ public final class VillageManager {
         for (Villager villager : level.getEntitiesOfClass(Villager.class,
                 new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 16))) {
             desatascarSiEstaEncajado(villager);
+            // I198 · Y AL QUE NO SE MUEVE CON SU FAENA EN MARCHA, SE LE PARA LA NAVEGACIÓN (3-oct-2026). El residuo que
+            // queda tiene una firma: `ANDADO` 0,0-0,9 bloques **con la ruta viva** (`alcanza=SI`) — un aldeano plantado
+            // que no da un paso. La red para eso (I190/I192) se puso en el `VillageDispatcherGoal`… que **no está
+            // cableado** (el propio `caminarHacia` lo dice: «se probó y se retiró, se queda sin cablear»), así que
+            // nunca se ejecutaba. Aquí sí: el latido recorre a todos los aldeanos del pueblo cada tick. Al que lleva
+            // **2 s sin moverse** (el dato ya existe, `DevilRpgUltimoMovimiento`, I177) y tiene un goal del mod activo
+            // se le **para la navegación**: los goals vuelven a pedir el camino cada tick, así que en el siguiente
+            // tick recalcula y sale del estancamiento. No se toca a las crías, ni al que duerme o descansa, ni al que
+            // no tiene faena del mod (su paseo es suyo), y se le da uno cada 3 s como mucho.
+            empujarSiEstaPlantado(villager, level);
             // I179 · EL CENTRO DEL PUEBLO, APUNTADO EN EL ALDEANO (30-sep-2026). Es lo que permite abrir sus portones
             // CONOCIDOS (el del corral y los de las tres parcelas) cuando le separan de su recado, sin adivinar ni
             // barrer medio pueblo: medido, el minero puede quedarse DENTRO del corral (628, 78, 566) con su destino en el
@@ -4336,6 +4346,11 @@ public final class VillageManager {
     /** Dónde y desde cuándo lleva quieto cada aldeano que está metido en un piso (para el rescate). */
     private static final java.util.Map<UUID, long[]> ATRAPADOS = new java.util.concurrent.ConcurrentHashMap<>();
     /**
+     * I198 · Cuándo se le dio el último <b>empujón del latido</b> a cada aldeano (pararle la navegación porque lleva
+     * 2 s sin moverse con su faena en marcha). Se le da uno cada 3 s como mucho, para no marearlo.
+     */
+    private static final java.util.Map<UUID, Long> EMPUJADOS_DEL_LATIDO = new java.util.concurrent.ConcurrentHashMap<>();
+    /**
      * Sin moverse de celda este tiempo, fuera de la banda de la calle, se le baja a la plaza. Estaba en <b>30 s</b> y
      * se bajó a <b>12 s</b> el 3-oct-2026 (I186) por una razón medida: el recado se rinde a los <b>10 s</b>
      * ({@link #RECADO_PRESUPUESTO}) y el goal del oficio ronda los <b>16 s</b>, así que con 30 s el rescate llegaba
@@ -4365,6 +4380,34 @@ public final class VillageManager {
             return true;
         }
         return villager.level().getGameTime() - ultimo < ticks;
+    }
+
+    /**
+     * I198 · <b>EL EMPUJÓN DEL LATIDO</b>: si el aldeano lleva 2 s sin moverse de verdad y tiene una faena del mod en
+     * marcha, se le para la navegación para que el goal vuelva a pedir el camino (los goals lo piden cada tick, así que
+     * el recálculo es inmediato). Es la red que faltaba: la misma idea de I190/I192, pero en el latido, que es el único
+     * sitio que se ejecuta (el despachador donde vivían **no está cableado**).
+     */
+    private static void empujarSiEstaPlantado(Villager villager, ServerLevel level) {
+        if (villager.isBaby() || villager.isSleeping() || estaDescansando(villager)) {
+            return;
+        }
+        if (!tieneUnGoalDelModActivo(villager)) {
+            return; // sin faena del mod, su paseo es cosa suya: no se le toca
+        }
+        if (seHaMovidoHacePoco(villager, 40)) {
+            return; // se ha movido en los últimos 2 s: va bien
+        }
+        long ahora = level.getGameTime();
+        Long ultimo = EMPUJADOS_DEL_LATIDO.get(villager.getUUID());
+        if (ultimo != null && ahora - ultimo < 60L) {
+            return; // uno cada 3 s como mucho
+        }
+        EMPUJADOS_DEL_LATIDO.put(villager.getUUID(), ahora);
+        villager.getNavigation().stop();
+        DevilRpg.LOGGER.info("[Village] empujon del latido a {} en {}: 2 s sin moverse con la faena en marcha; se le "
+                        + "para la navegacion para que recalcule el camino",
+                villager.getUUID(), villager.blockPosition().toShortString());
     }
 
     /**
