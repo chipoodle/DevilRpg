@@ -1375,9 +1375,13 @@ public final class VillageManager {
             if (!jugadorEnLaAldea(level, d)) {
                 if (!d.enPausa) {
                     d.enPausa = true;
-                    DevilRpg.LOGGER.info("[Village] Asedio de la aldea {} EN PAUSA: el jugador no esta en la aldea"
-                                    + " (a {} bloques del centro): el reloj se para y la aldea NO puede caer",
-                            d.objectiveIndex, Math.round(distanciaAlCentro(level, d)));
+                    double dist = distanciaAlCentro(level, d);
+                    DevilRpg.LOGGER.info("[Village] Asedio de la aldea {} EN PAUSA: {}: el reloj se para y la aldea"
+                                    + " NO puede caer",
+                            d.objectiveIndex,
+                            dist < 0
+                                    ? "el jugador que la defiende NO esta conectado"
+                                    : "el jugador no esta en la aldea (a " + Math.round(dist) + " bloques del centro)");
                 }
                 continue;
             }
@@ -1972,10 +1976,18 @@ public final class VillageManager {
      * Distancia <b>horizontal</b> (bloques) del jugador que defiende esta aldea a su centro. Devuelve
      * {@link Double#MAX_VALUE} si ese jugador no está conectado.
      */
+    /** Si el jugador que defiende la aldea no está conectado: el asedio se pausa, pero el registro lo dice claro. */
+    private static final double DISTANCIA_SIN_JUGADOR = -1.0D;
+
     private static double distanciaAlCentro(ServerLevel level, VillageDefense d) {
         ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
         if (p == null) {
-            return Double.MAX_VALUE;
+            // ANTES DEVOLVÍA `Double.MAX_VALUE` Y ESO SALÍA EN EL REGISTRO DEL JUGADOR COMO `9223372036854775807`
+            // (3-oct-2026): `Math.round(Double.MAX_VALUE)` es `Long.MAX_VALUE`, y el aviso decía «el jugador no está en
+            // la aldea (a 9223372036854775807 bloques del centro)» cuando lo que pasaba es que su partida acababa de
+            // cargar y **todavía no estaba en la lista de jugadores** (medido en su registro: el asedio se creó a las
+            // 04:06:09 y él entró a las 04:06:11). El asedio nació en pausa y con un número absurdo en el aviso.
+            return DISTANCIA_SIN_JUGADOR;
         }
         double dx = p.getX() - (d.center.getX() + 0.5D);
         double dz = p.getZ() - (d.center.getZ() + 0.5D);
@@ -1984,7 +1996,8 @@ public final class VillageManager {
 
     /** ¿El jugador que defiende esta aldea sigue en ella (ver {@link #RADIO_ASEDIO_CON_JUGADOR})? */
     private static boolean jugadorEnLaAldea(ServerLevel level, VillageDefense d) {
-        return distanciaAlCentro(level, d) <= RADIO_ASEDIO_CON_JUGADOR;
+        double distancia = distanciaAlCentro(level, d);
+        return distancia >= 0 && distancia <= RADIO_ASEDIO_CON_JUGADOR;
     }
 
     /** ¿Hay ALGÚN jugador en la aldea, o sea alguien que pueda defenderla (hordas del mundo)? */

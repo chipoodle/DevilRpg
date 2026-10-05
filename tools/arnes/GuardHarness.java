@@ -281,6 +281,15 @@ public class GuardHarness {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        // CANDADO (3-oct-2026, y mea culpa): el arnes es un BANCO DE PRUEBAS que VACIA EL ALMACEN, mueve aldeanos y
+        // escribe cientos de lineas. Estuvo compilado dentro del build y el jugador lo sufrio en SU partida (su
+        // registro: `[Arnes] ALDEA 2 ...`, `[Arnes] REMESA: almacen vaciado (0 pila(s) fuera, 0 troncos antes)`).
+        // Ahora NO se ejecuta si el banco no lo pide: la variable de entorno la ponen `tanda-rapida.ps1` y
+        // `tanda-larga.ps1`, y un `runClient` normal (o el boton de Gradle) NO la tiene, asi que el arnes queda
+        // inerte aunque alguien vuelva a copiar este fichero a `src/main/java`. Es un candado, no un comentario.
+        if (System.getenv("DEVILRPG_ARNES") == null) {
+            return;
+        }
         ServerLevel level = event.getServer().overworld();
         FakePlayer pega;
         if (!listo) {

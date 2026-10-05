@@ -42,6 +42,9 @@ foreach ($i in $numeros) {
     # 20 ticks/s, con 10 s de margen para que el guardado termine antes de que se acabe el tiempo de reloj.
     [int]$tickParar = [int]($MINUTOS * 60 * 20 * 0.85)
     Set-Content -Path run\arnes-parar.txt -Value $tickParar -Encoding ascii
+    # CANDADO DEL ARNES (3-oct-2026): ver `GuardHarness`. Sin esta variable el arnes no hace NADA, asi que un
+    # `runClient` normal (o el boton de Gradle) no lo ejecuta nunca mas.
+    $env:DEVILRPG_ARNES = '1'
     $p = Start-Process -FilePath '.\gradlew.bat' -ArgumentList 'runServer','--console=plain' -PassThru -NoNewWindow `
         -RedirectStandardOutput "build\runserver-tanda$i.txt" -RedirectStandardError "build\runserver-tanda$i.err"
     Start-Sleep -Seconds ($MINUTOS * 60)

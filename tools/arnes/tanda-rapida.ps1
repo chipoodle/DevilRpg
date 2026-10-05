@@ -40,6 +40,10 @@ foreach ($i in $numeros) {
     # ASENTADO. Sin esto el banco mataba el proceso y el mundo no se guardaba (y cada corrida volvia a migrar).
     [int]$tickParar = [int]($MINUTOS * 60 * 20 * 0.85)
     Set-Content -Path run\arnes-parar.txt -Value $tickParar -Encoding ascii
+    # CANDADO DEL ARNES (3-oct-2026): el arnes SOLO se ejecuta si esta variable esta puesta (ver GuardHarness). Asi,
+    # aunque su fichero vuelva a copiarse a `src/main/java`, un `runClient` normal NO lo ejecuta nunca: se colo en la
+    # partida del jugador y le vacio el almacen (`[Arnes] REMESA: almacen vaciado (0 pila(s) fuera...)`).
+    $env:DEVILRPG_ARNES = '1'
     $p = Start-Process -FilePath '.\gradlew.bat' -ArgumentList 'runServer','--console=plain' -PassThru -NoNewWindow `
         -RedirectStandardOutput "build\runserver-rapida$i.txt" -RedirectStandardError "build\runserver-rapida$i.err"
     Start-Sleep -Seconds ($MINUTOS * 60)
