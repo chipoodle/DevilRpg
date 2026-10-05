@@ -4351,6 +4351,13 @@ public final class VillageManager {
      */
     private static final java.util.Map<UUID, Long> EMPUJADOS_DEL_LATIDO = new java.util.concurrent.ConcurrentHashMap<>();
     /**
+     * I202 · Última vez que se le sacó la <b>ficha del plantado</b> a un aldeano (ver {@link #empujarSiEstaPlantado}).
+     * Es solo para el registro: el residuo que queda son aldeanos parados con la ruta viva y hay que saber **por qué**
+     * (¿la navegación tiene camino y no lo anda? ¿tiene gente apretada alrededor? ¿el cerebro apunta a otro sitio?),
+     * en vez de seguir probando parches.
+     */
+    private static final java.util.Map<UUID, Long> FICHAS_DEL_PLANTADO = new java.util.concurrent.ConcurrentHashMap<>();
+    /**
      * Sin moverse de celda este tiempo, fuera de la banda de la calle, se le baja a la plaza. Estaba en <b>30 s</b> y
      * se bajó a <b>12 s</b> el 3-oct-2026 (I186) por una razón medida: el recado se rinde a los <b>10 s</b>
      * ({@link #RECADO_PRESUPUESTO}) y el goal del oficio ronda los <b>16 s</b>, así que con 30 s el rescate llegaba
@@ -4408,6 +4415,43 @@ public final class VillageManager {
         DevilRpg.LOGGER.info("[Village] empujon del latido a {} en {}: 2 s sin moverse con la faena en marcha; se le "
                         + "para la navegacion para que recalcule el camino",
                 villager.getUUID(), villager.blockPosition().toShortString());
+        // I202 · Y LA FICHA DEL PLANTADO, cada 20 s por aldeano (solo registro, no cambia nada): es lo que hace falta
+        // para encontrar la causa del residuo sin adivinar. Tres preguntas y tres respuestas:
+        //   1) ¿la navegación tiene camino y no lo anda?  -> nav=[nodos, anda=si/no, llega=si/no]
+        //   2) ¿tiene gente apretada alrededor?          -> aldeanosCerca / bichosCerca
+        //   3) ¿a dónde apunta su cerebro?               -> cerebro=
+        Long ultimaFicha = FICHAS_DEL_PLANTADO.get(villager.getUUID());
+        if (ultimaFicha == null || ahora - ultimaFicha >= 400L) {
+            FICHAS_DEL_PLANTADO.put(villager.getUUID(), ahora);
+            var camino = villager.getNavigation().getPath();
+            String nav = camino == null ? "sin ruta"
+                    : camino.getNodeCount() + " nodos, anda=" + villager.getNavigation().isInProgress()
+                    + ", llega=" + camino.canReach();
+            String cerebro = villager.getBrain()
+                    .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                    .map(t -> t.getTarget().currentBlockPosition().toShortString()).orElse("-");
+            int aldeanosCerca = level.getEntitiesOfClass(Villager.class,
+                    new AABB(villager.blockPosition()).inflate(1.5D)).size() - 1;
+            // lint:ok I11 porque esto NO es un recuento de invasores de la aldea (no decide nada): es una medida LOCAL
+            // de apiñamiento alrededor del aldeano plantado, para el registro, y a 4 bloques la altura es la suya.
+            int bichosCerca = level.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class,
+                    new AABB(villager.blockPosition()).inflate(4.0D)).size();
+            StringBuilder goals = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : villager.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    goals.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                }
+            }
+            DevilRpg.LOGGER.info("[Planta] {} en {}: nav=[{}] cerebro={} aldeanosCerca={} bichosCerca={} goals=[{}] "
+                            + "posAnterior={}",
+                    villager.getUUID().toString().substring(0, 8), villager.blockPosition().toShortString(), nav,
+                    cerebro, aldeanosCerca, bichosCerca, goals.toString().trim(),
+                    villager.getPersistentData().contains("DevilRpgUltimoX")
+                            ? String.format(java.util.Locale.ROOT, "%.1f,%.1f",
+                                    villager.getPersistentData().getDouble("DevilRpgUltimoX"),
+                                    villager.getPersistentData().getDouble("DevilRpgUltimoZ"))
+                            : "-");
+        }
     }
 
     /**

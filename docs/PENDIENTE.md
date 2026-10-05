@@ -1497,3 +1497,34 @@ retirados ✓. La regla del proyecto se aplica: **lo que no arregla, se quita y 
 **Y una nota de método que me ha costado tres intentos**: la cuenta de líneas de actividad de los guardias
 (`Entrenando`/`Patrullando`) **es ruido** ✗ (varía de 938 a 0 entre corridas: la 124 dio 0 en las tres y la 125 dio 41
 de entrenamiento ✓, con el **mismo** código). Para juzgar hay que usar **`destinos`/tick** y **avisos por corrida** ✓.
+
+### 8.bis.0.duodevicies · **Ronda 44: LA CAUSA, MEDIDA (y mi diagnóstico anterior, tumbado)**
+
+**La ficha del plantado (I202)** escribe, cuando un aldeano lleva 2 s parado con faena del mod en marcha, las tres
+cosas que el aviso no distinguía: si la **navegación** tiene camino y no lo anda, si tiene **gente apretada** alrededor
+y **a dónde apunta su cerebro**. Primeras **454 fichas** (corrida 126, en vivo):
+
+| caso | fichas | lectura |
+|---|---|---|
+| **`nav = sin ruta`** | **454 de 454** ✗✗ | **no hay camino**, no es «camino que no se anda» |
+| `cerebro = "-"` (sin destino) | 113 | están **trabajando en el sitio** ✓ — eso es legítimo y **no** da aviso |
+| con aldeanos apretados | 28 | apiñamiento, minoritario |
+| con bichos cerca | **0** | descartado |
+
+Y los destinos del cerebro en las fichas con camino imposible: `606,…` (49), **`614,…` (37 = el almacén)**, `573,…`
+(23), `533/535,…` (21/20 = **las parcelas**) — todos con **`nav=sin ruta`** ✗.
+
+**Conclusión medida**: el residuo son aldeanos cuyo **destino no se puede alcanzar desde donde están** ✗ (el almacén y
+las parcelas en la muestra). **No** es un camino que no andan ✗.
+
+**Y esto tumba mi diagnóstico anterior** ✗, con el dato delante: `I200` e `I201` intentaban **no volver a pedir** un
+camino que **no existía** ✗, e `I198` (el empujón del latido) **para** la navegación, que es lo contrario de lo que
+hace falta ✗. Tres intentos apuntando al mecanismo equivocado ✓, y los tres retirados o inútiles ✓ — se dice.
+
+**Y explica la contradicción que me tuvo dando vueltas** ✓: el aviso imprimía `alcanza=SI` ✗ porque ese campo lo
+rellena una **sonda nueva** (que a veces sí encuentra ruta) mientras la **navegación viva** del aldeano está **sin
+ruta** ✗✓. Dos preguntas distintas con la misma palabra ✓.
+
+**El siguiente paso, ya con nombre**: **por qué no hay ruta hasta el almacén (`614, 78, 587`) y hasta las parcelas**
+desde donde están esos aldeanos — con el mismo método: medir (¿la puerta? ¿el mostrador? ¿el camino cortado?) antes de
+tocar nada ✓.
