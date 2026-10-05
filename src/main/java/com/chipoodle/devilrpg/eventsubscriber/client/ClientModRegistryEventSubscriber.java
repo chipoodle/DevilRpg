@@ -33,7 +33,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
  * Subscribe to events from the MOD EventBus that should be handled on the
  * PHYSICAL CLIENT side in this class
  */
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
 public final class ClientModRegistryEventSubscriber {
 
     public static final int SOULVINE_COLOR = 0xAF3F1F;

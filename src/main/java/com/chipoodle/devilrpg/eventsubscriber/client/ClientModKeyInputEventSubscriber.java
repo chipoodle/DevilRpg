@@ -33,7 +33,7 @@ public class ClientModKeyInputEventSubscriber {
     private static final KeyMapping[] KEYS = new KeyMapping[8];
     private static final HashMap<PowerEnum, KeyMapping> keyBindingsHash = new HashMap<>();
 
-    @EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
     public static class KeyRegister {
         @SubscribeEvent
         public static void onRegisterKeyMappingsEvent(RegisterKeyMappingsEvent registerKeyMappingsEvent) {

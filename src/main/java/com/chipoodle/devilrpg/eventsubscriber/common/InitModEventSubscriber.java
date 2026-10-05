@@ -40,7 +40,7 @@ import static com.chipoodle.devilrpg.init.ModItems.*;
  *
  * @author Cadiboo
  */
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = DevilRpg.MODID)
 public final class InitModEventSubscriber {
 
 

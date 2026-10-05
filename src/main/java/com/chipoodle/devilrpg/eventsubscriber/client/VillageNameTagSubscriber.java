@@ -26,7 +26,7 @@ import org.joml.Matrix4f;
  * jugador). Aquí se intercepta el evento de la etiqueta, se le dice al juego que <b>no</b> la dibuje y se pintan las
  * líneas una debajo de otra, centradas, imitando el dibujo de vanilla (una pasada de fondo y otra del texto).
  */
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
 public final class VillageNameTagSubscriber {
 
     /** Color con el que vanilla pinta la pasada de fondo de la etiqueta (negro translúcido). */

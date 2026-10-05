@@ -9,7 +9,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = DevilRpg.MODID)
 public class DataGeneratorsModEventSubscriber {
     private DataGeneratorsModEventSubscriber() {
     }

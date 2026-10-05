@@ -16,7 +16,7 @@ import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
  * {@code tooltip.item.devilrpg.frost_vex_spawn_egg}), se añade como una línea gris/cursiva bajo el nombre.
  * Así los spawn eggs y bloques del mod explican qué hacen, igual que el resto de items.
  */
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
 public final class ItemTooltipSubscriber {
 
     private ItemTooltipSubscriber() {

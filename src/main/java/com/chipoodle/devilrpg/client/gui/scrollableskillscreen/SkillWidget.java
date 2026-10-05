@@ -26,6 +26,10 @@ import java.util.List;
 import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
+// lint:ok nada -- ScreenUtils esta marcado para eliminacion por NeoForge; se silencia el aviso a proposito
+// porque migrar el dibujado con borde a ciegas (blitNineSliced) puede romper la pantalla de habilidades y no
+// puedo verla. Cuando se migre, se hara CON captura de pantalla delante para comparar.
+@SuppressWarnings("removal")
 public class SkillWidget {
     // static final int BUTTON_IMAGE_SIZE = 512;
     /** Tamaño (px) de la imagen fuente del icono/botón de cada skill (PNG 256x256). */

@@ -68,7 +68,7 @@ import java.util.function.BiConsumer;
  * @author Christian
  */
 
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = DevilRpg.MODID)
 public class CommonForgeInteractionEventSubscriber {
 
     public static final double XY_JUMP_FACTOR = 2;

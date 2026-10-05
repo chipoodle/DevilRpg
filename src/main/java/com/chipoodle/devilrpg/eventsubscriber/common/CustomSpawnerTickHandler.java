@@ -20,7 +20,7 @@ import java.util.Map;
  * Hookea el {@link CustomSpawner} al tick del servidor. Mantiene un spawneador por cada dimension
  * del overworld y registra las reglas de spawn una sola vez.
  */
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = DevilRpg.MODID)
 public class CustomSpawnerTickHandler {
 
     private static final Map<ServerLevel, CustomSpawner> SPAWNERS = new HashMap<>();

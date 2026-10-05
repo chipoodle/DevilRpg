@@ -12,6 +12,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.client.gui.ScreenUtils;
 
 @OnlyIn(Dist.CLIENT)
+@SuppressWarnings("removal") // ScreenUtils esta marcado para eliminacion: se silencia a proposito (ver SkillWidget)
 public enum SkillTabType {
     ABOVE(0, 0, 28, 32, 8), BELOW(84, 0, 28, 32, 8), LEFT(0, 64, 32, 28, 5), RIGHT(96, 64, 32, 28, 5);
 

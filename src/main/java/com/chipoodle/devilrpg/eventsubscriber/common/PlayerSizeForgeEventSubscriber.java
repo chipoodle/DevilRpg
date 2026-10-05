@@ -10,7 +10,7 @@ import net.neoforged.neoforge.event.entity.EntityEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = DevilRpg.MODID)
 public class PlayerSizeForgeEventSubscriber {
 
     public static final float WEREWOLF_EXTRA_HEIGHT = 0.500f;

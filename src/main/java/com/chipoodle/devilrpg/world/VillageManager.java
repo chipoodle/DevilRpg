@@ -1976,6 +1976,21 @@ public final class VillageManager {
      * Distancia <b>horizontal</b> (bloques) del jugador que defiende esta aldea a su centro. Devuelve
      * {@link Double#MAX_VALUE} si ese jugador no está conectado.
      */
+    static {
+        // AVISO HONESTO (3-oct-2026): el arnes de pruebas (`GuardHarness`) es un banco que VACIA EL ALMACEN y mueve
+        // aldeanos, y estuvo compilado dentro del build sin que se pudiera saber desde el juego. Ahora, si su clase
+        // esta en el classpath, este aviso sale UNA vez al arrancar el mundo y lo dice claro. Si no aparece, no hay
+        // arnes: esa es la respuesta a «no se como saber si hay aun un arnes».
+        try {
+            Class.forName("com.chipoodle.devilrpg.debug.GuardHarness");
+            DevilRpg.LOGGER.warn("[Village] OJO: el ARNES DE PRUEBAS (GuardHarness) esta COMPILADO en este build."
+                    + " Vacia el almacen y mueve aldeanos. Solo se ejecuta si esta puesta la variable DEVILRPG_ARNES,"
+                    + " asi que con un runClient normal queda inerte; pero conviene quitarlo del build.");
+        } catch (ClassNotFoundException sinArnes) {
+            // lo normal: el build esta limpio
+        }
+    }
+
     /** Si el jugador que defiende la aldea no está conectado: el asedio se pausa, pero el registro lo dice claro. */
     private static final double DISTANCIA_SIN_JUGADOR = -1.0D;
 

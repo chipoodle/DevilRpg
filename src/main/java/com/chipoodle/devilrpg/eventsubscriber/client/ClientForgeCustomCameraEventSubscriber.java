@@ -23,7 +23,7 @@ import java.lang.reflect.Method;
  *
  * @author Chipoodle
  */
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
 public final class ClientForgeCustomCameraEventSubscriber {
     private static final Class<?>[] types = {double.class, double.class, double.class};
     private static boolean firstPersonView = false;

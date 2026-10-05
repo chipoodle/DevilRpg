@@ -34,7 +34,7 @@ import java.util.function.BiConsumer;
  *
  * @author Chipoodle
  */
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
 public final class ClientForgePlayerRenderEventSubscriber {
 
 

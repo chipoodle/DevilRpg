@@ -22,7 +22,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Random;
 
-@EventBusSubscriber(modid = DevilRpg.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = DevilRpg.MODID, value = Dist.CLIENT)
 public final class ClientForgeResourceEventSubscriber {
 
     public static final int TICK_COUNT_REGENERATION = 10;
