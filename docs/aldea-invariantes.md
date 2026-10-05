@@ -5959,6 +5959,33 @@ en la traza del goal, una vez por tramo.
 **MEDIDO**: banco rápido **0 · 0** ✓ y las corridas largas **110-111** con la traza dentro ✓ (su resultado, en la ronda
 siguiente).
 
+### I200 · **RETIRADA** (3-oct-2026): «no vuelvas a pedir el camino si ya vas andando»
+
+**El dato que la motivó, y que es cierto** ✓: el aviso de la corrida 110 (`Remigio`, guardia) traía
+
+```
+ruta=20 nodos hasta 521, 78, 595  alcanza=SI ✓     nav=[20 nodos hasta 522, 78, 596 alcanza] ✓
+cerebro=521, 78, 596 ✓                              ANDADO 0.0 ✗   destinos=548 en 195 ticks ✗
+```
+
+o sea **≈2,8 peticiones de camino por tick** ✗ con el aldeano **plantado** y ruta viva: pedir el camino otra vez
+**reinicia el caminante** ✓. El diagnóstico es bueno; **el arreglo no** ✗.
+
+**Dos variantes, las dos medidas y las dos peores**:
+
+| variante | qué pasó | medida |
+|---|---|---|
+| `if (!VillageManager.seHaMovidoHacePoco(villager, 40))` | esa función contesta **true cuando NO hay dato** («no acusar sin pruebas»): al arrancar no pide camino → no anda → **sigue sin haber dato**. **Bucle cerrado** ✗ | `Entrenando en la barraca` **163-537 → 21 · 0** ✗ · `Patrullando` **938 → 0** ✗ |
+| preguntándolo al revés (hay dato reciente = va andando) | caminan mucho más y llegan mucho menos ✗ | `Entrenando` **0 · 79** ✗ con `Yendo a entrenar` **98 · 19** ✗ |
+
+**Se retira** ✓ (regla del proyecto: *lo que no arregla, se quita y se dice*) y se vuelve al estado **medido** (I199:
+**1 · 0** en las largas 110-111, con los guardias entrenando **537** líneas ✓).
+
+**Y queda escrita la implementación correcta**, para quien la retome: preguntar por
+**`villager.getNavigation().isInProgress()`** — que es `false` al arrancar (así **no** hay el bucle de la primera
+variante) y `true` mientras sigue un camino (así **no** se le vuelve a pedir) — **no** por el dato de movimiento. Y con
+**la actividad de guardias como guardián** (`Entrenando` + `Patrullando`), que fue justo lo que cazó el fallo ✓.
+
 ### I195 · **SI EL CEREBRO DEL GUARDIA VA A OTRA PARTE, SE LE VUELVE A MANDAR (no se rinde)** (3-oct-2026)
 
 **El caso que quedaba vivo, medido** (corrida larga 85, el **único** aviso): un guardia **lejano** (`neto 27`) con
