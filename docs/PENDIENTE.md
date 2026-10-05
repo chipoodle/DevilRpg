@@ -1569,3 +1569,65 @@ para este caso exacto: `casillaDePieCercaDe` / `casillaPosible` (el contrato de 
 **No se toca ahora** ✓ a propósito: es un cambio que exigiría su propio lote de 4 corridas y quedan dos rondas; queda
 **medido y con el arreglo nombrado** ✓ para cuando se retome. En las corridas del build final (131 · 132 · 133) **no**
 ha producido ningún aviso ✓.
+
+---
+
+# ACTA DE CIERRE DEFINITIVA (3-oct-2026, rondas 45-47)
+
+## 1 · Las cuatro corridas del objetivo (y dos más de apoyo)
+
+Seis corridas **largas** (20 minutos cada una), **pueblo asentado** y **cierre limpio**, sobre el **build final**
+(I182-I203):
+
+| corrida | 131 | 132 | **133** | **134** | 135 | 136 |
+|---|---|---|---|---|---|---|
+| avisos de rendición | **0** ✓ | **0** ✓ | **0** ✓ | **0** ✓ | (en curso) | (en curso) |
+| caminos recuperados (I203) | **501** ✓ | **563** ✓ | ✓ | ✓ | — | — |
+
+## 2 · El arco completo, medido
+
+| momento | avisos por corrida de 20 min |
+|---|---|
+| lotes viejos de la aldea | **62 · 64 · 72 · 80 · 110 · 238** ✗ |
+| lotes ya buenos | ~3 (1 · 2 · 4 · 1 · 5 · 4 · 1 · 8 …) |
+| lote asentado «antes» | 1 · 13 · 9 · 12 ✗ (media 8,75) |
+| lote anterior | 3 · 2 · 10 · 5 ✓ (media 5,0) |
+| **lote de cierre de I197** (100-103) | **0 · 1 · 0 · 0** ✓ (media 0,25) |
+| **build final con I203** (131-134) | **0 · 0 · 0 · 0** ✓✓ |
+
+## 3 · Las etiquetas del objetivo, una por una
+
+**No aparecen en ninguna corrida larga del build final** ✓: `Yendo a la cocina`, `Labrando la huerta`, `Guardo lo suyo`,
+`Buscando recambios`, `Yendo a la arboleda`, `Recogiendo lo suyo`, `Guardando lo suyo`, `Encendiendo la mina`,
+`Sembrando`, `Trajo … del almacén a la despensa`, `Bajando lo del corral`, `Recogiendo el corral`, `Cuidando el
+ganado`, `Yendo a entrenar`, `Yendo a la taberna` **y el resto de la lista histórica**: todas a **cero** en las
+corridas del build final ✓.
+
+## 4 · Los arreglos de la sesión (I182-I203), con su medida
+
+| invariante | qué arregla | medido |
+|---|---|---|
+| I182 | el cimiento **también al construir** (+ trazado 81) | dos `CIMIENTO` por corrida ✓ |
+| I183 | nombres y etiqueta **también con asedio** | `etiqueta=Bartolo (Herrero de armas)` ✓ |
+| I184 | el banco **cierra el servidor limpiamente** | «CIERRE LIMPIO» ✓ |
+| I185 | rescate del atrapado **bajo** la calle | ráfaga del minero 9-13 → 1 ✓ |
+| I186 · I187 · I188 | embudo de rendiciones, un puesto un dueño, rescate junto al puesto | 1·13·9·12 → 0 ✓ |
+| I191 · I193 | taberna y guardias: **precisión contra el navegador** | taberna cerrada ✓ · 1048 `Entrenando` ✓ |
+| **I197** | **el corral necesita DOS portones** | `porton del ESTE … 625, 78, 566` ✓ · 20·17·49 → 0 ✓ |
+| **I198** | el empujón en el **latido** (el despachador no está cableado) | 873-1460 empujones/corrida ✓ |
+| **I199** | entrenar: exacto **con salida** | traza confirmada 17× ✓ |
+| I200 · I201 | «no vuelvas a pedir el camino» | **retiradas** ✗ (medidas y peores o inútiles) |
+| **I202** | la **ficha del plantado** (solo registro) | 454 fichas: **454 sin ruta** ✗ |
+| **I203** | **si tiene destino y no tiene camino, se le vuelve a pedir** | **501 · 563 recuperaciones** ✓ y **0 avisos** ✓ |
+
+## 5 · Lo que queda abierto, dicho sin adornos
+
+1. **El goal de reparar camina al bloque que repara** ✗ (`586, 84, 539` = aire sobre el tejado, medido con corte
+   vertical): el arreglo está **nombrado** (`casillaDePieCercaDe`/`casillaPosible`, el contrato de casilla de pie) y
+   **no aplicado** ✓ — en el build final **no ha dado avisos** ✓.
+2. **La zanja de la mina** (`x=603`, 1×1 y 2 de fondo, **preexistente** en el guardado del jugador): pulido de mundo
+   (paso de 2 con escalón y su migración); hoy no cuesta avisos ✓.
+3. **I190/I192** viven en el `VillageDispatcherGoal`, que **no está cableado** ✗ (ya está escrito en su cabecera ✓):
+   no hacen nada y la red que funciona es **I198** ✓.
+4. **La cuenta de líneas de actividad es ruido** ✗ (varía 938 → 0 con el mismo código): para juzgar, `destinos`/tick y
+   avisos por corrida ✓.
