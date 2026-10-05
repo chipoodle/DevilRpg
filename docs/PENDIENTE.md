@@ -1365,3 +1365,70 @@ el mismo remedio de I190/I192, pero **en un sitio que se ejecuta**.
 
 **En marcha**: lote de cierre `100 · 101 · 102 · 103` (4 × 20 min, pueblo asentado) sobre el build con I197 — el
 primero sin el fallo del corral (20 · 17 · 49 → 1 en la larga 99).
+
+---
+
+# ACTA DE CIERRE DE LA ALDEA (3-oct-2026, ronda 38)
+
+## 1 · El lote de cierre, medido
+
+Cuatro corridas **largas** (20 minutos cada una) sobre el **pueblo asentado**, con el build final
+(**I191 + I192 + I193 + I195 + I196 + I197**) y **cierre limpio** en las cuatro:
+
+| corrida | 100 | 101 | 102 | 103 | **media** |
+|---|---|---|---|---|---|
+| avisos | **0** ✓ | **1** ✓ | **0** ✓ | **0** ✓ | **0,25** ✓✓ |
+
+**Es el mejor lote de toda la sesión**, y la comparación es la que da sentido al trabajo:
+
+| lote | avisos por corrida | media |
+|---|---|---|
+| lotes viejos (21-44) | 62 · 64 · 72 · 80 · 110 · **238** ✗ | — |
+| lotes buenos (111-128) | 1 · 2 · 4 · 1 · 5 · 4 · 1 · 8 · 4 · 1 · 2 · 6 ✓ | ~3 |
+| lote asentado «antes» (47-50) | 1 · 13 · 9 · 12 ✗ | 8,75 |
+| lote anterior (76-79) | 3 · 2 · 10 · 5 ✓ | 5,0 |
+| **lote de cierre (100-103)** | **0 · 1 · 0 · 0** ✓ | **0,25** |
+
+## 2 · Lo que quedaba vivo, y su estado
+
+- **`Yendo a entrenar`** (el único aviso de la 101): un guardia **lejano** (`neto 11`) con `alcanza=NO` ✗ — la ruta
+  **no llega**, así que su goal hace lo correcto al volver a la ronda. Es un subcaso distinto del que arregló I195
+  (que cubre «hay ruta viva pero el cerebro va a otra parte»). **Anotado.**
+- **El corral**: **cero avisos** en las cuatro corridas ✓ (venía de **20 · 17 · 49** ✗) y la compuerta del este puesta e
+  idempotente ✓ (`porton del ESTE` = 1 línea la primera vez, 0 después).
+
+## 3 · Las etiquetas del objetivo
+
+- **Ocho no aparecen en ninguna corrida larga**: `Yendo a la cocina`, `Labrando la huerta`, `Guardo lo suyo`,
+  `Buscando recambios`, `Yendo a la arboleda`, `Recogiendo lo suyo`, `Guardando lo suyo`, `Encendiendo la mina` ✓.
+- **Cinco más se cerraron en esta sesión**: `Volviendo a la caseta` (I188), `Yendo a la taberna` (I191), y el ganadero
+  y el almacén, que no dan avisos desde la corrida 82 ✓.
+- **Una sigue viva, reducida a un aviso por corrida de 20 minutos**: `Yendo a entrenar` (guardia lejano sin ruta).
+
+## 4 · Los arreglos de la sesión, con su medida
+
+| invariante | qué arregla | medido |
+|---|---|---|
+| I182 | el cimiento **también al construir** (+ trazado 81 para las aldeas ya hechas) | dos `CIMIENTO` en cada corrida ✓ |
+| I183 | los nombres y la etiqueta **también con asedio** | `etiqueta=Bartolo (Herrero de armas)` ✓ |
+| I184 | el banco **cierra el servidor limpiamente** (guarda el mundo) | «CIERRE LIMPIO» en cada corrida ✓ |
+| I185 | el atrapado **por debajo** de la calle también se rescata | ráfaga del minero 9-13 → 1 ✓ |
+| I186 | el embudo de rendiciones + los relojes del rescate | 1 · 13 · 9 · 12 → **0 · 0 · 0** ✓ |
+| I187 | **un puesto, un dueño** (el turno de composteros) | 3 granjeros con su compostero, 0 `SIN PUESTO` ✓ |
+| I188 | el rescate deja al aldeano **junto a su puesto** | el minero cae a 2 bloques de su caseta ✓ |
+| I191 | la taberna: **tolerancia contra el navegador** | 344 líneas de aldeanos comiendo ✓ · taberna cerrada ✓ |
+| I193 | el guardia va al puesto **con tolerancia cero** | 1048 `Entrenando` frente a 361 `Yendo a entrenar` ✓ |
+| I195 | si el cerebro del guardia va a otra parte, **se le vuelve a mandar** | banco rápido 0 · 0 ✓ |
+| I196 | la compuerta del recinto **sin la prueba de eje** | (insuficiente sola: ver I197) |
+| **I197** | **el corral necesita DOS portones** | `porton del ESTE … 625, 78, 566` ✓ y 20 · 17 · 49 → 0 ✓ |
+| I198 | el empujón **en el latido** (el despachador no está cableado) | en medida (ronda 38) |
+
+## 5 · Lo que queda abierto, sin adornos
+
+1. **I198**: la verificación va con las corridas 104-105 ✓ (y, si sale bien, con una larga).
+2. **`Yendo a entrenar` desde el lado opuesto** (sin ruta): un aviso por corrida de 20 minutos; candidato a una red
+   propia («no consigo bajar/entrar: prueba el otro acceso»).
+3. **La zanja de la mina** (`x=603`, 1×1 y 2 de fondo, **preexistente**): pulido de mundo (paso de 2 con escalón), no
+   urgente: el rescate deja al minero junto a su caseta y ya no cuesta avisos.
+4. **I190/I192 viven en un goal que no está cableado** (`VillageDispatcherGoal`): **no hacen nada** y sus comentarios
+   dicen que sí ✗ — hay que corregir el texto o retirarlos (anotado para la ronda siguiente).
