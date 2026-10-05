@@ -1391,19 +1391,16 @@ public class VillagerGuardGoal extends Goal {
             // corridas 101 y 106-107: guardias al noreste del pueblo (`546/553, 78, 568-578` → `520, 78, 595`). Así que
             // se pide exacto y, **si no hay ruta**, se cae a la petición normal (tolerancia ~1): el guardia anda, llega
             // a menos de `REACH` y entrena.
-            // I200 · RETIRADA (3-oct-2026, y se dice): aquí se intentó **no volver a pedir el camino** cuando el guardia
-            // ya iba andando, porque el aviso de la corrida 110 enseñaba `548 destinos en 195 ticks` (≈2,8 peticiones
-            // por tick) con `ANDADO 0.0` y ruta viva. Se probaron **dos** variantes y las dos empeoraron:
-            //   (1) `if (!VillageManager.seHaMovidoHacePoco(villager, 40))`: esa función contesta **true cuando no hay
-            //       dato** («no acusar sin pruebas»), así que al empezar no pedía camino → no andaba → seguía sin haber
-            //       dato: **bucle cerrado**. Medido: `Entrenando en la barraca` **163-537 → 21 · 0** y `Patrullando`
-            //       **938 → 0** ✗.
-            //   (2) preguntándolo al revés (hay dato y es reciente = va andando): `Entrenando` **0 · 79** ✗ con
-            //       `Yendo a entrenar` **98 · 19** ✗ — caminan mucho más y llegan mucho menos.
-            // Así que se vuelve a lo que **sí** está medido (I199: **1 · 0** en las largas 110-111, con los guardias
-            // entrenando 537 líneas) y el diagnóstico queda escrito: la implementación correcta, si alguien la retoma,
-            // es preguntar por **`villager.getNavigation().isInProgress()`** (que es false al arrancar —no hay ese
-            // bucle— y true mientras sigue un camino), no por el dato de movimiento.
+            // I201 · RETIRADA (3-oct-2026): «no le vuelvas a pedir el camino si ya va andando» (`isInProgress()`).
+            // El diagnóstico que la motivó **era falso en general** ✗, y lo dijo la métrica precisa: la mayoría de los
+            // avisos ya traían **1-11 `destinos`** en cientos de ticks (corrida 120: `1 en 654`, `11 en 872`,
+            // `9 en 880`); el `548 en 195` de la corrida 110 —que me llevó a intentarlo— era **un caso suelto**, no la
+            // norma. Con I201 puesta (corrida 125) la cosa queda igual (`1 en 1408` ✓ en un caso, `810` y `892` en
+            // otros ✗), sin mejora medible: **lo que no arregla, se quita y se dice**.
+            // Lo que **sí** queda es el dato: el residuo son aldeanos **plantados con la ruta viva** (`ANDADO 0.0` con
+            // `alcanza=SI`) o **sin ruta** (`alcanza=NO`), y **no** es por re-pedir el camino cada tick ✗. El
+            // siguiente paso, si se retoma, es **medir la causa** con una traza nueva (¿hay un `nav` vivo y quieto?,
+            // ¿hay bichos/aldeanos apretados alrededor?, ¿el cerebro apunta a otro sitio?), no con otro parche.
             if (!VillageManager.caminarHaciaExactoSiPuede(villager, punto, VELOCIDAD)) {
                 if (!reafirmadoElPasoExacto) {
                     reafirmadoElPasoExacto = true;

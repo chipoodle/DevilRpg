@@ -1469,3 +1469,31 @@ Yendo a la taberna` — todos con **`ANDADO` 0,0-0,1** ✗ y **`alcanza=SI`** �
 entre etiquetas (`Yendo al almacén`, `Yendo a la taberna`, `Yendo a entrenar`). **Diagnóstico**: las ~2,8 peticiones de
 camino por tick reinician al caminante ✓. **Arreglo correcto, escrito y no aplicado**: preguntar por
 `villager.getNavigation().isInProgress()` ✓, medido con `destinos`/tick y avisos por corrida ✓.
+
+### 8.bis.0.septendecies · **Ronda 43: la métrica precisa tumba mi diagnóstico (I201 retirada) — y el residuo queda como problema ABIERTO**
+
+**Lo que medí, con la métrica correcta** (`destinos` por tick, que sale en el propio aviso):
+
+| corrida | `destinos` / ticks | lectura |
+|---|---|---|
+| 110 (I199) | **548 en 195** ✗ | ≈2,8/tick — **el caso que me llevó a intentar el arreglo** |
+| 120 (retirado) | **1 en 654** ✓ · **11 en 872** ✓ · **9 en 880** ✓ | ≈0,01/tick: **el goal NO re-pide el camino cada tick** |
+| 125 (con I201) | **1 en 1408** ✓ · 810 en 350 ✗ · 892 en 350 ✗ | igual de mezclado, sin mejora |
+
+**Conclusión honesta**: mi premisa —«el goal pide el camino ~2,8 veces por tick y eso lo deja plantado»— **era falsa en
+general** ✗. El `548 en 195` era **un caso suelto**, y sobre él construí **dos** arreglos (I200 y I201), los dos
+retirados ✓. La regla del proyecto se aplica: **lo que no arregla, se quita y se dice** ✓.
+
+**Lo que sí queda medido y sirve**:
+1. El residuo son aldeanos **plantados** ✗: `ANDADO 0.0` con **`alcanza=SI`** (ruta viva) o con **`alcanza=NO`** (sin
+   ruta) — **dos subcasos**, y los tres avisos de la 125 son del segundo (`Mauricio / A por leña al almacén` y
+   `Zacarias / Cuidando el ganado` ×2, todos `alcanza=NO`).
+2. **No** es por re-pedir el camino cada tick ✗ (medido arriba).
+3. **No** es falta de red: el empujón del latido (I198) da **873-1460** por corrida ✓ y el rescate funciona ✓.
+4. **La causa sigue ABIERTA** ✗. Lo honesto es **medirla**, no parchearla: hace falta una traza nueva que diga, en el
+   momento del atasco, **si la navegación tiene camino vivo y no lo anda**, **si hay bichos o aldeanos apretados
+   alrededor** y **a dónde apunta el cerebro** — las tres cosas que el aviso no distingue hoy.
+
+**Y una nota de método que me ha costado tres intentos**: la cuenta de líneas de actividad de los guardias
+(`Entrenando`/`Patrullando`) **es ruido** ✗ (varía de 938 a 0 entre corridas: la 124 dio 0 en las tres y la 125 dio 41
+de entrenamiento ✓, con el **mismo** código). Para juzgar hay que usar **`destinos`/tick** y **avisos por corrida** ✓.
