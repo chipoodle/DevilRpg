@@ -6057,3 +6057,19 @@ se mide antes de tocar: **la regla de esta casa**.
 `docs/aldea-cerebro.md` §3 (*«el aldeano salta de mesa en mesa rindiéndose en cada una. Cableado RETIRADO»*), que es
 exactamente el baile que se quiere quitar. Tampoco hace falta copiar goals de vanilla: el conflicto medido es **entre
 goals del mod**, no con vanilla.
+
+**Y LA PRIMERA CORRECCIÓN DE VERDAD (misma ronda)**: con las banderas ya puestas, el **único** goal del mod que
+**camina y NO coge `MOVE`** es el de **puertas/portones** (`VillagerGateGoal`, `EnumSet.noneOf`) ✗ — así que es el
+único que puede correr **a la vez** que el del oficio y, al abrir una compuerta, **borrarle el camino** (`stop()` +
+`eraseMemory(WALK_TARGET)` + `eraseMemory(PATH)`). Ese es un pisotón de libro: el oficio pide el camino en cada tick,
+el de puertas se lo borra, y el aldeano **da tirones**. Arreglado: **si hay otro goal caminando (con `MOVE`), no se le
+toca el camino** ✓ — y no hace falta, porque con la compuerta ya abierta el goal del oficio **pide una ruta nueva que
+cruza por ella** ✓.
+
+**Documentado para que no se repita** (regla de la casa: *lo que no arregla, se quita y se dice*):
+1. **No volver a proponer «reescribir toda la lógica del aldeano»**: probada y retirada (acta §3) y **produce el mismo
+   baile** ✗.
+2. **No volver a suponer que faltan banderas `MOVE`**: están puestas desde antes; comprobarlo archivo por archivo es
+   un comando, suponerlo costó una hipótesis falsa ✗.
+3. **Un goal sin `MOVE` no puede tocar el camino de otro** ✗ (I205): es la única forma de que dos goals que "no
+   compiten" por bandera acaben peleándose igual.

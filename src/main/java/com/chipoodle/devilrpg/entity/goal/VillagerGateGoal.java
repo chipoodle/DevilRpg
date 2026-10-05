@@ -379,9 +379,25 @@ public class VillagerGateGoal extends Goal {
         // ruta nueva SÍ cruza. Medido con el arnés: Isidoro (parcela 2) se quedaba toda la noche en `1394,119,1452`,
         // la celda de dentro de su compuerta, con la cama reclamada al otro lado y las cuatro compuertas cerradas.
         // (El arreglo de "no borrárselo cuando la ruta viva ya alcanza" se midió y se retiró: ver arriba y I126.)
-        villager.getNavigation().stop();
-        villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-        villager.getBrain().eraseMemory(MemoryModuleType.PATH);
+        // I205 · PERO NO SE LE PISA EL CAMINO A OTRO GOAL (5-oct-2026, medido). Este goal **no** coge la bandera
+        // `MOVE` a propósito (solo abre puertas, no lleva al aldeano a ningún sitio), así que puede correr **a la vez**
+        // que el goal del oficio, que sí la coge y que **vuelve a pedir el camino en cada tick** (`caminarHacia`).
+        // Borrarle aquí el destino y cortarle la navegación es pelearse con él: el oficio pide, este borra, y el
+        // aldeano da tirones — el «baile» que el jugador ha reportado dos veces. Si hay otro caminante corriendo, se
+        // le deja en paz: con la compuerta ya abierta, su propio goal pedirá una ruta que cruza por ella.
+        boolean otroEstaCaminando = false;
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal w : villager.goalSelector.getAvailableGoals()) {
+            if (w.isRunning() && w.getGoal() != this
+                    && w.getGoal().getFlags().contains(net.minecraft.world.entity.ai.goal.Goal.Flag.MOVE)) {
+                otroEstaCaminando = true;
+                break;
+            }
+        }
+        if (!otroEstaCaminando) {
+            villager.getNavigation().stop();
+            villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+            villager.getBrain().eraseMemory(MemoryModuleType.PATH);
+        }
     }
 
     /** Abre el portón y lo registra. Devuelve {@code false} si el bloque ya no es un portón de valla. */
