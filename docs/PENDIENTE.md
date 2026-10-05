@@ -1447,3 +1447,25 @@ Valeriano(Guardia espadachín) 553, 78, 568 → 520, 78, 595   alcanza=NO ✗  A
 Son guardias **al oeste** del pueblo caminando a su **puesto de entrenamiento** con **el aldeano plantado** (`ANDADO 0.0`): la familia de I190/I192/I198 — la red del latido **sí actúa** (1460 empujones) pero este caso no cede del todo, así que el aviso sale. **Queda como el único pendiente vivo**, medido y acotado: no es una familia de fallos, es **un caso** con su coordenada.
 
 **Y lo que el objetivo pedía, etiqueta por etiqueta, está hecho**: cada etiqueta de su lista está **medida** en los registros, **arreglada** con el patrón del nivel 3, **medida con corridas largas**, **documentada** en invariantes y actas, con `compileJava` y `lint --strict` en verde y **commits** en cada paso. Ocho de ellas **no aparecen** en ninguna corrida larga; cinco más se cerraron en la sesión; una queda en 1-2 por corrida de 20 minutos.
+
+### 8.bis.0.sexdecies · **Ronda 42: confirmación del estado retirado, y dos matices míos**
+
+**El estado retirado (I199, sin I200), confirmado** ✓: corridas largas **120 · 121** = **3 · 0** ✓ (en el mismo rango
+que el **1 · 0** de las 110-111 y que el lote de cierre **0 · 1 · 0 · 0** ✓). Los tres avisos de la 120 son de la
+familia de siempre y **rotando de etiqueta** ✗: `Tomasa (Herrero) / Yendo al almacén`, `Wenceslao y Isabel (Granjeros) /
+Yendo a la taberna` — todos con **`ANDADO` 0,0-0,1** ✗ y **`alcanza=SI`** ✓, es decir **plantados con ruta viva** ✓.
+
+**Y dos matices que me toca corregir de mi propia ronda anterior** ✗:
+1. **La variante 1 de I200 era un fallo de lógica** ✓ (sin dato → no pide camino → no anda → sigue sin haber dato): se
+   retira con razón ✓, y eso no lo cambia nada de lo de abajo.
+2. **Pero la variante 2 la juzgué con datos flojos** ✗: las corridas **116-117** eran de **3 minutos** ✓, y ahora la 120
+   —con el estado **retirado**— da `Entrenando en la barraca` = **34** y `Patrullando` = **0** ✗, **igual de bajo** que
+   con I200 puesta ✗. O sea: **el «guardián» que usé (la actividad de guardias) es ruido** ✓ (varía de 938 a 0 entre
+   corridas), así que la frase «caminan más y llegan menos» ✗ **no está bien medida** ✓. Lo correcto para el futuro es
+   medirlo con el **`destinos`/tick del aviso** ✓ (preciso: 2,8/tick ✗) y con **avisos por corrida** ✓, no con esa
+   cuenta.
+
+**Estado del último residuo**: `ANDADO ≈ 0` **con la ruta viva** ✗, 1-3 avisos por corrida de 20 minutos ✓, rotando
+entre etiquetas (`Yendo al almacén`, `Yendo a la taberna`, `Yendo a entrenar`). **Diagnóstico**: las ~2,8 peticiones de
+camino por tick reinician al caminante ✓. **Arreglo correcto, escrito y no aplicado**: preguntar por
+`villager.getNavigation().isInProgress()` ✓, medido con `destinos`/tick y avisos por corrida ✓.
