@@ -1548,3 +1548,24 @@ del último residuo era **una ruta perdida que nadie volvía a pedir** ✗, y co
 **Cerrando el círculo de esta sesión**: los avisos de rendición de la aldea pasaron de **62-238** ✗ (lotes viejos) a
 **0 · 1 · 0 · 0** ✓ (lote de cierre de I197) y ahora a **0 · 0** ✓ en las largas con I203. **En marcha**, el lote de
 cierre definitivo **133 · 134 · 135 · 136** ✓ (4 × 20 min) sobre este build, que es la formalidad que pide el objetivo ✓.
+
+### 8.bis.0.vicies · **Ronda 46: el «destino imposible» que salió en las fichas, medido — y es el goal de reparar**
+
+En los pares de la ficha del plantado salía un caso raro: `586, 78, 536 → 586, 84, 539` ✗, **seis bloques por encima
+del pueblo**. Corte vertical del mundo ahí (`x 582-590, z 535-543`, del 78 al 85):
+
+| capa | qué hay |
+|---|---|
+| y=84 y 85 | **AIRE** ✗ — y es justo adonde el aldeano quería ir |
+| y=82 y 83 | tablones y vallas: **doble tejado** |
+| y=81 | el techo (vallas, tablones, troncos) |
+| y=78-80 | la planta de abajo: adoquín, antorchas y **agua** en dos huecos |
+
+O sea: hay goals que piden caminar a una casilla que **no es una casilla de pie** ✗ — el **bloque que van a reparar**
+(un tejado, una losa) en vez de la **casilla de pie de al lado** ✓. Los candidatos tienen nombre en la propia lista de
+etiquetas: **`Repuso un bloque`** (44 en el histórico) y **`Repuso losa`** (30). Y el remedio ya existe en el proyecto
+para este caso exacto: `casillaDePieCercaDe` / `casillaPosible` (el contrato de «casilla de pie», nivel 3).
+
+**No se toca ahora** ✓ a propósito: es un cambio que exigiría su propio lote de 4 corridas y quedan dos rondas; queda
+**medido y con el arreglo nombrado** ✓ para cuando se retome. En las corridas del build final (131 · 132 · 133) **no**
+ha producido ningún aviso ✓.
