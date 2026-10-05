@@ -2047,6 +2047,57 @@ public final class VillageManager {
         }
     }
 
+    /**
+     * I204 · <b>EL INFORME DE LAS PARCELAS</b> (3-oct-2026, solo registro). El jugador ve «semillas y vegetales
+     * flotando como objetos» dentro de una parcela y hay que saber de una vez <b>qué</b> son, <b>dónde</b> están,
+     * <b>cuánto</b> llevan ahí y <b>sobre qué</b> bloque flotan. Un objeto sobre el agua de la acequia flota y no lo
+     * recoge nadie; uno sobre tierra de cultivo lo recoge el granjero. Además cuenta las <b>celdas sin sembrar</b> y
+     * las <b>pisoteadas</b> (tierra o césped donde debería haber tierra de cultivo), que es la otra mitad del
+     * problema. Sin este dato, cualquier arreglo sería a ciegas — y a ciegas ya me he equivocado demasiadas veces.
+     */
+    private static void informeDeLasParcelas(ServerLevel level, BlockPos center) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, center);
+        if (cota <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        int sinSembrar = 0;
+        int pisoteadas = 0;
+        for (int i = 0; i < VillageGenerator.numeroDeParcelas(); i++) {
+            BlockPos esquina = VillageGenerator.esquinaDeLaParcela(center, i, cota);
+            for (int dx = 0; dx < VillageGenerator.PLOT_WIDTH; dx++) {
+                for (int dz = 0; dz < VillageGenerator.PLOT_DEPTH; dz++) {
+                    BlockPos suelo = esquina.offset(dx, -1, dz);
+                    if (!VillageGenerator.esCeldaDeCultivo(center, cota, suelo)) {
+                        continue;
+                    }
+                    if (VillageGenerator.esTierraPisoteada(level.getBlockState(suelo))) {
+                        pisoteadas++;
+                    } else if (level.getBlockState(suelo).is(Blocks.FARMLAND)
+                            && level.getBlockState(suelo.above()).isAir()) {
+                        sinSembrar++;
+                    }
+                }
+            }
+        }
+        for (net.minecraft.world.entity.item.ItemEntity objeto : level.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class,
+                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 16))) {
+            BlockPos p = objeto.blockPosition();
+            for (int i = 0; i < VillageGenerator.numeroDeParcelas(); i++) {
+                if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, p)
+                        || VillageGenerator.estaDentroDeLaParcela(center, i, cota, p.below())) {
+                    String sobre = level.getBlockState(p.below()).getBlock().getName().getString();
+                    DevilRpg.LOGGER.info("[Huerta] OBJETO {} en {} · {} ticks ahi · sobre {} · parcela {} · flota={}",
+                            objeto.getItem().getItem(), p.toShortString(), objeto.tickCount, sobre, i,
+                            level.getBlockState(p).is(Blocks.WATER) || level.getBlockState(p.below()).is(Blocks.WATER));
+                    break;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Huerta] parcelas al nivel {}: {} celda(s) SIN SEMBRAR, {} PISOTEADA(s)",
+                cota, sinSembrar, pisoteadas);
+    }
+
     /** Si el jugador que defiende la aldea no está conectado: el asedio se pausa, pero el registro lo dice claro. */
     private static final double DISTANCIA_SIN_JUGADOR = -1.0D;
 
@@ -2779,6 +2830,12 @@ public final class VillageManager {
         // Y EL QUE SE QUEDA DENTRO DE UNA CASA: si lleva 30 s sin moverse de celda en un piso (o un sótano), se le baja
         // a la plaza (ver `rescatarAldeanosAtrapados`).
         rescatarAldeanosAtrapados(level, aldeanos, center);
+        // I204 · Y EL INFORME DE LAS PARCELAS, cada 5 s (solo registro): objetos caídos dentro de la huerta con su
+        // edad y sobre qué bloque están, más las celdas sin sembrar y las pisoteadas. Es el dato que faltaba para
+        // arreglar «se me quedan semillas y vegetales flotando» sin adivinar.
+        if (level.getGameTime() % 100L == 0L) {
+            informeDeLasParcelas(level, center);
+        }
         // Y EL QUE AMANECE DE PIE ENCIMA DE UNA CAMA, A LA CALLE (medido con el arnés: la leñadora Tomasa se pasaba el
         // día encima de su cama, y desde ahí NO hay ruta a ninguna parte).
         bajarDeLasCamas(level, aldeanos, center);
