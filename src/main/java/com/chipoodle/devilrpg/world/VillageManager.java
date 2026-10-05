@@ -5403,6 +5403,33 @@ public final class VillageManager {
         if (cached != null) {
             return cached;
         }
+        // CENTRO CANÓNICO, ANTES QUE LA CAJA (5-oct-2026, medido en el registro del jugador). El centro de una aldea
+        // es EL DEL OBJETIVO —el ancla de invocación del jugador más el desfase de esa aldea— y NO el punto medio de
+        // lo construido. Aquí se tomaba el punto medio de la caja de TODO el plano: como la aldea crece hacia el este
+        // (almacén en +48, corral anexo en +50, taberna, pesquera…), el punto medio se iba al este con ella, y como
+        // los reparadores reciben ESTE centro, cada reparación volvía a levantar la aldea entera alrededor del punto
+        // medio nuevo y la empujaba otros 16 bloques. El registro del jugador lo enseña entero: su aldea construida
+        // DOS veces (herreria 585, mina 615, almacén 630, taberna 606, pesquera 602, corral 632) y dos aldeas
+        // superpuestas en el mismo mundo. Con el centro del objetivo, reparar vuelve a reparar LO MISMO.
+        for (ServerPlayer enLinea : level.players()) {
+            PlayerAuxiliaryCapabilityInterface aux =
+                    IGenericCapability.getUnwrappedPlayerCapability(enLinea, PlayerAuxiliaryCapability.INSTANCE);
+            Vec3 ancla = aux == null ? null : aux.getSpawnPoint();
+            if (ancla == null) {
+                continue;
+            }
+            BlockPos objetivo = ObjectiveTargets.targetOf(ancla, objectiveIndex);
+            BlockPos canonico = new BlockPos(objetivo.getX(), 0, objetivo.getZ());
+            if (!level.hasChunkAt(canonico)) {
+                return canonico; // chunk sin cargar: sin cachear, para no guardar una Y mala
+            }
+            BlockPos conCota = new BlockPos(canonico.getX(), VillageGenerator.cotaDeLaPlaza(level, canonico),
+                    canonico.getZ());
+            cache.put(objectiveIndex, conCota);
+            return conCota;
+        }
+        // Sin ningún jugador en línea no hay ancla que valga: se cae al plano (lo de antes) para no dejar sin centro
+        // ni a la barra de aldea ni a las reglas de spawn.
         VillageSavedData.Blueprint plano = saved.getBlueprint(objectiveIndex);
         if (plano == null || plano.size() == 0) {
             return null;
