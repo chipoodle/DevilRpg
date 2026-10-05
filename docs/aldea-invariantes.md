@@ -6029,3 +6029,31 @@ faltaba: **validación de ruta** (no dar por perdido un destino sin comprobar qu
 **MEDIDO Y DEMOSTRADO** ✓ (con una prueba que controlo yo, la línea `recuperado el camino`): banco rápido **0 · 0** ✓
 con **95 y 113 caminos recuperados** en dos corridas de 3 minutos ✓ — y los destinos de esas recuperaciones
 (`535, 78, 600`, `572, 78, 571`) son **exactamente** los pares que la ficha había medido ✓✓.
+
+### I205 · **LA TRAZA DE `PARAR` YA DICE QUIÉN** (5-oct-2026) — y una hipótesis mía, medida y tumbada
+
+**El síntoma del jugador** (reportado dos veces): *«los aldeanos todavía bailan, como si hubiera un conflicto de
+tareas solapándose»* ✗. Y en su registro de este mundo hay **29 líneas `PARAR:`** ✓ — todas de
+`VillageManager.parar(villager)`, que es un **parón global** (borra `WALK_TARGET`, `LOOK_TARGET`, el rumbo y corta la
+navegación).
+
+**MI HIPÓTESIS, Y POR QUÉ ERA FALSA** ✗: dije que los goals del mod **no** cogían la bandera `MOVE` (y que por eso
+varios podían caminar a la vez). Lo comprobé archivo por archivo y **sí la cogen**: `VillagerFarmGoal`,
+`VillagerAnimalFarmGoal`, `VillagerClericGoal`, `VillagerCollectGoal`, `VillagerCookGoal`, `VillagerFisherGoal`,
+`VillagerGuardGoal`, `VillagerLumberjackGoal`, `VillagerMinerGoal`, `VillagerPickupGoal`, `VillagerRepairGoal`,
+`VillagerSmithGoal` y `VillagerTavernGoal` llevan **`Goal.Flag.MOVE, Goal.Flag.LOOK`** ✓✓ → vanilla **ya garantiza
+un solo caminante** ✓. Quedan sin bandera `VillagerDoorGoal` y `VillagerGateGoal` (ninguna) y `VillageDispatcherGoal`
+(no declara, y **no está cableado**).
+
+**POR QUÉ LA TRAZA NO SERVÍA**: el aviso decía «con la faena EN MARCHA (goal del mod activo)» ✗ pero **no nombraba al
+goal que para ni a los que corren**, así que esa pregunta **no se podía contestar con el registro** — y yo la contesté
+suponiendo ✗.
+
+**ARREGLO (solo traza, no cambia nada del mundo)**: la línea `PARAR` ahora imprime **los goals que están corriendo en
+ese tick**, el **camino vivo** (nodos) y la posición, para que el peleador salga del registro **con nombre** ✓. Con eso
+se mide antes de tocar: **la regla de esta casa**.
+
+**Y la vía «reescribir toda la lógica del aldeano» NO se repite** ✗: está **probada y retirada** en
+`docs/aldea-cerebro.md` §3 (*«el aldeano salta de mesa en mesa rindiéndose en cada una. Cableado RETIRADO»*), que es
+exactamente el baile que se quiere quitar. Tampoco hace falta copiar goals de vanilla: el conflicto medido es **entre
+goals del mod**, no con vanilla.

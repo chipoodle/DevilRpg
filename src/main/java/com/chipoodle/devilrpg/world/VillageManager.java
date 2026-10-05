@@ -6277,8 +6277,23 @@ public final class VillageManager {
         if (tieneUnGoalDelModActivo(villager)
                 && villager.level().getGameTime() - villager.getPersistentData().getLong("DevilRpgPararAviso") > 40L) {
             villager.getPersistentData().putLong("DevilRpgPararAviso", villager.level().getGameTime());
-            DevilRpg.LOGGER.info("[Village] PARAR: {} para su camino en {} con la faena EN MARCHA (goal del mod activo)",
-                    villager.getUUID(), villager.blockPosition().toShortString());
+            // LA TRAZA TIENE QUE DECIR **QUIÉN** (5-oct-2026, y mea culpa): el aviso decía «hay faena en marcha» pero no
+            // nombraba al goal que para NI a los que están corriendo, así que la pregunta «quién pelea con quién» no
+            // se podía contestar con el registro — y yo la contesté **suponiendo** (dije que los goals del mod no
+            // cogían la bandera MOVE… y **sí la cogen**, medido: Farm, AnimalFarm, Cleric, Collect, Cook, Fisher,
+            // Guard, Lumberjack, Miner, Pickup, Repair, Smith y Tavern llevan `MOVE, LOOK`). Ahora se apunta todo:
+            // los goals que corren en este tick, cuántos nodos tiene el camino vivo y quién quedó parado.
+            StringBuilder quien = new StringBuilder();
+            for (net.minecraft.world.entity.ai.goal.WrappedGoal w : villager.goalSelector.getAvailableGoals()) {
+                if (w.isRunning()) {
+                    quien.append(w.getGoal().getClass().getSimpleName()).append(' ');
+                }
+            }
+            var camino = villager.getNavigation().getPath();
+            DevilRpg.LOGGER.info("[Village] PARAR: {} en {} · corriendo=[{}] · nav={} · el goal que para es uno de los "
+                            + "de arriba",
+                    villager.getUUID(), villager.blockPosition().toShortString(), quien.toString().trim(),
+                    camino == null ? "sin ruta" : camino.getNodeCount() + " nodos");
         }
         // Y el apunte del rumbo (I171): parar es parar. Si no se borra, el latido le devolvería el destino en cuanto el
         // goal lo pida otra vez en el mismo tick, y el aldeano seguiría yendo a un sitio ya resuelto.
