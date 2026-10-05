@@ -1400,6 +1400,26 @@ public final class VillageManager {
             // Tras el margen de exploración, lanza la ola desde FUERA de la valla.
             if (!d.waveSpawned && d.tickTicks >= GRACE_TICKS) {
                 spawnWave(level, d);
+                if (d.wave.isEmpty()) {
+                    // LA OLEADA NO PUDO NACER Y ANTES ESO SE CANTABA COMO VICTORIA (3-oct-2026, medido en la partida
+                    // del jugador). `EntityType.create(..., alignPosition=true, ...)` devuelve **null** cuando la
+                    // casilla no admite el spawn (agua, dentro de un bloque, chunk sin cargar), y
+                    // `isWaveCleared` de una ola **VACÍA** es cierto: su registro enseña «¡Defiende la aldea de los
+                    // monstruos!» a las 04:17:19 y «Aldea 0 salvada» a las 04:17:20, **sin un solo spawn de asediador
+                    // en todo el log**. Ahora: se reintenta cada 5 s (hasta 5 veces) y, si no nace, el asedio se
+                    // CANCELA sin darse por ganado y sin pagar recompensa.
+                    if (d.reintentosDeOleada < 5) {
+                        d.reintentosDeOleada++;
+                        d.tickTicks -= 100; // cinco segundos más y se vuelve a intentar
+                        DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada salio VACIA (0 asediadores, intento {}/5):"
+                                + " se reintenta en 5 s", d.objectiveIndex, d.reintentosDeOleada);
+                    } else {
+                        DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada NO PUDO NACER en 5 intentos: el asedio se"
+                                + " cancela SIN darse por ganado (antes se regalaba la victoria)", d.objectiveIndex);
+                        list.remove(i);
+                    }
+                    continue;
+                }
                 d.waveSpawned = true;
                 ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
                 if (p != null) {
@@ -1414,7 +1434,9 @@ public final class VillageManager {
                 // atacante de la ola dentro: la valla está a 62 del centro, así que el pueblo es casi todo
                 // lo que se ve alrededor de la plaza).
                 informarDelAsedio(level, d);
-                boolean waveCleared = isWaveCleared(level, d.wave);
+                // Y UNA OLA VACÍA **NO** ESTÁ LIMPIA: sin este `!isEmpty()`, una oleada que no nació se leía como
+                // «limpiada» en el mismo tick y el pueblo se salvaba solo.
+                boolean waveCleared = !d.wave.isEmpty() && isWaveCleared(level, d.wave);
                 boolean timeout = d.tickTicks > GRACE_TICKS + SIEGE_TIMEOUT_TICKS;
                 if (waveCleared || timeout) {
                     // Al acabarse el tiempo, si queda algún zombie FUERA del perímetro (sin pasar los muros) se
@@ -1594,6 +1616,40 @@ public final class VillageManager {
                 d.wave.add(zombie.getUUID());
             }
         }
+        // SEGUNDA PASADA, SIN EXIGIR QUE LA CASILLA SEA «DE SPAWN» (3-oct-2026, medido). `create(..., alignPosition =
+        // true, ...)` devuelve **null** si el sitio no le gusta (agua, hierba alta, dentro de un bloque, chunk sin
+        // cargar) y una oleada ENTERA podía quedarse en CERO: el registro del jugador enseña «¡Defiende la aldea de
+        // los monstruos!» y un segundo después «Aldea 0 salvada», sin un solo spawn. Aquí se prueba el suelo, un
+        // bloque por encima y uno por debajo, se acepta cualquier casilla con el aire libre y el zombie se coloca a
+        // mano con `moveTo` (el `alignPosition = false` es justo lo que quita la exigencia de casilla).
+        if (d.wave.isEmpty()) {
+            for (int i = 0; i < count * 3 && d.wave.isEmpty(); i++) {
+                double angle = random.nextDouble() * Math.PI * 2.0D;
+                int dist = WAVE_SPAWN_MIN + random.nextInt(WAVE_SPAWN_MAX - WAVE_SPAWN_MIN);
+                int x = (int) Math.round(d.center.getX() + Math.cos(angle) * dist);
+                int z = (int) Math.round(d.center.getZ() + Math.sin(angle) * dist);
+                int y = VillageGenerator.spawnY(level, x, z);
+                for (int dy = 1; dy >= -1; dy--) {
+                    BlockPos donde = new BlockPos(x, y + dy, z);
+                    if (!level.getBlockState(donde).isAir() || !level.getBlockState(donde.above()).isAir()) {
+                        continue;
+                    }
+                    AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
+                            .create(level, null, donde, MobSpawnType.MOB_SUMMONED, false, false);
+                    if (zombie == null) {
+                        continue;
+                    }
+                    zombie.moveTo(x + 0.5D, y + dy, z + 0.5D, 0.0F, 0.0F);
+                    zombie.setVillageCenter(d.center);
+                    zombie.setWorldSiegeIndex(d.objectiveIndex);
+                    level.addFreshEntity(zombie);
+                    d.wave.add(zombie.getUUID());
+                    break;
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea {}: OLEADA de {} asediadores intentados, {} colocados (radio {}-{})",
+                d.objectiveIndex, count, d.wave.size(), WAVE_SPAWN_MIN, WAVE_SPAWN_MAX);
         // Los asediadores van marcados con brillo (ver `marcarAsediadores`): sin la marca, en una noche con
         // decenas de bichos alrededor el jugador no puede saber a quién tiene que matar.
         marcarAsediadores(level, d.wave, true);
@@ -7380,6 +7436,12 @@ public final class VillageManager {
         int ultimosVivos = -1;
         /** El reloj está parado porque el jugador no está en la aldea (ver {@link #RADIO_ASEDIO_CON_JUGADOR}). */
         boolean enPausa;
+        /**
+         * Intentos de lanzar la oleada que salieron con <b>0 asediadores</b> (3-oct-2026): el spawn puede fallar
+         * entero —agua, casilla ocupada, chunk sin cargar— y antes eso se leía como «ola limpiada» y regalaba la
+         * victoria. Ver el bloque de {@code spawnWave} en {@link #tick(ServerLevel)}.
+         */
+        int reintentosDeOleada;
 
         VillageDefense(int objectiveIndex, UUID playerUUID, BlockPos center) {
             this.objectiveIndex = objectiveIndex;
