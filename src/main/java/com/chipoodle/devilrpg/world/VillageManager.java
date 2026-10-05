@@ -6340,6 +6340,19 @@ public final class VillageManager {
     }
 
     /** Deja de caminar: se quita el destino del cerebro para que no siga yendo a un sitio ya resuelto. */    public static void parar(Villager villager) {
+        // I208 · PARAR ES IDEMPOTENTE DENTRO DEL MISMO TICK (5-oct-2026, medido EN VIVO). Los goals de la aldea
+        // aparcan **en cada tick** mientras trabajan en el sitio (llego -> paro -> trabajo N ticks -> paso siguiente),
+        // y cada llamada borraba el destino del cerebro, el rumbo (`RUMBO_POS`) y cortaba la navegación. Con el destino
+        // borrado, el `ponerRumbo` del paso siguiente **no puede** acogerse al atajo de I206 (no ve un destino igual al
+        // que ya iba) y vuelve a pedir la ruta: `moveTo` recalcula y **REINICIA el caminante** — el tirón. Y de paso,
+        // mientras trabaja, su ficha sale con `cerebro=-`, que no es que le falte destino: es que se lo borra el
+        // aparcado. Una vez por tick basta: dentro del mismo tick no hay dos movimientos que parar.
+        long ahoraDelParar = villager.level().getGameTime();
+        CompoundTag datosDelParar = villager.getPersistentData();
+        if (datosDelParar.getLong("DevilRpgPararTick") == ahoraDelParar) {
+            return;
+        }
+        datosDelParar.putLong("DevilRpgPararTick", ahoraDelParar);
         villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
         // Y TAMBIÉN el LOOK_TARGET: el cerebro del aldeano tiene "andar hacia donde mira"
         // (`SetWalkTargetFromLookTarget` en su paquete IDLE), así que con el destino borrado y la mirada puesta en el

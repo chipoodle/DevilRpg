@@ -6131,3 +6131,28 @@ dentro; no depende de la cota: el bloque es el de sus pies).
 
 **MEDIDA**: en el registro, las líneas `estaba METIDO en la puerta ...: se la abro` deben **sustituir** a las de
 `(dentro de oak_door/dark_oak_door): lo saco a`, y los `PARAR` en bucle de esos aldeanos deben caer.
+
+### I208 · **`parar()` ES IDEMPOTENTE DENTRO DEL MISMO TICK** (5-oct-2026) — el aparcado borraba el destino en bucle
+
+**Leído en el código** (`VillagerAnimalFarmGoal` L389, `VillagerSmithGoal` L284, y el mismo patrón en `Collect` y
+`Repair`):
+
+```java
+if (distancia > alcance) { caminarHacia(...); return; }   // lejos: camina
+VillageManager.parar(villager);                           // ← EN CADA TICK mientras trabaja en el sitio
+villager.swing(...); if (++workTicks < WORK_TICKS) { ...; return; }
+```
+
+`parar()` borra el `WALK_TARGET`, el `LOOK_TARGET`, el apunte del rumbo y corta la navegación. Llamado **cada tick**
+durante el trabajo, eso tiene dos consecuencias medidas:
+
+1. **Rompe el atajo de I206**: con el destino borrado, el `ponerRumbo` del paso siguiente **no ve** un destino igual al
+   que ya iba, así que vuelve a pedir la ruta → `moveTo` recalcula → **reinicia el caminante** = el tirón.
+2. **Ensuciaba el diagnóstico**: la ficha del plantado salía con `cerebro=-` y parecía «un goal sin destino», cuando lo
+   que pasaba es que **el aparcado se lo borraba** ✗.
+
+**ARREGLO**: una parada por tick y por aldeano (sello `DevilRpgPararTick`) ✓. Dentro del mismo tick no hay dos
+movimientos que parar, así que no cambia nada de lo que se ve salvo quitar el bucle ✓.
+
+**MEDIDA**: las líneas `PARAR` deben caer en picado (eran decenas por sesión), y las de `METIDO en la puerta … se la
+abro` (I207) deben sustituir a las de «lo saco a».
