@@ -6214,3 +6214,22 @@ lo salta** (I153 ✓) en vez de perseguir el aire. Y la medida de la sesión lo 
 
 **Queda escrito para no volver a "arreglarlo"** ✗ — que es exactamente el error que esta casa quiere evitar (tocar lo
 que ya funciona y romperlo).
+
+### ASEDIO INICIAL · **POR QUE NO ARRANCA: LA TRAZA QUE FALTABA** (5-oct-2026)
+
+**Medido en el mundo nuevo del jugador**: el registro **no tiene ni una vez** el aviso de llegada (`Llegaste a la
+aldea... los monstruos se acercan`) ni lineas de asedio/oleada ✗ — es decir, **el asedio inicial nunca arranca**, que es
+exactamente lo que el jugador reporto (*«ni siquiera llegaron los zombis del asedio inicial»*).
+
+**Lo que YA se ha descartado, leyendo el codigo (no suponiendo)**:
+- `ObjectiveManager.tick(player)` **si** se ejecuta **cada tick** (`PlayerCapabilityForgeEventSubscriber.onPlayerTick`,
+  `PlayerTickEvent.Post`) ✓.
+- El jugador esta en **590,63,666** y el objetivo es **582,63,678** → **14 bloques**, muy dentro del radio de llegada
+  (24) ✓.
+- El objetivo es el correcto: la pre-generacion del mundo nuevo lo prueba (`Aldea 0 pre-generada en 582, 63, 678`) ✓.
+- `VillageManager.start(...)` tiene un **unico** llamador (`ObjectiveManager` L65) y **tres** salidas tempranas, y el
+  aviso de llegada solo se escribe cuando **pasa** ✓ → luego **se esta saliendo por una guarda, en silencio** ✗.
+
+**ARREGLO (solo traza, cero cambio de comportamiento)**: las dos guardas que pueden dejar el asedio sin arrancar ahora
+**lo dicen** en el registro ✓ — «el mundo ya la esta atacando (horda dirigida)» y «su asedio ya consta como resuelto».
+Con eso, la proxima partida dice **cual** de las dos es, sin interpretaciones ✓.
