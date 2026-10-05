@@ -1332,22 +1332,25 @@ public final class VillageManager {
         // Ni si el mundo ya la está atacando por su cuenta (horda dirigida a esta aldea): no se apilan dos
         // oleadas sobre la misma aldea.
         if (isUnderWorldSiege(level, objectiveIndex)) {
-            // TRAZA (5-oct-2026): el asedio del mod se salta en silencio si el mundo ya tiene una horda dirigida a
-            // esta aldea, y eso deja el registro MUDO: el jugador ve que "no llegan los zombis del asedio inicial" y
-            // no hay ni una linea que diga por que. Medido en su mundo nuevo: `start` se llama cada tick con el
-            // objetivo correcto (la pre-generacion prueba que el target es 582,63,678, a 14 bloques del jugador) y
-            // NUNCA sale el aviso de llegada, asi que se esta saliendo por aqui o por la guarda de abajo.
-            DevilRpg.LOGGER.info("[Village] asedio de la aldea {} NO arranca: el mundo ya la esta atacando "
-                    + "(horda dirigida)", objectiveIndex);
+            // TRAZA (5-oct-2026): el asedio del mod se salta en silencio si el mundo ya tiene una horda dirigida a esta
+            // aldea, y eso dejaba el registro MUDO (el jugador ve que "no llegan los zombis del asedio inicial" y no
+            // hay ni una linea que diga por que). APRETADA a una linea cada 2 s: su primera version escribia una POR
+            // TICK y dejo 3333 lineas en una sola sesion.
+            if (level.getGameTime() % 40L == 0L) {
+                DevilRpg.LOGGER.info("[Village] asedio de la aldea {} NO arranca: el mundo ya la esta atacando "
+                        + "(horda dirigida)", objectiveIndex);
+            }
             return;
         }
         // Ni si el asedio de este objetivo ya se resolvió (salvada o caída): se guarda, así que al reiniciar
         // la partida no se puede repetir la recompensa ni volver a asediar la misma aldea.
         VillageSavedData saved = VillageSavedData.get(level);
         if (saved.isSiegeResolved(objectiveIndex)) {
-            // TRAZA (5-oct-2026, la otra guarda que puede dejar el asedio inicial sin arrancar y el registro mudo).
-            DevilRpg.LOGGER.info("[Village] asedio de la aldea {} NO arranca: su asedio ya consta como resuelto "
-                    + "(salvada o caida)", objectiveIndex);
+            // TRAZA (5-oct-2026, la otra guarda que puede dejar el asedio inicial sin arrancar; misma cadencia).
+            if (level.getGameTime() % 40L == 0L) {
+                DevilRpg.LOGGER.info("[Village] asedio de la aldea {} NO arranca: su asedio ya consta como resuelto "
+                        + "(salvada o caida)", objectiveIndex);
+            }
             return;
         }
         if (!saved.isGenerated(objectiveIndex)) {
