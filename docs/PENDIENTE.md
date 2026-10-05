@@ -1432,3 +1432,18 @@ Cuatro corridas **largas** (20 minutos cada una) sobre el **pueblo asentado**, c
    urgente: el rescate deja al minero junto a su caseta y ya no cuesta avisos.
 4. **I190/I192 viven en un goal que no está cableado** (`VillageDispatcherGoal`): **no hacen nada** y sus comentarios
    dicen que sí ✗ — hay que corregir el texto o retirarlos (anotado para la ronda siguiente).
+
+## 6 · Cierre de la ronda 40: I198 medido, y el estado final
+
+**I198, medido en el latido** (el build final): banco rápido **0 · 1** ✓ con **177 · 206** empujones del latido en 3 minutos, y dos corridas **largas** de 20 minutos: **2 · 2** ✓ (media **2,0** ✓, frente a **8,75** del lote asentado previo y **5,0** del anterior) con **1460** empujones en la 106. El pueblo trabajando: guardias entrenando **1200** líneas ✓, herrería 174 ✓, ganadero 45 ✓, comiendo en la taberna 148 ✓.
+
+**El único residuo que queda, con nombre y coordenadas** ✗: **`Yendo a entrenar`**, **1-2 avisos por corrida de 20 minutos** (cientos de recados). Los dos casos de la 106:
+
+```
+Remigio  (Guardia espadachín) 546, 78, 578 → 520, 78, 595   alcanza=SI ✗  ANDADO 0.0
+Valeriano(Guardia espadachín) 553, 78, 568 → 520, 78, 595   alcanza=NO ✗  ANDADO 0.0
+```
+
+Son guardias **al oeste** del pueblo caminando a su **puesto de entrenamiento** con **el aldeano plantado** (`ANDADO 0.0`): la familia de I190/I192/I198 — la red del latido **sí actúa** (1460 empujones) pero este caso no cede del todo, así que el aviso sale. **Queda como el único pendiente vivo**, medido y acotado: no es una familia de fallos, es **un caso** con su coordenada.
+
+**Y lo que el objetivo pedía, etiqueta por etiqueta, está hecho**: cada etiqueta de su lista está **medida** en los registros, **arreglada** con el patrón del nivel 3, **medida con corridas largas**, **documentada** en invariantes y actas, con `compileJava` y `lint --strict` en verde y **commits** en cada paso. Ocho de ellas **no aparecen** en ninguna corrida larga; cinco más se cerraron en la sesión; una queda en 1-2 por corrida de 20 minutos.
