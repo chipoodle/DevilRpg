@@ -1631,3 +1631,21 @@ corridas del build final ✓.
    no hacen nada y la red que funciona es **I198** ✓.
 4. **La cuenta de líneas de actividad es ruido** ✗ (varía 938 → 0 con el mismo código): para juzgar, `destinos`/tick y
    avisos por corrida ✓.
+
+## 7 · El lote de cierre, cerrado (ronda 47)
+
+**Cuatro corridas largas (20 minutos), pueblo asentado, cierre limpio, build final (I182-I203)** — la formalidad exacta
+que pedía el objetivo:
+
+```
+133 : avisos=0  caminos recuperados=646  cierre limpio=SI      (guardias 214 · comiendo 518 · herrería 203)
+134 : avisos=0  caminos recuperados=438  cierre limpio=SI      (guardias 404 · comiendo 316 · herrería 147)
+135 : avisos=0  caminos recuperados=689  cierre limpio=SI      (guardias 404 · comiendo 109 · ganadero 108)
+136 : avisos=0  caminos recuperados=768  cierre limpio=SI      (guardias 783 · comiendo 345 · herrería 154)
+```
+
+Y con las 131 y 132 (también largas, también **0** ✓), son **seis corridas largas seguidas a cero** ✓ con el pueblo
+trabajando **a pleno rendimiento** ✓ (guardias entrenando hasta 783 líneas, taberna sirviendo, herrería, ganado) y
+**sin una sola migración** (`REPARADA=0` ✓) y con la compuerta del este ya puesta (idempotente ✓).
+
+**Comparación final**: de **62-238** avisos de rendición por corrida de 20 minutos a **0** ✓.
