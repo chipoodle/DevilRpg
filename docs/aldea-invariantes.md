@@ -6080,3 +6080,32 @@ entre una multitud y al que está trabajando en el sitio ✗. Pararle el camino 
 de las fuentes del «baile», puesta por mí. Ahora **solo actúa cuando no hay ruta viva** ✓, que es el caso para el que
 se inventó (I203: «tiene destino y no tiene camino → se le vuelve a pedir»). Lo que sí se conserva es la recuperación
 de ruta ✓.
+
+### I206 · **EL BAILE: EL EMBUDO DEL RUMBO REESCRIBÍA EL DESTINO EN CADA TICK** (5-oct-2026)
+
+**El síntoma** (el jugador, dos veces): *«todos los aldeanos bailan, hay conflicto»* ✗.
+
+**Lo que NO era** (dos hipótesis mías, medidas y tumbadas — se dejan escritas para no repetirlas):
+1. «Los goals del mod no cogen la bandera `MOVE` y por eso caminan varios a la vez» ✗ **falso**: la cogen **todos**
+   los que caminan (Farm, AnimalFarm, Cleric, Collect, Cook, Fisher, Guard, Lumberjack, Miner, Pickup, Repair,
+   Smith, Tavern) ✓.
+2. «Los `PARAR` son peleas entre goals» ✗ **falso en su mayoría**: la traza nueva (I205) demostró que son **llegadas
+   normales** (el goal llega → para → trabaja) ✓; y el goal de puertas, que sí puede correr a la vez, **no abre nada**
+   en esa sesión (`[Gate] = 0`) ✓.
+
+**Lo que SÍ es, leído en el código**: `VillageManager.ponerRumbo` es el **embudo por el que pasan todos los goals**, y
+escribía el `WALK_TARGET` del cerebro **en cada llamada** — y los goals de la aldea llaman **en cada tick** ✗. El
+sumidero de vanilla (`MoveToTargetSink`) lee esa memoria cada tick y vuelve a llamar a `navigation.moveTo(...)`, que
+**recalcula la ruta y reinicia el caminante** ✗ → el aldeano anda **en el sitio, a tirones**: el baile ✗✓.
+
+**ARREGLO (uno, en el embudo, para todos los goals)**: si el destino que se pide **es el mismo al que ya va** y tiene
+**camino vivo**, no se toca nada (ni la memoria ni el apunte) ✓ → el caminante sigue su nodo ✓. Si no hay destino, o es
+otro, o se quedó sin ruta, se escribe como siempre ✓ → **no hay forma de quedarse atascado** ✓.
+
+**MEDIDA**: cada 20 s se apunta `[Rumbo] peticiones=N · ya iban andando (no se les toca)=M` ✓. Si M/N es alto, el
+arreglo está trabajando; el baile debe desaparecer sin que nadie ande menos.
+
+**Y UNA LECCIÓN DE ESTA CASA**: la idea ya la había tenido (I200/I201: «no vuelvas a pedir el camino si ya vas
+andando») y **la retiré** ✗ porque la medí mal y la implementé con el dato de movimiento (que produce un bucle ✗). La
+idea era **buena**; lo que fallaba era **dónde y cómo** ✗. Queda dicho: **antes de retirar una idea, comprobar si lo que
+falla es la idea o la implementación** ✓.

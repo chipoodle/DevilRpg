@@ -5676,6 +5676,11 @@ public final class VillageManager {
     }
 
     /** Escribe el destino en el cerebro del aldeano ({@code WALK_TARGET}/{@code LOOK_TARGET}), sin más. */
+    /** I206 · Peticiones de rumbo y cuántas se han saltado por ser el MISMO destino al que ya iba (medida del baile). */
+    private static long rumbosPedidos;
+    private static long rumbosSaltados;
+    private static long ultimoAvisoDeRumbo;
+
     private static void ponerRumbo(Villager villager, BlockPos objetivo, float velocidad) {
         CompoundTag datos = villager.getPersistentData();
         // OJO · I180 SE PROBÓ AQUÍ Y SE RETIRA (30-sep-2026): «el primero que escribe el destino en un tick manda»,
@@ -5701,6 +5706,32 @@ public final class VillageManager {
             // destinos) de «da vueltas alrededor del mismo» (un destino y muchos bloques), que es lo que apunta el
             // navegador cuando da por LLEGADO con un bloque de tolerancia y el goal dice que aún no.
             datos.putInt("DevilRpgDestinos", datos.getInt("DevilRpgDestinos") + 1);
+        }
+        // I206 · NO SE LE REPITE EL MISMO DESTINO (5-oct-2026: medido en el registro y LEÍDO en el código). Los goals
+        // de la aldea piden el camino **en cada tick**, y aquí se escribía el `WALK_TARGET` otra vez en cada llamada.
+        // El sumidero de vanilla (`MoveToTargetSink`) lee esa memoria cada tick y vuelve a llamar a
+        // `navigation.moveTo(...)`, que **recalcula la ruta y REINICIA el caminante**: el aldeano se queda andando en
+        // el sitio, dando tirones — el «baile» que el jugador ve en TODOS los aldeanos y que llevaba semanas
+        // atribuyéndose a goals que compiten (y no: los goals ya llevan la bandera MOVE y solo corre uno).
+        // SI EL DESTINO ES EL MISMO AL QUE YA VA Y TIENE CAMINO VIVO, NO SE TOCA NADA: el caminante sigue su nodo.
+        // Si no hay destino, o es otro, o se quedó sin ruta, se escribe como siempre (no hay forma de quedarse
+        // atascado: en cuanto el camino termina o se pierde, esta comprobación deja de cumplirse).
+        rumbosPedidos++;
+        var yaIba = villager.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
+        if (yaIba.isPresent()
+                && yaIba.get().getTarget() instanceof net.minecraft.world.entity.ai.behavior.BlockPosTracker yaPuesto
+                && yaPuesto.currentBlockPosition().equals(objetivo)
+                && Math.abs(yaIba.get().getSpeedModifier() - velocidad) < 0.001F
+                && villager.getNavigation().getPath() != null
+                && !villager.getNavigation().getPath().isDone()) {
+            rumbosSaltados++;
+            datos.putLong(RUMBO_TICK, villager.level().getGameTime());
+            if (villager.level().getGameTime() - ultimoAvisoDeRumbo >= 400L) {
+                ultimoAvisoDeRumbo = villager.level().getGameTime();
+                DevilRpg.LOGGER.info("[Rumbo] peticiones={} · ya iban andando (no se les toca)={}", rumbosPedidos,
+                        rumbosSaltados);
+            }
+            return;
         }
         datos.putLong(RUMBO_POS, objetivo.asLong());
         datos.putFloat(RUMBO_VEL, velocidad);
