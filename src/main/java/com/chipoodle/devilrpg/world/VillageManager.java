@@ -2830,12 +2830,15 @@ public final class VillageManager {
         // Y EL QUE SE QUEDA DENTRO DE UNA CASA: si lleva 30 s sin moverse de celda en un piso (o un sótano), se le baja
         // a la plaza (ver `rescatarAldeanosAtrapados`).
         rescatarAldeanosAtrapados(level, aldeanos, center);
-        // I204 · Y EL INFORME DE LAS PARCELAS, cada 5 s (solo registro): objetos caídos dentro de la huerta con su
-        // edad y sobre qué bloque están, más las celdas sin sembrar y las pisoteadas. Es el dato que faltaba para
-        // arreglar «se me quedan semillas y vegetales flotando» sin adivinar.
-        if (level.getGameTime() % 100L == 0L) {
-            informeDeLasParcelas(level, center);
-        }
+        // I204 · Y EL INFORME DE LAS PARCELAS (solo registro): objetos caídos dentro de la huerta con su edad y sobre
+        // qué bloque están, más las celdas sin sembrar y las pisoteadas. Es el dato que faltaba para arreglar «se me
+        // quedan semillas y vegetales flotando» sin adivinar.
+        // OJO CON EL FILTRO DE TIEMPO, que aquí me mordí yo mismo: esto vive dentro de `tickVillageLife`, que ya solo
+        // corre cuando `gameTime % VILLAGE_POLL_TICKS == 0`. Si encima se le pide `gameTime % 100 == 0` y
+        // VILLAGE_POLL_TICKS NO es múltiplo de 100, la condición **no se cumple nunca** y el informe no sale jamás
+        // (medido en el registro del jugador: ni una sola línea `[Huerta]` en toda una sesión). Va sin filtro propio:
+        // sale al ritmo del pueblo, que es justo lo que se quiere.
+        informeDeLasParcelas(level, center);
         // Y EL QUE AMANECE DE PIE ENCIMA DE UNA CAMA, A LA CALLE (medido con el arnés: la leñadora Tomasa se pasaba el
         // día encima de su cama, y desde ahí NO hay ruta a ninguna parte).
         bajarDeLasCamas(level, aldeanos, center);
