@@ -1384,14 +1384,23 @@ public class VillagerGuardGoal extends Goal {
                         villager.getUUID(), diana.toShortString(), objectiveIndex);
                 return false;
             }
-            // I193 · AL PUESTO SE VA CON LA TOLERANCIA CERO (3-oct-2026, MEDIDO). Aquí se usaba `caminarHacia`, que pone
-            // el destino con tolerancia **1 bloque**: con el guardia a ~3 bloques del puesto (justo por encima de
-            // `REACH`, que es el borde que decide si camina o entrena) el navegador daba el camino por terminado, el
-            // guardia **no daba un paso** (`ANDADO 0.0`) y su contador subía hasta rendirse: medido en las corridas 78
-            // y 82, `Vicenta`/`Ramona` con destino `520, 78, 595` y `neto` **exactamente 3.0**. El proyecto ya tiene la
-            // herramienta para este caso exacto (I114, creada para el granjero en la compuerta): `caminarHaciaExacto`
-            // pide la ruta **a la celda**, sin tolerancia, así que el guardia se mueve de verdad y el tramo avanza.
-            VillageManager.caminarHaciaExacto(villager, punto, VELOCIDAD);
+            // I193 · AL PUESTO SE VA CON LA TOLERANCIA CERO… Y I199 · PERO CON SALIDA (3-oct-2026, MEDIDO). La variante
+            // exacta pide la ruta **a la celda** (tolerancia 0) y el planificador del juego trabaja con ~1 bloque: si el
+            // puesto no se puede pisar «de lleno» desde ahí, **no devuelve ruta** y el guardia se queda **plantado**
+            // (`ANDADO 0.0`) mientras el aviso, que pregunta con la tolerancia normal, dice `alcanza=SI`. Medido en las
+            // corridas 101 y 106-107: guardias al noreste del pueblo (`546/553, 78, 568-578` → `520, 78, 595`). Así que
+            // se pide exacto y, **si no hay ruta**, se cae a la petición normal (tolerancia ~1): el guardia anda, llega
+            // a menos de `REACH` y entrena.
+            if (!VillageManager.caminarHaciaExactoSiPuede(villager, punto, VELOCIDAD)) {
+                if (!reafirmadoElPasoExacto) {
+                    reafirmadoElPasoExacto = true;
+                    DevilRpg.LOGGER.info("[Village] Guardia {}: al paso del entreno {} NO se llega exacto; se camina "
+                                    + "con la tolerancia normal (I199)", villager.getUUID(), punto.toShortString());
+                }
+                VillageManager.caminarHacia(villager, punto, VELOCIDAD);
+            } else {
+                reafirmadoElPasoExacto = false;
+            }
             VillageManager.ponerActividad(villager, "Yendo a entrenar");
             return true;
         }
@@ -1430,6 +1439,8 @@ public class VillagerGuardGoal extends Goal {
     private int reafirmacionesEntreno;
     /** Tope de reafirmaciones del entrenamiento (ver {@link #reafirmacionesEntreno}). */
     private static final int REAFIRMACIONES_DE_ENTRENO = 3;
+    /** I199 · Si ya se avisó de que a este paso no se llega «exacto» (para la traza, una vez por tramo). */
+    private boolean reafirmadoElPasoExacto;
     private int entrenoTicks;
     /**
      * El <b>punto de ahora</b> ({@link VillageManager#elPuntoDeAhora}) al que va el guardia a entrenar: el puesto del

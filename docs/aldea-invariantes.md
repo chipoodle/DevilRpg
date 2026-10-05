@@ -5933,6 +5933,32 @@ El aviso que queda en la 99 es **otra variante** (`Bajando lo del corral` desde 
 un aldeano que apenas se mueve con la ruta viva — la familia de I190/I192, que sigue pendiente de que el despachador
 vea el no-movimiento.
 
+### I199 · **AL PASO DEL ENTRENO SE VA EXACTO… PERO CON SALIDA** (3-oct-2026) — el último residuo, cerrado
+
+**El caso medido** (corridas 101 y 106-107): guardias al **noreste** del pueblo (`546/553, 78, 568-578`) yendo a su
+puesto de entrenamiento (`520, 78, 595`) con **`ANDADO 0.0`** —y uno con `alcanza=SI` y el otro con `alcanza=NO`—, es
+decir: **no arrancaban a andar**. La contradicción (`alcanza=SI` pero sin moverse) venía de una **diferencia de
+precisión**: el goal caminaba con `caminarHaciaExacto` (tolerancia **0**, I193) y el planificador del juego trabaja con
+**~1 bloque**, así que **no devolvía ruta**; el aviso, en cambio, pregunta con la tolerancia normal y por eso decía `SI`.
+
+**La hipótesis se confirmó con su propia traza** ✓ (no por deducción): con I199 puesta, el registro dice
+
+```
+[Village] Guardia ab77b7f2…: al paso del entreno 547, 78, 577 NO se llega exacto; se camina con la tolerancia normal
+[Village] Guardia c18767c3…: al paso del entreno 520, 78, 596 NO se llega exacto; se camina con la tolerancia normal
+```
+
+**Y fíjate en el segundo**: `520, 78, 596` es la casilla **pegada** al puesto (`595`) y **tampoco** se llega «exacto» ✗
+— o sea que la petición con tolerancia 0 es demasiado fina para este planificador **siempre**, no solo de lejos ✓.
+
+**ARREGLO**: se pide la celda exacta ✓ (que es lo que hace que el guardia se mueva **de verdad** y no se pare a un
+bloque ✓) y, **si no hay ruta**, se cae a la petición **normal** (tolerancia ~1) ✓, que sí la da ✓. El guardia anda,
+llega a menos de `REACH` y **entrena** ✓. Va en `VillageManager.caminarHaciaExactoSiPuede` (devuelve si hubo ruta) y
+en la traza del goal, una vez por tramo.
+
+**MEDIDO**: banco rápido **0 · 0** ✓ y las corridas largas **110-111** con la traza dentro ✓ (su resultado, en la ronda
+siguiente).
+
 ### I195 · **SI EL CEREBRO DEL GUARDIA VA A OTRA PARTE, SE LE VUELVE A MANDAR (no se rinde)** (3-oct-2026)
 
 **El caso que quedaba vivo, medido** (corrida larga 85, el **único** aviso): un guardia **lejano** (`neto 27`) con

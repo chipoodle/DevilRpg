@@ -5655,12 +5655,31 @@ public final class VillageManager {
      * otra cosa.
      */
     public static void caminarHaciaExacto(Villager villager, BlockPos objetivo, float velocidad) {
+        caminarHaciaExactoSiPuede(villager, objetivo, velocidad);
+    }
+
+    /**
+     * I199 · Igual que {@link #caminarHaciaExacto} pero <b>dice si el planificador dio ruta a la celda exacta</b>.
+     * <p>
+     * Existe por el último residuo medido (corridas 101 y 106-107): el goal del guardia camina con la variante exacta
+     * (tolerancia <b>0</b>, I193) y el planificador del juego trabaja con <b>~1 bloque</b>, así que cuando el puesto no
+     * se puede pisar «de lleno» desde ahí **no devuelve ruta** y el guardia se queda **plantado** (`ANDADO 0.0`)…
+     * mientras el aviso de rendición, que pregunta con la tolerancia normal, dice `alcanza=SI`. Con este dato, el goal
+     * puede pedir exacto y, si no hay ruta, **caer a la petición normal** (tolerancia ~1): el guardia anda, llega a
+     * menos de `REACH` y entrena, que es lo que quiere.
+     */
+    public static boolean caminarHaciaExactoSiPuede(Villager villager, BlockPos objetivo, float velocidad) {
+        boolean hayRuta = villager.getNavigation().moveTo(objetivo.getX() + 0.5D, objetivo.getY(),
+                objetivo.getZ() + 0.5D, velocidad);
+        if (!hayRuta) {
+            return false; // el planificador no llega a la celda exacta: que decida quien llama
+        }
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET,
                 new net.minecraft.world.entity.ai.memory.WalkTarget(
                         new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo), velocidad, 0));
         villager.getBrain().setMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.LOOK_TARGET,
                 new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
-        villager.getNavigation().moveTo(objetivo.getX() + 0.5D, objetivo.getY(), objetivo.getZ() + 0.5D, velocidad);
+        return true;
     }
 
     /**
