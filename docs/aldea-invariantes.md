@@ -6204,3 +6204,13 @@ enmendado después (`e504d1e`). Regla: **compilar y commitear van en pasos separ
 5. **Métrica floja a corregir**: las líneas `PARAR` están **limitadas a una cada 2 s por aldeano**, así que **no** sirven
    para medir el baile fino ✗ (salieron 160 en una sesión larga). La métrica buena para el caminar es `[Rumbo]`
    (peticiones vs saltadas) y `no consigue llegar`.
+
+### PUNTO 3 DE LA AUDITORÍA · **VERIFICADO, YA ESTABA RESUELTO** (5-oct-2026) — no se toca
+
+Figuraba como abierto («el goal de reparar camina al bloque que repara», `586,84,539` = aire sobre el tejado ✗). **Se
+comprueba y NO hay nada que arreglar** ✓: `VillagerRepairGoal` (L163-L178) ya camina a **una casilla de pie** desde la
+que alcanza (`sitioDeCamino`, invariantes I114/I117 ✓) y, **si no hay casilla desde la que reparar, suelta el hueco y
+lo salta** (I153 ✓) en vez de perseguir el aire. Y la medida de la sesión lo respalda: `no consigue llegar` = **0** ✓✓.
+
+**Queda escrito para no volver a "arreglarlo"** ✗ — que es exactamente el error que esta casa quiere evitar (tocar lo
+que ya funciona y romperlo).
