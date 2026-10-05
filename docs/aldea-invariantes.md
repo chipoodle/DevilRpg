@@ -6109,3 +6109,25 @@ arreglo está trabajando; el baile debe desaparecer sin que nadie ande menos.
 andando») y **la retiré** ✗ porque la medí mal y la implementé con el dato de movimiento (que produce un bucle ✗). La
 idea era **buena**; lo que fallaba era **dónde y cómo** ✗. Queda dicho: **antes de retirar una idea, comprobar si lo que
 falla es la idea o la implementación** ✓.
+
+### I207 · **SI ESTÁ METIDO EN UNA PUERTA, SE ABRE LA PUERTA** (5-oct-2026) — el «baile» que se ve desde fuera
+
+**Medido EN VIVO en la partida del jugador** (registro de las 05:56-05:58), a cada rato y con varios aldeanos:
+
+```
+[Village] 39afb9dc estaba METIDO en 562,63,636 (dentro de oak_door): lo saco a 563,63,636
+[Village] 21f8d22a / 7f923fcc / aa8573ab ... (dentro de dark_oak_door) ... · add27454 (dentro de stone_brick_stairs)
+[Village] PARAR: 39afb9dc en 563,63,636 · corriendo=[VillagerClericGoal VillagerDoorGoal] · nav=sin ruta   ← en bucle
+```
+
+El desatasco los **sacaba** de la celda ✗, el aldeano **volvía a entrar** y se repetía: eso es el baile ✓. Y es
+**exactamente** el caso que ya estaba resuelto para los **portones** (I157): abrir la puerta lo libera **sin mover a
+nadie**, que es lo que hace un aldeano de verdad.
+
+**ARREGLO**: si la celda de sus pies es una **puerta cerrada**, se **abre** (las dos mitades: las puertas son dos
+celdas) y se le deja salir andando ✓. Las **escaleras** (`stone_brick_stairs`) no se pueden abrir: ahí sigue valiendo
+sacarlo, que es lo correcto ✓. Con su excepción `lint:ok I8` (idempotente: solo si está cerrada y con un aldeano
+dentro; no depende de la cota: el bloque es el de sus pies).
+
+**MEDIDA**: en el registro, las líneas `estaba METIDO en la puerta ...: se la abro` deben **sustituir** a las de
+`(dentro de oak_door/dark_oak_door): lo saco a`, y los `PARAR` en bucle de esos aldeanos deben caer.

@@ -6025,6 +6025,42 @@ public final class VillageManager {
                     villager.getUUID(), pies.toShortString());
             return true;
         }
+        // I207 · Y SI ESTÁ METIDO EN UNA PUERTA, SE ABRE LA PUERTA (5-oct-2026, medido EN VIVO en la partida del
+        // jugador). Su registro lo enseña a cada rato —y es el «baile» que se ve desde fuera—:
+        //   `39afb9dc estaba METIDO en 562,63,636 (dentro de oak_door): lo saco a 563,63,636`
+        //   `21f8d22a / 7f923fcc / aa8573ab ... (dentro de dark_oak_door)`
+        // El desatasco los sacaba de la celda, el aldeano volvía a entrar y se repetía. Es EXACTAMENTE el caso que ya
+        // estaba resuelto para los portones (I157, justo abajo): abrir la puerta lo libera **sin mover a nadie**, y es
+        // lo que hace un aldeano de verdad (la puerta es de la aldea). Las ESCALERAS (`stone_brick_stairs`) no se
+        // pueden abrir: ahí sigue valiendo sacarlo, que es lo correcto.
+        if (enLosPies.getBlock() instanceof net.minecraft.world.level.block.DoorBlock
+                && !enLosPies.getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) {
+            // lint:ok I8 porque solo abre la puerta que tiene a un aldeano DENTRO y solo si esta cerrada (idempotente:
+            // en cuanto esta abierta, el `if` no vuelve a entrar), y no depende de la cota: el bloque es el de sus pies.
+            level.setBlock(pies, enLosPies.setValue(net.minecraft.world.level.block.DoorBlock.OPEN, true),
+                    net.minecraft.world.level.block.Block.UPDATE_ALL);
+            // Las puertas son DOS celdas (mitad de abajo y de arriba) y el aldeano puede estar metido en cualquiera de
+            // las dos: se abre también la otra mitad, o quedaría media puerta abierta y media cerrada (que es, de
+            // hecho, otra forma de quedarse encajado).
+            BlockPos otraMitad = enLosPies.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
+                    == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
+                            ? pies.above() : pies.below();
+            net.minecraft.world.level.block.state.BlockState estadoOtra = level.getBlockState(otraMitad);
+            // lint:ok I8 porque es la OTRA MITAD de la misma puerta (las puertas son dos celdas): mismo criterio
+            // idempotente y sin cota, y solo si esa mitad tambien es una puerta.
+            if (estadoOtra.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+                net.minecraft.world.level.block.state.BlockState otraAbierta =
+                        estadoOtra.setValue(net.minecraft.world.level.block.DoorBlock.OPEN, true);
+                // lint:ok I8 porque es la OTRA MITAD de la misma puerta (idempotente, sin cota, solo si esa mitad tambien es puerta)
+                level.setBlock(otraMitad, otraAbierta, net.minecraft.world.level.block.Block.UPDATE_ALL);
+            }
+            level.playSound(null, pies, net.minecraft.sounds.SoundEvents.WOODEN_DOOR_OPEN,
+                    net.minecraft.sounds.SoundSource.BLOCKS, 0.7F, 1.0F);
+            datos.putLong(DESATASCO_TAG, ahora + 40); // 2 s, no 200: si vuelve a pasar, se vuelve a mirar pronto
+            DevilRpg.LOGGER.info("[Village] {} estaba METIDO en la puerta {}: se la abro para que salga",
+                    villager.getUUID(), pies.toShortString());
+            return true;
+        }
         BlockPos salida = casillaPisableCercaDe(level, pies);
         if (salida == null) {
             return false; // no hay donde sacarlo: no se toca
