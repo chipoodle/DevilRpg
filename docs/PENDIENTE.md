@@ -1528,3 +1528,23 @@ ruta** ✗✓. Dos preguntas distintas con la misma palabra ✓.
 **El siguiente paso, ya con nombre**: **por qué no hay ruta hasta el almacén (`614, 78, 587`) y hasta las parcelas**
 desde donde están esos aldeanos — con el mismo método: medir (¿la puerta? ¿el mostrador? ¿el camino cortado?) antes de
 tocar nada ✓.
+
+### 8.bis.0.undevicies · **Ronda 45: I203 medido — la causa era «ruta perdida que nadie vuelve a pedir»**
+
+**El arreglo** (I203) y sus números, todos con **prueba propia** (la línea `recuperado el camino`, que yo controlo ✓):
+
+| corrida | avisos | caminos recuperados | destinos |
+|---|---|---|---|
+| 129 (rápida) | **0** ✓ | **95** ✓ | `535, 78, 600` · `572, 78, 571` |
+| 130 (rápida) | **0** ✓ | **113** ✓ | `603, 78, 589` · `584, 82, 540` |
+| **131 (larga)** | **0** ✓ | **501** ✓ | `533, 78, 580` · `535, 78, 600` · **`614, 78, 587` (el almacén)** ✓ |
+| **132 (larga)** | **0** ✓ | (con la misma red) | — |
+
+**Y los destinos de las recuperaciones son exactamente los pares que la ficha del plantado había medido** ✓✓: los
+**puestos de los granjeros** (`533, 78, 580` · `535, 78, 600`) y **el almacén** (`614, 78, 587`) ✓. Es decir: la causa
+del último residuo era **una ruta perdida que nadie volvía a pedir** ✗, y con I203 se recupera **501 veces por corrida**
+✓ sin un solo aviso ✓.
+
+**Cerrando el círculo de esta sesión**: los avisos de rendición de la aldea pasaron de **62-238** ✗ (lotes viejos) a
+**0 · 1 · 0 · 0** ✓ (lote de cierre de I197) y ahora a **0 · 0** ✓ en las largas con I203. **En marcha**, el lote de
+cierre definitivo **133 · 134 · 135 · 136** ✓ (4 × 20 min) sobre este build, que es la formalidad que pide el objetivo ✓.
