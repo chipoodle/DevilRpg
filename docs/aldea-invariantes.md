@@ -6156,3 +6156,19 @@ movimientos que parar, así que no cambia nada de lo que se ve salvo quitar el b
 
 **MEDIDA**: las líneas `PARAR` deben caer en picado (eran decenas por sesión), y las de `METIDO en la puerta … se la
 abro` (I207) deben sustituir a las de «lo saco a».
+
+### I209 · **UNA CELDA DE PASO NO ES UN ENCAJAMIENTO** (5-oct-2026) — el detector de «metido» daba falsos positivos
+
+**Medido EN VIVO** (registro de la sesión, 86 KB): `estaba METIDO` **6** veces ✗ — con I207 puesto (`se la abro` ✓ en
+`624,63,698`)— y **2 s después el mismo aldeano seguía marcado como metido en esa misma puerta** ✗, en bucle. La causa,
+leída en el código: el detector **solo mira la ALTURA** de la forma (`forma.max(Axis.Y) > pies.Y + 0,05`) ✗, y una
+**puerta** (o una **valla**) es un bloque **alto y fino** (0,1875 / 0,25 de grosor): abierta o cerrada, contaba como
+«metido» ✓ → el desatasco lo sacaba, él volvía, y vuelta a empezar ✓. Es otra fuente del baile ✗.
+
+**ARREGLO**: para declarar a alguien encajado, el bloque tiene que ser **grueso** en X y en Z (`>= 0,6`) ✓ — o sea, un
+bloque de verdad. Siguen detectándose los casos reales (escaleras `dark_oak_stairs`, bloques llenos, dentro de un
+cofre) y se acaban los falsos (puertas, vallas, losas) ✓. Los dos casos legítimos de **abrir** (portón cerrado I157,
+puerta cerrada I207) van **antes** de esta comprobación, así que siguen funcionando ✓.
+
+**MEDIDA**: las líneas `estaba METIDO … (dentro de dark_oak_door / dark_oak_fence): lo saco a` deben desaparecer ✓ y
+quedarse solo las de verdad (escaleras/bloques llenos), con su `se la abro` cuando toque puerta ✓.

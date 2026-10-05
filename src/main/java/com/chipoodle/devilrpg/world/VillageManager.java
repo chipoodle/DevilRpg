@@ -6061,6 +6061,20 @@ public final class VillageManager {
                     villager.getUUID(), pies.toShortString());
             return true;
         }
+        // I209 · Y UNA CELDA DE PASO NO ES UN ENCAJAMIENTO (5-oct-2026, medido EN VIVO). El detector solo miraba la
+        // ALTURA de la forma, así que una **puerta** (alta y fina) contaba como «metido» estuviera abierta o cerrada:
+        // el registro lo enseña — `se la abro` en `624,63,698` ✓ y **2 s después el mismo aldeano sigue marcado como
+        // metido en esa misma puerta** ✗, en bucle. Lo mismo con `dark_oak_fence` (0,25 de grosor: nadie está "dentro"
+        // de una valla). Estar en una celda de paso —puerta, portón ya abierto, valla, losa…— es estar DE PIE, no
+        // encajado. Se exige que el bloque sea **grueso** (un bloque de verdad) para sacar a nadie: así siguen
+        // detectándose los casos reales (escaleras, bloques llenos, dentro de un cofre…) y se acaban los falsos.
+        double grosorX = forma.max(net.minecraft.core.Direction.Axis.X)
+                - forma.min(net.minecraft.core.Direction.Axis.X);
+        double grosorZ = forma.max(net.minecraft.core.Direction.Axis.Z)
+                - forma.min(net.minecraft.core.Direction.Axis.Z);
+        if (grosorX < 0.6D || grosorZ < 0.6D) {
+            return false;
+        }
         BlockPos salida = casillaPisableCercaDe(level, pies);
         if (salida == null) {
             return false; // no hay donde sacarlo: no se toca
