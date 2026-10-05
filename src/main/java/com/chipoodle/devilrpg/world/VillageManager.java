@@ -4412,6 +4412,28 @@ public final class VillageManager {
         }
         EMPUJADOS_DEL_LATIDO.put(villager.getUUID(), ahora);
         villager.getNavigation().stop();
+        // I203 · Y SI TIENE DESTINO PERO NO CAMINO, SE LE VUELVE A PEDIR EL CAMINO — que es lo que de verdad faltaba
+        // (3-oct-2026, MEDIDO con la ficha del plantado, I202). Las 454 fichas dijeron **454 · `nav = sin ruta`** ✗, y
+        // los pares «está en → quiere ir» son **viajes cortos dentro del pueblo a sus puestos de trabajo**
+        // (`579, 78, 568 → 573, 78, 570`, `540, 78, 578 → 533, 78, 580`, `613, 78, 567 → 623, 78, 567`) más algún
+        // destino imposible (`586, 78, 536 → 586, 84, 539`, seis bloques por encima del pueblo). Como la **sonda nueva**
+        // del aviso a veces SÍ encuentra ruta, lo que falla es la **petición viva en ese momento** (el planificador
+        // tiene presupuesto y con aldeanos apretados —28 fichas— se queda sin él): es **transitorio**, y encaja con que
+        // el residuo sea de 0 a 3 avisos por corrida. Antes, cuando la navegación se quedaba sin ruta, **nadie volvía a
+        // pedirla**: el goal contaba atasco y se rendía. Aquí se le pide otra vez, al destino que su cerebro ya tiene
+        // (que es el que su goal puso), con el freno de los 3 s que ya lleva el empujón.
+        var suDestino = villager.getBrain()
+                .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                .map(t -> t.getTarget().currentBlockPosition());
+        if (suDestino.isPresent() && villager.getNavigation().getPath() == null) {
+            BlockPos adonde = suDestino.get();
+            boolean recuperado = villager.getNavigation().moveTo(adonde.getX() + 0.5D, adonde.getY(),
+                    adonde.getZ() + 0.5D, 0.6D);
+            if (recuperado) {
+                DevilRpg.LOGGER.info("[Village] recuperado el camino de {} hacia {} (estaba sin ruta y con destino): "
+                                + "se le volvio a pedir (I203)", villager.getUUID(), adonde.toShortString());
+            }
+        }
         DevilRpg.LOGGER.info("[Village] empujon del latido a {} en {}: 2 s sin moverse con la faena en marcha; se le "
                         + "para la navegacion para que recalcule el camino",
                 villager.getUUID(), villager.blockPosition().toShortString());

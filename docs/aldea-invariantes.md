@@ -6004,3 +6004,28 @@ cada reafirmación queda en el registro con nombre y coordenadas, para poder med
 **MEDIDO**: banco rápido **0 · 0**, y el **lote final de 4 corridas largas** (`93 · 94 · 95 · 96`, 4 × 20 min, pueblo
 asentado) está corriendo con I195 **e** I196 dentro: sirve a la vez para cerrar el objetivo y para **probar I196** (si un
 ganadero vuelve a quedarse en el este del corral, el registro tiene que enseñar `[Gate]`, que en el «antes» era 0).
+
+### I203 · **SI TIENE DESTINO PERO NO CAMINO, SE LE VUELVE A PEDIR EL CAMINO** (3-oct-2026)
+
+**De dónde sale** ✓ (medido con la ficha del plantado, I202): **454 de 454** fichas traían **`nav = sin ruta`** ✗ — no
+era «un camino que no andan», era **que no había camino** ✗. Y los pares «está en → quiere ir» son **viajes cortos
+dentro del pueblo a sus puestos de trabajo**:
+
+```
+57x  599, 78, 540  →  606, 78, 562      12x  586, 78, 536  →  586, 84, 539   ← y=84: imposible (6 sobre el pueblo)
+23x  613, 78, 567  →  623, 78, 567      13x  540, 78, 578  →  533, 78, 580   ← el puesto de un granjero
+12x  579, 78, 568  →  573, 78, 570      12x  539/541, 78, 598 → 535, 78, 600 ← el puesto de otro
+```
+
+**Por qué** ✓: la **sonda nueva** del aviso a veces **sí** encuentra ruta, así que lo que falla es la **petición viva
+en ese momento** — el planificador tiene presupuesto y con aldeanos apretados (28 fichas) se queda sin él. Es
+**transitorio**, y encaja con que el residuo sea de 0 a 3 avisos por corrida. Y **nadie volvía a pedirla**: el goal
+contaba atasco y se rendía ✗.
+
+**ARREGLO**: en el empujón del latido (I198), si el aldeano **tiene destino en el cerebro** (el que puso su goal) y su
+**navegación se ha quedado sin ruta**, se le **vuelve a pedir el camino a ese destino**. Es el patrón del nivel 3 que
+faltaba: **validación de ruta** (no dar por perdido un destino sin comprobar que el camino se puede pedir otra vez).
+
+**MEDIDO Y DEMOSTRADO** ✓ (con una prueba que controlo yo, la línea `recuperado el camino`): banco rápido **0 · 0** ✓
+con **95 y 113 caminos recuperados** en dos corridas de 3 minutos ✓ — y los destinos de esas recuperaciones
+(`535, 78, 600`, `572, 78, 571`) son **exactamente** los pares que la ficha había medido ✓✓.
