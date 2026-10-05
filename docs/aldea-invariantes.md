@@ -6233,3 +6233,24 @@ exactamente lo que el jugador reporto (*«ni siquiera llegaron los zombis del as
 **ARREGLO (solo traza, cero cambio de comportamiento)**: las dos guardas que pueden dejar el asedio sin arrancar ahora
 **lo dicen** en el registro ✓ — «el mundo ya la esta atacando (horda dirigida)» y «su asedio ya consta como resuelto».
 Con eso, la proxima partida dice **cual** de las dos es, sin interpretaciones ✓.
+
+### VillageBrainDebug · **FUERA DE ESTA RAMA, y por que el contrato quedaba mal** (5-oct-2026)
+
+El fichero `VillageBrainDebug` es de la rama `feature/autonomous-village`; se trajo aqui para corregir su filtro y se ha
+**vuelto a quitar** (junto con los tres valores de config que solo existian para el), porque en esta rama **no lo llama
+nadie** ✗ (no se registra nada) y no hace falta para las reparaciones de la aldea ✓.
+
+**Lo que hay que recordar del contrato** (era un fallo real y hay que corregirlo **en su rama** si se retoma):
+`matchesFilter` devolvia `configured == null || configured.isBlank() || configured.equalsIgnoreCase(miUuid)` ✗ → con el
+UUID **vacio** pasaban **TODOS** los aldeanos (justo cuando no se habia pedido observar a nadie). El contrato correcto,
+que es el que se dejo aplicado y verificado (compilaba y el lint daba verde), es:
+
+```java
+if (configured == null || configured.isBlank()) {
+    return false;                        // UUID vacio = NO se selecciona a ningun aldeano
+}
+return configured.trim().equalsIgnoreCase(villager.getUUID().toString());   // valido = solo ese
+```
+
+`recordIntent` ya consultaba el filtro (`if (!enabled() || !matchesFilter(villager)) return;`) ✓, asi que con esto no
+registra nada con el UUID vacio ✓.
