@@ -11,6 +11,17 @@ import org.jetbrains.annotations.Nullable;
  * <b>M1 · EL DESPACHADOR</b> (I151 — fase 2 del cerebro propio de la aldea; el plan está en
  * {@code docs/aldea-cerebro.md}).
  * <p>
+ * <b>OJO: ESTE GOAL NO ESTÁ CABLEADO, Y POR TANTO NO SE EJECUTA</b> (dicho claro el 3-oct-2026, ronda 39, porque sus
+ * comentarios decían lo contrario y me costó dos rondas entender por qué sus arreglos «no hacían nada»: los empujones
+ * de I190 y la supervisión de movimiento de I192 salían **0 veces** en todas las corridas). Lo dice el propio
+ * {@code VillageManager.caminarHacia}: *«el despachador (M1) —el que apuntaba el recado aquí y lo defendía— se probó y
+ * se retiró… el módulo ({@code VillageDispatcherGoal}) y {@code apuntarElRecado} se quedan sin cablear como base del
+ * nivel 3»*. Se conserva como base de ese nivel, pero <b>nadie lo instancia</b>.
+ * <p>
+ * <b>Y POR ESO la red que sí funciona es I198</b>, en el latido del pueblo ({@code VillageManager}): al aldeano con
+ * faena del mod que lleva 2 s sin moverse se le para la navegación para que su goal vuelva a pedir el camino. Medido:
+ * 177 y 206 empujones en dos corridas de 3 minutos, con los avisos en el mejor nivel de la sesión (0 · 1).
+ * <p>
  * Es <b>el único dueño del rumbo</b> de un aldeano de la aldea. El problema medido que resuelve: el aldeano tiene dos
  * voces que le dicen a dónde ir —el <b>goal del mod</b> (el trabajo, que pide el destino con {@code caminarHacia}) y el
  * <b>cerebro del propio juego</b>, que con sus paseos y su «anda hacia donde miras» escribe <b>el mismo</b>
