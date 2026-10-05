@@ -4549,6 +4549,15 @@ public final class VillageManager {
         if (seHaMovidoHacePoco(villager, 40)) {
             return; // se ha movido en los últimos 2 s: va bien
         }
+        // I205 · Y SI TIENE CAMINO VIVO NO SE LE TOCA (5-oct-2026): este empujón se inventó para el aldeano que
+        // QUIERE ir a un sitio y NO tiene ruta (el caso de I203), pero paraba la navegación de cualquiera que llevara
+        // 2 s sin cambiar de celda — y eso incluye al que va andando despacio, al que va entre una multitud y al que
+        // está trabajando en el sitio. Pararle el camino a quien va andando es, literalmente, un tirón: es una de las
+        // fuentes del «baile». Ahora solo se actúa cuando de verdad no hay ruta viva.
+        var caminoVivo = villager.getNavigation().getPath();
+        if (caminoVivo != null && !caminoVivo.isDone()) {
+            return; // va andando: se le deja
+        }
         long ahora = level.getGameTime();
         Long ultimo = EMPUJADOS_DEL_LATIDO.get(villager.getUUID());
         if (ultimo != null && ahora - ultimo < 60L) {

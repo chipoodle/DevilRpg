@@ -6073,3 +6073,10 @@ cruza por ella** ✓.
    un comando, suponerlo costó una hipótesis falsa ✗.
 3. **Un goal sin `MOVE` no puede tocar el camino de otro** ✗ (I205): es la única forma de que dos goals que "no
    compiten" por bandera acaben peleándose igual.
+
+**TERCERA CORRECCIÓN DE LA RONDA, y es de mi propio código** ✗: el «empujón del latido» (I198) paraba la navegación
+de **cualquier** aldeano que llevara 2 s sin cambiar de celda — y eso incluye al que va andando despacio, al que va
+entre una multitud y al que está trabajando en el sitio ✗. Pararle el camino a quien va andando **es un tirón**: una
+de las fuentes del «baile», puesta por mí. Ahora **solo actúa cuando no hay ruta viva** ✓, que es el caso para el que
+se inventó (I203: «tiene destino y no tiene camino → se le vuelve a pedir»). Lo que sí se conserva es la recuperación
+de ruta ✓.
