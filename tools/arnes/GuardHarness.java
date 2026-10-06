@@ -140,7 +140,23 @@ public class GuardHarness {
      * Lo que se busca en el log: `[Siege] un zombie empieza a TALADRAR hacia la aldea en … (presupuesto 40 bloques)`
      * y que en la línea aparezca <b>aire</b> donde había muralla. Y de paso que <b>no</b> toque nada de dentro.
      */
-    private static final boolean MEDIR_MURO = true;
+    private static final boolean MEDIR_MURO = false;
+    /**
+     * <b>¿SE MIDEN LOS TRES ATRAVESADORES (I212)?</b> Puente, escalera de bloques y túnel. Se montan <b>tres escenas
+     * controladas</b> alrededor de la aldea 0 del jugador, una por herramienta, cada una con su asaltante del asedio
+     * inicial y el obstáculo JUSTO que solo se pasa con esa herramienta:
+     * <ul>
+     *   <li><b>escalera</b>: un muro de piedra de 3 de alto y el objetivo <b>encima y detrás</b> (a 3 por encima del
+     *       asaltante): hay que abrir el hueco y apilar un escalón;</li>
+     *   <li><b>túnel</b>: una cámara <b>techada con piedra</b> dos bloques por debajo del asaltante, con el objetivo
+     *       dentro: la única entrada es cavar hacia abajo;</li>
+     *   <li><b>puente</b>: una zanja de 1 de ancho y 5 de hondo en su camino, sin poder rodearla: hay que tender un
+     *       tablón.</li>
+     * </ul>
+     * Lo que se busca en el log: `[Siege] un asaltante pone un ESCALON …`, `[Siege] un asaltante CAVA hacia abajo …` y
+     * `[Siege] un zombie empieza a PONER UN PUENTE …`, más la posición y los goals de cada asaltante cada 6 s.
+     */
+    private static final boolean MEDIR_ATRAVESADORES = false;
     /**
      * ¿Se mide LA REPARACIÓN DE UN AGUJERO DEL SUELO (el cráter de un creeper, que NO está en el plano)? Abre un
      * cráter de 3x3x2 en el suelo de la aldea y vuelca sus dos capas con letras ('.'=aire, 'G'=hierba, 'D'=tierra,
@@ -346,7 +362,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
         // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
         // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_HORDAS && !MEDIR_PEPITAS) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_HORDAS && !MEDIR_PEPITAS) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -369,7 +385,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
         }
         // El latido de la aldea, tal cual lo llama el tick del jugador (con el ancla del objetivo 2).
-        if (pega != null) {
+        // OJO: EN LA MEDIDA DE LOS ATRAVESADORES NO SE LLAMA (5-oct-2026, medido): `manageNearby` RECOLOCA al jugador
+        // de pega en la plaza cada tick (`pega.moveTo(CENTRO…)`), asi que las tres escenas —que necesitan al objetivo
+        // DONDE la escena lo pone— apuntaban al centro de la aldea y lo que se midio fue el tunel del PUENTE hacia el
+        // centro. Es una medida de mecanica pura (los atravesadores), no del latido, asi que no se pierde nada.
+        if (pega != null && !MEDIR_ATRAVESADORES) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
@@ -389,6 +409,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElAsedioVivo(level, pega);
         } else if (MEDIR_MURO) {
             medirElAsaltoAlMuro(level, pega);
+        } else if (MEDIR_ATRAVESADORES) {
+            medirLosAtravesadores(level, pega);
         } else if (MEDIR_AGUJERO) {
             medirElAgujeroDelSuelo(level, pega);
         } else if (MEDIR_LENADOR) {
@@ -2398,8 +2420,278 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
     }
 
+    // ============================ LOS TRES ATRAVESADORES (I212) ============================
+
+    /** Los tres asaltantes de la medida de los atravesadores (uno por herramienta). */
+    private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> atraviesan =
+            new java.util.ArrayList<>();
+    /** Un objetivo FIJO por escena (ver {@link #objetivoDeLaEscena}): el jugador de pega es uno solo. */
+    private static final java.util.List<net.minecraft.world.entity.LivingEntity> objetivosDeLasEscenas =
+            new java.util.ArrayList<>();
+    /** Las celdas de cada escena, para poder decir si el asaltante ha hecho SU trabajo. */
+    private static final java.util.List<BlockPos> escaleraDePrueba = new java.util.ArrayList<>();
+    private static final java.util.List<BlockPos> techoDelTunel = new java.util.ArrayList<>();
+    private static final java.util.List<BlockPos> zanjaDelPuente = new java.util.ArrayList<>();
+    /** Rumbos de las tres escenas (grados), separados para que no se pisen. */
+    private static final int RUMBO_ESCALERA = 0;
+    private static final int RUMBO_TUNEL = 120;
+    private static final int RUMBO_PUENTE = 240;
+
+    private static void medirLosAtravesadores(ServerLevel level, FakePlayer pega) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (ticks == 300 && atraviesan.isEmpty()) {
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(120))) {
+                v.discard();
+            }
+            for (net.minecraft.world.entity.animal.IronGolem golem : level.getEntitiesOfClass(
+                    net.minecraft.world.entity.animal.IronGolem.class, new AABB(CENTRO).inflate(120))) {
+                golem.discard();
+            }
+            montarEscaleraDePrueba(level, cota, pega);
+            montarTunelDePrueba(level, cota, pega);
+            montarPuenteDePrueba(level, cota, pega);
+            DevilRpg.LOGGER.info("[Arnes] ATRAVESADORES: tres escenas montadas (cota {})", cota);
+        }
+        if (atraviesan.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < atraviesan.size(); i++) {
+            // CADA ASALTANTE CON SU PROPIO OBJETIVO (ver `objetivoDeLaEscena`): el jugador de pega es uno solo y no
+            // puede estar en las tres escenas a la vez (medido en la corrida 29: los tres apuntaban al último sitio
+            // donde se le había puesto, y lo que se midió fue el túnel del de la zanja hacia la aldea).
+            if (i < objetivosDeLasEscenas.size()) {
+                atraviesan.get(i).setTarget(objetivosDeLasEscenas.get(i));
+            }
+        }
+        if (ticks % 120 != 0) {
+            return;
+        }
+        for (int i = 0; i < atraviesan.size(); i++) {
+            var z = atraviesan.get(i);
+            int r = (int) Math.sqrt(z.distanceToSqr(CENTRO.getX(), z.getY(), CENTRO.getZ()));
+            DevilRpg.LOGGER.info("[Arnes] ATRAVESADOR {} t={} vivo={} pos={} r={} dObjetivo={} navHecha={}"
+                            + " goalsCorriendo=[{}]", i, ticks, z.isAlive(), z.blockPosition(), r,
+                    (int) Math.sqrt(z.distanceToSqr(pega.getX(), pega.getY(), pega.getZ())),
+                    z.getNavigation().isDone(), goalsCorriendo(z));
+        }
+        DevilRpg.LOGGER.info("[Arnes] ATRAVESADORES t={} | ESCALERA en pie={}/{} | TECHO del tunel en pie={}/{} |"
+                        + " AGUA en la zanja={}/{}", ticks, enPie(level, escaleraDePrueba), escaleraDePrueba.size(),
+                enPie(level, techoDelTunel), techoDelTunel.size(), aguaEn(level, zanjaDelPuente),
+                zanjaDelPuente.size());
+    }
+
+    /**
+     * <b>Un objetivo FIJO para una escena</b>: un soporte de armadura invisible, sin gravedad y sin IA, en la celda que
+     * le digan. Es lo que hace que cada asaltante tenga SU objetivo (el jugador de pega es uno solo y no puede estar en
+     * las tres escenas a la vez).
+     */
+    private static net.minecraft.world.entity.LivingEntity objetivoDeLaEscena(ServerLevel level, int x, int y, int z) {
+        net.minecraft.world.entity.decoration.ArmorStand stand =
+                new net.minecraft.world.entity.decoration.ArmorStand(level, x + 0.5D, y, z + 0.5D);
+        stand.setNoGravity(true);
+        stand.setInvisible(true);
+        stand.setInvulnerable(true);
+        stand.setSilent(true);
+        level.addFreshEntity(stand);
+        objetivosDeLasEscenas.add(stand);
+        return stand;
+    }
+
+    /** Cuántas de esas celdas siguen siendo el bloque que se puso (para saber si el asaltante ha abierto). */
+    private static int enPie(ServerLevel level, java.util.List<BlockPos> celdas) {
+        int n = 0;
+        for (BlockPos p : celdas) {
+            if (level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.STONE_BRICKS)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** ¿Cuántas celdas de la zanja se han cubierto (dejaron de ser agua)? */
+    private static int aguaEn(ServerLevel level, java.util.List<BlockPos> celdas) {
+        int n = 0;
+        for (BlockPos p : celdas) {
+            if (level.getBlockState(p).getFluidState().is(net.minecraft.tags.FluidTags.WATER)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /**
+     * <b>ESCALERA</b>: una torre de 3x3 con su piso ARRIBA (a 4 por encima de la cota), con una <b>pared de 3 de
+     * alto</b> en todo el borde menos la cara que mira al asaltante. El objetivo está en lo alto, así que para llegar
+     * hay que <b>subir</b>: abrir el hueco de la pared de delante y apilar un escalón ({@code APILAR}). Se construye a
+     * mano (no se confía en el terreno) porque el montaje anterior —el asaltante "a la cota" junto al muro— lo dejó
+     * dentro de la piedra y murió asfixiado antes de poder hacer nada (medido en la corrida 29).
+     */
+    private static void montarEscaleraDePrueba(ServerLevel level, int cota, FakePlayer pega) {
+        double a = Math.toRadians(RUMBO_ESCALERA);
+        int dx = (int) Math.round(Math.cos(a));
+        int dz = (int) Math.round(Math.sin(a));
+        if (dx == 0 && dz == 0) {
+            dx = 1;
+        }
+        // El centro de la torre, 6 bloques por fuera del asaltante y en su mismo rumbo.
+        int bx = CENTRO.getX() + (int) Math.round(Math.cos(a) * 58);
+        int bz = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 58);
+        // El piso de arriba (3x3), a cota+4.
+        for (int ix = -1; ix <= 1; ix++) {
+            for (int iz = -1; iz <= 1; iz++) {
+                BlockPos p = new BlockPos(bx + ix, cota + 4, bz + iz);
+                level.setBlock(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                escaleraDePrueba.add(p.immutable());
+                if (iz == 0) { // la columna de debajo, maciza: que no se cuele por abajo
+                    for (int h = 0; h <= 3; h++) {
+                        level.setBlock(new BlockPos(bx + ix, cota + h, bz + iz),
+                                net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        // La pared (3 de alto) por todo el borde menos la cara que mira al asaltante.
+        for (int ix = -1; ix <= 1; ix++) {
+            for (int iz = -1; iz <= 1; iz++) {
+                if (Math.abs(ix) != 1 && Math.abs(iz) != 1) {
+                    continue; // el centro no es borde
+                }
+                // ¿Es la cara que mira al asaltante? Su normal apunta al asaltante (que está en -dx,-dz del centro).
+                boolean caraDelAsaltante = (ix == -dx && iz == -dz);
+                if (caraDelAsaltante) {
+                    continue; // por aquí tiene que subir
+                }
+                for (int h = 1; h <= 3; h++) {
+                    BlockPos p = new BlockPos(bx + ix, cota + 4 + h, bz + iz);
+                    level.setBlock(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                    escaleraDePrueba.add(p.immutable());
+                }
+            }
+        }
+        var objetivo = objetivoDeLaEscena(level, bx, cota + 5, bz);
+        // El asaltante, a 6 bloques de la torre, sobre el suelo de verdad.
+        int ax = CENTRO.getX() + (int) Math.round(Math.cos(a) * 64);
+        int az = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 64);
+        com.chipoodle.devilrpg.entity.AggressiveZombieEntity z =
+                com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+        if (z != null) {
+            int ay = colocarAsaltanteAlSuelo(level, z, ax, az, cota);
+            z.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+            z.setGoToCenterActive(true);
+            z.recargarTunel();
+            z.setPersistenceRequired();
+            level.addFreshEntity(z);
+            z.setTarget(objetivo);
+            atraviesan.add(z);
+            DevilRpg.LOGGER.info("[Arnes] ATRAVESADORES: ESCALERA montada — asaltante en {} (suelo {}) y objetivo en lo"
+                    + " alto de la torre {}", z.blockPosition(), ay, objetivo.blockPosition());
+        }
+    }
+
+    /** <b>TÚNEL</b>: cámara techada con piedra dos bloques por debajo del asaltante, con el objetivo dentro. */
+    private static void montarTunelDePrueba(ServerLevel level, int cota, FakePlayer pega) {
+        double a = Math.toRadians(RUMBO_TUNEL);
+        int ax = CENTRO.getX() + (int) Math.round(Math.cos(a) * 50);
+        int az = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 50);
+        // El techo de la camara: 3x3 de piedra, dos bloques por debajo de los pies del asaltante.
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                BlockPos p = new BlockPos(ax + dx, cota - 2, az + dz);
+                level.setBlock(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                techoDelTunel.add(p.immutable());
+            }
+        }
+        // Y la camara de debajo, hueca (con su suelo), para que haya sitio donde meterse.
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = -6; dy <= -3; dy++) {
+                    level.setBlock(new BlockPos(ax + dx, cota + dy, az + dz),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+                level.setBlock(new BlockPos(ax + dx, cota - 7, az + dz),
+                        net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+            }
+        }
+        var objetivo = objetivoDeLaEscena(level, ax, cota - 6, az);
+        com.chipoodle.devilrpg.entity.AggressiveZombieEntity z =
+                com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+        if (z != null) {
+            colocarAsaltanteAlSuelo(level, z, ax, az, cota);
+            z.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+            z.setGoToCenterActive(true);
+            z.recargarTunel();
+            z.setPersistenceRequired();
+            level.addFreshEntity(z);
+            z.setTarget(objetivo);
+            atraviesan.add(z);
+            DevilRpg.LOGGER.info("[Arnes] ATRAVESADORES: TUNEL montado — asaltante en {} y objetivo en la camara {}"
+                    + " (techada con 9 de piedra)", z.blockPosition(), objetivo.blockPosition());
+        }
+    }
+
+    /** <b>PUENTE</b>: zanja de 1 de ancho y 5 de hondo en el camino del asaltante, sin poder rodearla. */
+    private static void montarPuenteDePrueba(ServerLevel level, int cota, FakePlayer pega) {
+        double a = Math.toRadians(RUMBO_PUENTE);
+        int ax = CENTRO.getX() + (int) Math.round(Math.cos(a) * 64);
+        int az = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 64);
+        // La zanja, perpendicular al rumbo: 11 de ancho POR EL LADO y 11 de fondo (hacia fuera), para que no se pueda
+        // rodear ni saltar (medido en la corrida 32: con la zanja de 1 bloque el asaltante se metia en el agujero y se
+        // quedaba ahi, sin puente que tender).
+        for (int t = -5; t <= 5; t++) {
+            for (int fondo = 0; fondo <= 10; fondo++) {
+                for (int h = 0; h >= -5; h--) {
+                    int zx = CENTRO.getX() + (int) Math.round(Math.cos(a) * (58 + fondo) - Math.sin(a) * t);
+                    int zz = CENTRO.getZ() + (int) Math.round(Math.sin(a) * (58 + fondo) + Math.cos(a) * t);
+                    BlockPos p = new BlockPos(zx, cota + h, zz);
+                    if (h == 0) {
+                        zanjaDelPuente.add(p.immutable()); // el borde de dentro: donde hay que poner el tablon
+                    }
+                    level.setBlock(p, h == -5
+                            ? net.minecraft.world.level.block.Blocks.WATER.defaultBlockState()
+                            : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        // El objetivo, al OTRO LADO de la zanja (si se pone de este lado, el asaltante llega andando y no hay nada que
+        // cruzar: medido en la corrida 33, con el objetivo en r=56 y la zanja en r=58..68 el asaltante YA estaba con
+        // el objetivo de su lado y no tendio ningun puente).
+        var objetivo = objetivoDeLaEscena(level,
+                CENTRO.getX() + (int) Math.round(Math.cos(a) * 71), cota + 1,
+                CENTRO.getZ() + (int) Math.round(Math.sin(a) * 71));
+        // EL ASALTANTE VA **AL BORDE DE DENTRO DE LA ZANJA**, no dentro: asi lo que tiene delante es el hueco (que es
+        // lo que el puente cubre) y no un agujero de un bloque del que no se sale.
+        com.chipoodle.devilrpg.entity.AggressiveZombieEntity z =
+                com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+        if (z != null) {
+            int bordeX = CENTRO.getX() + (int) Math.round(Math.cos(a) * 57);
+            int bordeZ = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 57);
+            colocarAsaltanteAlSuelo(level, z, bordeX, bordeZ, cota);
+            z.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+            z.setGoToCenterActive(true);
+            z.recargarTunel();
+            z.setPersistenceRequired();
+            level.addFreshEntity(z);
+            z.setTarget(objetivo);
+            atraviesan.add(z);
+            DevilRpg.LOGGER.info("[Arnes] ATRAVESADORES: PUENTE montado — asaltante en {} y objetivo en {} (zanja de"
+                    + " 11x6 con agua en el fondo)", z.blockPosition(), objetivo.blockPosition());
+        }
+    }
+
+    /** Los goals que están CORRIENDO ahora mismo, en una línea. */
+    private static String goalsCorriendo(com.chipoodle.devilrpg.entity.AggressiveZombieEntity z) {
+        StringBuilder sb = new StringBuilder();
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal w : z.goalSelector.getAvailableGoals()) {
+            if (w.isRunning()) {
+                sb.append(w.getPriority()).append(':').append(w.getGoal().getClass().getSimpleName()).append(' ');
+            }
+        }
+        return sb.length() == 0 ? "(ninguno)" : sb.toString().trim();
+    }
+
     /** Bloques (no aire) en la banda de la muralla (r = 57..67) a esa altura. */
-    private static int bloquesEnLaBanda(ServerLevel level, int y) {        int n = 0;
+    private static int bloquesEnLaBanda(ServerLevel level, int y) {
+        int n = 0;
         for (int dx = -67; dx <= 67; dx++) {
             for (int dz = -67; dz <= 67; dz++) {
                 int d2 = dx * dx + dz * dz;
@@ -2513,6 +2805,48 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
         }
         return -1;
+    }
+
+    /**
+     * <b>Dónde poner al asaltante de una escena</b>: sobre el suelo del terreno (el primer bloque sólido desde
+     * {@code cota + 24} hacia abajo) y con el aire despejado a su alrededor, para que pueda moverse.
+     * <p>
+     * Nace de dos montajes fallidos que costaron dos corridas: (1) colocarlo "a la cota" lo dejaba <b>enterrado</b> en
+     * la montaña y <b>moría asfixiado</b> en 4 s; y (2) el suelo del terreno a r=64 está a <b>y=88</b> (cinco bloques
+     * por encima de la cota, que es la altura de la PLAZA), así que buscarlo solo en la banda de la cota devolvía
+     * {@code -1} y el asaltante aparecía en {@code y=-1}, cien bloques más abajo.
+     */
+    private static int colocarAsaltanteAlSuelo(ServerLevel level, com.chipoodle.devilrpg.entity.AggressiveZombieEntity z,
+            int x, int zz, int cota) {
+        int y = -1;
+        // El sitio de pie: el bloque MAS ALTO de la columna que tenga aire libre encima (no el primero que aparezca,
+        // que puede ser el techo de una cueva: medido en la corrida 32, el asaltante de la escalera nacio en una cueva
+        // a y=77 con la torre en y=83 encima).
+        for (int yy = cota + 24; yy >= cota - 8; yy--) {
+            if (!level.getBlockState(new BlockPos(x, yy, zz)).isAir()
+                    && level.getBlockState(new BlockPos(x, yy + 1, zz)).isAir()
+                    && level.getBlockState(new BlockPos(x, yy + 2, zz)).isAir()) {
+                y = yy + 1;
+                break;
+            }
+        }
+        if (y < 0) {
+            y = cota + 1;
+        }
+        // Y se le despeja el aire alrededor (los pies, la cabeza y un anillo de 3x3x3): asi seguro que no se asfixia
+        // ni nace encajado en la piedra.
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int dy = 0; dy <= 2; dy++) {
+                    BlockPos p = new BlockPos(x + dx, y + dy, zz + dz);
+                    if (!level.getBlockState(p).isAir()) {
+                        level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        z.moveTo(x + 0.5D, y, zz + 0.5D, 0.0F, 0.0F);
+        return y;
     }
 
     /**

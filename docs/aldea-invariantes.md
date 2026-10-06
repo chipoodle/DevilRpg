@@ -6366,6 +6366,60 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
    `BreakBlockGoal` L1021 ✓) → **tres atravesadores nuevos** ✓ con la forma de éstos ✓ y a velocidad normal ✓.
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗).
 
+### I212 · LOS TRES ATRAVESADORES: ESCALERA DE BLOQUES, TÚNEL Y PUENTE
+
+**El jugador**: *«no deben dudar tanto para ocupar estas herramientas»* ✓, con la aclaración de que tienen que ir a
+**velocidad normal** ✓. Y estaba escrito en el acta que **no existían** ✗: buscado en todo `src`, solo había
+`EscapeWaterGoal` (**L971**) y `BreakBlockGoal` (**L1147**) — el puente sí estaba escrito
+(`AggressiveZombieEntity.puentearHacia`, **L583** tras este cambio) pero **solo lo llamaba la marcha al centro**, y esa
+marcha se apaga en cuanto el asaltante tiene un objetivo: en un asedio de verdad **no se usaba nunca** ✓.
+
+**LAS TRES HERRAMIENTAS**, en `AggressiveZombieEntity`, con la forma de los atravesadores que ya había (deciden **en el
+mismo tick**, sin tanteos) y a **velocidad normal** (medio segundo por bloque; el puente mantiene su segundo, que es
+cruzar un abismo tablón a tablón):
+
+| herramienta | dónde vive | qué hace |
+|---|---|---|
+| **escalera de bloques** | `apilarBloqueParaSubir` (**L688**) | si el objetivo está **arriba**: abre el hueco de delante (`breakStepAheadHacia`, **L730**) y **apila un escalón** de adoquín debajo de los pies (tope de `APILAR_PRESUPUESTO` = 8 bloques: no se hace una torre al cielo) |
+| **túnel** | `cavarHaciaAbajo` (**L777**) | si el objetivo está **abajo** y no hay bajada: cava el bloque de debajo, un bloque cada `CAVAR_ENTRE_BLOQUES` = 10 ticks |
+| **puente** | `puentearHacia` (**L583**, ya existía) | si delante hay un hueco de 2 o más: tiende un tablón |
+
+**Y EL GOAL QUE LAS USA** ✓: `TraverseGoal` (**L1495**), registrado en **prioridad 3 sin flags** como `BreakBlockGoal`
+(es pasivo: no navega, solo aparta el estorbo, así que no le pisa el camino a nadie — I205), y sirve a **los dos
+caminos** del asaltante: el que va a por un objetivo y el que marcha al centro (`objetivoDeLaMarcha`, **L1520**).
+
+**LA HERRAMIENTA SE ELIGE POR SITUACIÓN** ✓ y esto salió de una medida, no del gusto: con el orden fijo
+(puente → escalera → túnel) la corrida 36 dio **1 escalón y 12 cavadas**, porque un asaltante con una cueva debajo y su
+objetivo abajo **se pasaba la corrida apilando escalones hacia arriba** ✓. Ahora se pregunta primero **por dónde está el
+objetivo** —abajo se cava, arriba se escala, y si no, el puente— y si la herramienta que le toca no puede (porque está
+dentro de la aldea, o se le ha acabado el presupuesto), se prueba la siguiente ✓.
+
+**Y NO HAY DETECTOR DE ATASCO, a propósito** ✓ (es lo que pidió el jugador: *«no deben dudar tanto»*): lo tenía
+(¿se ha movido 0,5 bloques?) y la corrida 35 lo tumbó — el asaltante **salta en el sitio** contra una pared de 3 de
+alto (`y=77` ↔ `y=78`), ese salto **cuenta como moverse** y la decisión **no llegaba a tomarse nunca**: **0 escalones**
+en toda la corrida ✓. Cada herramienta lleva su propio ritmo y sus condiciones son estrechas, así que se les pregunta
+cada medio segundo y **no dudan** ✓.
+
+**MEDIDO CON EL ARNÉS** (`MEDIR_ATRAVESADORES`, nuevas escenas: una torre de 3x3 con pared de 3 de alto y el objetivo
+en lo alto; una cámara techada con el objetivo debajo; una zanja de 11x11x6 con agua en el fondo y el objetivo al otro
+lado). Estado tras 36 y 37:
+
+| herramienta | lo que se buscaba | medido |
+|---|---|---|
+| **túnel** | `[Siege] un asaltante CAVA hacia abajo …` | **12 cavadas** ✓ (el asaltante baja hacia su objetivo) |
+| **escalera** | `[Siege] un asaltante pone un ESCALON …` | **1 escalón** ✓ (la puso; el tope de 8 y la escena de la cueva no la dejan llegar más) |
+| **puente** | `[Siege] un zombie empieza a PONER UN PUENTE …` | **1 puente** en la corrida 34 ✓, **0** en la 36-37 |
+
+**LO QUE QUEDA ABIERTO, dicho claro** ✗ (y es el siguiente trozo): (1) el puente **no dispara de forma fiable** —con el
+asaltante saltando en el borde de la zanja, unas veces lo tiene delante y otras debajo, y la condición del puente pide
+un hueco **de frente**—; y (2) las tres escenas del arnés son **de mecanismo** (lo ponen todo a mano) y **no** miden el
+asedio de verdad: falta ver las tres herramientas **en una ola real** contra la aldea. **Seis fallos del instrumento**
+por el camino, escritos para no repetirlos: el barrido de bichos del arnés **borraba** a los tres asaltantes ✓; el
+jugador de pega lo **recoloca el latido** (los tres apuntaban al centro en vez de a su escena) ✓; colocarlos «a la
+cota» los dejaba **enterrados** y morían asfixiados ✓; buscar el suelo en la banda de la cota devolvía **-1** (a r=64
+el terreno está en **y=88**, cinco por encima de la cota de la plaza) ✓; la zanja de **1 bloque** metía al asaltante en
+un agujero del que no salía ✓; y el objetivo del puente puesto **de este lado** de la zanja no dejaba nada que cruzar ✓.
+
 ### I210 · LA REGLA DEL MURO PERIMETRAL, EN LA DECISIÓN DE ROMPER DEL ASALTANTE (5-oct-2026)
 
 **El jugador**: *«solo el muro perimetral es rompible; una vez dentro ya no puede romper nada»* ✓.

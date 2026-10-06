@@ -155,6 +155,7 @@ public class AggressiveZombieEntity extends Zombie {
         this.tunelRestante = TUNEL_PRESUPUESTO;
         this.tunelEspera = 0;
         this.puenteEspera = 0;
+        recargarAtravesadores();
     }
 
     /** Ticks de espera del túnel/puente. Se llama en cada tick del zombie (ver {@link #aiStep}). */
@@ -164,6 +165,12 @@ public class AggressiveZombieEntity extends Zombie {
         }
         if (puenteEspera > 0) {
             puenteEspera--;
+        }
+        if (apilarEspera > 0) {
+            apilarEspera--;
+        }
+        if (cavarEspera > 0) {
+            cavarEspera--;
         }
     }
 
@@ -641,6 +648,159 @@ public class AggressiveZombieEntity extends Zombie {
         }
     }
 
+    // --- LOS TRES ATRAVESADORES (I212): escalera de bloques, tunel y puente ----------------------------
+    /**
+     * Ticks entre bloque y bloque de los atravesadores <b>nuevos</b>: {@code APILAR_ENTRE_BLOQUES} (0,5 s) para el
+     * escalón y {@code CAVAR_ENTRE_BLOQUES} (0,5 s) para el túnel hacia abajo.
+     * <p>
+     * <b>MEDIDO Y PUESTO A MEDIA SEGUNDO</b> (5-oct-2026), por la misma razón que el romper: el jugador pidió *«no
+     * deben dudar tanto para ocupar estas herramientas»* y el proyecto ya tenía medido que una espera larga deja al
+     * asaltante plantado. El puente se queda en su segundo ({@link #PUENTE_ENTRE_BLOQUES}), que es cruzar un abismo
+     * tablón a tablón y ahí la lentitud es a propósito.
+     */
+    private static final int APILAR_ENTRE_BLOQUES = 10;
+    /** Ticks entre bloque y bloque del túnel hacia abajo (0,5 s): cava a velocidad normal, sin dudar. */
+    private static final int CAVAR_ENTRE_BLOQUES = 10;
+    /** Ticks de espera del escalón apilado y del túnel hacia abajo. Se descuentan en {@link #tickTunel()}. */
+    private int apilarEspera;
+    private int cavarEspera;
+    /** Bloques que le quedan de escalera apilada en esta marcha (no se hace una torre al cielo). */
+    private static final int APILAR_PRESUPUESTO = 8;
+    private int apilarRestante = APILAR_PRESUPUESTO;
+    /** Vuelve a darle presupuesto de escalera (al empezar una marcha nueva). */
+    public void recargarAtravesadores() {
+        this.apilarRestante = APILAR_PRESUPUESTO;
+        this.apilarEspera = 0;
+        this.cavarEspera = 0;
+    }
+
+    /**
+     * <b>ESCALERA DE BLOQUES</b> (lo pidió el jugador: *«que no duden en usar escalera, túnel o puente»*): si el
+     * objetivo está <b>por encima</b> y la pared de delante no se puede saltar, el asaltante se <b>apila</b> un bloque
+     * bajo los pies y sube un escalón; repite hasta coronar.
+     * <p>
+     * Es la forma de los atravesadores que ya había (decide <b>en el mismo tick</b>, sin tanteos) y va a <b>velocidad
+     * normal</b>: un bloque cada {@link #APILAR_ENTRE_BLOQUES}. Antes de apilar, si lo que estorba es la pared, se le
+     * abre el hueco con el camino que ya existe ({@link BreakBlockGoal#breakStepAhead}), que es el que respeta la
+     * regla del muro: <b>fuera</b> y en el anillo se pica, <b>dentro de la aldea</b> no.
+     *
+     * @return {@code true} si ha hecho algo (apilado o abierto el hueco)
+     */
+    private boolean apilarBloqueParaSubir(BlockPos hacia) {
+        if (apilarRestante <= 0 || apilarEspera > 0) {
+            return false;
+        }
+        BlockPos zPos = blockPosition();
+        if (hacia.getY() <= zPos.getY() + 1) {
+            return false; // el objetivo no está arriba: la escalera no es la herramienta
+        }
+        // El hueco de delante (a la altura de la cabeza), que es lo que "estorba" para subir.
+        if (breakStepAheadHacia(hacia)) {
+            apilarEspera = APILAR_ENTRE_BLOQUES;
+            apilarRestante--;
+            return true;
+        }
+        // Y si el hueco de delante ya está abierto —o el asaltante está a media pared, no pegado a ella—, el escalón:
+        // un bloque sólido justo debajo de los pies (dos por debajo, que es donde el juego deja colocar sobre la cara
+        // de arriba del bloque de abajo). Medido en la corrida 34: el asaltante oscilaba a 3-5 bloques de la torre,
+        // donde su hueco de delante YA está abierto, y sin esto no ocupaba la escalera nunca.
+        BlockPos bajo = zPos.below(2);
+        if (level().getBlockState(bajo).isAir() && level().getBlockState(zPos.below()).isAir()
+                && !level().getBlockState(zPos.below(3)).isAir()
+                && !dentroDeLaAldea(bajo, cotaParaElRecinto())) {
+            level().setBlock(bajo, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+            level().playSound(null, bajo, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+            particulasDeTrabajo(bajo);
+            DevilRpg.LOGGER.info("[Siege] un asaltante pone un ESCALON en {} para subir al objetivo ({})",
+                    bajo.toShortString(), hacia.toShortString());
+            apilarEspera = APILAR_ENTRE_BLOQUES;
+            apilarRestante--;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Abre el <b>hueco de delante a la altura de la cabeza</b> (y uno más arriba) siguiendo la regla del muro. Es el
+     * camino que ya usaba {@link BreakBlockGoal#breakStepAhead}, sacado aquí para que los dos atravesadores que suben
+     * compartan <b>una sola</b> verdad.
+     *
+     * @return {@code true} si ha picado algo
+     */
+    private boolean breakStepAheadHacia(BlockPos hacia) {
+        BlockPos zPos = blockPosition();
+        int sx = Integer.signum(hacia.getX() - zPos.getX());
+        int sz = Integer.signum(hacia.getZ() - zPos.getZ());
+        int[][] dirs = (sx == 0 && sz == 0)
+                ? new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+                : new int[][]{{sx, 0}, {0, sz}, {sx, sz}};
+        for (int[] d : dirs) {
+            if (d[0] == 0 && d[1] == 0) {
+                continue;
+            }
+            for (int dist = 1; dist <= 2; dist++) { // a un bloque y a dos: no siempre está pegado a la pared
+                boolean roto = false;
+                for (int dy = 1; dy <= 2; dy++) {
+                    BlockPos p = new BlockPos(zPos.getX() + d[0] * dist, zPos.getY() + dy, zPos.getZ() + d[1] * dist);
+                    if (protegidoPorLaAldea(p)) {
+                        continue; // dentro de la aldea no se pica (el anillo del muro sí: es la brecha)
+                    }
+                    if (canBreakBlock(level().getBlockState(p))) {
+                        breakBlockAt(p);
+                        roto = true;
+                    }
+                }
+                // Y el suelo de esa columna, que es el ESCALÓN que queda al abrir el hueco: sin esto el asaltante
+                // necesita dos rondas (una para el hueco y otra para el escalón) y se queda oscilando delante.
+                for (int dy = 0; dy >= -1; dy--) {
+                    BlockPos p = new BlockPos(zPos.getX() + d[0] * dist, zPos.getY() + dy, zPos.getZ() + d[1] * dist);
+                    if (protegidoPorLaAldea(p)) {
+                        continue;
+                    }
+                    if (canBreakBlock(level().getBlockState(p))) {
+                        breakBlockAt(p);
+                        roto = true;
+                    }
+                }
+                if (roto) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * <b>TÚNEL HACIA ABAJO</b>: si el objetivo está <b>por debajo</b> y el asaltante no encuentra la bajada, cava. Usa
+     * el taladro que ya existe ({@link #breakBlockTowards}), que es el que lleva su presupuesto
+     * ({@link #TUNEL_PRESUPUESTO}) y su espera, y el que <b>respeta la regla del muro</b>: por eso un asaltante
+     * <b>dentro</b> de la aldea no se hace un túnel de salida.
+     *
+     * @return {@code true} si ha cavado
+     */
+    private boolean cavarHaciaAbajo(BlockPos hacia) {
+        if (cavarEspera > 0) {
+            return false;
+        }
+        BlockPos zPos = blockPosition();
+        if (hacia.getY() >= zPos.getY()) {
+            return false; // el objetivo no está por debajo: el túnel hacia abajo no es la herramienta
+        }
+        BlockPos abajo = zPos.below();
+        if (level().getBlockState(abajo).isAir()) {
+            return false; // ya hay hueco: esto es caer, no cavar
+        }
+        if (protegidoPorLaAldea(abajo) || !canBreakBlock(level().getBlockState(abajo))) {
+            return false; // dentro de la aldea no se cava (ni lo que no se puede romper)
+        }
+        breakBlockAt(abajo);
+        particulasDeTrabajo(abajo);
+        cavarEspera = CAVAR_ENTRE_BLOQUES;
+        DevilRpg.LOGGER.info("[Siege] un asaltante CAVA hacia abajo en {} para bajar al objetivo ({})",
+                abajo.toShortString(), hacia.toShortString());
+        return true;
+    }
+
     // Configurar atributos personalizados: se usan las bases del perfil (ahora iguales a un zombie normal).
     public static AttributeSupplier.Builder setAttributes() {
         SpawnScaleProfile p = SPAWN_PROFILE;
@@ -659,6 +819,11 @@ public class AggressiveZombieEntity extends Zombie {
         this.goalSelector.addGoal(2, new EscapeWaterGoal(this));
         // Romper el bloque que le estorba cuando está atascado (pero no atacar casas si puede pasar).
         this.goalSelector.addGoal(3, new BreakBlockGoal(this));
+        // Y LOS TRES ATRAVESADORES (I212): puente, escalera de bloques y túnel, a velocidad normal. Va justo DESPUES
+        // del romper y con la MISMA prioridad (3), sin flags: el romper mira "¿estorba un bloque?" y este mira "¿el
+        // objetivo está arriba, abajo, o hay un hueco delante?", y los dos son pasivos (no navegan), asi que no se
+        // pisan el camino a nadie (I205).
+        this.goalSelector.addGoal(3, new TraverseGoal(this));
         // Comportamiento de MANADA: dispersarse y rodear al objetivo, no apilarse en línea recta. Solo
         // actúa mientras el zombie NO está bien posicionado; al estarlo, cede el control a MeleeAttack.
         this.goalSelector.addGoal(4, new HerdBehaviorGoal(this, 1.2D));
@@ -1333,6 +1498,109 @@ public class AggressiveZombieEntity extends Zombie {
                         && zombie.canBreakBlock(zombie.level().getBlockState(higher))) {
                     zombie.breakBlockAt(higher);
                 }
+            }
+        }
+    }
+
+    /**
+     * <b>LOS TRES ATRAVESADORES</b> (I212): cuando el asaltante <b>no avanza</b> hacia su objetivo, elige la
+     * herramienta que le toca y la usa <b>en el mismo tick</b>, sin dudar:
+     * <ol>
+     *   <li><b>PUENTE</b> — si lo que hay delante es un hueco (o agua), tiende un tablón y pasa
+     *       ({@link AggressiveZombieEntity#puentearHacia});</li>
+     *   <li><b>ESCALERA DE BLOQUES</b> — si el objetivo está <b>arriba</b>, abre el hueco de delante y se apila un
+     *       escalón bajo los pies ({@link AggressiveZombieEntity#apilarBloqueParaSubir});</li>
+     *   <li><b>TÚNEL</b> — si el objetivo está <b>abajo</b> y no hay bajada, cava
+     *       ({@link AggressiveZombieEntity#cavarHaciaAbajo}).</li>
+     * </ol>
+     * Lo pidió el jugador: *«no deben dudar tanto para ocupar estas herramientas»* ✓, y las tres van a <b>velocidad
+     * normal</b> (medio segundo por bloque, no los tres segundos que tenía el romper antes de I209).
+     * <p>
+     * Es un goal <b>pasivo</b>, como {@link BreakBlockGoal}: <b>sin flags</b> a propósito, porque no navega —el camino
+     * lo sigue llevando su goal de siempre mientras esto le quita el estorbo—. Comparte con él el detector de atasco
+     * (¿se ha movido 0,5 bloques desde el tick anterior?) y <b>las dos reglas de la casa</b>: la del muro
+     * ({@link AggressiveZombieEntity#protegidoPorLaAldea}: el anillo se pica, dentro de la aldea no) y la de no pisar
+     * el camino de otro goal (I205).
+     */
+    static class TraverseGoal extends Goal {
+        /** Cada cuántos ticks evalúa qué herramienta usar. Medio segundo, igual que el romper (I209). */
+        private static final int EVALUAR_CADA_TICKS = 10;
+        /** Cuánto tiene que moverse (al cuadrado) para contar como que AVANZA: 0,5 bloques. */
+        private static final double MOVIMIENTO_QUE_CUENTA = 0.25D;
+        private final AggressiveZombieEntity zombie;
+        private net.minecraft.world.phys.Vec3 ultimaPos = null;
+        private int evalTicks = 0;
+
+        public TraverseGoal(AggressiveZombieEntity zombie) {
+            this.zombie = zombie;
+            // A PROPÓSITO sin flags (igual que BreakBlockGoal): no navega ni mira, solo aparta el estorbo.
+        }
+
+        @Override
+        public boolean canUse() {
+            // Sirve a los DOS caminos del asaltante, a propósito: el que va a por un objetivo (pelea) y el que marcha
+            // al centro de la aldea (asedio). Si solo mirara el objetivo, un asaltante que marcha al centro —el caso
+            // de la ola cuando aún no ha visto a nadie— se quedaría sin puente, sin escalera y sin túnel.
+            return objetivoDeLaMarcha() != null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void start() {
+            ultimaPos = zombie.position();
+            evalTicks = 0;
+        }
+
+        /** La celda a la que va: la de lo que ataca o, si no ataca a nadie, la del centro de su aldea. */
+        private BlockPos objetivoDeLaMarcha() {
+            Entity target = zombie.getTarget();
+            if (target != null && target.isAlive()) {
+                return target.blockPosition();
+            }
+            BlockPos centro = zombie.getVillageCenter();
+            if (centro == null || zombie.getHomePos() != null) {
+                return null;
+            }
+            return centro;
+        }
+
+        @Override
+        public void tick() {
+            BlockPos hacia = objetivoDeLaMarcha();
+            if (hacia == null) {
+                return;
+            }
+            if (zombie.distanceToSqr(hacia.getX() + 0.5D, hacia.getY() + 0.5D, hacia.getZ() + 0.5D) < 9.0D) {
+                return; // pegado al objetivo: aquí lo que toca es pelear
+            }
+            if (++evalTicks < EVALUAR_CADA_TICKS) {
+                return;
+            }
+            evalTicks = 0;
+            // LA HERRAMIENTA SE ELIGE POR SITUACIÓN, no por un orden fijo (medido en la corrida 36): con el orden
+            // fijo (puente → escalera → túnel), un asaltante que tenía una cueva debajo y su objetivo abajo se pasaba
+            // la corrida APILANDO escalones hacia arriba —12 cavadas frente a 1 escalón— por culpa del orden. Ahora:
+            // objetivo ABAJO → se cava; objetivo ARRIBA → escalera de bloques; si no, un hueco delante → puente.
+            // Y si la herramienta que le toca no puede (porque está dentro de la aldea, o le queda presupuesto),
+            // se prueba la siguiente, que es lo que hace que nunca se quede sin hacer nada.
+            boolean algo = false;
+            if (hacia.getY() < zombie.blockPosition().getY()) {
+                algo = zombie.cavarHaciaAbajo(hacia);
+            } else if (hacia.getY() > zombie.blockPosition().getY() + 1) {
+                algo = zombie.apilarBloqueParaSubir(hacia);
+            }
+            if (!algo) {
+                algo = zombie.puentearHacia(hacia);
+            }
+            if (!algo) {
+                algo = zombie.apilarBloqueParaSubir(hacia);
+            }
+            if (!algo) {
+                zombie.cavarHaciaAbajo(hacia);
             }
         }
     }
