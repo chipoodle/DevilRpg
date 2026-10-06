@@ -6364,7 +6364,40 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
    → falta ponerlo en la decisión de romper de L1072-1090 ✓.~~ **CERRADO el 5-oct-2026: ver el apartado siguiente.**
 2. **Escalera de bloques, túnel y puente**: **no existen** ✗ (buscado en todo `src` ✓, solo hay `EscapeWaterGoal` L851 y
    `BreakBlockGoal` L1021 ✓) → **tres atravesadores nuevos** ✓ con la forma de éstos ✓ y a velocidad normal ✓.
-3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗).
+3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
+   I215** (más abajo).
+
+### I215 · EL NADO: SE LE QUITA EL «RENDIRSE» Y EL CASTIGO
+
+**El jugador**: *«cuando están en el agua se quedan ahí y avanzan muy lento»* ✓ → *«deben desplazarse a velocidad normal
+y no deben dudar tanto»* ✓. Es el resto del pendiente 3: en I212 se le bajó la **espera** de 40 a 8 ticks ✓; quedaban el
+nado y el tope.
+
+**EL DEFECTO, en la cuenta del propio código** ✓ (y esto **no** hay que medirlo en el juego: son ticks escritos):
+
+```java
+private static final int MAX_ESCAPE_TICKS = 200;      // 10 s intentando salir del agua
+public boolean canContinueToUse() { return … && escapeTicks < MAX_ESCAPE_TICKS; }
+public void stop() { retryCooldown = MAX_ESCAPE_TICKS; … }   // y 10 s MÁS sin volver a intentarlo
+```
+
+El asaltante en el agua se pasaba **10 segundos** intentándolo y, al rendirse, **otros 10 segundos** con el
+`retryCooldown` **sin poder tocar el agua**: **20 segundos** en los que ni avanza ni intenta nada, que es exactamente lo
+que el jugador describe ✓. Y el empujón hacia la orilla iba **cada 15 ticks** (0,75 s) ✓.
+
+**ARREGLO** (`AggressiveZombieEntity.EscapeWaterGoal`, **L1162**):
+- **NO SE RINDE**: `canContinueToUse` (**L1233**) solo mira que siga en el agua ✓ y `stop()` (**L1254**) ya **no** pone
+  castigo ✓. El tope deja de ser un «rendirse» y pasa a ser un **recálculo** (`RECALCULAR_CADA_TICKS`, **L1185**): si en
+  10 s no ha salido, vuelve a buscar orilla —por si la que eligió no tenía salida— y **sigue nadando** ✓.
+- **A RITMO DE NADO**: el empujón hacia la orilla y hacia arriba pasa de **15 a 6 ticks** (**L1298**) ✓ — 0,3 s en vez
+  de 0,75 —, así que avanza a velocidad de crucero en vez de a tirones ✓.
+- Y el `retryCooldown` **se retira entero** (era el que producía la segunda mitad de los 20 s) ✓.
+
+**LO QUE NO QUEDÓ MEDIDO, dicho claro** ✗: monté un pozo en el arnés (`MEDIR_AGUA`) para cronometrar la salida y **la
+escena no vale**: el asaltante queda **flotando en el borde del agua** (navegación apuntando a un punto **fuera** del
+pozo, velocidad **0,012**, `enAgua=SI` toda la corrida) y no sale **ni con el arreglo ni sin él** ✓ — o sea que lo que
+estaba midiendo era **mi pozo**, no el nado. El instrumento queda anotado para arreglarlo antes de dar el nado por
+cerrado: hay que **quitar las paredes** del pozo (o darle una orilla a la que la navegación llegue de verdad) ✓.
 
 ### I212 · LOS TRES ATRAVESADORES: ESCALERA DE BLOQUES, TÚNEL Y PUENTE
 

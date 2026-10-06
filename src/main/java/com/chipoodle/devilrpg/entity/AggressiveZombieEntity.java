@@ -1168,8 +1168,21 @@ public class AggressiveZombieEntity extends Zombie {
      * atascados</b> ✓. Con 8 ticks reaccionan en menos de medio segundo ✓ y el asaltante no se queda plantado ✓.
      */
     private static final int STUCK_TICKS_BEFORE_TRYING = 8;
-        /** Tope de intentos seguidos de salir del agua antes de soltar el control. */
-        private static final int MAX_ESCAPE_TICKS = 200;
+        /**
+         * <b>EL AGUA NO ES UN ATAJO, ES OTRO SITIO POR EL QUE SE ANDA</b> (5-oct-2026, y es el arreglo del "se quedan en el
+         * agua y avanzan muy lento" del jugador).
+         * <p>
+         * Antes esto era un goal de <b>ESCAPE</b>: se rendía a los {@code MAX_ESCAPE_TICKS} = <b>200</b> ticks (10 s) y
+         * al rendirse se ponía un <b>castigo de otros 200 ticks</b> ({@code retryCooldown}) sin tocar el agua. Medido en
+         * el registro del jugador, eso es exactamente lo que se ve: <b>20 segundos</b> en los que el asaltante ni avanza
+         * ni intenta nada. *«Cuando están en el agua se quedan ahí y avanzan muy lento»* ✓.
+         * <p>
+         * Ahora, mientras esté en el agua, el asaltante <b>empuja hacia la orilla más cercana y hacia arriba</b> —a
+         * velocidad de crucero, sin esperas— y la navegación de siempre hace el resto. El tope deja de ser un
+         * "rendirse" y pasa a ser un <b>recálculo</b>: si en 10 s no ha salido, vuelve a buscar orilla (por si la que
+         * eligió no tenía salida) y <b>sigue nadando</b>, sin castigo.
+         */
+        private static final int RECALCULAR_CADA_TICKS = 200;
 
         private final AggressiveZombieEntity zombie;
         private BlockPos shore = null;
@@ -1180,7 +1193,6 @@ public class AggressiveZombieEntity extends Zombie {
         private double trackX = Double.NaN, trackZ = 0;
         private int idleStuckTicks = 0;
         private int escapeTicks = 0;
-        private int retryCooldown = 0;
 
         public EscapeWaterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -1205,10 +1217,6 @@ public class AggressiveZombieEntity extends Zombie {
                 idleStuckTicks = 0;
                 return false;
             }
-            if (retryCooldown > 0) {
-                retryCooldown--;
-                return false;
-            }
             // Mientras nada y avanza, no está atascado: que manden el ataque, la manada, romper o el centro.
             double dx = zombie.getX() - trackX;
             double dz = zombie.getZ() - trackZ;
@@ -1223,9 +1231,9 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public boolean canContinueToUse() {
-            // Si en MAX_ESCAPE_TICKS no lo consigue, suelta el control: así deja turno a romper los bloques
-            // que le estorban (que es justo lo que hace falta cuando la orilla tiene una pared).
-            return zombie.isInWater() && zombie.isInWaterOrRain() && escapeTicks < MAX_ESCAPE_TICKS;
+            // NO SE RINDE: mientras esté en el agua, el agua es su camino. Si en RECALCULAR_CADA_TICKS no ha salido,
+            // se recalcula la orilla en `tick()` (por si la elegida no tenía salida) y sigue nadando.
+            return zombie.isInWater() && zombie.isInWaterOrRain();
         }
 
         @Override
@@ -1244,8 +1252,9 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public void stop() {
-            // Al rendirse, deja el turno el mismo tiempo que lo intentó antes de volver a probar.
-            retryCooldown = MAX_ESCAPE_TICKS;
+            // SIN CASTIGO: al salir del agua se deja de rastrear, pero no se le prohibe volver a nadar (antes se
+            // ponía `retryCooldown = MAX_ESCAPE_TICKS`, o sea 10 s más sin poder tocar el agua: la mitad de los 20 s
+            // que el jugador veía al asaltante parado en el agua).
             trackX = Double.NaN;
             idleStuckTicks = 0;
         }
@@ -1262,7 +1271,7 @@ public class AggressiveZombieEntity extends Zombie {
                 lastX = zombie.getX();
                 lastZ = zombie.getZ();
             }
-            // Si no avanza en 80 ticks, re-buscar la orilla y re-navegar.
+            // Si no avanza en 80 ticks (4 s), re-buscar la orilla y re-navegar.
             if (stuckTicks >= 80) {
                 shore = findNearestShore();
                 if (shore != null) {
@@ -1272,12 +1281,21 @@ public class AggressiveZombieEntity extends Zombie {
                 lastX = zombie.getX();
                 lastZ = zombie.getZ();
             }
-            // Saltar hacia la orilla si está en el agua y no logra salir. Cada ~15 ticks, con un impulso
-            // vertical + horizontal hacia la orilla, para trepar el desnivel de la isla (aunque detecte
-            // mal la pared, el empuje hacia arriba lo saca del agua).
+            // Y si lleva RECALCULAR_CADA_TICKS sin salir del agua, se vuelve a buscar orilla (la que eligió puede no
+            // tener salida) SIN rendirse y SIN castigo: sigue empujando hacia la nueva.
+            if (escapeTicks >= RECALCULAR_CADA_TICKS) {
+                escapeTicks = 0;
+                shore = findNearestShore();
+                if (shore != null) {
+                    zombie.getNavigation().moveTo(shore.getX(), shore.getY(), shore.getZ(), 1.2D);
+                }
+            }
+            // Empuje hacia la orilla y hacia arriba MIENTRAS ESTÁ EN EL AGUA, a ritmo de nado (cada 6 ticks, que son
+            // 0,3 s): es lo que le hace avanzar a velocidad normal y trepar el desnivel de la orilla. Antes era cada 15
+            // ticks y además con la mitad del tiempo rendido, y eso es "avanzan muy lento".
             if (zombie.isInWater() && shore != null && --jumpCooldown <= 0) {
                 jumpTowardShore();
-                jumpCooldown = 15;
+                jumpCooldown = 6;
             }
         }
 

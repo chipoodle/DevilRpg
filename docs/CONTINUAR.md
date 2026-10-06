@@ -95,8 +95,14 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    **fallo en mi lector de chunks** (el formato por secciones de esta partida rompe `nbtdump`; los numeros que salieron
    NO son fiables y la herramienta se retiro). El modelo a copiar es `tools/arnes/columna_mina.py`, que si lee el
    guardado. Cuando este medido: o se cierran los huecos, o se acepta que el asedio entre andando.
-3. **El nado del asaltante**: que avance **a velocidad normal** mientras esta en el agua (sin depender de la navegacion
-   de vanilla) y revisar **`MAX_ESCAPE_TICKS = 200`** de `EscapeWaterGoal` (L851), porque hoy se rinde y se queda parado.
+3. **El nado del asaltante** — **HECHO en I215** (falta el instrumento). El defecto estaba en la cuenta del propio
+   codigo: `MAX_ESCAPE_TICKS = 200` (10 s intentando salir) **+ `retryCooldown = MAX_ESCAPE_TICKS`** en `stop()` (otros
+   10 s **sin poder tocar el agua**) = **20 segundos** en los que el asaltante ni avanza ni intenta nada, que es
+   exactamente el *"se quedan ahi y avanzan muy lento"* del jugador. Arreglado en `EscapeWaterGoal` (**L1162**): no se
+   rinde (`canContinueToUse`, L1233), `stop()` (L1254) ya no pone castigo, el tope es un **recalculo** de orilla
+   (`RECALCULAR_CADA_TICKS`, L1185) y el empujon va cada **6** ticks en vez de 15 (L1298). **ABIERTO**: la escena del
+   pozo del arnes (`MEDIR_AGUA`) **no mide** (el asaltante queda flotando en el borde, velocidad 0,012, y no sale ni
+   con el arreglo ni sin el): hay que quitarle las paredes al pozo antes de dar el nado por medido.
 4. **Un asaltante salio a `MOVEMENT_SPEED: 0.552`** (= 0.23 x 2.4) con el mismo `scaleFactor` que los demas: ese **no paso
    por el tope** del 1.6 y hay que averiguar por que (¿otro perfil?, ¿otro camino de creacion?).
 5. **Traza de la milicia** (pequeno): que el reparto escriba `[Milicia] aldea N: X espadachines y Y arqueros equipados`,

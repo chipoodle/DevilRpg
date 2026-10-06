@@ -412,6 +412,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElAsaltoAlMuro(level, pega);
         } else if (MEDIR_OLA_REAL) {
             medirLaOlaReal(level, pega);
+        } else if (MEDIR_AGUA) {
+            medirElNado(level, pega);
         } else if (MEDIR_ATRAVESADORES) {
             medirLosAtravesadores(level, pega);
         } else if (MEDIR_AGUJERO) {
@@ -2165,6 +2167,69 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * rumbo con mampostería, se aparece en el suelo con {@code VillageGenerator.spawnY} y se volca su IA (vivo, sin IA,
      * marcha activa, ruta, objetivo y goals) junto a la columna de la muralla capa a capa.
      */
+    /**
+     * <b>¿SE MIDE EL NADO (I215)?</b> Un asaltante en el fondo de un pozo de agua, a 14 bloques de la orilla, y se mide
+     * <b>cuánto tarda en salir y a qué velocidad avanza</b>. Es lo que pidió el jugador: *«cuando están en el agua se
+     * quedan ahí y avanzan muy lento»* → *«deben desplazarse a velocidad normal»*.
+     * <p>
+     * Lo que se busca en el log: `[Arnes] AGUA t=… pos=… r=… fueraDelAgua=SI/NO` con el radio BAJANDO de 14 a 0, y
+     * `AGUA: SALE DEL AGUA a los N ticks` (o `NO SALE` si se queda).
+     */
+    private static final boolean MEDIR_AGUA = false;
+
+    private static void medirElNado(ServerLevel level, FakePlayer pega) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        final int bx = CENTRO.getX() + 40;
+        final int bz = CENTRO.getZ();
+        if (ticks == 300 && asaltante == null) {
+            // El pozo: 5x5 de agua de 12 de hondo, con suelo de piedra, y su orilla en +x (a 3 del borde).
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    for (int dy = -12; dy <= 0; dy++) {
+                        BlockPos p = new BlockPos(bx + dx, cota + dy, bz + dz);
+                        level.setBlock(p, dy == -12 || Math.abs(dx) == 2 || Math.abs(dz) == 2
+                                ? net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()
+                                : net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+                    }
+                }
+            }
+            asaltante = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+            if (asaltante != null) {
+                asaltante.moveTo(bx + 0.5D, cota - 1, bz + 0.5D, 0.0F, 0.0F);
+                asaltante.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+                asaltante.setGoToCenterActive(true);
+                asaltante.recargarTunel();
+                asaltante.setPersistenceRequired();
+                level.addFreshEntity(asaltante);
+                asaltante.setTarget(pega);
+                DevilRpg.LOGGER.info("[Arnes] AGUA: asaltante en el fondo del pozo en {} (cota {}, orilla a {} bloques"
+                                + " en +x)", asaltante.blockPosition(), cota, 14);
+            }
+            return;
+        }
+        if (asaltante == null) {
+            return;
+        }
+        asaltante.setTarget(pega);
+        if (ticks % 40 != 0) {
+            return;
+        }
+        boolean enAgua = asaltante.isInWater();
+        if (!enAgua && ticksDeSalida < 0) {
+            ticksDeSalida = ticks - 300;
+            DevilRpg.LOGGER.info("[Arnes] AGUA: SALE DEL AGUA a los {} ticks ({} s) de empezar, en {}",
+                    ticksDeSalida, ticksDeSalida / 20, asaltante.blockPosition());
+        }
+        DevilRpg.LOGGER.info("[Arnes] AGUA t={} pos={} r={} vel={} enAgua={} nav={} goals=[{}]", ticks,
+                asaltante.blockPosition(),
+                (int) asaltante.distanceToSqr(bx + 0.5D, asaltante.getY(), bz + 0.5D),
+                String.format("%.3f", asaltante.getDeltaMovement().horizontalDistance()),
+                enAgua ? "SI" : "NO", asaltante.getNavigation().getTargetPos(), goalsCorriendo(asaltante));
+    }
+
+    /** Ticks que tardó en salir del agua (para el volcado de {@link #MEDIR_AGUA}). */
+    private static int ticksDeSalida = -1;
+
     /**
      * <b>¿SE MIDE UNA OLA DE VERDAD (I212)?</b> Ocho asaltantes del asedio inicial repartidos alrededor del muro
      * (r=60, cada 45 grados), todos apuntando al jugador de pega que está en la plaza. Mide las <b>tres cosas</b> a la
