@@ -48,8 +48,11 @@ foreach ($i in $numeros) {
         -RedirectStandardOutput "build\runserver-rapida$i.txt" -RedirectStandardError "build\runserver-rapida$i.err"
     Start-Sleep -Seconds ($MINUTOS * 60)
     # Y SE LE ESPERA: si cierra solo, el mundo esta guardado. Solo se mata si no ha cerrado.
+    # OJO: la espera era de 120 s y el guardado de salida (una aldea entera, con su trazado) puede tardar mas: en la
+    # corrida 4 de esta ronda el servidor NO llego a cerrar en 120 s y la corrida se quedo SIN `CIERRE LIMPIO`, o sea
+    # sin valor (la regla del banco). Se le da margen.
     $espera = 0
-    while (-not $p.HasExited -and $espera -lt 120) { Start-Sleep -Seconds 5; $espera += 5 }
+    while (-not $p.HasExited -and $espera -lt 300) { Start-Sleep -Seconds 5; $espera += 5 }
     Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
         Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force }

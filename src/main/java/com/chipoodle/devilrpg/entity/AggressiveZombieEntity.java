@@ -105,8 +105,16 @@ public class AggressiveZombieEntity extends Zombie {
     private static final int TUNEL_ENTRE_BLOQUES = 40;
     /** Ticks entre tabla y tabla del puente (1 s): un abismo se cruza despacio, tablón a tablón. */
     private static final int PUENTE_ENTRE_BLOQUES = 20;
-    /** Radio (a partir del centro) dentro del cual el zombie NO rompe ni construye: solo tiene que LLEGAR al
-     *  perímetro. Así no se cava un túnel por debajo de la aldea ni se le destroza nada al pueblo al llegar. */
+    /**
+     * Radio (a partir del centro) dentro del cual el zombie <b>no construye</b>: solo tiene que <b>LLEGAR</b> al
+     * perímetro. Lo usa el puente ({@link #puentearHacia}) para no tender tablones encima de la aldea ni de su muro.
+     * <p>
+     * <b>OJO</b>: esto es <b>horizontal y con 2 bloques de margen</b> (radio de la valla + 2) a propósito, porque el
+     * muro está grueso (una columna, celdas en diagonal) y el puente no debe caerle encima. El veto de <b>ROMPER</b> no
+     * vive aquí: es {@link #protegidoPorLaAldea}, que pregunta por el recinto de verdad
+     * ({@link VillageManager#dentroDelRecinto}, con la altura del pueblo) y es el que deja la cara de fuera del muro
+     * rompible para que el asedio abra la brecha.
+     */
     private static final double NO_TOCAR_LA_ALDEA = VillageGenerator.FENCE_RADIUS + 2.0D;
     /**
      * <b>LA MURALLA SÍ SE ROMPE; LO DE DENTRO NO.</b> Ancho (bloques, hacia dentro y hacia fuera) del <b>anillo de la
@@ -121,8 +129,17 @@ public class AggressiveZombieEntity extends Zombie {
      * Con esta banda, el asedio <b>abre brecha en la muralla</b> (y el obrero la repara después, I50/3b.72), pero las
      * casas, la plaza, la huerta y el kiosco —que están bien dentro— siguen intocables, y por debajo de la muralla
      * tampoco se cava (la banda tiene altura, no profundidad).
+     * <p>
+     * Desde el 5-oct-2026 la banda solo tiene que cubrir la <b>cara de DENTRO</b> del anillo: la de fuera (radio 62,5)
+     * ya cae fuera del recinto y se pica por la regla general de fuera.
+     * <b>Y LA BANDA ES ESTRECHA, COMO EL MURO</b> (5-oct-2026, medido con el arnés): {@code MURALLA_ANCHO} era
+     * <b>5</b> —«hacia dentro y hacia fuera»— y eso hacía rompible una franja de <b>diez bloques de grueso</b>
+     * (r=57..67) a la altura del pueblo: medido, el asaltante del asedio inicial se metió <b>24 bloques dentro</b> de la
+     * aldea (r=38..46) picando tierra y piedra que la banda contaba como «muralla». El anillo de la valla es <b>una
+     * celda</b> de grueso (con sus columnas y sus diagonales), así que la banda es <b>1</b> y el veto de dentro empieza
+     * en la celda de al lado.
      */
-    private static final int MURALLA_ANCHO = 5;
+    private static final int MURALLA_ANCHO = 1;
     /** Hasta dónde llega la muralla hacia arriba (desde la cota del pueblo): es lo que se puede picar de ella. */
     private static final int MURALLA_ALTO = 6;
 
@@ -272,8 +289,21 @@ public class AggressiveZombieEntity extends Zombie {
         return true; // madera, tierra, grava, arena, lana...
     }
 
-    /** Rompe el bloque en la posición, respetando el límite de obsidiana y los bloques inquebrantables. */
+    /**
+     * Rompe el bloque en la posición, respetando el límite de obsidiana y los bloques inquebrantables.
+     * <p>
+     * <b>Y ES AQUÍ DONDE SE CUMPLE LA REGLA DEL JUGADOR</b> (5-oct-2026): *"solo el muro perimetral es rompible; una vez
+     * dentro ya no puede romper nada"*. Este es el ÚNICO sitio del asaltante que destruye un bloque, así que el veto de
+     * {@link #protegidoPorLaAldea} se comprueba <b>en la puerta</b>: por muchos caminos que abran bloques (la marcha, el
+     * paso hacia un objetivo y el escalón), <b>ninguno</b> puede colar una celda de dentro. Medido con el arnés: con la
+     * comprobación solo en los caminos, el asaltante del asedio inicial se metía <b>24 bloques dentro</b> de la aldea
+     * (r=65 → r=44 picando tierra y piedra del pueblo); la traza enseñó la celda abierta con
+     * {@code dentroDeLaAldea=true}, o sea que la puerta es la que tiene que decidir, no el que llama.
+     */
     private void breakBlockAt(BlockPos pos) {
+        if (protegidoPorLaAldea(pos)) {
+            return; // dentro de la aldea no se pica; el muro perimetral sí (es la brecha)
+        }
         BlockState bs = level().getBlockState(pos);
         Block b = bs.getBlock();
         if (b.defaultDestroyTime() < 0.0F) {
@@ -383,11 +413,35 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
-     * ¿Esa posición cae <b>dentro de la aldea</b> (o su perímetro)? Ahí el zombie no rompe ni construye: lo único que
-     * tiene que hacer es <b>llegar</b> al perímetro. El muro, las casas, la huerta y el kiosco están todos dentro de
-     * ese disco, así que esta sola comprobación protege toda la obra del pueblo (y evita que se cuele por debajo).
+     * ¿Esa posición cae <b>dentro del recinto</b> de la aldea (o en su muro)? Ahí el zombie no rompe ni construye: lo
+     * único que tiene que hacer es <b>llegar</b> al muro. El muro, las casas, la huerta y el kiosco están todos dentro
+     * de ese recinto, así que esta sola comprobación protege toda la obra del pueblo.
+     * <p>
+     * <b>EL RECINTO ES EL DE LA ALDEA, NO UN DISCO</b> (5-oct-2026): antes era solo la distancia <b>horizontal</b>
+     * ({@code NO_TOCAR_LA_ALDEA} = radio de la valla + 2) y la ÚNICA verdad de «dentro de la aldea» del proyecto es
+     * {@link VillageManager#dentroDelRecinto}, que además exige estar <b>a la altura del pueblo</b>: un asaltante en
+     * una cueva 60 bloques por debajo de la plaza <b>no</b> está dentro (no ha pasado los muros) y con el disco se le
+     * vetaba picar su propio túnel. Se pregunta a la misma función que usa {@code hayEnemigosDentro}, para que «dentro»
+     * signifique lo mismo en todo el mod.
      */
-    private boolean dentroDeLaAldea(BlockPos pos) {
+    private boolean dentroDeLaAldea(BlockPos pos, int cota) {
+        if (villageCenter == null) {
+            return false;
+        }
+        // LA PREGUNTA ES LA MISMA DEL PROYECTO (`VillageManager.dentroDelRecinto`, recinto en XZ + banda de altura
+        // sobre la cota), con el bicho puesto DE PIE EN ESA CELDA: el bloque que se va a picar está dentro si un bicho
+        // de pie ahí lo estaría. Así la cara de FUERA del muro —el pie de la brecha, a radio 62,5— queda fuera del
+        // recinto y el asedio puede abrirla, y la de dentro no.
+        return VillageManager.dentroDelRecinto(pos, villageCenter, cota, VillageGenerator.FENCE_RADIUS);
+    }
+
+    /**
+     * El <b>disco horizontal</b> de la aldea con sus dos bloques de margen ({@link #NO_TOCAR_LA_ALDEA}), que es la
+     * única regla que usa el <b>puente</b> para no tender tablones sobre el pueblo ni sobre su muro. No lleva altura a
+     * propósito: lo que se veta ahí es <b>construir</b> encima, no romper (para romper está {@link #protegidoPorLaAldea},
+     * que sí pregunta por el recinto de verdad).
+     */
+    private boolean dentroDelDiscoDeLaAldea(BlockPos pos) {
         if (villageCenter == null) {
             return false;
         }
@@ -396,11 +450,49 @@ public class AggressiveZombieEntity extends Zombie {
         return dx * dx + dz * dz <= NO_TOCAR_LA_ALDEA * NO_TOCAR_LA_ALDEA;
     }
 
+    /** Ticks de juego en los que se midió {@link #cotaDelRecinto} (ver {@link #cotaParaElRecinto()}). */
+    private long cotaDelRecintoTick = Long.MIN_VALUE;
+    /** Cota medida en {@link #cotaDelRecintoTick}: se pide UNA vez por tick y no por celda candidata. */
+    private int cotaDelRecinto;
+
+    /**
+     * La <b>cota de la aldea AHORA</b> (el nivel al que se anda), para las dos preguntas del recinto
+     * ({@link #dentroDeLaAldea} y {@link #esLaMuralla}). Se mide <b>una vez por tick</b> y se recuerda, porque las
+     * decisiones de romper preguntan por 18 celdas candidatas de golpe.
+     * <p>
+     * Y por qué no vale la Y del {@code villageCenter} (medido con el arnés el 5-oct-2026): ese centro se fija al
+     * <b>nacer</b> el asaltante y no se entera de que el pueblo suba de nivel. En la corrida que lo destapó, el
+     * asaltante llevaba un centro <b>4 bloques por debajo</b> de la cota real, y con esa Y la banda de la muralla
+     * ({@code esLaMuralla}) se estiraba hacia arriba: bloques de tierra y piedra a <b>24 bloques DENTRO</b> del pueblo
+     * (r=38..46) contaban como «muralla» y el túnel entraba en la aldea. Es un caso real: la migración del terreno
+     * sube el pueblo y la cota de la aldea cambia.
+     */
+    private int cotaParaElRecinto() {
+        long ahora = level().getGameTime();
+        if (ahora != cotaDelRecintoTick) {
+            cotaDelRecintoTick = ahora;
+            cotaDelRecinto = villageCenter == null ? level().getSeaLevel()
+                    : (level() instanceof ServerLevel serverLevel
+                            ? VillageGenerator.cotaDeLaPlaza(serverLevel, villageCenter)
+                            : villageCenter.getY());
+        }
+        return cotaDelRecinto;
+    }
+
     /**
      * ¿Esa posición es de la <b>muralla</b> (el anillo de la valla, a la altura del pueblo)? Ahí <b>sí</b> se pica:
      * es la brecha por la que entra un asedio. Ver {@link #MURALLA_ANCHO}.
+     * <p>
+     * <b>LA ALTURA ES LA DE LA COTA DE AHORA, NO LA DEL CENTRO QUE LLEVA EL ZOMBIE</b> (5-oct-2026, medido con el
+     * arnés): el {@code villageCenter} se fija al nacer y <b>no se entera</b> de que el pueblo suba de nivel. Medido en
+     * esta ronda: la cota de la aldea era <b>83</b> y el asaltante llevaba un centro con Y <b>4 bloques por debajo</b>
+     * —se fijó cuando el cache de {@code cotaDeLaPlaza} aún devolvía la medida vieja, antes de la migración—, así que la
+     * banda de la muralla se estiraba hacia arriba y contaba como «muralla» celdas de <b>tierra y piedra a 24 bloques
+     * DENTRO</b> del pueblo: el túnel entraba en la aldea. La cota se pregunta a la misma verdad que usa todo el mod
+     * ({@code cotaDeLaPlaza}), así que la banda queda a la altura del muro y no a la de un dato viejo. Es un caso real:
+     * la migración del terreno sube el pueblo.
      */
-    private boolean esLaMuralla(BlockPos pos) {
+    private boolean esLaMuralla(BlockPos pos, int cota) {
         if (villageCenter == null) {
             return false;
         }
@@ -412,14 +504,24 @@ public class AggressiveZombieEntity extends Zombie {
         if (distSqr < dentro * dentro || distSqr > fuera * fuera) {
             return false;
         }
-        int dy = pos.getY() - villageCenter.getY();
+        int dy = pos.getY() - cota;
         return dy >= -1 && dy <= MURALLA_ALTO; // hacia arriba sí; por debajo no se cava
     }
 
     /**
-     * ¿Esa posición está <b>protegida</b> por el <b>campo de fuerza</b> de la aldea (no se pica)? Es la única regla que
-     * usan los dos caminos que rompen bloques (la marcha al centro y el que se abre paso hacia un objetivo), para que no
-     * se pueda colar por un lado lo que se veta por el otro.
+     * ¿Esa posición está <b>protegida</b> por la <b>aldea</b> (no se pica)? Es la única regla que usan los dos caminos
+     * que rompen bloques (la marcha al centro y el que se abre paso hacia un objetivo), para que no se pueda colar por
+     * un lado lo que se veta por el otro.
+     * <p>
+     * <b>LA REGLA DEL JUGADOR</b> (5-oct-2026): *"solo el muro perimetral es rompible; una vez dentro ya no puede
+     * romper nada"*. Traducida a esta función:
+     * <ul>
+     *   <li><b>Fuera del recinto</b>: campo abierto — se pica, y ahí es donde el asedio <b>abre la brecha</b> en el
+     *       muro (la cara de fuera del anillo está a radio 62,5, o sea fuera del recinto).</li>
+     *   <li><b>Dentro del recinto</b>: no se pica <b>nada</b>, y eso incluye la cara de dentro del muro: el asaltante
+     *       entra por la brecha que abrió desde fuera y, una vez dentro, ni se hace un túnel de salida ni levanta el
+     *       pueblo. Las casas, la huerta, el kiosco y la plaza están todos dentro.</li>
+     * </ul>
      * <p>
      * <b>EL CAMPO DE FUERZA ES DE LA ALDEA YA GANADA</b> (lo corrigió el jugador: *"los zombies en el asedio inicial,
      * cuando se llega a la aldea, SÍ pueden romper todo lo necesario; pero cuando se gana el asedio la aldea genera un
@@ -428,18 +530,18 @@ public class AggressiveZombieEntity extends Zombie {
      * romper nada de dentro y se quedaban fuera (medido con el arnés: un asaltante contra un cerco de piedra cerrado
      * picó 2 bloques en 3 minutos y no entró).
      * <ul>
-     *   <li>Asedio <b>sin resolver</b> (el inicial): la aldea no está protegida — se rompe <b>lo que haga falta</b>, por
-     *       dentro y por fuera, para llegar al centro.</li>
-     *   <li>Asedio <b>ya ganado</b>: dentro no se rompe <b>nada</b>; la <b>muralla</b> (el anillo de la valla) sigue
-     *       rompible, y fuera de la aldea también, para que los asaltos posteriores puedan entrar y hacerse escaleras,
-     *       pero una vez dentro no tocan nada.</li>
+     *   <li>Asedio <b>sin resolver</b> (el inicial): la aldea no está protegida — se rompe <b>lo que haga falta</b>
+     *       <b>de fuera adentro</b>, empezando por el muro, para llegar al centro.</li>
+     *   <li>Asedio <b>ya ganado</b>: la <b>muralla</b> (el anillo de la valla) y todo lo de fuera siguen rompibles,
+     *       para que los asaltos posteriores puedan entrar y hacerse escaleras, pero una vez dentro no tocan nada.</li>
      * </ul>
      */
     private boolean protegidoPorLaAldea(BlockPos pos) {
-        if (!dentroDeLaAldea(pos)) {
+        int cota = cotaParaElRecinto(); // UNA medida por tick, y la MISMA para las dos preguntas
+        if (!dentroDeLaAldea(pos, cota)) {
             return false; // fuera: campo abierto (aquí se hacen las escaleras de bloques para entrar)
         }
-        if (esLaMuralla(pos)) {
+        if (esLaMuralla(pos, cota)) {
             return false; // la muralla: es la brecha por la que entra un asedio
         }
         return elAsedioYaSeGano();
@@ -480,7 +582,9 @@ public class AggressiveZombieEntity extends Zombie {
                 continue;
             }
             BlockPos delante = new BlockPos(zPos.getX() + d[0], zPos.getY(), zPos.getZ() + d[1]);
-            if (dentroDeLaAldea(delante) || !level().getBlockState(delante).isAir()
+            // OJO: el puente sigue usando el disco horizontal con sus 2 bloques de margen (NO_TOCAR_LA_ALDEA), NO el
+            // recinto con altura: lo que se veta aquí es TENDER TABLONES sobre la aldea y su muro, y el muro es grueso.
+            if (dentroDelDiscoDeLaAldea(delante) || !level().getBlockState(delante).isAir()
                     || !level().getBlockState(delante.above()).isAir()) {
                 continue;
             }
@@ -1074,6 +1178,12 @@ public class AggressiveZombieEntity extends Zombie {
          * un muro de piedra de 15 bloques delante y el objetivo al otro lado, el asaltante lo <b>RODEA</b>, y mientras
          * rodea la distancia al objetivo sigue bajando poco a poco, así que el detector de atasco <b>no se disparaba
          * nunca</b> (medido con el arnés: 3 minutos sin romper un solo bloque y el muro intacto).
+         * <p>
+         * <b>Y SOLO SE ROMPE FUERA DEL RECINTO</b> (5-oct-2026). Los dos sitios donde este goal elige qué picar
+         * —{@link #blockingBlockAhead()} y {@link #breakStepAhead(Entity)}— preguntan antes a
+         * {@link AggressiveZombieEntity#protegidoPorLaAldea}, que es donde vive la regla del jugador (*"solo el muro
+         * perimetral es rompible; una vez dentro ya no puede romper nada"*). Antes este goal rompía <b>sin comprobar
+         * nada</b>: era la mitad que faltaba de I89, y un asaltante que ya había entrado seguía levantando el pueblo.
          */
         @Override
         public void tick() {
@@ -1132,7 +1242,7 @@ public class AggressiveZombieEntity extends Zombie {
                 for (int dy = 1; dy <= 2; dy++) { // altura de la cabeza y uno más arriba
                     BlockPos p = new BlockPos(px, zPos.getY() + dy, pz);
                     if (zombie.protegidoPorLaAldea(p)) {
-                        continue; // dentro de la aldea no se pica (salvo la muralla, que es la brecha)
+                        continue; // dentro de la aldea no se pica (la muralla sí: es la brecha)
                     }
                     if (canBreak(zombie.level().getBlockState(p))) {
                         zombie.breakBlockAt(p);
@@ -1192,15 +1302,19 @@ public class AggressiveZombieEntity extends Zombie {
             // Abrir SIEMPRE el hueco de 2 de alto (cuerpo + cabeza). Antes solo se rompía el de arriba si el
             // objetivo estaba más alto, así que contra una valla de 2 bloques el zombie picaba el de abajo,
             // seguía sin caber y necesitaba otra ronda entera (3 s más) para el de arriba.
+            // Los dos de arriba pasan por la MISMA regla: si la celda de arriba ya es de dentro de la aldea (el
+            // borde de la brecha, a la altura de la cabeza), no se toca, que un hueco abierto hacia dentro es
+            // justo lo que el jugador veta (*"una vez dentro ya no puede romper nada"*).
             BlockPos above = pos.above();
-            if (zombie.canBreakBlock(zombie.level().getBlockState(above))) {
+            if (!zombie.protegidoPorLaAldea(above) && zombie.canBreakBlock(zombie.level().getBlockState(above))) {
                 zombie.breakBlockAt(above);
             }
             // Y si el objetivo está todavía más arriba, uno más: así el hueco queda en escalón de subida.
             Entity target = zombie.getTarget();
             if (target != null && target.getY() > zombie.getY() + 1.0D) {
                 BlockPos higher = above.above();
-                if (zombie.canBreakBlock(zombie.level().getBlockState(higher))) {
+                if (!zombie.protegidoPorLaAldea(higher)
+                        && zombie.canBreakBlock(zombie.level().getBlockState(higher))) {
                     zombie.breakBlockAt(higher);
                 }
             }

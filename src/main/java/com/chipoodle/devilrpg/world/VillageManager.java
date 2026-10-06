@@ -1293,6 +1293,40 @@ public final class VillageManager {
     }
 
     /**
+     * La misma pregunta para una <b>celda</b> (5-oct-2026): ¿está dentro del recinto el bloque {@code pos}?, o sea
+     * ¿lo estaría un bicho <b>de pie en esa celda</b> (los pies en la base del bloque)? La pide la regla del asaltante
+     * (*"solo el muro perimetral es rompible; una vez dentro ya no puede romper nada"*), que necesita decidir por
+     * <b>celda</b> y no por entidad.
+     * <p>
+     * Es la única forma de que esa regla coincida con {@code hayEnemigosDentro} sin copiar la cuenta (y sin que las dos
+     * se separen en cuanto se toque una). Si el nivel no es de servidor (cliente, o un mundo de pruebas) no hay cota
+     * que medir: se contesta con el recinto <b>horizontal</b>, que es lo único que se sabe.
+     */
+    public static boolean dentroDelRecinto(net.minecraft.world.level.Level level, BlockPos pos, BlockPos center,
+                                           double radio) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            // Sin servidor no hay cota que medir y la Y del centro NO vale (llega la del spawn): se contesta con el
+            // recinto HORIZONTAL, que es lo único que se sabe (el nivel del mar solo rellena el parámetro).
+            return dentroDelRecinto(pos, center, level.getSeaLevel(), radio);
+        }
+        return dentroDelRecinto(pos, center, VillageGenerator.cotaDeLaPlaza(serverLevel, center), radio);
+    }
+
+    /**
+     * Igual, con la cota ya medida por quien llama (es la forma que se usa cuando la pregunta se hace <b>muchas veces
+     * seguidas</b>, como en la decisión de romper de un asaltante, que mira 18 celdas candidatas de golpe).
+     */
+    public static boolean dentroDelRecinto(BlockPos pos, BlockPos center, int cota, double radio) {
+        double dx = pos.getX() + 0.5D - (center.getX() + 0.5D);
+        double dz = pos.getZ() + 0.5D - (center.getZ() + 0.5D);
+        if (dx * dx + dz * dz > radio * radio) {
+            return false;
+        }
+        int dy = pos.getY() - cota;
+        return dy >= -RECINTO_DY_ABAJO && dy <= RECINTO_DY_ARRIBA;
+    }
+
+    /**
      * ¿Hay <b>monstruos DENTRO de la aldea</b> ahora mismo? No es lo mismo que {@link #isUnderAttack} (que mira los
      * asedios declarados): en la partida del jugador hay zombies agresivos sueltos que entran al pueblo y matan
      * aldeanos <b>sin que haya asedio</b>, y con eso el gestor seguía repoblando.

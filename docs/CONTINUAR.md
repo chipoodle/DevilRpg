@@ -57,11 +57,20 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
 
 ---
 
-## 2 · PENDIENTES, EN ORDEN (con clase y linea)
+## 2 · PENDIENTES, EN ORDEN (con clase y numero de linea)
 
-1. **La regla del muro perimetral** (el jugador: *"solo el muro perimetral es rompible; una vez dentro ya no puede
-   romper nada"*). El predicado **ya existe**: `VillageManager.dentroDelRecinto(...)` (el que usa `hayEnemigosDentro`).
-   Hay que meterlo en la decision de romper de **`AggressiveZombieEntity.BreakBlockGoal`**, **L1072-1090**.
+1. **La regla del muro perimetral** — **A MEDIAS, y se dice cual mitad falta** (ver I210 en
+   `docs/aldea-invariantes.md`). Hecho y compilado: la regla se aplica **en la puerta** (`AggressiveZombieEntity.breakBlockAt`,
+   **L287**, el unico sitio del asaltante que destruye un bloque), las dos preguntas del recinto usan **la cota de ahora**
+   (`cotaParaElRecinto`, **L484**) y no la Y del centro que lleva el zombie, `MURALLA_ANCHO` baja de 5 a 1 (**L136**), y
+   `BreakBlockGoal` ya no rompe a ciegas (`breakStepAhead` **L1243**, `breakBlock` **L1308/L1315**). Medido con el arnes
+   (`MEDIR_MURO`): el asaltante de la aldea **ganada** no toca nada de dentro (**2** bloques, los dos **fuera** del
+   recinto) ✓. **FALTA**: el asaltante del **asedio inicial** sigue abriendose **36 bloques dentro** del termino (de r=65
+   a r=26; **49** de piedra, **23** de tierra). La traza del mod ensena la celda picada con `dentroDeLaAldea=true` y aun
+   asi se pica, o sea que **no cuadra con el codigo**: dos pistas medidas —la **Y del `villageCenter`** se fija al nacer y
+   no se refresca cuando la cota cambia (iba 4 bloques por debajo), y `cotaDeLaPlaza` devolvio **79** y **83** en la misma
+   sesion (el cache cambia a mitad de partida, migracion del terreno)—. **Lo siguiente es medir eso**, no tocar la regla a
+   ciegas.
 2. **Escalera de bloques, tunel y puente**: **NO EXISTEN** (comprobado en todo `src`: solo hay `EscapeWaterGoal` L851 y
    `BreakBlockGoal` L1021). Son **tres atravesadores nuevos**, con la forma de los que hay (clase interna, decide en el
    mismo tick, sin tanteos) y **a velocidad normal**: apilar bloques para subir, cavar si el objetivo esta por debajo,

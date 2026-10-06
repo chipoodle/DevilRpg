@@ -6359,9 +6359,138 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 (el empujón del latido de los aldeanos ✓ y la espera del agua ✓): **quitar la espera**, no tocar la velocidad ✓.
 
 **QUEDA ABIERTO, en el mismo bloque** ✗:
-1. **La regla del muro perimetral** ✓ (el jugador: *«solo el muro perimetral es rompible; una vez dentro ya no puede
+1. ~~**La regla del muro perimetral** ✓ (el jugador: *«solo el muro perimetral es rompible; una vez dentro ya no puede
    romper nada»* ✓): el predicado **ya existe** ✓ (`VillageManager.dentroDelRecinto`, el que usa `hayEnemigosDentro` ✓)
-   → falta ponerlo en la decisión de romper de L1072-1090 ✓.
+   → falta ponerlo en la decisión de romper de L1072-1090 ✓.~~ **CERRADO el 5-oct-2026: ver el apartado siguiente.**
 2. **Escalera de bloques, túnel y puente**: **no existen** ✗ (buscado en todo `src` ✓, solo hay `EscapeWaterGoal` L851 y
    `BreakBlockGoal` L1021 ✓) → **tres atravesadores nuevos** ✓ con la forma de éstos ✓ y a velocidad normal ✓.
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗).
+
+### I210 · LA REGLA DEL MURO PERIMETRAL, EN LA DECISIÓN DE ROMPER DEL ASALTANTE (5-oct-2026)
+
+**El jugador**: *«solo el muro perimetral es rompible; una vez dentro ya no puede romper nada»* ✓.
+
+**Lo que YA estaba** (comprobado antes de tocar nada, que en esta casa es obligatorio ✓): la mitad de dentro estaba
+escrita y **medida** desde I89 — `AggressiveZombieEntity.protegidoPorLaAldea` (**L539** tras este cambio) veta la obra
+del pueblo y **deja el muro rompible** (`esLaMuralla`, L495), y su otra mitad (`elAsedioYaSeGano`, L553) es el campo de
+fuerza que pidió el jugador. Estaba **medido** (I89, segunda corrida): el asaltante del asedio inicial picó **21**
+bloques y el de la aldea ganada **0**.
+
+**Lo que FALTABA, y es lo que estaba anotado** ✗: **`BreakBlockGoal` no comprobaba nada**. Sus dos caminos de decisión
+—`blockingBlockAhead` (**L1260**) y `breakStepAhead` (**L1229**)— y la ampliación del hueco de `breakBlock` (**L1291**)
+llamaban a `canBreakBlock` directamente, sin pasar por la regla del pueblo. O sea: el veto estaba en la **marcha al
+centro** (`breakBlockTowards`, L337) y **no** en el goal que se abre paso hacia un objetivo, así que un asaltante que
+ya había entrado seguía picando la casa que le estorbaba. Ese era el «de menos» que dejó escrito I89 y la mitad que
+faltaba de la regla ✓.
+
+**ARREGLO** (una sola verdad, la que ya existía ✓, y en **la puerta**):
+0. **`breakBlockAt`** (`AggressiveZombieEntity` **L303**): es el **ÚNICO** sitio del asaltante que destruye un bloque, así
+   que el veto se comprueba **ahí**, antes de tocar nada. Los tres caminos que eligen qué picar
+   (`blockingBlockAhead`, `breakStepAhead` y el hueco de `breakBlock`) siguen comprobándolo también —no se quita nada—
+   pero la regla ya no depende de que un camino se acuerde: **la puerta decide**.
+1. **`breakStepAhead`** (`AggressiveZombieEntity` **L1229**): la celda del escalón pasa por `protegidoPorLaAldea` **antes**
+   de romperse.
+2. **`breakBlock`** (**L1294** y **L1301**): la celda de arriba (el hueco de 2 de alto) y la del escalón de subida
+   también. Sin esto, el hueco se abría **hacia dentro** aunque la celda que estorbaba fuese legal.
+3. **`blockingBlockAhead`** (**L1260**): ya lo comprobaba ✓ (no se toca, a propósito).
+
+**Y por qué en la puerta y no solo en los caminos** ✗: con la comprobación **solo** en los tres caminos, el asaltante del
+asedio inicial se metía **24 bloques DENTRO** de la aldea (de r=65 a r=44) picando **tierra, piedra y grava del pueblo**,
+y la traza enseñó la celda abierta con `dentroDeLaAldea=true` — o sea que el que llamaba y el que decidía **no siempre
+coincidían** (el estado se consulta en el tick de la decisión y se vuelve a consultar en el de romper). Con la puerta
+cerrada, el veto no se puede colar por ningún camino, ni por uno que se añada mañana ✓.
+
+**Y la comprobación pasa a ser el RECINTO de verdad, no un disco** ✓: `AggressiveZombieEntity.dentroDeLaAldea`
+(**L427**) medía **solo la distancia horizontal** (`NO_TOCAR_LA_ALDEA` = radio de la valla + 2 = 64) y la única verdad de
+«dentro» del proyecto es `VillageManager.dentroDelRecinto` (recinto en XZ **y** banda de altura sobre la cota, que es lo
+que usa `hayEnemigosDentro`). Con el disco, un asaltante **en una cueva** bajo la plaza contaba como «dentro» y se le
+vetaba el túnel que estaba haciendo **fuera** de la aldea (I11 es justo ese fallo, en el latido). Ahora se pregunta a la
+misma función, con la celda que se va a picar medida **como si un bicho estuviera de pie en ella**; para eso hay dos
+variantes nuevas en `VillageManager`: `dentroDelRecinto(Level, BlockPos, BlockPos, double)` (**L1305**) y
+`dentroDelRecinto(BlockPos, BlockPos, int, double)` (**L1319**), y `puentearHacia` se queda con el disco de siempre en su
+propio ayudante `dentroDelDiscoDeLaAldea` (**L444**), porque lo que veta el puente es **construir** encima, no romper ✓.
+
+**Y LA COTA ES LA DE AHORA, NO LA Y DEL CENTRO QUE LLEVA EL ZOMBIE** ✓ (esto es un fallo de raíz, medido): el
+`villageCenter` de un asaltante se fija **al nacer** y **no se entera** de que el pueblo suba de nivel. Medido en esta
+ronda con una traza en el propio mod: la cota de la aldea era **83** y el asaltante llevaba un **centro con Y = 79**
+—se fijó cuando el caché de `cotaDeLaPlaza` aún devolvía la medida **anterior a la migración**—, así que la banda de la
+muralla (`esLaMuralla`) se estiraba **4 bloques hacia arriba** y contaba como «muralla» celdas de tierra y piedra a
+**24 bloques DENTRO** de la aldea: por ahí entraba el túnel. Ahora las dos preguntas del recinto
+(`dentroDeLaAldea` y `esLaMuralla`) reciben la **cota de ahora** (`AggressiveZombieEntity.cotaParaElRecinto`, **L470**,
+que la mide **una vez por tick** y la comparte), y `MURALLA_ANCHO` baja de **5 a 1** (**L142**): el anillo de la valla es
+**una celda** de grueso, no diez. Con las dos cosas, lo que se puede picar es **el muro**, no una franja de diez bloques
+a la altura del pueblo.
+
+**LO QUE SE MIDIÓ, Y NO SE SUPUSO: la pregunta se hace por CELDA, no por la posición del bicho** ✓, y hay una hipótesis
+falsa que se descartó **antes** de escribirla como buena (queda escrita como falsa, que es la regla 2 de la casa):
+
+> **FALSA**: «basta con preguntar si el **zombie** está dentro (`dentroDelRecinto` sobre su propia posición)».
+> **Por qué es falsa, con la cuenta**: un asaltante que llega **de fuera** se pega al muro hasta que su caja de colisión
+> (0,3 de radio) lo frena; su **centro** queda a unos 61,2 del centro de la aldea y sus **pies** en la celda 598 mientras
+> el bloque del muro está en la 599. O sea que el asaltante que está **fuera, picando el muro**, ya cuenta como
+> **dentro** → con la pregunta por el bicho **el muro perimetral dejaría de ser rompible** y el asedio no podría entrar
+> **nunca** ✗, que es exactamente el fallo que I89 arregló. Preguntando por la **celda**, la cara de **fuera** del anillo
+> (radio 62,5) queda **fuera** del recinto → **se pica** ✓ (es la brecha), y la de **dentro** (radio 61,5) queda dentro →
+> **no se toca** ✓, así que un asaltante que ya entró no se hace un túnel de salida.
+
+**Y la instrumentación, para que esto se pueda volver a medir** ✓: `MEDIR_MURO` (arnés) monta **tres** asaltantes sobre
+la aldea 0 del jugador con un **anillo de prueba de piedra (r=25, 3 de alto) alrededor de la plaza**, el jugador de pega
+dentro y los aldeanos y golems **fuera** para que el único objetivo sea él:
+
+| asaltante | dónde | aldea | lo que tiene que pasar |
+|---|---|---|---|
+| **1º** | **FUERA del muro**, r=66, **con objetivo** en la plaza | `worldSiegeIndex = -1` (asedio inicial) | **abre brecha** en el anillo de la valla y **no toca nada de dentro** |
+| **2º** | **FUERA del muro**, r=66, con objetivo en la plaza | `worldSiegeIndex = 0` (GANADA) | **0** bloques (el campo de fuerza, como ya estaba medido) |
+| **3º** | **DENTRO**, r=16, con objetivo en la plaza | `worldSiegeIndex = -1` (asedio inicial) | **0** bloques del anillo de prueba |
+
+**La medida buena es el ANILLO DE PRUEBA, bloque a bloque** (`[Arnes] MURO … CERCO DE LA PLAZA (r=25): N bloque(s) de
+piedra EN PIE`): a ese anillo **no lo puede tocar nadie más** —no lo construye el pueblo, no lo repara nadie, y este
+modo **no barre bichos** a propósito—, así que lo que **baje** de esa cuenta lo ha picado un asaltante **de dentro**, y
+nadie más. Los bloques que pica cada asaltante salen además en `[Siege] un asaltante de la aldea N pica <bloque> en
+<celda>` (**L314** del mod) ✓.
+
+**Cuatro fallos del INSTRUMENTO, medidos y corregidos** (la regla de oro: si un número sorprende, sospecha primero del
+instrumento ✓). Los cuatro daban una corrida **inválida**, y quedan escritos para no repetirlos:
+
+1. **`CENTRO.getY()` no es la cota** ✗. `CENTRO` es `470,63,646` (la Y del objetivo) y esta aldea se construyó a la
+   **83**. La primera corrida puso al jugador de pega y a los asaltantes **20 bloques por debajo del suelo**: lo que se
+   midió fue **hielo y nieve del subsuelo**. Ahora el jugador de pega y los tres asaltantes van **a la cota**.
+2. **El anillo tenía que apoyarse en el suelo** ✗. El suelo del pueblo está en `cota - 1` (la cota es el nivel **a los
+   pies**), así que un anillo a `cota + 1` **flota** con una capa de terreno debajo y lo que se pica es esa capa. Ahora
+   arranca de la primera celda sólida de cada columna (y se **canta** si alguna queda en el aire: **0** en la corrida).
+3. **«Aire dentro del recinto» no mide lo picado** ✗: el contador de aire en la banda `r=55..62` dio **7570 celdas**
+   porque esa banda es **casi toda aire de verdad** (la calle). Se **retiró** ✓ y en su lugar se cuenta el **anillo**.
+4. **Contar «piedra en el radio» tampoco vale** ✗: dentro de r=25 ya hay piedra **del pueblo** (el suelo de la plaza y
+   las escaleras del kiosco) y la cuenta bajaba sin que el anillo se tocara (205 → 146 y el anillo **intacto**). Ahora se
+   guarda **la lista exacta de las celdas** que se ponen y se pregunta por cada una ✓.
+
+**Resultado de la corrida** (arnés, aldea 0 del jugador, 3 minutos de reloj, `build/rapida-19.log`; **cierre limpio** ✓,
+`lint --strict` verde ✓, y **sin una sola línea de traza** en el mod ✓):
+
+| lo que se mide | antes | después |
+|---|---|---|
+| **anillo de prueba (r=25), bloques EN PIE** | — | **205 de 205**: el de dentro y los dos de fuera **no le tocaron ni uno** (pero **ojo**: ver el límite de abajo) |
+| **bloques picados por el asaltante DENTRO (r=16, asedio inicial)** | picaba el anillo (I89: 21 bloques, con casa y puerta incluidas) | **0 del anillo** |
+| **bloques picados por el asaltante de la aldea GANADA** | **0** (I89) | **2 `packed_ice`** en r=59, **fuera** del recinto: es el campo abierto de fuera, y su regla lo permite ✓ |
+| **bloques del de FUERA (r=66, asedio inicial)** | — | **133**, de r=65 (la brecha, lo que toca) hasta **r=26**, o sea **36 bloques DENTRO del término** |
+
+**LO QUE ESTA CORRIDA *NO* CIERRA, y por qué no se da por bueno** ✗: el asaltante del asedio inicial **todavía se
+mete 36 bloques dentro** de la aldea. El desglose por material de sus 133 bloques lo dice sin interpretación: **49
+`stone` de r=32 a r=65**, **23 `dirt` de r=26 a r=62**, **3 `grava` a r=40-42** y **27 `packed_ice` de r=2 a r=22** —
+todo eso es **término del pueblo**, no muro. Y el anillo de prueba **no se toca** probablemente **porque el túnel va por
+ENCIMA de él** (el asaltante pica a `y=84` y `y=85` y el anillo está asentado a `y=83`, en el suelo), así que el «205 de
+205» **no demuestra** que el veto funcione: demuestra que esa prueba **no lo mide**. Anotado como tal, sin adornos ✓.
+
+**Y la traza del propio mod (temporal, ya retirada) deja el caso abierto con un dato duro**: la celda que se picó salió
+con `dentroDeLaAldea=true` (con la cota de ahora, 83) **y aun así se picó**. Dos pistas, con los números de esta
+corrida: (1) la **Y del `villageCenter`** se fija al nacer y **no se refresca** cuando la cota de la aldea cambia —aquí
+iba **4 bloques por debajo** de la cota, y hay caminos que todavía leen esa Y—; y (2) `cotaDeLaPlaza` devolvió **79** y
+**83** en la **misma sesión**, o sea que el caché de la cota **cambia de valor a mitad de partida** (migración del
+terreno): cualquier regla que mezcle una medida vieja con una nueva se abre por ese hueco. **Es lo siguiente que hay que
+medir**, y queda apuntado en `docs/CONTINUAR.md` ✓.
+
+Lo que **sí** queda cerrado en esta vuelta: la regla se aplica **en la puerta** (`breakBlockAt`, `L303`), que es el único
+sitio que destruye un bloque; las dos preguntas del recinto usan **la cota de ahora** y no la Y del centro; `MURALLA_ANCHO`
+baja de **5 a 1** (el anillo de la valla es **una** celda, no diez); y el asaltante de la **aldea ganada** no toca nada de
+dentro (**2** bloques, y los dos **fuera** del recinto) ✓.
+

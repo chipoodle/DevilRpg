@@ -140,7 +140,7 @@ public class GuardHarness {
      * Lo que se busca en el log: `[Siege] un zombie empieza a TALADRAR hacia la aldea en … (presupuesto 40 bloques)`
      * y que en la línea aparezca <b>aire</b> donde había muralla. Y de paso que <b>no</b> toque nada de dentro.
      */
-    private static final boolean MEDIR_MURO = false;
+    private static final boolean MEDIR_MURO = true;
     /**
      * ¿Se mide LA REPARACIÓN DE UN AGUJERO DEL SUELO (el cráter de un creeper, que NO está en el plano)? Abre un
      * cráter de 3x3x2 en el suelo de la aldea y vuelca sus dos capas con letras ('.'=aire, 'G'=hierba, 'D'=tierra,
@@ -2142,6 +2142,13 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      */
     private static void medirElAsaltoAlMuro(ServerLevel level, FakePlayer pega) {
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        // LA COTA MANDA, NO `CENTRO.getY()` (fallo del instrumento, medido el 5-oct-2026). `CENTRO` es 470,63,646
+        // (la Y del objetivo), pero el pueblo se construye a SU cota: en esta partida el kiosco se coloco "al nivel
+        // del pueblo 83". La PRIMERA corrida de esta medida puso al jugador de pega en 63 y a los dos asaltantes de
+        // dentro a 20 bloques POR DEBAJO del suelo, asi que: el asaltante del asedio inicial se paso la corrida
+        // pidiendo un escalon (el "objetivo" estaba 20 arriba) y NO pico el muro interior, y todo lo que se midio fue
+        // hielo y nieve del subsuelo. El jugador de pega va a la COTA (la plaza) y los muros de prueba, a su altura.
+        pega.moveTo(CENTRO.getX() + 0.5D, cota + 1, CENTRO.getZ() + 0.5D);
         if (ticks == 300 && asaltante == null) {
             int mejorRumbo = 0;
             int mejorSolidos = -1;
@@ -2165,29 +2172,36 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 }
             }
             rumboDelAsalto = mejorRumbo * Math.PI / 4.0D;
-            int x = CENTRO.getX() + (int) Math.round(Math.cos(rumboDelAsalto) * 14);
-            int z = CENTRO.getZ() + (int) Math.round(Math.sin(rumboDelAsalto) * 14);
-            int y = com.chipoodle.devilrpg.world.VillageGenerator.spawnY(level, x, z);
+            // LOS DOS ASALTANTES DE FUERA VAN **FUERA DEL MURO** (r=66), CON OBJETIVO Y AL MISMO RUMBO (5-oct-2026).
+            // Antes se ponian DENTRO (r=14) con el jugador de pega enterrado 20 bloques por debajo del suelo: el
+            // asaltante del asedio inicial se pasaba la corrida picando el kiosco (a r=3..4 del centro) y el cerco de
+            // prueba (r=25) NUNCA se tocaba, asi que lo que se medía no era la regla. Un asaltante que aparece a r=66
+            // con el objetivo en la plaza queda ENCERRADO por el muro perimetral: su `BreakBlockGoal` no tiene otro
+            // camino que picar la cara de FUERA del muro (que es la mitad "el muro perimetral SI es rompible").
+            int x = CENTRO.getX() + (int) Math.round(Math.cos(rumboDelAsalto) * 66);
+            int z = CENTRO.getZ() + (int) Math.round(Math.sin(rumboDelAsalto) * 66);
+            int y = cota + 1;
             asaltante = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
             if (asaltante != null) {
                 asaltante.moveTo(x + 0.5D, y, z + 0.5D, 0.0F, 0.0F);
-                asaltante.setVillageCenter(new BlockPos(CENTRO.getX(), y, CENTRO.getZ()));
+                asaltante.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
                 asaltante.setGoToCenterActive(true);
                 asaltante.recargarTunel();
                 asaltante.setPersistenceRequired();
                 level.addFreshEntity(asaltante);
                 // CON OBJETIVO: es lo que hace que `BreakBlockGoal` entre en juego (su `canUse` pide objetivo). Sin
-                // objetivo, el asaltante solo puede taladrar por la marcha (`MoveToVillageCenterGoal`), y solo cuando
-                // su navegación se declara "hecha": medido, anduvo del radio 66 al 58 y se quedó ahí los 135 s sin
-                // romper un bloque. El jugador de pega es el objetivo y va invulnerable (la medida no es el combate).
+                // objetivo, el asaltante solo puede taladrar por la marcha (`MoveToVillageCenterGoal`), que en las
+                // corridas anteriores ni llego a dispararse. El jugador de pega es el objetivo y va invulnerable (la
+                // medida no es el combate).
                 pega.setInvulnerable(true);
                 asaltante.setTarget(pega);
-                // MURO INTERIOR DE PRUEBA (r=30, DENTRO de la aldea): es lo que separa las dos mitades de la regla. Se
-                // levanta un muro de piedra delante de cada asaltante y se ve QUIÉN lo pica:
-                //   - el asaltante SIN aldea (worldSiegeIndex < 0) es el ASEDIO INICIAL: tiene que picarlo (la aldea
-                //     todavía no tiene campo de fuerza);
-                //   - el de la aldea 0 (GANADA, con campo de fuerza): no puede picar NADA de dentro.
-                cercoDeLaPlaza(level, y);
+                // CERCO DE PRUEBA (r=25, DENTRO de la aldea): es lo que separa las dos mitades de la regla, porque a
+                // los asaltantes de fuera les estorba el MURO PERIMETRAL, pero el asaltante que se pone DENTRO (el 3º)
+                // no tiene muro entre él y la plaza: lo que le estorba es este cerco. Se ve QUIEN lo pica:
+                //   - el 3º, SIN aldea (worldSiegeIndex < 0), es el ASEDIO INICIAL: en I89 se midio que pica la obra
+                //     del pueblo (21 bloques), y con la regla del jugador (I210) tiene que picar CERO;
+                //   - el 2º, de la aldea 0 (GANADA, con campo de fuerza): tampoco puede picar NADA de dentro (I89).
+                cercoDeLaPlaza(level, cota, RADIO_DEL_CERCO);
                 // SIN TESTIGOS: se quitan los aldeanos y los golems del pueblo (es una COPIA) para que el único objetivo
                 // posible sea el jugador de pega. Medido: con los aldeanos dentro, el asaltante se iba detrás de uno de
                 // ellos (llegó a r=67 del centro, FUERA del pueblo) y no llegaba ni a acercarse al cerco de la plaza.
@@ -2201,28 +2215,118 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
 
                 asaltanteDos = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
                 if (asaltanteDos != null) {
-                    int x2 = CENTRO.getX() + (int) Math.round(Math.cos(ANGULO_DEL_SEGUNDO) * 14);
-                    int z2 = CENTRO.getZ() + (int) Math.round(Math.sin(ANGULO_DEL_SEGUNDO) * 14);
-                    int y2 = com.chipoodle.devilrpg.world.VillageGenerator.spawnY(level, x2, z2);
+                    int x2 = CENTRO.getX() + (int) Math.round(Math.cos(ANGULO_DEL_SEGUNDO) * 66);
+                    int z2 = CENTRO.getZ() + (int) Math.round(Math.sin(ANGULO_DEL_SEGUNDO) * 66);
+                    int y2 = cota + 1;
                     asaltanteDos.moveTo(x2 + 0.5D, y2, z2 + 0.5D, 0.0F, 0.0F);
-                    asaltanteDos.setVillageCenter(new BlockPos(CENTRO.getX(), y2, CENTRO.getZ()));
+                    asaltanteDos.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
                     asaltanteDos.setGoToCenterActive(true);
                     asaltanteDos.recargarTunel();
                     asaltanteDos.setPersistenceRequired();
                     asaltanteDos.setWorldSiegeIndex(0); // la aldea 0 del jugador: YA GANADA -> con campo de fuerza
                     level.addFreshEntity(asaltanteDos);
                     asaltanteDos.setTarget(pega);
-                    DevilRpg.LOGGER.info("[Arnes] MURO: 2º asaltante (aldea 0 = GANADA, con campo de fuerza) en {} con"
-                            + " muro interior delante: NO deberia poder picarlo", asaltanteDos.blockPosition());
+                    DevilRpg.LOGGER.info("[Arnes] MURO: 2º asaltante (aldea 0 = GANADA, con campo de fuerza) en {}"
+                            + " FUERA del muro con objetivo en la plaza: NO deberia poder picar NADA de dentro",
+                            asaltanteDos.blockPosition());
                 }
-                DevilRpg.LOGGER.info("[Arnes] MURO: los dos muros interiores de prueba (r=30, 12x3) levantados");
-                DevilRpg.LOGGER.info("[Arnes] MURO: asaltante puesto en {} (cota {}, rumbo {} con {} bloque(s)),"
-                                + " CON objetivo (el jugador de pega) y marchando al centro {}", asaltante.blockPosition(),
-                        cota, mejorRumbo, mejorSolidos, CENTRO);
+                // EL 3er ASALTANTE: DENTRO Y CON OBJETIVO (5-oct-2026). Es el que mide "una vez dentro ya no puede
+                // romper nada": aparece dentro del recinto, a r=16, con el jugador de pega en la plaza y el cerco de
+                // prueba (r=25) entre los dos, asi que si picara algo, picaria el cerco.
+                asaltanteTres = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+                if (asaltanteTres != null) {
+                    int x3 = CENTRO.getX() + (int) Math.round(Math.cos(ANGULO_DEL_TERCERO) * 16);
+                    int z3 = CENTRO.getZ() + (int) Math.round(Math.sin(ANGULO_DEL_TERCERO) * 16);
+                    asaltanteTres.moveTo(x3 + 0.5D, cota + 1, z3 + 0.5D, 0.0F, 0.0F);
+                    asaltanteTres.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+                    asaltanteTres.setGoToCenterActive(true);
+                    asaltanteTres.recargarTunel();
+                    asaltanteTres.setPersistenceRequired();
+                    level.addFreshEntity(asaltanteTres);
+                    asaltanteTres.setTarget(pega);
+                    DevilRpg.LOGGER.info("[Arnes] MURO: 3er asaltante (asedio INICIAL) DENTRO del recinto, en {}, con"
+                            + " el cerco de la plaza delante: con la regla del jugador tiene que picar CERO",
+                            asaltanteTres.blockPosition());
+                }
+                DevilRpg.LOGGER.info("[Arnes] MURO: asaltante (asedio inicial) puesto en {} (cota {}, rumbo {} con {}"
+                                + " bloque(s)), CON objetivo (el jugador de pega) desde FUERA del muro",
+                        asaltante.blockPosition(), cota, mejorRumbo, mejorSolidos);
             }
         }
         if (asaltante == null) {
             return;
+        }
+        // SUELO DE VERDAD, SIN LA NIEVE DEL BIOMA (fallo del instrumento en la 1ª corrida de este modo): el asaltante
+        // se pasó un minuto y medio picando `snow_block` del propio terreno antes de poder ANDAR. Se le despeja al
+        // suelo blando (nieve, hielo, plantas) una calle de 3 de ancho a su rumbo, de la cota a la cota+5; el terreno
+        // duro NO se toca: el muro del pueblo tiene que seguir siendo el obstáculo que se mide.
+        if (asaltante != null && ticks == 320) {
+            int quitados = 0;
+            // Las DOS calles por las que van a llegar los de fuera (los rumbos del 1º y del 2º asaltante).
+            for (double ang : new double[] { rumboDelAsalto, ANGULO_DEL_SEGUNDO }) {
+                for (int r = 24; r <= 70; r++) {
+                    for (int t = -1; t <= 1; t++) {
+                        int cx = CENTRO.getX() + (int) Math.round(Math.cos(ang) * r - Math.sin(ang) * t);
+                        int cz = CENTRO.getZ() + (int) Math.round(Math.sin(ang) * r + Math.cos(ang) * t);
+                        for (int dy = 0; dy <= 5; dy++) {
+                            BlockPos p = new BlockPos(cx, cota + 1 + dy, cz);
+                            var bs = level.getBlockState(p);
+                            var b = bs.getBlock();
+                            if (b == net.minecraft.world.level.block.Blocks.SNOW
+                                    || b == net.minecraft.world.level.block.Blocks.SNOW_BLOCK
+                                    || b == net.minecraft.world.level.block.Blocks.POWDER_SNOW
+                                    || b == net.minecraft.world.level.block.Blocks.ICE
+                                    || b == net.minecraft.world.level.block.Blocks.PACKED_ICE
+                                    || b == net.minecraft.world.level.block.Blocks.BLUE_ICE
+                                    || b instanceof net.minecraft.world.level.block.BushBlock
+                                    || b instanceof net.minecraft.world.level.block.GrowingPlantBlock
+                                    || b == net.minecraft.world.level.block.Blocks.LILY_PAD) {
+                                level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                                quitados++;
+                            }
+                        }
+                    }
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] MURO: calles de 3 de ancho despejadas en los rumbos {} y {} ({} bloque(s) de"
+                            + " nieve/hielo/planta fuera, de la cota a la cota+5)", (int) Math.toDegrees(rumboDelAsalto),
+                    (int) Math.toDegrees(ANGULO_DEL_SEGUNDO), quitados);
+            // CENSO: los asaltantes que ya venian EN EL GUARDADO (este modo NO barre bichos, a proposito). Sus lineas
+            // `[Siege] ... aldea -1 ...` son indistinguibles de las del asaltante del asedio inicial, asi que hay que
+            // contarlos para no atribuirles lo que pica el anillo de prueba (por eso la medida buena es el anillo).
+            int censo = 0;
+            for (com.chipoodle.devilrpg.entity.AggressiveZombieEntity z : level.getEntitiesOfClass(
+                    com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class, new AABB(CENTRO).inflate(160))) {
+                if (z != asaltante && z != asaltanteDos && z != asaltanteTres) {
+                    censo++;
+                    DevilRpg.LOGGER.info("[Arnes] MURO: ASALTANTE QUE YA VENIA EN EL GUARDADO en {} (aldea {}) — no es"
+                            + " de esta medida", z.blockPosition(), z.getWorldSiegeIndex());
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] MURO: censo a los {} ticks: {} asaltante(s) que ya venian + los 3 de la"
+                    + " medida (2 fuera del muro y 1 dentro)", ticks, censo);
+            // SONDA DEL RECINTO (5-oct-2026): la regla del asaltante se apoya en
+            // `VillageManager.dentroDelRecinto`, y si esa cuenta no dice lo que uno cree, el fallo se lee como "el
+            // arreglo no funciona" cuando el que no sabe dónde está es el instrumento. Aqui se pregunta por el SUELO
+            // DE LA PLAZA y por el anillo de prueba, con la cota ya medida y con la Y de los dos asaltantes.
+            int cotaSonda = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+            // OJO CON ESTA LINEA (5-oct-2026): `cotaDeLaPlaza` es un CACHE y el arnes lo pregunta ANTES que nadie
+            // (el modo corre desde el primer tick), asi que si sale un numero que no es el del pueblo, aqui se ve.
+            DevilRpg.LOGGER.info("[Arnes] MURO SONDA cotaDeLaPlaza(470,646)={} | Y de la base del terreno=83 |"
+                    + " centro guardado del asaltante 1={} | centro del 3={}",
+                    cotaSonda, asaltante.getVillageCenter(), asaltanteTres == null ? null : asaltanteTres.getVillageCenter());
+            for (int[] c : new int[][] { { 470, 83, 646 }, { 495, 84, 646 }, { 470, 84, 646 }, { 532, 83, 646 },
+                    { 532, 84, 646 }, { 426, 84, 646 }, { 450, 84, 646 }, { 495, 84, 646 } }) {
+                BlockPos p = new BlockPos(c[0], c[1], c[2]);
+                double dc = Math.sqrt(Math.pow(c[0] - 470.5D, 2) + Math.pow(c[2] - 646.5D, 2));
+                DevilRpg.LOGGER.info("[Arnes] MURO SONDA {} (r={}): dentroDelRecinto(centro 470,63,646)={} |"
+                                + " (centro 470,84,646)={} | cota medida={} | altura sobre la cota={}",
+                        p.toShortString(), Math.round(dc),
+                        com.chipoodle.devilrpg.world.VillageManager.dentroDelRecinto(level, p, CENTRO, 62.0D),
+                        com.chipoodle.devilrpg.world.VillageManager.dentroDelRecinto(level, p,
+                                new BlockPos(CENTRO.getX(), 84, CENTRO.getZ()), 62.0D),
+                        cotaSonda, c[1] - cotaSonda);
+            }
         }
         // El asaltante va a por el jugador de pega (que está en la plaza, dentro): lo que se mide es si ABRE BRECHA.
         asaltante.setTarget(pega);
@@ -2269,6 +2373,29 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             ultimaLineaDelMuro = linea;
             DevilRpg.LOGGER.info("[Arnes] MURO t={} banda r=57..67 por capas: {}", ticks, linea);
         }
+        // OJO, Y ESTO SE APRENDIO MIDIENDO (5-oct-2026): NO se cuenta "aire dentro del recinto" como medida de lo
+        // picado. Se probo y la primera corrida dio 7570 celdas de aire en la banda r=55..62 — porque esa banda es
+        // casi toda AIRE de verdad (la calle del pueblo), no herida. Se retiro el contador en vez de dejarlo ahi
+        // dando un numero que no significa nada: lo picado se cuenta con las lineas `[Siege] un asaltante ... pica
+        // <bloque> en <celda>`, que dicen exactamente quien, que y donde.
+        // LA MEDIDA DE ESTA CORRIDA: el anillo de prueba, bloque a bloque. Solo lo pueden tocar los asaltantes.
+        int enPie = piedraDelCerco(level);
+        if (enPie != cercoEnPie) {
+            DevilRpg.LOGGER.info("[Arnes] MURO t={} CERCO DE LA PLAZA (r={}): {} bloque(s) de piedra EN PIE{}", ticks,
+                    RADIO_DEL_CERCO, enPie, cercoEnPie < 0 ? "" : " (antes " + cercoEnPie + ")");
+            cercoEnPie = enPie;
+        }
+        if (ticks % 120 == 0) {
+            // El 3er asaltante (el de FUERA): su posicion y su radio, para verlo llegar al muro y abrir la brecha.
+            if (asaltanteTres != null) {
+                int r3 = (int) Math.sqrt(asaltanteTres.distanceToSqr(CENTRO.getX(), asaltanteTres.getY(),
+                        CENTRO.getZ()));
+                DevilRpg.LOGGER.info("[Arnes] MURO t={} 3er asaltante (SIN objetivo, de FUERA) pos={} r={} nav={}"
+                                + " navHecha={} (su presupuesto de tunel se lee en las lineas [Siege])", ticks,
+                        asaltanteTres.blockPosition(), r3, asaltanteTres.getNavigation().getTargetPos(),
+                        asaltanteTres.getNavigation().isDone());
+            }
+        }
     }
 
     /** Bloques (no aire) en la banda de la muralla (r = 57..67) a esa altura. */
@@ -2289,8 +2416,18 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
 
     /** El 2º asaltante de la medida: el de la aldea YA GANADA (con campo de fuerza). */
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity asaltanteDos = null;
+    /** El 3er asaltante: el del asedio INICIAL que llega de FUERA y tiene que abrir la brecha en el muro. */
+    private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity asaltanteTres = null;
+    /** Radio del anillo de prueba que rodea la plaza (ver {@link #cercoDeLaPlaza}). */
+    private static final int RADIO_DEL_CERCO = 25;
+    /** Las celdas EXACTAS del anillo de prueba: lo único que cuenta {@link #piedraDelCerco}. */
+    private static final java.util.List<BlockPos> anilloDePrueba = new java.util.ArrayList<>();
+    /** Los bloques de piedra del anillo de prueba que siguen EN PIE (para saber si el asaltante lo ha picado). */
+    private static int cercoEnPie = -1;
     /** Rumbo del 2º asaltante (25°), para que no se pise con el primero (0° = este). */
     private static final double ANGULO_DEL_SEGUNDO = Math.toRadians(25.0D);
+    /** Rumbo del 3er asaltante (el de DENTRO, 200°): lejos de los dos de fuera. */
+    private static final double ANGULO_DEL_TERCERO = Math.toRadians(200.0D);
 
     /**
      * Levanta un <b>muro interior de prueba</b> (piedra, 12 de ancho y 3 de alto) a 30 bloques del centro, en el rumbo
@@ -2314,26 +2451,68 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     }
 
     /**
-     * Cierra un ANILLO de piedra (radio 7, 3 de alto) alrededor de la plaza, con el jugador de pega DENTRO: así el
-     * asaltante TIENE que picar para llegar a él. Un muro corto no mide nada —se rodea andando—, que es lo que pasó en
-     * la corrida anterior: con 12 bloques de ancho, el asaltante entró por el lado sin picar.
+     * Cierra un ANILLO de piedra (3 de alto) ALREDEDOR de la plaza, con el jugador de pega DENTRO: así el asaltante
+     * TIENE que picar para llegar a él. Un muro corto no mide nada —se rodea andando—, que es lo que pasó en la
+     * corrida anterior: con 12 bloques de ancho, el asaltante entró por el lado sin picar.
+     * <p>
+     * <b>SE APOYA EN EL SUELO DE VERDAD</b> (fallo del instrumento, medido el 5-oct-2026): la primera version lo
+     * levantaba a {@code cota + 1} y el suelo del pueblo está en {@code cota - 1} (la cota es el nivel A LOS PIES), así
+     * que el anillo quedaba <b>flotando en el aire con una capa de terreno por debajo</b> y lo que se midió fue la
+     * nieve y el hielo del subsuelo, no el cerco. Ahora se busca la primera celda sólida desde {@code cota + 1} hacia
+     * abajo y el anillo arranca ahí.
      */
-    private static void cercoDeLaPlaza(ServerLevel level, int cota) {
+    private static void cercoDeLaPlaza(ServerLevel level, int cota, int radio) {
         int puestos = 0;
+        int flotando = 0;
         for (int ang = 0; ang < 360; ang += 3) {
             double a = Math.toRadians(ang);
+            int mx = CENTRO.getX() + (int) Math.round(Math.cos(a) * (double) radio);
+            int mz = CENTRO.getZ() + (int) Math.round(Math.sin(a) * (double) radio);
+            int suelo = sueloDeLaColumna(level, mx, mz, cota + 1);
+            if (suelo < 0) {
+                continue; // columna sin suelo: no se levanta nada
+            }
             for (int dy = 0; dy <= 2; dy++) {
-                int mx = CENTRO.getX() + (int) Math.round(Math.cos(a) * 7.0D);
-                int mz = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 7.0D);
-                BlockPos p = new BlockPos(mx, cota + dy, mz);
+                BlockPos p = new BlockPos(mx, suelo + dy, mz);
                 if (level.getBlockState(p).isAir()) {
                     level.setBlock(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
                     puestos++;
+                    anilloDePrueba.add(p.immutable());
                 }
             }
+            if (level.getBlockState(new BlockPos(mx, suelo - 1, mz)).isAir()) {
+                flotando++; // el anillo no se apoya en nada: se canta para no medir un cerco en el aire
+            }
         }
-        DevilRpg.LOGGER.info("[Arnes] MURO: cerco de la PLAZA cerrado (r=7, 3 de alto, {} bloque(s) nuevos) con el"
-                + " jugador de pega dentro: hay que picarlo para llegar a el", puestos);
+        DevilRpg.LOGGER.info("[Arnes] MURO: cerco de la PLAZA cerrado (r={}, 3 de alto, {} bloque(s) nuevos, cota {})"
+                + " con el jugador de pega dentro: hay que picarlo para llegar a el (columnas sin suelo por debajo: {})",
+                radio, puestos, cota, flotando);
+    }
+
+    /**
+     * <b>LOS BLOQUES DEL ANILLO DE PRUEBA QUE SIGUEN EN PIE.</b> Es LA medida de esta corrida: se guarda la lista EXACTA
+     * de las celdas que se acaban de poner ({@link #anilloDePrueba}) y se pregunta por cada una. No vale contar "piedra
+     * en la banda del radio" — se probó y dio un número que no significaba nada, porque dentro de ese radio ya hay
+     * piedra del PUEBLO (la plaza y las escaleras del kiosco) y la cuenta bajaba sin que el anillo se tocara.
+     */
+    private static int piedraDelCerco(ServerLevel level) {
+        int enPie = 0;
+        for (BlockPos p : anilloDePrueba) {
+            if (level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.STONE_BRICKS)) {
+                enPie++;
+            }
+        }
+        return enPie;
+    }
+
+    /** La primera celda NO de aire desde {@code desde} hacia abajo (el suelo sobre el que se puede apoyar), o -1. */
+    private static int sueloDeLaColumna(ServerLevel level, int x, int z, int desde) {
+        for (int y = desde; y >= desde - 8; y--) {
+            if (!level.getBlockState(new BlockPos(x, y, z)).isAir()) {
+                return y + 1; // se apoya ENCIMA de esa celda
+            }
+        }
+        return -1;
     }
 
     /**
