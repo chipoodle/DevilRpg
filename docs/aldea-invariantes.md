@@ -6274,7 +6274,40 @@ normal ✓); aldeas siguientes → siguen subiendo ✓.
 
 **PENDIENTE, visto en la misma traza y NO tocado** ✗: **uno de los ocho** asaltantes salió a **`MOVEMENT_SPEED: 0.552`**
 (= 0.23 × 2.4 ✗) con el mismo `scaleFactor` (1.73) que los demás — o sea que ese no pasó por el tope, y hay que mirar
-por qué (¿otro perfil? ¿otro camino de creación?) antes de dar la velocidad por cerrada ✓.
+por qué (¿otro perfil? ¿otro camino de creación?) antes de dar la velocidad por cerrada ✓. → **RESUELTO en I216** ✓.
+
+### I216 · EL ASALTANTE DE 0.552 ERA UN CRÍO (el tope se aplicaba a la base, no al valor final)
+
+**El pendiente 4**: *«uno de los ocho asaltantes salió a `MOVEMENT_SPEED: 0.552` con el mismo `scaleFactor` que los
+demás: ese no pasó por el tope del 1.6»*. Y el tope es real: `0,23 × 1,6 = 0,368`, así que **0,552 era imposible por esa
+vía** ✗ — tenía que haber una **segunda** vía.
+
+**MEDIDO con el arnés** (`MEDIR_VELOCIDAD`, un asaltante de verdad y su atributo leído del juego) ✓:
+
+| caso | base | valor |
+|---|---|---|
+| **adulto** | 0,23 | **0,23** |
+| **crío** (`setBaby(true)`) | 0,23 | **0,345** (`×1,5`) |
+
+O sea: **el juego le pone al crío un modificador de velocidad de ×1,5**, y ese multiplicador se aplica **después** de la
+base. Y la cuenta cierra **exacta** con el número del jugador: **`0,368 × 1,5 = 0,552`** ✓ — un asaltante **crío** de la
+primera aldea. *(La otra cuenta que parecía posible, `0,23 × 2,4`, da el mismo número por casualidad, pero el factor 2,4
+no existe en el código: el `scaleFactor` estaba topado.)*
+
+**ARREGLO** (`AggressiveZombieEntity.adjustAttributesBasedOnSpawnDistance`, **L1125-1140**): el tope se aplica ahora al
+**VALOR FINAL**, no a la base. La base se **deriva** dividiendo por los modificadores que ya tenga el bicho:
+`base = objetivo × (objetivo / valorConModificadores)`. Así el tope vale para el crío, para el adulto y para cualquier
+modificador que ponga el juego ✓ — y **la progresión no se toca**: la curva sigue siendo la misma ✓.
+
+**MEDIDO con el arnés, la prueba del arreglo** ✓ (`rapida-52.log`): crío de la aldea 0 con la base de siempre —
+
+| | base | valor final |
+|---|---|---|
+| **SIN arreglo** | 0,368 | **0,552** ✗ |
+| **CON arreglo** | **0,1533** | **0,230** ✓ (el factor del crío medido: **1,50**) |
+
+O sea: el crío de la aldea 0 vuelve a andar **como un zombi normal** ✓ y las aldeas siguientes siguen subiendo ✓.
+
 
 **MEDIDA para la próxima partida**: la traza debe decir **`MOVEMENT_SPEED: 0.23`** en la aldea 0 ✓ y seguir subiendo en
 las siguientes ✓.

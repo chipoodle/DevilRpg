@@ -362,8 +362,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
         // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
         // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_HORDAS
-                && !MEDIR_PEPITAS) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -414,6 +413,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirLaOlaReal(level, pega);
         } else if (MEDIR_AGUA) {
             medirElNado(level, pega);
+        } else if (MEDIR_VELOCIDAD) {
+            medirLaVelocidadRara(level, pega);
         } else if (MEDIR_ATRAVESADORES) {
             medirLosAtravesadores(level, pega);
         } else if (MEDIR_AGUJERO) {
@@ -2176,6 +2177,56 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * `AGUA: SALE DEL AGUA a los N ticks` (o `NO SALE` si se queda).
      */
     private static final boolean MEDIR_AGUA = false;
+
+    /**
+     * <b>¿DE DÓNDE SALE EL ASALTANTE DE 0.552?</b> (pendiente 4). El tope del mod hace imposible ese número por la vía
+     * del escalado ({@code 0,23 × 1,6 = 0,368}), así que tiene que haber una SEGUNDA vía. Aquí se prueban las
+     * sospechosas sobre un asaltante de verdad y se canta el atributo resultante: el <b>crío</b> (en el juego un zombi
+     * crío lleva un modificador de velocidad) y las dos cuentas de la sospecha ({@code 0,23 × 2,4} y
+     * {@code 0,368 × 1,5} = 0,552).
+     */
+    private static final boolean MEDIR_VELOCIDAD = false;
+
+    private static void medirLaVelocidadRara(ServerLevel level, FakePlayer pega) {
+        if (ticks != 300) {
+            return;
+        }
+        var z = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+        if (z == null) {
+            return;
+        }
+        int y = com.chipoodle.devilrpg.world.VillageGenerator.spawnY(level, CENTRO.getX() + 1, CENTRO.getZ() + 1);
+        z.moveTo(CENTRO.getX() + 1.5D, y, CENTRO.getZ() + 1.5D, 0.0F, 0.0F);
+        level.addFreshEntity(z);
+        var att = z.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+        if (att == null) {
+            DevilRpg.LOGGER.info("[Arnes] VELOCIDAD: el asaltante NO tiene el atributo de velocidad");
+            return;
+        }
+        DevilRpg.LOGGER.info("[Arnes] VELOCIDAD del asaltante ADULTO: base={} valor={} (la base del perfil es 0,23)",
+                att.getBaseValue(), att.getValue());
+        z.setBaby(true);
+        DevilRpg.LOGGER.info("[Arnes] VELOCIDAD del asaltante CRÍO: base={} valor={} (si sale 0,345 o 0,552, el culpable"
+                + " es el crío)", att.getBaseValue(), att.getValue());
+        DevilRpg.LOGGER.info("[Arnes] VELOCIDAD las dos cuentas: 0,23 × 2,4 = {} | 0,368 × 1,5 = {} | el tope del mod es"
+                        + " 0,23 × 1,6 = {}", String.format("%.3f", 0.23D * 2.4D),
+                String.format("%.3f", 0.368D * 1.5D), String.format("%.3f", 0.23D * 1.6D));
+        // Y LA PRUEBA DEL ARREGLO: al crío se le da la base de la aldea 0 (0,368) y se comprueba que el VALOR final
+        // (con el ×1,5 del crío) vuelve al objetivo de 0,23 aplicando el tope AL VALOR FINAL (que es lo que ahora hace
+        // `adjustAttributesBasedOnSpawnDistance`). OJO: hay que VOLVER A LEER el valor despues de tocar la base (el
+        // atributo cachea el valor: leer el de antes daba un número falso).
+        att.setBaseValue(0.368D);
+        double sinArreglo = att.getValue();
+        double objetivo = 0.23D;
+        double factorCrío = sinArreglo / 0.368D;
+        att.setBaseValue(objetivo / factorCrío);
+        double conArreglo = att.getValue();
+        DevilRpg.LOGGER.info("[Arnes] VELOCIDAD crío de la aldea 0: SIN arreglo {} (factor del crío {}) | CON arreglo"
+                        + " base={} y valor final {}", String.format("%.3f", sinArreglo),
+                String.format("%.2f", factorCrío), String.format("%.4f", att.getBaseValue()),
+                String.format("%.3f", conArreglo));
+        z.discard();
+    }
 
     private static void medirElNado(ServerLevel level, FakePlayer pega) {
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);

@@ -1125,7 +1125,19 @@ public class AggressiveZombieEntity extends Zombie {
         double velocidad = Math.max(VELOCIDAD_DE_ZOMBI_NORMAL,
                 SPAWN_PROFILE.baseSpeed() * Math.min(scaleFactor, VELOCIDAD_TOPE_DE_ESCALA)
                         - AJUSTE_DE_VELOCIDAD_PRIMERA_ALDEA);
-        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(velocidad);
+        // Y EL TOPE SE APLICA AL VALOR FINAL, NO A LA BASE (5-oct-2026, y esto cierra el pendiente del asaltante de
+        // 0.552). MEDIDO con el arnes (`MEDIR_VELOCIDAD`): el juego le pone al CRÍO un modificador de velocidad de
+        // ×1,5 —adulto `0,23` → crío `0,345`—, y ese multiplicador se aplica DESPUES de la base. O sea que el tope del
+        // mod (base = 0,23 × 1,6 = 0,368) se quedaba corto: un asaltante CRÍO salia a `0,368 × 1,5 = 0,552`, que es
+        // EXACTAMENTE el numero que el jugador vio en su registro con el mismo `scaleFactor` que los demas ✓.
+        // La base se deriva del valor final que se quiere (`velocidad`), dividiendo por los modificadores que ya tenga
+        // el bicho: asi el tope vale para el crío, para el adulto y para cualquier modificador que ponga el juego.
+        var atributoVelocidad = Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED));
+        atributoVelocidad.setBaseValue(velocidad);
+        double conModificadores = atributoVelocidad.getValue();
+        if (conModificadores > velocidad + 1.0E-9D && conModificadores > 0.0D) {
+            atributoVelocidad.setBaseValue(velocidad * (velocidad / conModificadores));
+        }
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(SPAWN_PROFILE.baseDamage() * scaleFactor);
 
         // Subir la vida ACTUAL al nuevo máximo: al escalar solo se cambiaba el máximo, así que un zombie

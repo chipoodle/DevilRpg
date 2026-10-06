@@ -103,8 +103,13 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    (`RECALCULAR_CADA_TICKS`, L1185) y el empujon va cada **6** ticks en vez de 15 (L1298). **ABIERTO**: la escena del
    pozo del arnes (`MEDIR_AGUA`) **no mide** (el asaltante queda flotando en el borde, velocidad 0,012, y no sale ni
    con el arreglo ni sin el): hay que quitarle las paredes al pozo antes de dar el nado por medido.
-4. **Un asaltante salio a `MOVEMENT_SPEED: 0.552`** (= 0.23 x 2.4) con el mismo `scaleFactor` que los demas: ese **no paso
-   por el tope** del 1.6 y hay que averiguar por que (¿otro perfil?, ¿otro camino de creacion?).
+4. **El asaltante de `MOVEMENT_SPEED: 0.552`** — **RESUELTO** (I216). Era un **crio**: el juego le pone al zombi crio un
+   modificador de velocidad de **x1,5** (medido con el arnes: adulto `0,23` -> crio `0,345`) y ese multiplicador se
+   aplica **despues** de la base, asi que el tope del mod (base `0,23 x 1,6 = 0,368`) se quedaba corto:
+   **`0,368 x 1,5 = 0,552`**, exactamente el numero del registro. Arreglado en
+   `AggressiveZombieEntity.adjustAttributesBasedOnSpawnDistance` (**L1125-1140**): el tope se aplica al **VALOR FINAL**
+   (la base se deriva dividiendo por los modificadores que ya tenga el bicho). Medido: el crio de la aldea 0 sale a
+   **0,552 SIN el arreglo y a 0,230 CON el** (base 0,1533 x 1,5), y la progresion no se toca.
 5. **Traza de la milicia** (pequeno): que el reparto escriba `[Milicia] aldea N: X espadachines y Y arqueros equipados`,
    para poder **contarlos** en el registro en vez de deducirlo. El reparto vive en `VillageManager.repartirGuardia`
    (**L3182**, llamado desde **L3079**) y **ya alterna** los tipos (`i % 2 == 0 ? ESPADACHIN : ARQUERO`, L3222-3227), asi
