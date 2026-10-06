@@ -6338,3 +6338,30 @@ Buscado en todo `src`: **no hay** ningún goal de **escalera de bloques**, **tú
 `EscapeWaterGoal` (L851 ✓) y `BreakBlockGoal` (L1021 ✓). O sea que «que no duden en usar escalera, túnel o puente» ✗ es
 **trabajo nuevo** ✓: tres atravesadores con la forma de los que ya hay ✓ (goal interno, decide en el mismo tick, sin
 tanteos ✓) y a velocidad normal ✓.
+
+### ASALTANTE Y EL MURO · **LA DUDA DE 3 SEGUNDOS, CORREGIDA** (5-oct-2026)
+
+**El jugador**: *«no tarde tanto en romper el muro, o para hacer una escalera o para cavar un túnel o para hacer un
+puente… no deben dudar tanto para ocupar estas herramientas»* ✓.
+
+**La causa, en el mismo sitio** ✓: `AggressiveZombieEntity.BreakBlockGoal` (**L1021** ✓), en su primera constante:
+
+```java
+private static final int BREAK_EVERY_TICKS = 60;   // "evaluar romper cada 3 s" ✗ ← TRES SEGUNDOS dudando
+```
+
+Y en ese mismo bloque el proyecto ya tenía **medido con el arnés** (L1067-1069 ✓) que, con un muro de 15 bloques delante y
+el objetivo al otro lado, el asaltante **lo RODEA** y **no rompe ni un bloque en 3 minutos** ✗ — o sea: la duda no era
+una impresión del jugador, estaba medida ✓.
+
+**ARREGLO**: la evaluación baja de **60 a 10 ticks** ✓ (de 3 s a **medio segundo** ✓) → **no duda**: decide en el acto,
+rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la misma familia de los dos arreglos anteriores
+(el empujón del latido de los aldeanos ✓ y la espera del agua ✓): **quitar la espera**, no tocar la velocidad ✓.
+
+**QUEDA ABIERTO, en el mismo bloque** ✗:
+1. **La regla del muro perimetral** ✓ (el jugador: *«solo el muro perimetral es rompible; una vez dentro ya no puede
+   romper nada»* ✓): el predicado **ya existe** ✓ (`VillageManager.dentroDelRecinto`, el que usa `hayEnemigosDentro` ✓)
+   → falta ponerlo en la decisión de romper de L1072-1090 ✓.
+2. **Escalera de bloques, túnel y puente**: **no existen** ✗ (buscado en todo `src` ✓, solo hay `EscapeWaterGoal` L851 y
+   `BreakBlockGoal` L1021 ✓) → **tres atravesadores nuevos** ✓ con la forma de éstos ✓ y a velocidad normal ✓.
+3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗).

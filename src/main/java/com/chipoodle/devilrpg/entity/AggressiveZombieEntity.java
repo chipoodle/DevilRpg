@@ -1025,7 +1025,14 @@ public class AggressiveZombieEntity extends Zombie {
      * Rompe bloques "débiles" por defecto y obsidiana si su nivel lo permite ({@link #canBreakObsidian()}).
      */
     static class BreakBlockGoal extends Goal {
-        private static final int BREAK_EVERY_TICKS = 60;      // evaluar romper cada 3 s
+        /**
+     * Cada cuántos ticks se evalúa romper. <b>MEDIDO Y BAJADO (5-oct-2026)</b>: eran <b>60</b> — <b>TRES SEGUNDOS</b>
+     * pensando si romper ✗, que es lo que el jugador describió (*«no tarde tanto en romper el muro»*, *«no deben dudar
+     * tanto»* ✓). Y en este mismo sitio ya estaba medido con el arnés que, con un muro por delante, el asaltante
+     * <b>lo rodea</b> y <b>no rompe ni un bloque en 3 minutos</b> ✗. Con <b>10</b> ticks decide en medio segundo ✓: no
+     * duda, rompe lo que le estorba y sigue hacia el centro ✓ (que es su prioridad ✓).
+     */
+    private static final int BREAK_EVERY_TICKS = 10;
         /** Cuánto tiene que moverse (en bloques, al cuadrado) para contar como que AVANZA: 0,5 bloques. */
         private static final double MOVIMIENTO_QUE_CUENTA = 0.25D;
         private final AggressiveZombieEntity zombie;
