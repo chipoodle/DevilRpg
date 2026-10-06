@@ -389,7 +389,12 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // de pega en la plaza cada tick (`pega.moveTo(CENTRO…)`), asi que las tres escenas —que necesitan al objetivo
         // DONDE la escena lo pone— apuntaban al centro de la aldea y lo que se midio fue el tunel del PUENTE hacia el
         // centro. Es una medida de mecanica pura (los atravesadores), no del latido, asi que no se pierde nada.
-        if (pega != null && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL) {
+        // Y EN LA MEDIDA DE LA OLA REAL SÍ SE LLAMA, PERO SOLO AL PRINCIPIO (6-oct-2026). Antes no se llamaba NUNCA en
+        // este modo (para no recolocar al jugador de pega durante la medida de los atravesadores), y eso hacía que el
+        // latido de la aldea —y con él la comprobación del MURO— no corriera en toda la corrida: medía una aldea sin
+        // latido y el muro no se levantaba. Ahora corre hasta el tick 300 (hasta que se colocan los asaltantes) y
+        // después se deja quieto, que es lo que la medida de la ola necesita.
+        if (pega != null && (!MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL || ticks < 300)) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
@@ -411,6 +416,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElAsaltoAlMuro(level, pega);
         } else if (MEDIR_OLA_REAL) {
             medirLaOlaReal(level, pega);
+        } else if (MEDIR_ANILLO) {
+            medirElAnilloDelMuro(level);
         } else if (MEDIR_AGUA) {
             medirElNado(level, pega);
         } else if (MEDIR_VELOCIDAD) {
@@ -2177,6 +2184,251 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * `AGUA: SALE DEL AGUA a los N ticks` (o `NO SALE` si se queda).
      */
     private static final boolean MEDIR_AGUA = false;
+
+    /**
+     * <b>EL ANILLO DEL MURO, MEDIDO DESDE DENTRO DEL JUEGO</b> (6-oct-2026). El jugador decidió <b>cerrar el anillo</b>
+     * para que el asedio tenga que abrir brecha, y antes hay que saber dónde hay muro y dónde agujero.
+     * <p>
+     * Se mide <b>aquí dentro</b> y no leyendo el guardado a propósito: el lector de chunks falló tres veces en esta
+     * ronda (el guardado de `run/saves` es el mundo en CRUDO, a la cota 63, sin aldea; y el migrado tampoco dio la firma
+     * con mi lector). Aquí se recorre el MISMO anillo que construye el mod, con el bloque ya resuelto por el juego, así
+     * que no hay interpretación que valga.
+     * <p>
+     * Lo que se busca en el log: `[Arnes] ANILLO: … con muro M | AGUJEROS A` y el reparto por rumbo, para saber qué
+     * cerrar (los cuatro portones cardinales son a propósito y se quedan).
+     */
+    private static final boolean MEDIR_ANILLO = false;
+
+    private static void medirElAnilloDelMuro(ServerLevel level) {
+        if (ticks != 300) {
+            return;
+        }
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        // El MISMO anillo que el mod (muestreo angular + relleno cardinal), como en VillageGenerator.anilloDelMuro.
+        java.util.List<BlockPos> anillo = new java.util.ArrayList<>();
+        java.util.List<int[]> pts = new java.util.ArrayList<>();
+        int samples = 720;
+        for (int a = 0; a <= samples; a++) {
+            double ang = (a / (double) samples) * Math.PI * 2.0;
+            int x = (int) Math.round(CENTRO.getX() + Math.cos(ang) * 62.0D);
+            int z = (int) Math.round(CENTRO.getZ() + Math.sin(ang) * 62.0D);
+            if (pts.isEmpty() || pts.get(pts.size() - 1)[0] != x || pts.get(pts.size() - 1)[1] != z) {
+                pts.add(new int[] { x, z });
+            }
+        }
+        for (int i = 0; i < pts.size(); i++) {
+            int x = pts.get(i)[0];
+            int z = pts.get(i)[1];
+            int nx = pts.get((i + 1) % pts.size())[0];
+            int nz = pts.get((i + 1) % pts.size())[1];
+            anillo.add(new BlockPos(x, 0, z));
+            while (x != nx || z != nz) {
+                if (x != nx) {
+                    x += Integer.signum(nx - x);
+                } else if (z != nz) {
+                    z += Integer.signum(nz - z);
+                }
+                anillo.add(new BlockPos(x, 0, z));
+            }
+        }
+        // ¿DÓNDE ESTÁ EL MURO? Se busca su firma (troncos o adoquín) en una banda ANCHA de alturas: la cota de la
+        // aldea y la altura del terreno de hoy pueden diferir mucho (la cota del centro es 63 y el suelo de la plaza,
+        // de hoy, 83: medido con el juego, "a la cota" el anillo es stone/air, o sea TERRENO, no muro).
+        java.util.Map<Integer, Integer> firma = new java.util.TreeMap<>();
+        for (BlockPos p : anillo) {
+            for (int dy = -30; dy <= 30; dy++) {
+                var b = level.getBlockState(new BlockPos(p.getX(), cota + dy, p.getZ())).getBlock();
+                if (b == net.minecraft.world.level.block.Blocks.OAK_LOG
+                        || b == net.minecraft.world.level.block.Blocks.COBBLESTONE
+                        || b == net.minecraft.world.level.block.Blocks.MOSSY_COBBLESTONE) {
+                    firma.merge(cota + dy, 1, Integer::sum);
+                }
+            }
+        }
+        if (firma.isEmpty()) {
+            // ¿Y EN OTROS RADIOS? Si el muro no está en r=62, que diga DÓNDE está: se busca la firma en cada radio de
+            // 20 a 90, en una banda ancha de alturas.
+            StringBuilder radios = new StringBuilder();
+            for (int r = 20; r <= 90; r += 5) {
+                int troncos = 0;
+                for (int a = 0; a < 360; a += 3) {
+                    double ang = Math.toRadians(a);
+                    int x = CENTRO.getX() + (int) Math.round(Math.cos(ang) * r);
+                    int z = CENTRO.getZ() + (int) Math.round(Math.sin(ang) * r);
+                    for (int y = cota - 30; y <= cota + 30; y++) {
+                        var b = level.getBlockState(new BlockPos(x, y, z)).getBlock();
+                        if (b == net.minecraft.world.level.block.Blocks.OAK_LOG) {
+                            troncos++;
+                        }
+                    }
+                }
+                if (troncos > 0) {
+                    radios.append("r=").append(r).append(':').append(troncos).append(' ');
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] ANILLO: NO hay firma de muro (troncos/adoquín) en r=62 de la cota-30 a la"
+                    + " cota+30. Lo que hay a la cota: {} | TRONCOS POR RADIO: {}",
+                    bloqueEnLaCota(level, anillo, cota),
+                    radios.length() == 0 ? "(ninguno de r=20 a r=90)" : radios.toString().trim());
+            // Y UNA COLUMNA ENTERA de una celda del anillo, de y=60 a y=95, bloque a bloque: es lo que dice sin
+            // interpretacion si ahi hay muro, terreno, o nada.
+            for (int i : new int[] { 0, 100, 300, 700 }) {
+                if (i >= anillo.size()) {
+                    continue;
+                }
+                BlockPos p = anillo.get(i);
+                StringBuilder col = new StringBuilder();
+                for (int y = 60; y <= 95; y++) {
+                    String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                            .getKey(level.getBlockState(new BlockPos(p.getX(), y, p.getZ())).getBlock()).getPath();
+                    if (!"air".equals(n)) {
+                        col.append(y).append('=').append(n.replace("minecraft:", "")).append(' ');
+                    }
+                }
+                DevilRpg.LOGGER.info("[Arnes] ANILLO columna ({},{}): {}", p.getX(), p.getZ(),
+                        col.length() == 0 ? "(todo aire de 60 a 95)" : col.toString().trim());
+            }
+            // LA COLUMNA DEL CENTRO y un censo de lo CONSTRUIDO: si en 100 de radio no hay ni un adoquin ni una piedra
+            // labrada, es que la aldea no esta construida en este mundo (y entonces el muro no falta: no hay nada).
+            StringBuilder centro = new StringBuilder();
+            for (int y = 55; y <= 100; y++) {
+                String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .getKey(level.getBlockState(new BlockPos(CENTRO.getX(), y, CENTRO.getZ())).getBlock()).getPath();
+                if (!"air".equals(n)) {
+                    centro.append(y).append('=').append(n.replace("minecraft:", "")).append(' ');
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] ANILLO columna del CENTRO ({},{}): {}", CENTRO.getX(), CENTRO.getZ(),
+                    centro.toString().trim());
+            java.util.Map<String, Integer> construido = new java.util.TreeMap<>();
+            for (int dx = -100; dx <= 100; dx += 2) {
+                for (int dz = -100; dz <= 100; dz += 2) {
+                    for (int y = 60; y <= 95; y++) {
+                        String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                                .getKey(level.getBlockState(new BlockPos(CENTRO.getX() + dx, y, CENTRO.getZ() + dz))
+                                        .getBlock()).getPath().replace("minecraft:", "");
+                        if (n.contains("cobblestone") || n.contains("stone_brick") || n.contains("planks")
+                                || n.contains("oak_log") || n.contains("glass") || n.contains("door")
+                                || n.contains("stairs") || n.contains("fence")) {
+                            construido.merge(n, 1, Integer::sum);
+                        }
+                    }
+                }
+            }
+            DevilRpg.LOGGER.info("[Arnes] ANILLO: lo CONSTRUIDO en 200x200 (los 10 mas comunes): {}",
+                    construido.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue()).limit(10)
+                            .map(e -> e.getKey() + "=" + e.getValue()).reduce((a, b) -> a + " " + b).orElse("(NADA)"));
+            // LO QUE HAY ALREDEDOR de una celda del anillo, EN UNA SOLA LINEA (el log no se lleva bien con saltos):
+            // se canta, por cada altura, el bloque del CENTRO y cuantos de los 25 NO son aire.
+            for (int[] c : new int[][] { { 532, 646 }, { 470, 708 }, { 408, 646 }, { 470, 584 },
+                    { CENTRO.getX(), CENTRO.getZ() }, { CENTRO.getX() + 20, CENTRO.getZ() } }) {
+                StringBuilder rej = new StringBuilder();
+                for (int y = 92; y >= 76; y--) {
+                    java.util.Map<String, Integer> cuenta = new java.util.TreeMap<>();
+                    for (int dx = -2; dx <= 2; dx++) {
+                        for (int dz = -2; dz <= 2; dz++) {
+                            String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                                    .getKey(level.getBlockState(new BlockPos(c[0] + dx, y, c[1] + dz)).getBlock())
+                                    .getPath().replace("minecraft:", "");
+                            cuenta.merge("air".equals(n) ? "." : n, 1, Integer::sum);
+                        }
+                    }
+                    String bloqueCentro = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                            .getKey(level.getBlockState(new BlockPos(c[0], y, c[1])).getBlock()).getPath()
+                            .replace("minecraft:", "");
+                    rej.append(y).append('=').append("air".equals(bloqueCentro) ? "." : bloqueCentro).append('(');
+                    cuenta.entrySet().stream().filter(e -> !".".equals(e.getKey()))
+                            .forEach(e -> rej.append(e.getKey()).append(':').append(e.getValue()).append(','));
+                    rej.append(") ");
+                }
+                DevilRpg.LOGGER.info("[Arnes] ANILLO rejilla ({},{}): {}", c[0], c[1], rej.toString().trim());
+            }
+            DevilRpg.LOGGER.info("[Arnes] ANILLO: la cota que da el mod (cotaDeLaPlaza) es {} y el centro es {}", cota,
+                    CENTRO);
+            // EL SUELO DEL ANILLO: para construir el muro hace falta saber a que altura esta el suelo de verdad en
+            // cada celda (la cota de la plaza puede no ser la del terreno del anillo, y el muro se apoya en el suelo).
+            java.util.Map<Integer, Integer> suelos = new java.util.TreeMap<>();
+            for (BlockPos p : anillo) {
+                int suelo = -1;
+                for (int y = cota + 10; y >= cota - 10; y--) {
+                    if (!level.getBlockState(new BlockPos(p.getX(), y, p.getZ())).isAir()) {
+                        suelo = y;
+                        break;
+                    }
+                }
+                suelos.merge(suelo, 1, Integer::sum);
+            }
+            DevilRpg.LOGGER.info("[Arnes] ANILLO: suelo del anillo (altura = celdas): {}", suelos);
+            return;
+        }
+        int y0 = firma.entrySet().stream().max(java.util.Map.Entry.comparingByValue()).get().getKey();
+        DevilRpg.LOGGER.info("[Arnes] ANILLO: firma del muro en y={} ({} de {} celdas). Capas: {}", y0,
+                firma.get(y0), anillo.size(), firma);
+        // Y LAS COLUMNAS DE UN TRAMO, crudas: qué hay en 8 celdas seguidas del anillo, de y0-6 a y0+4.
+        StringBuilder tramo = new StringBuilder();
+        for (int i = 40; i < 48 && i < anillo.size(); i++) {
+            BlockPos p = anillo.get(i);
+            tramo.append('(').append(p.getX()).append(',').append(p.getZ()).append("):");
+            for (int y = y0 - 6; y <= y0 + 4; y++) {
+                String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .getKey(level.getBlockState(new BlockPos(p.getX(), y, p.getZ())).getBlock()).getPath();
+                tramo.append(' ').append(y).append('=').append(n.replace("minecraft:", ""));
+            }
+            tramo.append(" | ");
+        }
+        DevilRpg.LOGGER.info("[Arnes] ANILLO columnas: {}", tramo.toString().trim());
+        // Y celda a celda: MURO (firma en la base o encima) o AGUJERO.
+        int muro = 0;
+        java.util.Map<Integer, Integer> porRumbo = new java.util.TreeMap<>();
+        int rachaLarga = 0;
+        int rachaActual = 0;
+        for (BlockPos p : anillo) {
+            boolean hay = false;
+            for (int dy = 0; dy <= 2; dy++) {
+                var b = level.getBlockState(new BlockPos(p.getX(), y0 + dy, p.getZ())).getBlock();
+                if (b == net.minecraft.world.level.block.Blocks.OAK_LOG
+                        || b == net.minecraft.world.level.block.Blocks.COBBLESTONE
+                        || b == net.minecraft.world.level.block.Blocks.MOSSY_COBBLESTONE) {
+                    hay = true;
+                    break;
+                }
+            }
+            if (hay) {
+                muro++;
+                rachaActual = 0;
+            } else {
+                rachaActual++;
+                rachaLarga = Math.max(rachaLarga, rachaActual);
+                int rumbo = (int) Math.round(Math.toDegrees(Math.atan2(p.getZ() - CENTRO.getZ(),
+                        p.getX() - CENTRO.getX())) / 45.0) % 8;
+                porRumbo.merge((rumbo + 8) % 8, 1, Integer::sum);
+            }
+        }
+        String[] nombres = {"ESTE", "SURESTE", "SUR", "SUROESTE", "OESTE", "NOROESTE", "NORTE", "NORESTE"};
+        StringBuilder reparto = new StringBuilder();
+        for (var e : porRumbo.entrySet()) {
+            reparto.append(nombres[e.getKey()]).append('=').append(e.getValue()).append(' ');
+        }
+        DevilRpg.LOGGER.info("[Arnes] ANILLO (r=62, base y={}): {} celdas | con muro {} | AGUJEROS {} ({}) | racha mas"
+                        + " larga de agujeros seguidos: {}", y0, anillo.size(), muro, anillo.size() - muro,
+                reparto.toString().trim(), rachaLarga);
+        DevilRpg.LOGGER.info("[Arnes] ANILLO: lo que hay a la cota {} en el anillo: {}", cota,
+                bloqueEnLaCota(level, anillo, cota));
+    }
+
+    /** Censo de bloques a esa altura en las celdas del anillo (los 6 más comunes). */
+    private static String bloqueEnLaCota(ServerLevel level, java.util.List<BlockPos> anillo, int y) {
+        java.util.Map<String, Integer> cuenta = new java.util.TreeMap<>();
+        for (BlockPos p : anillo) {
+            String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                    .getKey(level.getBlockState(new BlockPos(p.getX(), y, p.getZ())).getBlock()).getPath();
+            cuenta.merge(n, 1, Integer::sum);
+        }
+        StringBuilder sb = new StringBuilder();
+        cuenta.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue()).limit(6)
+                .forEach(e -> sb.append(e.getKey()).append('=').append(e.getValue()).append(' '));
+        return sb.toString().trim();
+    }
 
     /**
      * <b>¿DE DÓNDE SALE EL ASALTANTE DE 0.552?</b> (pendiente 4). El tope del mod hace imposible ese número por la vía

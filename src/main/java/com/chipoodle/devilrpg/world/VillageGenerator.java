@@ -6869,6 +6869,50 @@ public final class VillageGenerator {
     }
 
     /**
+     * <b>ASEGURA EL MURO PERIMETRAL A LA COTA DE VERDAD</b> (6-oct-2026, lo pidió el jugador: *cerrar el anillo para
+     * que el asedio tenga que abrir brecha*).
+     * <p>
+     * <b>EL FALLO QUE ARREGLA, medido</b> ✓: el muro se levanta en {@code fence} con {@code baseY = cotaDeLaPlaza(...)},
+     * y en una aldea construida hace tiempo esa cota era la del <b>centro</b> (63) mientras el suelo del pueblo subió
+     * después a <b>83</b> — o sea que el muro quedó <b>ENTERRADO veinte bloques</b> ✓. La ruta que lo reconstruye a la
+     * cota buena ({@link #rehacerMuro}) <b>solo se llama desde la migración</b>, y la migración corre <b>una vez por
+     * aldea</b>: pasada ya, nadie volvía a levantar el muro ✓. Medido con el arnés: <b>ni un tronco ni un adoquín en
+     * r=62, en ±30 bloques de altura</b>, con la aldea construida y los ocho asaltantes <b>entrando andando</b> ✓.
+     * <p>
+     * Es <b>idempotente</b> como las demás: primero <b>mira</b> si el muro está a la cota de verdad y solo entonces
+     * reconstruye. Y es <b>aditivo</b>: no mueve el centro ni el pueblo, solo levanta el anillo en su radio (I7).
+     */
+    public static void asegurarMuro(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        List<BlockPos> ring = anilloDelMuro(center);
+        if (ring.isEmpty()) {
+            return;
+        }
+        // ¿ESTÁ EL MURO A LA COTA DE VERDAD? Se cuenta en cuántas celdas del anillo hay firma de muro en la banda
+        // del suelo del pueblo (la cota y los dos bloques de arriba, que es donde vive el muro: troncos a la cota+1
+        // y a la cota+2, columnas de adoquín).
+        int conMuro = 0;
+        for (BlockPos p : ring) {
+            for (int dy = 0; dy <= 2; dy++) {
+                BlockState s = level.getBlockState(new BlockPos(p.getX(), cota + dy, p.getZ()));
+                if (s.is(Blocks.OAK_LOG) || s.is(Blocks.COBBLESTONE) || s.is(Blocks.COBBLESTONE_STAIRS)) {
+                    conMuro++;
+                    break;
+                }
+            }
+        }
+        // Si YA está (la mayoría del anillo tiene muro), no se toca nada. El listón está en el 90 % y no en el 100 %
+        // a propósito: los 9 agujeros que quedan son los CUATRO PORTONES (medido: ESTE=3, SUR=2, OESTE=2, NORTE=2,
+        // 912 de 921 celdas ✓), y esos no se cierran: son la puerta del pueblo.
+        if (conMuro >= ring.size() * 0.9D) {
+            return;
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO esta a la cota {} (solo {} de {} celdas del anillo lo"
+                        + " tienen): se reconstruye a su nivel", center, cota, conMuro, ring.size());
+        rehacerMuro(level, center);
+    }
+
+    /**
      * <b>Rehace el muro</b> de una aldea ya construida (migración): limpia los restos que hayan quedado en la
      * línea del muro (troncos enterrados por un nivelado viejo, columnas sueltas, peldaños) y lo vuelve a levantar
      * entero con {@link #fence}.

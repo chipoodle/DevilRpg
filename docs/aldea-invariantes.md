@@ -6312,6 +6312,77 @@ O sea: el crío de la aldea 0 vuelve a andar **como un zombi normal** ✓ y las 
 **MEDIDA para la próxima partida**: la traza debe decir **`MOVEMENT_SPEED: 0.23`** en la aldea 0 ✓ y seguir subiendo en
 las siguientes ✓.
 
+### I218 · EL ANILLO CERRADO: EL MURO ESTABA ENTERRADO VEINTE BLOQUES (y el asedio ya tiene que abrir brecha)
+
+**Lo decidió el jugador** (6-oct-2026): *«cerrar el anillo y el asedio tenga que abrir brecha»* ✓. Es el pendiente de
+los huecos, y lo primero fue **medir**, como él pidió ✓.
+
+**MEDIDO, y el muro NO estaba** ✓. Recorriendo el MISMO anillo que construye el mod (`VillageGenerator.anilloDelMuro`,
+muestreo angular de 720 muestras + relleno cardinal) y **desde dentro del juego** (no leyendo el guardado, que me falló
+tres veces) ✓:
+
+| dónde se miró | resultado |
+|---|---|
+| firma de muro (troncos/adoquín) en r=62, de cota−30 a cota+30 | **NO HAY** ✗ |
+| troncos por radio (r=20..90, de 5 en 5) | r=30:2, r=35:1, r=40:4, r=45:7, r=50:1, r=55:2, r=90:9 — **bosque suelto, ningún anillo** |
+| columnas enteras de 4 celdas del anillo (y=60..95) | terreno natural: `stone`, `dirt`, `snow` |
+| **censo de lo construido en 200×200** | `dark_oak_planks=370 oak_log=197 cobblestone=181 stone_bricks=152 …` → **la aldea SÍ está** ✓ |
+
+**LA CAUSA, de las que se ven en el código** ✓: el muro se levanta en `fence()` con
+`baseY = cotaDeLaPlaza(level, center)` (**L6928**), y en una aldea construida hace tiempo **esa cota era la del CENTRO
+(63)** mientras el suelo del pueblo subió después a **83** (medido en el registro: *«kiosco de la plaza colocado al nivel
+del pueblo 83»*): el muro se levantó a **63** y **el pueblo creció veinte bloques POR ENCIMA de él** — quedó
+**enterrado** ✓. Y la única ruta que lo reconstruye a la cota buena, `rehacerMuro` (**L6979**), **solo se llama desde la
+migración** (`VillageManager` L2364), que **corre una sola vez por aldea** ✓: pasada ya, **nadie volvía a levantar el
+muro** ✓. Comprobado con trazas temporales en las dos rutas: **ni `fence()` ni `rehacerMuro()` se ejecutaban** en la
+partida de medida ✓.
+
+**ARREGLO** ✓:
+- **`VillageGenerator.asegurarMuro`** (**L6885**, nuevo): recorre el anillo y **cuenta** en cuántas celdas hay firma de
+  muro a la cota de verdad (la cota y los dos bloques de arriba). Si están **≥ 90 %**, no toca nada; si no, llama a
+  `rehacerMuro`, que limpia los restos de la línea del muro y lo levanta entero. El listón del 90 % y no del 100 % es a
+  propósito: **los 9 agujeros que quedan son los cuatro portones** y **no se cierran** ✓ — son la puerta del pueblo.
+- **Y SE LLAMA DESDE `manageNearby`** (**L1034**), **no** desde `tickVillageLife`: el latido del pueblo está detrás de
+  `isUnderAttack`, de `hayEnemigosDentro` y de `vivos > 0`, así que **solo corre con la aldea EN PAZ** ✓. Un arreglo del
+  muro metido ahí **no correría justo cuando hace falta** (con el asedio dentro) y una aldea vacía no lo levantaría
+  **nunca** ✓ — es el mismo fallo de sitio que ya está documentado para las camas y los nombres (I183). Se descubrió
+  midiendo: con el arreglo dentro del latido, **0 de 921** celdas tras ocho corridas ✓.
+
+**MEDIDO, la reparación** ✓ (`rapida-75.log`, con el latido en marcha):
+
+```
+el muro NO esta a la cota 83 (solo 0 de 921 celdas del anillo lo tienen): se reconstruye a su nivel
+muro reconstruido al nivel del pueblo 83 (0 restos quitados)
+```
+
+(el `0 restos quitados` dice que **no había nada que limpiar**: el muro viejo está enterrado fuera de la banda, no
+estorbaba ✓). Y a partir de ahí:
+
+| medida | antes | después |
+|---|---|---|
+| firma del muro en y=83 | **0 de 921** ✗ | **912 de 921** ✓ (capas `83=912, 84=912, 85=446, 86=9`) |
+| agujeros | todo el anillo | **9**, repartidos **ESTE=3 SUR=2 OESTE=2 NORTE=2** — **los cuatro portones** ✓ |
+| racha más larga de agujeros seguidos | — | **2** (no queda ninguna brecha accidental) ✓ |
+| **el centro de la aldea** | 470, 63, 646 | **470, 63, 646** — **NO se ha movido** ✓ (I7) |
+
+**Y EL ASEDIO YA TIENE QUE ABRIR BRECHA** ✓ (`rapida-76/78.log`, 8 asaltantes a r=60):
+
+| | sin muro (I214) | con el anillo cerrado |
+|---|---|---|
+| bloques que pican | nieve y hielo del terreno | **`cobblestone` y `oak_log`** — **el muro** ✓ |
+| entran | **8 de 8** andando ✗ | entran rompiendo el muro y por los portones ✓ |
+
+**El lector independiente lo confirma** ✓ (`anillo_del_muro.py` sobre el guardado `run/world` — el MISMO dato por otra
+vía, y aquí el lector sí funciona): `LA BASE DEL MURO ES y=83 (912 de 921 celdas)`, y **los 9 agujeros caen EXACTAMENTE
+en las cuatro entradas cardinales** — `(532,646)` ×3, `(470,708)` ×2, `(408,646)` ×2, `(470,584)` ×2 — con rachas de
+**1** ✓.
+
+**LO QUE QUEDA ABIERTO, dicho claro** ✗: los **cuatro portones siguen siendo paso libre**, así que un asaltante que
+llegue a un portón **entra sin romper nada**. Eso es coherente con *cerrar el anillo* (los portones son la puerta, y
+tienen su función: por ahí sale y entra el pueblo), pero **no** con que el asedio *tenga que* abrir brecha. Decidir si
+los portones se cierran —y con qué (portones que el pueblo abre, o muralla maciza)— es una decisión de diseño del
+jugador, y **no se toca sin que la tome** ✓.
+
 ### I217 · LA TRAZA DE LA MILICIA (para poder contarla, no deducirla)
 
 **Lo pedía el pendiente 5** ✓: *«que el reparto escriba `[Milicia] aldea N: X espadachines y Y arqueros equipados`, para

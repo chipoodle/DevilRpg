@@ -90,11 +90,18 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    nunca** (por eso 0 ESCALON en las corridas 42-46); y dos trampas del instrumento (el muro de prueba puesto **dentro**
    del recinto lo protege la regla -> 15/15 intacto, que es la prueba de que la regla funciona; y el borde de la zanja
    del puente a 3-4 bloques, donde no hay hueco que cubrir).
-3. **LOS HUECOS DEL ANILLO DEL MURO** (nuevo, y es lo siguiente): la ola entra **sin picar el muro** (I213), asi que el
-   anillo tiene huecos. **Medirlo primero, con un lector que funcione**: el intento con `tools/arnes/huecos_del_muro.py`
-   **fallo en mi lector de chunks** (el formato por secciones de esta partida rompe `nbtdump`; los numeros que salieron
-   NO son fiables y la herramienta se retiro). El modelo a copiar es `tools/arnes/columna_mina.py`, que si lee el
-   guardado. Cuando este medido: o se cierran los huecos, o se acepta que el asedio entre andando.
+3. **LOS HUECOS DEL ANILLO DEL MURO** — **RESUELTO** (I218), y **no eran huecos: EL MURO NO EXISTIA**. Medido desde
+   dentro del juego (el lector de guardados fallo tres veces; el que funciona es `columna_mina.py`): **ni un tronco ni un
+   adoquin en r=62 de la cota-30 a la cota+30**, con la aldea construida. La causa: el muro se levanta en `fence()` con
+   la **cota del centro (63)** y el pueblo crecio a **83**, asi que quedo **enterrado veinte bloques**; y `rehacerMuro`
+   (la unica ruta que lo reconstruye a la cota buena, L6979) **solo se llama desde la migracion** (VillageManager
+   L2364), que **corre una sola vez por aldea**. Arreglado con `VillageGenerator.asegurarMuro` (**L6885**, idempotente),
+   llamado desde **`manageNearby` (L1034)** y **NO** desde `tickVillageLife` (que solo corre en aldea EN PAZ: ahi el
+   muro no se repararia justo con el asedio dentro, y una aldea vacia no lo levantaria nunca — ver I183). Medido:
+   **0 -> 912 de 921 celdas**, los 9 agujeros son **los cuatro portones** (ESTE=3 SUR=2 OESTE=2 NORTE=2), el centro
+   **no se movio** (470,63,646) y el asedio **ya pica `cobblestone` y `oak_log`** en vez de solo nieve.
+   **DECISION PENDIENTE DEL JUGADOR**: los cuatro portones siguen siendo paso libre. ¿Se cierran (y con que: portones
+   que el pueblo abre, o muralla maciza) o se quedan?
 3. **El nado del asaltante** — **HECHO en I215** (falta el instrumento). El defecto estaba en la cuenta del propio
    codigo: `MAX_ESCAPE_TICKS = 200` (10 s intentando salir) **+ `retryCooldown = MAX_ESCAPE_TICKS`** en `stop()` (otros
    10 s **sin poder tocar el agua**) = **20 segundos** en los que el asaltante ni avanza ni intenta nada, que es

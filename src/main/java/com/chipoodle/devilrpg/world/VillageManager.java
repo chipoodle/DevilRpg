@@ -1021,6 +1021,18 @@ public final class VillageManager {
                 // 10 s, y solo pone nombre a quien no lo tiene).
                 nombrarLaGenteDelPueblo(level, target);
             }
+            // Y EL MURO PERIMETRAL (6-oct-2026). Va AQUÍ, fuera del bloque de arriba (que solo corre cada 200 ticks y
+            // no con la aldea vacía) y FUERA del latido del pueblo: `tickVillageLife` está detrás de `isUnderAttack`,
+            // de `hayEnemigosDentro` y de `vivos > 0`, y el muro es justo lo que hay que tener EN PIE **cuando** llega
+            // el asedio ✗. El jugador pidió *cerrar el anillo para que el asedio tenga que abrir brecha*; medido con el
+            // arnés, el muro **no estaba**: se levantó con la cota del CENTRO (63) y quedó ENTERRADO veinte bloques
+            // cuando el suelo del pueblo subió a 83, y la única ruta que lo reconstruye a la cota buena
+            // (`rehacerMuro`) se llama desde la migración, que **corre una sola vez por aldea** (medido: 0 de 921
+            // celdas del anillo con muro, y los ocho asaltantes entrando ANDANDO ✓).
+            // Es idempotente y barato: mira el anillo y, si el muro ya está a la cota, no toca nada.
+            if (saved.isGenerated(i) && level.hasChunkAt(target)) {
+                VillageGenerator.asegurarMuro(level, target);
+            }
             if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)) {
                 if (saved.isSiegeResolved(i)) {
                     expulsarHostilesDeLaAldea(level, target, i);
@@ -2726,6 +2738,11 @@ public final class VillageManager {
         // KIOSCO: la plataforma de la plaza con su CAMPANA en el centro (el POI de reunión del pueblo) y su farol
         // colgado del tejado. Si falta —en una aldea vieja—, se levanta. Ya NO tiene cofre: la despensa vive en la
         // cocina de la taberna desde la migración 47.
+        // OJO: EL MURO PERIMETRAL **NO** SE ASEGURA AQUÍ. Vivía en este método y era un fallo de sitio (6-oct-2026):
+        // `tickVillageLife` solo corre con la aldea EN PAZ (`!isUnderAttack`, sin enemigos dentro y con aldeanos
+        // vivos), así que el muro no se habría reparado **justo cuando hace falta**, y una aldea vacía no lo habría
+        // levantado nunca (medido en el arnés: `aldeanos=0` → 0 reparaciones). Se asegura en `manageNearby`, fuera de
+        // todos esos guardias. Ver `VillageGenerator.asegurarMuro`.
         VillageGenerator.asegurarKiosco(level, center);
         // ALMACÉN del pueblo: cobertizo con cofre doble (que crece) donde el constructor recolector va dejando lo que
         // recoge. Es una construcción aparte, al lado de la plaza.
