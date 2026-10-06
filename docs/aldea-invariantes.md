@@ -6302,3 +6302,39 @@ es UNA línea más** ✓ (mejor armadura, otra arma, lo que venga ✓) sin tocar
 arranque de la milicia: **2 juegos de cuero** (casco, peto, grebas, botas ✓), **2 espadas de madera** ✓, **2 escudos** ✓,
 **2 arcos** ✓ y **64 flechas** ✓ → los cuatro primeros milicianos (2 espadachines + 2 arqueros ✓) salen equipados como se
 pidió, y a partir de ahí **mejoran solos** con lo que fabrique el herrero ✓.
+
+### ASALTANTE EN EL AGUA · **LA ESPERA DE 2 SEGUNDOS, CORREGIDA** (5-oct-2026)
+
+**El jugador**: *«cuando están en el agua se quedan ahí y avanzan muy lento»* ✗ — y su aclaración: *«deben desplazarse a
+velocidad normal y no deben dudar tanto para ocupar estas herramientas»* ✓.
+
+**La causa, en el código** ✓: `AggressiveZombieEntity.EscapeWaterGoal` (**L851** ✓) tenía
+
+```java
+private static final int STUCK_TICKS_BEFORE_TRYING = 40;   // ← DOS SEGUNDOS quieto antes de reaccionar ✗
+private static final int MAX_ESCAPE_TICKS = 200;           // ← y a los 200 ticks se rinde ✗
+```
+
+No es que naden despacio ✗: es que **esperan a estar atascados** ✓ — 40 ticks (2 s ✓) plantados en el agua antes de
+intentar salir ✓, que es exactamente lo que se ve desde fuera ✓.
+
+**ARREGLO**: la espera baja a **8 ticks** ✓ (menos de medio segundo ✓) → reacciona **ya** ✓ y no se queda plantado ✓. Es
+la misma familia del «empujón del latido» de los aldeanos ✓, que ya funcionó ✓.
+
+**QUEDA ABIERTO, en el mismo sitio** ✗: el **nado en sí** (que avance a velocidad normal mientras está en el agua ✓, sin
+depender de la navegación de vanilla ✗) y el **`MAX_ESCAPE_TICKS = 200`** ✓ (que se rinda y se quede parado ✗) — los dos
+son el siguiente trozo ✓, y van con la misma medida: la traza dirá cuántos asaltantes salen del agua y en cuántos ticks ✓.
+
+### ASALTANTE Y EL MURO · **la regla que falta, con su predicado ya hecho** (5-oct-2026)
+
+El jugador: *«solo el muro perimetral es rompible; una vez dentro ya no puede romper nada»* ✓.
+`BreakBlockGoal` está en **`AggressiveZombieEntity` L1021** ✓ y el predicado que decide «dentro del recinto» **ya existe**
+✓ (`VillageManager.dentroDelRecinto(...)`, el que usa `hayEnemigosDentro` ✓) → la regla es **una línea** ✓: si está dentro,
+no rompe ✓. Anotado para aplicarlo con el resto de los atravesadores ✓.
+
+### LO QUE NO EXISTE (y hay que crear) ✗
+
+Buscado en todo `src`: **no hay** ningún goal de **escalera de bloques**, **túnel** ni **puente** ✗ — solo
+`EscapeWaterGoal` (L851 ✓) y `BreakBlockGoal` (L1021 ✓). O sea que «que no duden en usar escalera, túnel o puente» ✗ es
+**trabajo nuevo** ✓: tres atravesadores con la forma de los que ya hay ✓ (goal interno, decide en el mismo tick, sin
+tanteos ✓) y a velocidad normal ✓.

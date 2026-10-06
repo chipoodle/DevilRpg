@@ -850,7 +850,13 @@ public class AggressiveZombieEntity extends Zombie {
      */
     static class EscapeWaterGoal extends Goal {
         /** Ticks nadando sin avanzar antes de considerar que está atascado y tocarle buscar la orilla. */
-        private static final int STUCK_TICKS_BEFORE_TRYING = 40;
+        /**
+     * Cuántos ticks atascado antes de intentar salir del agua. <b>MEDIDO Y BAJADO (5-oct-2026)</b>: eran <b>40</b> —
+     * <b>DOS SEGUNDOS</b> quieto en el agua antes de reaccionar ✗, que es justo lo que el jugador describió (*«cuando
+     * están en el agua se quedan ahí y avanzan muy lento»* ✓): no es que naden despacio, es que <b>esperan a estar
+     * atascados</b> ✓. Con 8 ticks reaccionan en menos de medio segundo ✓ y el asaltante no se queda plantado ✓.
+     */
+    private static final int STUCK_TICKS_BEFORE_TRYING = 8;
         /** Tope de intentos seguidos de salir del agua antes de soltar el control. */
         private static final int MAX_ESCAPE_TICKS = 200;
 
