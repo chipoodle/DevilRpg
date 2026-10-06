@@ -246,10 +246,32 @@ public final class VillageStorage {
                 break; // no cupo (raro: el almacén está recién hecho): se deja lo que entró
             }
         }
-        VillagePantry.guardar(caja, new ItemStack(Items.IRON_PICKAXE));
-        VillagePantry.guardar(caja, new ItemStack(Items.IRON_INGOT, REMESA_INICIAL_LINGOTES));
+        // LA REMESA ES UNA TABLA A PROPÓSITO (5-oct-2026). Antes eran tres llamadas sueltas; ahora es una lista con
+        // "qué, cuánto y para qué", y AÑADIR ALGO AL FUTURO ES UNA LÍNEA MÁS aquí — sin tocar los goals, el almacén
+        // ni el equipo de la milicia (que se cambia solo cambiando esta tabla). Es el sitio donde se declara lo que
+        // el pueblo trae de fábrica.
+        record Entrega(net.minecraft.world.item.Item que, int cuantos, String paraQue) {
+        }
+        java.util.List<Entrega> remesa = java.util.List.of(
+                new Entrega(Items.IRON_PICKAXE, 1, "el minero no puede ni empezar sin herramienta"),
+                new Entrega(Items.IRON_INGOT, REMESA_INICIAL_LINGOTES, "para que el minero funda y el herrero arranque"),
+                // --- LA MILICIA DE ARRANQUE (2 espadachines + 2 arqueros): CUERO Y MADERA, como pidió el jugador.
+                // Con esto los cuatro primeros guardias salen equipados del almacén (VillagerGuardGoal L50-51) y,
+                // cuando el herrero forje hierro, ellos solos irán mejorando: la remesa no hay que tocarla.
+                new Entrega(Items.LEATHER_HELMET, 2, "milicia: casco de cuero"),
+                new Entrega(Items.LEATHER_CHESTPLATE, 2, "milicia: peto de cuero"),
+                new Entrega(Items.LEATHER_LEGGINGS, 2, "milicia: grebas de cuero"),
+                new Entrega(Items.LEATHER_BOOTS, 2, "milicia: botas de cuero"),
+                new Entrega(Items.WOODEN_SWORD, 2, "milicia: espada de madera del espadachín"),
+                new Entrega(Items.SHIELD, 2, "milicia: escudo del espadachín"),
+                new Entrega(Items.BOW, 2, "milicia: arco del arquero"),
+                new Entrega(Items.ARROW, 64, "milicia: flechas del arquero"));
+        for (Entrega entrega : remesa) {
+            VillagePantry.guardar(caja, new ItemStack(entrega.que(), entrega.cuantos()));
+        }
         DevilRpg.LOGGER.info("[Village] almacen: remesa inicial ({} troncos de roble para el fuego del cocinero, la"
-                + " fragua del herrero y su sierra; y 1 pico de hierro con {} lingotes para el minero)",
+                + " fragua del herrero y su sierra; 1 pico de hierro con {} lingotes para el minero; y el equipo de"
+                + " arranque de la milicia: cuero, espadas de madera, escudos, arcos y flechas)",
                 cuentaLena(level, villageCenter), REMESA_INICIAL_LINGOTES);
     }
 

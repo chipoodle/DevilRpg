@@ -6278,3 +6278,27 @@ por qué (¿otro perfil? ¿otro camino de creación?) antes de dar la velocidad 
 
 **MEDIDA para la próxima partida**: la traza debe decir **`MOVEMENT_SPEED: 0.23`** en la aldea 0 ✓ y seguir subiendo en
 las siguientes ✓.
+
+### MILICIA · **LA REMESA INICIAL ES UNA TABLA, Y TRAE EL EQUIPO DE ARRANQUE** (5-oct-2026)
+
+**Lo que pidió el jugador**: *«dale a cada aldea también 2 arqueros y 2 guerreros con armaduras de cuero, las espadas de
+madera, como iniciales; y conforme se vayan integrando más y se vayan fabricando mejores armas y armaduras y vayan
+entrenando, irá creciendo»* ✓.
+
+**Lo que YA existía** (comprobado, no supuesto ✓): `VillagerGuardGoal` tiene los dos roles (`ESPADACHIN = 0`,
+`ARQUERO = 1`, L69-71 ✓), se **equipa del almacén** (espada y escudo, o arco y flechas, **y la armadura que el pueblo
+tenga fabricada, pieza a pieza**, L50-51 ✓), y **se le ve el equipo** (`GuardVillagerModel` + `GuardVillagerRenderer` ✓).
+O sea: **el crecimiento que pide ya está** ✓ — el miliciano coge del almacén y mejora solo cuando el herrero forja ✓.
+
+**Lo que faltaba era el ARRANQUE** ✗: al nacer la aldea el almacén no tenía equipo, así que los primeros guardias
+salían sin nada. **Clase donde vive la remesa**: `com.chipoodle.devilrpg.world.VillageStorage`
+(`remesaInicialDelAlmacen`, L238 ✓), llamada desde `VillageManager` L2704-2708 ✓ — y la de la despensa es
+`VillagePantry.remesaInicial` ✓ (llamada en `VillageGenerator` L373-375 y L10156-10159 ✓). Las dos son **idempotentes**:
+solo rellenan un contenedor VACÍO ✓.
+
+**ARREGLO (extensible a propósito ✓)**: la remesa pasa de tres llamadas sueltas a una **tabla de entregas** con
+«qué, cuánto y **para qué**» ✓, y el reparto es un bucle de tres líneas que no cambia nunca ✓. **Añadir algo al futuro
+es UNA línea más** ✓ (mejor armadura, otra arma, lo que venga ✓) sin tocar goals ni almacén ✓. Y trae el equipo de
+arranque de la milicia: **2 juegos de cuero** (casco, peto, grebas, botas ✓), **2 espadas de madera** ✓, **2 escudos** ✓,
+**2 arcos** ✓ y **64 flechas** ✓ → los cuatro primeros milicianos (2 espadachines + 2 arqueros ✓) salen equipados como se
+pidió, y a partir de ahí **mejoran solos** con lo que fabrique el herrero ✓.
