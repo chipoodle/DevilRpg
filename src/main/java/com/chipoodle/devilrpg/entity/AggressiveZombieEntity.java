@@ -710,18 +710,17 @@ public class AggressiveZombieEntity extends Zombie {
             for (int dist = 1; dist <= 2; dist++) {
                 int px = zPos.getX() + d[0] * dist;
                 int pz = zPos.getZ() + d[1] * dist;
-                boolean roto = false;
-                if (breakStepAheadHacia(hacia)) {
+                // PRIMERO SE ABRE EL HUECO Y TAMBIÉN SE PICA EL SUELO (el escalón), en la MISMA ronda: si se sale
+                // aquí en cuanto se pica el hueco, el escalón no se llega a poner nunca y el asaltante se queda
+                // oscilando delante del muro (medido en la corrida 44: 0 escalones y el muro intacto).
+                if (breakStepAheadHacia(hacia, true)) {
                     apilarEspera = APILAR_ENTRE_BLOQUES;
                     apilarRestante--;
-                    return true; // primero se le abre el hueco; en la siguiente ronda se le pone el escalón
+                    return true;
                 }
-                // EL ESCALÓN VA EN LA COLUMNA DE DELANTE, A LA ALTURA DE LOS PIES, y solo si el hueco de arriba está
-                // libre (si no, el asaltante no cabría y lo que toca es seguir abriendo).
-                // ESTE ERA EL FALLO (5-oct-2026): el bloque se ponía `zPos.below(2)`, o sea DEBAJO DE SUS PROPIOS
-                // PIES, que no sube a nadie — se quedaba una losa suelta en el suelo y el asaltante sin escalón (por
-                // eso el instrumento midió 1 solo «ESCALON» en toda la corrida 36 y 0 en la ola de la 38-39: no
-                // servía de nada). Lo cazó la ola real, no las escenas.
+                // Y si el hueco ya está abierto, el ESCALÓN: un bloque en la columna de delante, a la altura de los
+                // pies, para poder subir. ESTE ERA EL FALLO (5-oct-2026): antes se ponía `zPos.below(2)`, o sea DEBAJO
+                // DE SUS PROPIOS PIES, que no sube a nadie.
                 BlockPos escalon = new BlockPos(px, zPos.getY(), pz);
                 boolean huecoLibre = level().getBlockState(escalon.above()).isAir()
                         && level().getBlockState(escalon.above(2)).isAir();
@@ -737,9 +736,6 @@ public class AggressiveZombieEntity extends Zombie {
                     apilarRestante--;
                     return true;
                 }
-                if (roto) {
-                    return true;
-                }
             }
         }
         return false;
@@ -750,9 +746,11 @@ public class AggressiveZombieEntity extends Zombie {
      * camino que ya usaba {@link BreakBlockGoal#breakStepAhead}, sacado aquí para que los dos atravesadores que suben
      * compartan <b>una sola</b> verdad.
      *
+     * @param conEscalon si además se pica el <b>suelo de delante</b> (el bloque a la altura de los pies), que es lo que
+     *                   convierte el hueco en un <b>escalón</b> al que el asaltante puede subir
      * @return {@code true} si ha picado algo
      */
-    private boolean breakStepAheadHacia(BlockPos hacia) {
+    private boolean breakStepAheadHacia(BlockPos hacia, boolean conEscalon) {
         BlockPos zPos = blockPosition();
         int sx = Integer.signum(hacia.getX() - zPos.getX());
         int sz = Integer.signum(hacia.getZ() - zPos.getZ());
@@ -777,14 +775,17 @@ public class AggressiveZombieEntity extends Zombie {
                 }
                 // Y el suelo de esa columna, que es el ESCALÓN que queda al abrir el hueco: sin esto el asaltante
                 // necesita dos rondas (una para el hueco y otra para el escalón) y se queda oscilando delante.
-                for (int dy = 0; dy >= -1; dy--) {
-                    BlockPos p = new BlockPos(zPos.getX() + d[0] * dist, zPos.getY() + dy, zPos.getZ() + d[1] * dist);
-                    if (protegidoPorLaAldea(p)) {
-                        continue;
-                    }
-                    if (canBreakBlock(level().getBlockState(p))) {
-                        breakBlockAt(p);
-                        roto = true;
+                if (conEscalon) {
+                    for (int dy = 0; dy >= -1; dy--) {
+                        BlockPos p = new BlockPos(zPos.getX() + d[0] * dist, zPos.getY() + dy,
+                                zPos.getZ() + d[1] * dist);
+                        if (protegidoPorLaAldea(p)) {
+                            continue;
+                        }
+                        if (canBreakBlock(level().getBlockState(p))) {
+                            breakBlockAt(p);
+                            roto = true;
+                        }
                     }
                 }
                 if (roto) {

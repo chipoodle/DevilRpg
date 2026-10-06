@@ -6371,7 +6371,7 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 **El jugador**: *«no deben dudar tanto para ocupar estas herramientas»* ✓, con la aclaración de que tienen que ir a
 **velocidad normal** ✓. Y estaba escrito en el acta que **no existían** ✗: buscado en todo `src`, solo había
 `EscapeWaterGoal` (**L971**) y `BreakBlockGoal` (**L1147**) — el puente sí estaba escrito
-(`AggressiveZombieEntity.puentearHacia`, **L583** tras este cambio) pero **solo lo llamaba la marcha al centro**, y esa
+(`AggressiveZombieEntity.puentearHacia`, **L597**) pero **solo lo llamaba la marcha al centro**, y esa
 marcha se apaga en cuanto el asaltante tiene un objetivo: en un asedio de verdad **no se usaba nunca** ✓.
 
 **LAS TRES HERRAMIENTAS**, en `AggressiveZombieEntity`, con la forma de los atravesadores que ya había (deciden **en el
@@ -6380,11 +6380,11 @@ cruzar un abismo tablón a tablón):
 
 | herramienta | dónde vive | qué hace |
 |---|---|---|
-| **escalera de bloques** | `apilarBloqueParaSubir` (**L688**) | si el objetivo está **arriba**: abre el hueco de delante (`breakStepAheadHacia`, **L730**) y **apila un escalón** de adoquín debajo de los pies (tope de `APILAR_PRESUPUESTO` = 8 bloques: no se hace una torre al cielo) |
-| **túnel** | `cavarHaciaAbajo` (**L777**) | si el objetivo está **abajo** y no hay bajada: cava el bloque de debajo, un bloque cada `CAVAR_ENTRE_BLOQUES` = 10 ticks |
-| **puente** | `puentearHacia` (**L583**, ya existía) | si delante hay un hueco de 2 o más: tiende un tablón |
+| **escalera de bloques** | `apilarBloqueParaSubir` (**L692**) | si el objetivo está **arriba**: abre el hueco de delante (`breakStepAheadHacia`, **L753**) y **apila un escalón** de adoquín debajo de los pies (tope de `APILAR_PRESUPUESTO` = 8 bloques: no se hace una torre al cielo) |
+| **túnel** | `cavarHaciaAbajo` (**L807**) | si el objetivo está **abajo** y no hay bajada: cava el bloque de debajo, un bloque cada `CAVAR_ENTRE_BLOQUES` = 10 ticks |
+| **puente** | `puentearHacia` (**L597**, ya existía) | si delante hay un hueco de 2 o más: tiende un tablón |
 
-**Y EL GOAL QUE LAS USA** ✓: `TraverseGoal` (**L1495**), registrado en **prioridad 3 sin flags** como `BreakBlockGoal`
+**Y EL GOAL QUE LAS USA** ✓: `TraverseGoal` (**L1551**), registrado en **prioridad 3 sin flags** como `BreakBlockGoal`
 (es pasivo: no navega, solo aparta el estorbo, así que no le pisa el camino a nadie — I205), y sirve a **los dos
 caminos** del asaltante: el que va a por un objetivo y el que marcha al centro (`objetivoDeLaMarcha`, **L1520**).
 
@@ -6428,14 +6428,14 @@ era **un fallo de bulto en mi código**, no del instrumento.
 **FALLO 1 · EL PUENTE SOLO MIRABA DE FRENTE** ✗. Probaba únicamente la dirección exacta del objetivo (la diagonal y los
 dos ejes) y con un asaltante **saltando en el borde** de la zanja el hueco cae unas veces de frente y otras **al lado o
 debajo**, así que disparaba una vez de cada diez (medido: **1** puente en la corrida 34 y **0** en la 36). Ahora mira
-**los cuatro lados** y los ordena por **el que más apunta al objetivo** (`puentearHacia`, **L590**): cruzar un abismo no
+**los cuatro lados** y los ordena por **el que más apunta al objetivo** (`puentearHacia`, **L597**): cruzar un abismo no
 es cuestión de puntería ✓. Y la comprobación de «no estoy cayendo» se hace **al principio** y una sola vez, en vez de
 dentro del bucle ✓.
 
 **FALLO 2 · LA ESCALERA PONÍA EL ESCALÓN DEBAJO DE SUS PROPIOS PIES** ✗, y era de bulto: el bloque iba a
 `zPos.below(2)`, o sea **dos bloques por debajo del asaltante** — una losa suelta en el suelo que **no sube a nadie**
 (por eso el instrumento midió **1** «ESCALON» en toda la corrida 36 y **0** en la ola de la 38-39: no servía de nada).
-Ahora el escalón se pone **en la columna de delante, a la altura de los pies** (`apilarBloqueParaSubir`, **L688**), y
+Ahora el escalón se pone **en la columna de delante, a la altura de los pies** (`apilarBloqueParaSubir`, **L692**), y
 solo si el hueco de encima está libre y hay suelo debajo — si no, primero se abre el hueco y se vuelve a intentar en la
 siguiente ronda ✓. Lo cazó la **ola real**, no las escenas de mecanismo.
 
@@ -6460,6 +6460,40 @@ ahora mismo eso significa que **la mitad «el muro perimetral es rompible» no l
 **Lo que sí queda corregido y medido en esta vuelta**: el puente (cuatro lados), el escalón (en la columna de delante),
 y la certeza de que las tres herramientas **no estorban** al asedio: la ola entra igual que antes (6 dentro a los 11 s,
 8 a los 37 s) ✓.
+
+### I214 · LOS TRES FALLOS DE FLUJO DE LOS ATRAVESADORES, Y LA BRECHA DEL MURO VERIFICADA
+
+**El jugador**: *«corrige primero lo que salió mal»* ✓, y luego *«continua»* ✓. Persiguiendo las dos correcciones de I213
+aparecieron **tres fallos más**, todos del mismo tipo (el instrumento tapando el fallo) y uno de ellos **de flujo** en mi
+código:
+
+1. **`breakStepAheadHacia` devolvía en cuanto picaba el hueco y el escalón no se ponía nunca** ✗. La función picaba el
+   hueco de la cabeza y **salía**, así que la rama que pone el escalón **no se alcanzaba jamás**: por eso el instrumento
+   daba **0 ESCALON** una y otra vez (corridas 42-46). Ahora el escalón se pica **en la misma ronda** que el hueco
+   (`breakStepAheadHacia(hacia, conEscalon)`, **L753**, y el bloque del escalón en **L692**) ✓.
+2. **Mi muro de prueba estaba DENTRO del recinto y por eso no se tocaba** ✗, y esto no era un fallo del mod sino **la
+   prueba de que la regla funciona**: puesto a r=56-60, `protegidoPorLaAldea` **lo protege** (es «dentro de la aldea») y
+   el asaltante se quedaba oscilando delante sin picarlo (corridas 43-45: muro **15/15** intacto). El muro de verdad está
+   en **r=62** ✓.
+3. **Y la escena del puente tenía el borde de la zanja a 3-4 bloques** ✗ (la zanja va de r=58 a r=68 y el asaltante
+   quedaba en r=54-56): el puente **exige un hueco de verdad delante** y a esa distancia lo que hay es suelo. El
+   instrumento, otra vez.
+
+**Y LO QUE SÍ QUEDÓ VERIFICADO, que es lo importante de esta vuelta** ✓: con el muro de prueba **en r=62** (el radio del
+muro de verdad), el asaltante del asedio inicial **ABRE LA BRECHA**: el muro pasó de **15 bloques a 10** (picó **5**) y
+el asaltante **entró** (de r=63 a r=58 y al centro) ✓. Es la primera vez que se mide la mitad «**el muro perimetral es
+rompible**» de la regla del jugador, y sale **sí** ✓. Y dice algo más: entró **andando por el hueco** que abrió a la
+altura de los pies, **sin necesitar la escalera** (ESCALON = 0): para el muro de 3 de la aldea, la brecha basta — la
+escalera es para paredes que no se pueden picar.
+
+**Y EL ANILLO DEL MURO: lo que sé y lo que no** ✗. Medido con el arnés, la ola entra **sin picar el muro** (I213), así
+que el anillo **tiene huecos**. Lo intenté medir del guardado con una herramienta nueva
+(`tools/arnes/huecos_del_muro.py`) y **mi lector de chunks falla**: la versión de formato por secciones de esta partida
+rompe el parseo de `nbtdump` (el mismo que usan `columna_mina.py` y `ruta_atasco.py`, que sí funcionan), así que las
+cuentas de «celdas con muro» que salieron (**563 de 921**, **38,9 % de huecos**) **no son fiables** y se retiraron con la
+herramienta ✓. Queda **anotado como pendiente con la trampa escrita**: para cerrar los huecos hay que medirlos primero
+con un lector que funcione (`columna_mina.py` es el modelo), no con uno nuevo a medio hacer.
+
 
 
 ### I210 · LA REGLA DEL MURO PERIMETRAL, EN LA DECISIÓN DE ROMPER DEL ASALTANTE (5-oct-2026)

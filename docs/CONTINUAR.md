@@ -82,8 +82,19 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    **6 dentro a los 11 s y 8 a los 37 s**, y de las tres herramientas **solo se usa el tunel (19 cavadas de terreno)**
    — el muro **no lo pica nadie** (`TALADRAR` = 0) porque el anillo **tiene huecos y la ola entra andando**. ABIERTO:
    (a) esa mitad de la regla («el muro perimetral es rompible») **no la ejerce nadie** hoy: o los huecos del anillo se
-   cierran, o el asedio no tiene por que abrir brecha; (b) falta ver el **puente y la escalera** en una ola (en las
-   escenas de mecanismo: tunel 12, escalera 1, puente 1).
+   cierran, o el asedio no tiene por que abrir brecha; (b) falta ver el **puente y la escalera** en una ola.
+   **CORREGIDO Y MEDIDO en I214**: con el muro de prueba **en r=62** (el radio del muro de verdad), el asaltante
+   **ABRE LA BRECHA** (el muro paso de **15 bloques a 10**: pico 5) y **entro** — es la primera medida de esa mitad de
+   la regla, y sale **si**. Y entro **andando por el hueco**, sin necesitar la escalera. Ademas, tres fallos de flujo
+   mas de los atravesadores, corregidos: `breakStepAheadHacia` **devolvia al picar el hueco y el escalon no se ponia
+   nunca** (por eso 0 ESCALON en las corridas 42-46); y dos trampas del instrumento (el muro de prueba puesto **dentro**
+   del recinto lo protege la regla -> 15/15 intacto, que es la prueba de que la regla funciona; y el borde de la zanja
+   del puente a 3-4 bloques, donde no hay hueco que cubrir).
+3. **LOS HUECOS DEL ANILLO DEL MURO** (nuevo, y es lo siguiente): la ola entra **sin picar el muro** (I213), asi que el
+   anillo tiene huecos. **Medirlo primero, con un lector que funcione**: el intento con `tools/arnes/huecos_del_muro.py`
+   **fallo en mi lector de chunks** (el formato por secciones de esta partida rompe `nbtdump`; los numeros que salieron
+   NO son fiables y la herramienta se retiro). El modelo a copiar es `tools/arnes/columna_mina.py`, que si lee el
+   guardado. Cuando este medido: o se cierran los huecos, o se acepta que el asedio entre andando.
 3. **El nado del asaltante**: que avance **a velocidad normal** mientras esta en el agua (sin depender de la navegacion
    de vanilla) y revisar **`MAX_ESCAPE_TICKS = 200`** de `EscapeWaterGoal` (L851), porque hoy se rinde y se queda parado.
 4. **Un asaltante salio a `MOVEMENT_SPEED: 0.552`** (= 0.23 x 2.4) con el mismo `scaleFactor` que los demas: ese **no paso

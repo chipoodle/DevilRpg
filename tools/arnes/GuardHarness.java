@@ -2592,62 +2592,74 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     }
 
     /**
-     * <b>ESCALERA</b>: una torre de 3x3 con su piso ARRIBA (a 4 por encima de la cota), con una <b>pared de 3 de
-     * alto</b> en todo el borde menos la cara que mira al asaltante. El objetivo está en lo alto, así que para llegar
-     * hay que <b>subir</b>: abrir el hueco de la pared de delante y apilar un escalón ({@code APILAR}). Se construye a
-     * mano (no se confía en el terreno) porque el montaje anterior —el asaltante "a la cota" junto al muro— lo dejó
-     * dentro de la piedra y murió asfixiado antes de poder hacer nada (medido en la corrida 29).
+     * <b>ESCALERA</b>: un MURO de piedra de 3 de alto y 5 de ancho DELANTE del asaltante (a 2 bloques), con el objetivo
+     * en una plataforma 3 bloques por encima del muro. Para llegar hay que <b>subir</b>, así que la única herramienta
+     * que sirve es la escalera de bloques. Se construye a mano porque el terreno a r=60 tiene cuevas (medido: un
+     * montaje "a la cota" dejó al asaltante enterrado y murió asfixiado).
      */
     private static void montarEscaleraDePrueba(ServerLevel level, int cota, FakePlayer pega) {
         double a = Math.toRadians(RUMBO_ESCALERA);
-        int dx = (int) Math.round(Math.cos(a));
-        int dz = (int) Math.round(Math.sin(a));
-        if (dx == 0 && dz == 0) {
-            dx = 1;
+        // OJO AL RADIO: el muro de prueba tiene que estar **EN EL RADIO DEL MURO DE VERDAD (r=62)**, no dentro: puesto
+        // a r=56-60 lo protege la regla del jugador (es "dentro de la aldea") y el asaltante no lo pica NUNCA —
+        // medido en las corridas 43-45, con el muro intacto (15/15) y el asaltante oscilando delante. Eso, de paso, es
+        // la prueba de que la regla funciona: lo de dentro no se toca.
+        int distMuro = 62;
+        int bx0 = CENTRO.getX() + (int) Math.round(Math.cos(a) * (distMuro - 3));
+        int bz0 = CENTRO.getZ() + (int) Math.round(Math.sin(a) * (distMuro - 3));
+        final int base = 83;
+        // La plataforma (DENTRO, a r=59): 7x5 de piedra maciza de base-2 a base, y AIRE por encima hasta base+6.
+        for (int t = -3; t <= 3; t++) {
+            for (int f = -2; f <= 2; f++) {
+                int px = bx0 + (int) Math.round(-Math.sin(a) * t) + (int) Math.round(Math.cos(a) * f);
+                int pz = bz0 + (int) Math.round(Math.cos(a) * t) + (int) Math.round(Math.sin(a) * f);
+                for (int dy = -2; dy <= 6; dy++) {
+                    level.setBlock(new BlockPos(px, base + dy, pz),
+                            dy <= 0 ? net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState()
+                                    : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
         }
-        // El centro de la torre, 6 bloques por fuera del asaltante y en su mismo rumbo.
-        int bx = CENTRO.getX() + (int) Math.round(Math.cos(a) * 58);
-        int bz = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 58);
-        // El piso de arriba (3x3), a cota+4.
-        for (int ix = -1; ix <= 1; ix++) {
-            for (int iz = -1; iz <= 1; iz++) {
-                BlockPos p = new BlockPos(bx + ix, cota + 4, bz + iz);
+        // EL MURO, EN r=62 (el radio del muro de verdad): 5 de ancho y 3 de alto.
+        for (int t = -2; t <= 2; t++) {
+            for (int h = 1; h <= 3; h++) {
+                int px = CENTRO.getX() + (int) Math.round(Math.cos(a) * distMuro - Math.sin(a) * t);
+                int pz = CENTRO.getZ() + (int) Math.round(Math.sin(a) * distMuro + Math.cos(a) * t);
+                BlockPos p = new BlockPos(px, base + h, pz);
                 level.setBlock(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
                 escaleraDePrueba.add(p.immutable());
-                if (iz == 0) { // la columna de debajo, maciza: que no se cuele por abajo
-                    for (int h = 0; h <= 3; h++) {
-                        level.setBlock(new BlockPos(bx + ix, cota + h, bz + iz),
-                                net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
-                    }
-                }
             }
         }
-        // La pared (3 de alto) por todo el borde menos la cara que mira al asaltante.
-        for (int ix = -1; ix <= 1; ix++) {
-            for (int iz = -1; iz <= 1; iz++) {
-                if (Math.abs(ix) != 1 && Math.abs(iz) != 1) {
-                    continue; // el centro no es borde
-                }
-                // ¿Es la cara que mira al asaltante? Su normal apunta al asaltante (que está en -dx,-dz del centro).
-                boolean caraDelAsaltante = (ix == -dx && iz == -dz);
-                if (caraDelAsaltante) {
-                    continue; // por aquí tiene que subir
-                }
-                for (int h = 1; h <= 3; h++) {
-                    BlockPos p = new BlockPos(bx + ix, cota + 4 + h, bz + iz);
-                    level.setBlock(p, net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
-                    escaleraDePrueba.add(p.immutable());
-                }
+        // El objetivo, DENTRO (a r=59) y 3 bloques por encima de la base del muro.
+        int ox = CENTRO.getX() + (int) Math.round(Math.cos(a) * (distMuro - 3));
+        int oz = CENTRO.getZ() + (int) Math.round(Math.sin(a) * (distMuro - 3));
+        for (int t = -1; t <= 1; t++) {
+            for (int f = -1; f <= 1; f++) {
+                int px = ox + (int) Math.round(-Math.sin(a) * t) + (int) Math.round(Math.cos(a) * f);
+                int pz = oz + (int) Math.round(Math.cos(a) * t) + (int) Math.round(Math.sin(a) * f);
+                level.setBlock(new BlockPos(px, base + 3, pz),
+                        net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
             }
         }
-        var objetivo = objetivoDeLaEscena(level, bx, cota + 5, bz);
-        // El asaltante, a 6 bloques de la torre, sobre el suelo de verdad.
+        var objetivo = objetivoDeLaEscena(level, ox, base + 5, oz);
+        // El asaltante, FUERA (a r=64), de pie en una plataforma de fuera a la misma altura.
         int ax = CENTRO.getX() + (int) Math.round(Math.cos(a) * 64);
         int az = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 64);
+        for (int t = -2; t <= 2; t++) {
+            for (int f = -1; f <= 1; f++) {
+                int px = ax + (int) Math.round(-Math.sin(a) * t) + (int) Math.round(Math.cos(a) * f);
+                int pz = az + (int) Math.round(Math.cos(a) * t) + (int) Math.round(Math.sin(a) * f);
+                level.setBlock(new BlockPos(px, base, pz),
+                        net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                for (int dy = 1; dy <= 3; dy++) {
+                    level.setBlock(new BlockPos(px, base + dy, pz),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
         com.chipoodle.devilrpg.entity.AggressiveZombieEntity z =
                 com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
         if (z != null) {
-            int ay = colocarAsaltanteAlSuelo(level, z, ax, az, cota);
+            z.moveTo(ax + 0.5D, base + 1, az + 0.5D, 0.0F, 0.0F);
             z.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
             z.setGoToCenterActive(true);
             z.recargarTunel();
@@ -2655,8 +2667,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             level.addFreshEntity(z);
             z.setTarget(objetivo);
             atraviesan.add(z);
-            DevilRpg.LOGGER.info("[Arnes] ATRAVESADORES: ESCALERA montada — asaltante en {} (suelo {}) y objetivo en lo"
-                    + " alto de la torre {}", z.blockPosition(), ay, objetivo.blockPosition());
+            DevilRpg.LOGGER.info("[Arnes] ATRAVESADORES: ESCALERA montada — asaltante en {} (plataforma y={}), muro de 3"
+                    + " de alto delante y objetivo en {} (a 4 por encima)", z.blockPosition(), base + 1,
+                    objetivo.blockPosition());
         }
     }
 
@@ -2730,14 +2743,27 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         var objetivo = objetivoDeLaEscena(level,
                 CENTRO.getX() + (int) Math.round(Math.cos(a) * 71), cota + 1,
                 CENTRO.getZ() + (int) Math.round(Math.sin(a) * 71));
-        // EL ASALTANTE VA **AL BORDE DE DENTRO DE LA ZANJA**, no dentro: asi lo que tiene delante es el hueco (que es
-        // lo que el puente cubre) y no un agujero de un bloque del que no se sale.
+        // El asaltante, al BORDE de dentro de la zanja pero con SUELO FIRME a la altura del muro (una plataforma a
+        // y=83, que es la cota del pueblo): en el suelo de hoy (y=88-93) el borde de la zanja le queda 5 bloques por
+        // debajo y no tiene hueco que cubrir (medido en la corrida 42: el asaltante nacia en y=93 y no tendia nada).
+        int bordeX = CENTRO.getX() + (int) Math.round(Math.cos(a) * 56);
+        int bordeZ = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 56);
+        for (int t = -2; t <= 2; t++) {
+            for (int f = -1; f <= 0; f++) { // solo la orilla: la zanja empieza en r=58
+                int px = bordeX + (int) Math.round(-Math.sin(a) * t) + (int) Math.round(Math.cos(a) * f);
+                int pz = bordeZ + (int) Math.round(Math.cos(a) * t) + (int) Math.round(Math.sin(a) * f);
+                level.setBlock(new BlockPos(px, 83, pz),
+                        net.minecraft.world.level.block.Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                for (int dy = 1; dy <= 3; dy++) {
+                    level.setBlock(new BlockPos(px, 83 + dy, pz),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
         com.chipoodle.devilrpg.entity.AggressiveZombieEntity z =
                 com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
         if (z != null) {
-            int bordeX = CENTRO.getX() + (int) Math.round(Math.cos(a) * 57);
-            int bordeZ = CENTRO.getZ() + (int) Math.round(Math.sin(a) * 57);
-            colocarAsaltanteAlSuelo(level, z, bordeX, bordeZ, cota);
+            z.moveTo(bordeX + 0.5D, 84, bordeZ + 0.5D, 0.0F, 0.0F);
             z.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
             z.setGoToCenterActive(true);
             z.recargarTunel();
