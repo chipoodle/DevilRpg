@@ -2377,15 +2377,20 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             tramo.append(" | ");
         }
         DevilRpg.LOGGER.info("[Arnes] ANILLO columnas: {}", tramo.toString().trim());
-        // Y celda a celda: MURO (firma en la base o encima) o AGUJERO.
+        // Y celda a celda: MURO (firma en la base o encima), PORTÓN (la puerta del pueblo) o AGUJERO.
         int muro = 0;
+        int portones = 0;
         java.util.Map<Integer, Integer> porRumbo = new java.util.TreeMap<>();
         int rachaLarga = 0;
         int rachaActual = 0;
         for (BlockPos p : anillo) {
             boolean hay = false;
+            boolean porton = false;
             for (int dy = 0; dy <= 2; dy++) {
                 var b = level.getBlockState(new BlockPos(p.getX(), y0 + dy, p.getZ())).getBlock();
+                if (b == net.minecraft.world.level.block.Blocks.OAK_FENCE_GATE) {
+                    porton = true;
+                }
                 if (b == net.minecraft.world.level.block.Blocks.OAK_LOG
                         || b == net.minecraft.world.level.block.Blocks.COBBLESTONE
                         || b == net.minecraft.world.level.block.Blocks.MOSSY_COBBLESTONE) {
@@ -2393,7 +2398,10 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     break;
                 }
             }
-            if (hay) {
+            if (porton) {
+                portones++;
+            }
+            if (hay || porton) {
                 muro++;
                 rachaActual = 0;
             } else {
@@ -2409,9 +2417,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         for (var e : porRumbo.entrySet()) {
             reparto.append(nombres[e.getKey()]).append('=').append(e.getValue()).append(' ');
         }
-        DevilRpg.LOGGER.info("[Arnes] ANILLO (r=62, base y={}): {} celdas | con muro {} | AGUJEROS {} ({}) | racha mas"
-                        + " larga de agujeros seguidos: {}", y0, anillo.size(), muro, anillo.size() - muro,
-                reparto.toString().trim(), rachaLarga);
+        DevilRpg.LOGGER.info("[Arnes] ANILLO (r=62, base y={}): {} celdas | con muro {} | PORTONES {} | AGUJEROS {} ({})"
+                        + " | racha mas larga de agujeros seguidos: {}", y0, anillo.size(), muro, portones,
+                anillo.size() - muro, reparto.toString().trim(), rachaLarga);
         DevilRpg.LOGGER.info("[Arnes] ANILLO: lo que hay a la cota {} en el anillo: {}", cota,
                 bloqueEnLaCota(level, anillo, cota));
     }

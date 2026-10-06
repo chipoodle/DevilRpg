@@ -144,19 +144,30 @@ def main():
     y0 = max(firma, key=lambda k: firma[k])
     print()
     print('=> LA BASE DEL MURO ES y=%d (%d de %d celdas)' % (y0, firma[y0], len(ring)))
-    # Y AHORA, CELDA A CELDA: muro (tronco/adoquin a la base o encima), porton (entrada declarada) o AGUJERO.
+    puertas = {}
+    for (x, z) in ring:
+        n = b(x, y0, z)
+        if n == 'oak_fence_gate':
+            puertas[(x, z)] = [b(x, y0 + dy, z) for dy in (0, 1, 2)]
+    if puertas:
+        print('PORTONES (puertas de valla del muro), %d celdas: %s' % (len(puertas), sorted(puertas)))
+    # Y AHORA, CELDA A CELDA: muro (tronco/adoquin a la base o encima), PORTON (la puerta del pueblo) o AGUJERO.
     muro = 0
+    conPorton = 0
     agujeros = []
     for (x, z) in ring:
         capas = [b(x, y0 + dy, z) for dy in (0, 1, 2)]
         if any(c in ('oak_log', 'cobblestone', 'mossy_cobblestone') for c in capas):
             muro += 1
+        elif any(c == 'oak_fence_gate' for c in capas):
+            conPorton += 1
         else:
             agujeros.append((x, z, capas))
     # Las entradas cardinales que el generador abre a proposito: (centro.x +- r, centro.z) y (centro.x, centro.z +- r).
     portones = {(CENTRO[0] + R, CENTRO[1]), (CENTRO[0] - R, CENTRO[1]),
                 (CENTRO[0], CENTRO[1] + R), (CENTRO[0], CENTRO[1] - R)}
-    print('anillo: con muro %d | SIN muro %d (%.1f%%)' % (muro, len(agujeros), 100.0 * len(agujeros) / len(ring)))
+    print('anillo: con muro %d | con PORTON %d | SIN nada (agujero) %d (%.1f%%)'
+          % (muro, conPorton, len(agujeros), 100.0 * len(agujeros) / len(ring)))
     print()
     print('%-8s %8s  %s' % ('RUMBO', 'agujeros', 'ejemplo (celda: capa base / +1 / +2)'))
     nombres = ['ESTE', 'SURESTE', 'SUR', 'SUROESTE', 'OESTE', 'NOROESTE', 'NORTE', 'NORESTE']

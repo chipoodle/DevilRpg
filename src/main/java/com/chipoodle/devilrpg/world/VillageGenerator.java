@@ -6895,16 +6895,20 @@ public final class VillageGenerator {
         for (BlockPos p : ring) {
             for (int dy = 0; dy <= 2; dy++) {
                 BlockState s = level.getBlockState(new BlockPos(p.getX(), cota + dy, p.getZ()));
-                if (s.is(Blocks.OAK_LOG) || s.is(Blocks.COBBLESTONE) || s.is(Blocks.COBBLESTONE_STAIRS)) {
+                // El PORTÓN también cuenta como cierre (es la puerta del pueblo): si no, `asegurarMuro` daría el muro
+                // por ausente en las cuatro entradas y lo reconstruiría en cada latido.
+                if (s.is(Blocks.OAK_LOG) || s.is(Blocks.COBBLESTONE) || s.is(Blocks.COBBLESTONE_STAIRS)
+                        || s.is(Blocks.OAK_FENCE_GATE)) {
                     conMuro++;
                     break;
                 }
             }
         }
-        // Si YA está (la mayoría del anillo tiene muro), no se toca nada. El listón está en el 90 % y no en el 100 %
-        // a propósito: los 9 agujeros que quedan son los CUATRO PORTONES (medido: ESTE=3, SUR=2, OESTE=2, NORTE=2,
-        // 912 de 921 celdas ✓), y esos no se cierran: son la puerta del pueblo.
-        if (conMuro >= ring.size() * 0.9D) {
+        // Si YA está CERRADO DEL TODO, no se toca nada. El listón es el 100 % a propósito: los cuatro portones del muro
+        // TAMBIÉN cuentan como cierre (son la puerta del pueblo, y sin ellos el anillo tenía cuatro boquetes de aire),
+        // así que una aldea con el muro viejo —sin portones— se reconstruye UNA vez para ponerlos, y a partir de ahí el
+        // portón cuenta y no se vuelve a tocar (no oscila) ✓.
+        if (conMuro >= ring.size()) {
             return;
         }
         DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO esta a la cota {} (solo {} de {} celdas del anillo lo"
@@ -7035,8 +7039,18 @@ public final class VillageGenerator {
     }
 
     /**
-     * Entrada de cobblestone en un punto cardinal: columna de cobblestone a cada lado, hueco central y
-     * dintel de cobblestone encima. El eje de la entrada es perpendicular a la dirección cardinal.
+     * <b>Entrada del muro en un punto cardinal</b>: columna de cobblestone a cada lado, <b>portón de valla</b> de dos
+     * bloques de alto en el hueco central y dintel de cobblestone encima.
+     * <p>
+     * <b>EL PORTÓN ES LA CLAVE DE «QUE EL ASEDIO TENGA QUE ROMPER»</b> (6-oct-2026, decisión del jugador). Antes el
+     * hueco quedaba <b>abierto</b> (aire): el muro estaba cerrado pero un asaltante que llegara a una entrada entraba
+     * <b>sin romper nada</b>. Ahora lleva <b>puerta de valla</b> por una razón medida, no por gusto: el juego
+     * <b>no deja</b> que un zombi abra ni rompa una puerta de valla (la trata como valla, no como puerta), así que el
+     * asaltante <b>tiene que picar el muro</b> ✓ — y el <b>pueblo sí</b> las cruza, porque ya tiene su goal que se las
+     * abre y se las cierra ({@code VillagerGateGoal}, que existe justo para esto: el juego tampoco deja que un aldeano
+     * abra una puerta de valla).
+     * <p>
+     * El eje del portón es <b>perpendicular</b> al muro: en las entradas N/S el portón mira en X y en las E/O en Z.
      */
     private static void entrance(ServerLevel level, BlockPos center, BlockPos p, int r, int baseY) {
         // Eje perpendicular a la entrada (si la entrada está en N/S, los lados se reparten en X; si en E/O, en Z).
@@ -7047,6 +7061,17 @@ public final class VillageGenerator {
             colocar(level, new BlockPos(p.getX() - signX, baseY + i, p.getZ() - signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
             colocar(level, new BlockPos(p.getX() + signX, baseY + i, p.getZ() + signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
         }
+        // EL PORTÓN: dos bloques de alto, en la celda del hueco. Se apoya en el suelo de la aldea (baseY-1), así que su
+        // `canSurvive` va servido; el de arriba se apoya en el de abajo.
+        // lint:ok I9 porque este portón NO necesita subir CURRENT_LAYOUT: `asegurarMuro` (que lo cuenta como cierre)
+        // reconstruye el anillo entero en el latido en cuanto ve que le falta un portón, así que las partidas que ya
+        // tienen muro lo reciben solas —idempotente— sin rehacer la aldea. Medido: `con muro 912 -> 921 | PORTONES 9 |
+        // AGUJEROS 0` ✓.
+        BlockState porton = Blocks.OAK_FENCE_GATE.defaultBlockState()
+                .setValue(FenceGateBlock.FACING, northSouth ? Direction.EAST : Direction.SOUTH)
+                .setValue(FenceGateBlock.OPEN, false);
+        colocar(level, new BlockPos(p.getX(), baseY, p.getZ()), porton, 3);
+        colocar(level, new BlockPos(p.getX(), baseY + 1, p.getZ()), porton, 3);
         colocar(level, new BlockPos(p.getX(), baseY + 3, p.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
     }
 
@@ -8250,14 +8275,35 @@ public final class VillageGenerator {
     }
 
     /**
+     * <b>LOS CUATRO PORTONES DEL MURO PERIMETRAL</b> (6-oct-2026, lo pidió el jugador: *«cerrar el anillo y el asedio
+     * tenga que abrir brecha»* → y al ver que los cuatro portones seguían siendo paso libre, eligió *«portones de
+     * verdad: que el asedio tenga que ROMPERLOS»*).
+     * <p>
+     * Es la celda de cada entrada cardinal (la que {@link #entrance} deja hueca). Vive aquí, en el sitio único de los
+     * portones (I4), para que la use el que los <b>coloca</b> ({@link #entrance}), el que los <b>abre</b>
+     * ({@code VillagerGateGoal}, que ya abre las puertas de valla del pueblo porque el juego no deja que un aldeano las
+     * abra), el <b>despeje</b> de su hueco (I54) y el <b>filtro del plano</b>.
+     */
+    public static List<BlockPos> portonesDelMuro(BlockPos center, int nivel) {
+        List<BlockPos> portones = new ArrayList<>();
+        portones.add(new BlockPos(center.getX() + FENCE_RADIUS, nivel, center.getZ()));
+        portones.add(new BlockPos(center.getX() - FENCE_RADIUS, nivel, center.getZ()));
+        portones.add(new BlockPos(center.getX(), nivel, center.getZ() + FENCE_RADIUS));
+        portones.add(new BlockPos(center.getX(), nivel, center.getZ() - FENCE_RADIUS));
+        return portones;
+    }
+
+    /**
      * <b>TODOS los portones de valla de la aldea</b>: los doce de las parcelas (el granjero los cruza para entrar y
-     * salir de su huerta) y los dos del anexo (el del corral y el del gallinero). Vive en <b>un solo sitio</b> (I4):
+     * salir de su huerta), los dos del anexo (el del corral y el del gallinero) y <b>los cuatro del muro</b> (que son
+     * la puerta del pueblo al campo, y lo que impide que el asedio entre andando). Vive en <b>un solo sitio</b> (I4):
      * lo usan el goal que los abre ({@code VillagerGateGoal}), el despeje de su hueco y el filtro del plano (I54).
      */
     public static List<BlockPos> todosLosPortones(BlockPos center, int nivel) {
         List<BlockPos> portones = new ArrayList<>(portonesDeLosBancales(center, nivel));
         portones.add(portonDelCorral(center, nivel));
         portones.add(portonDelGallinero(center, nivel));
+        portones.addAll(portonesDelMuro(center, nivel));
         return portones;
     }
 

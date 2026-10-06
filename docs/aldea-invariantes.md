@@ -6312,7 +6312,67 @@ O sea: el crío de la aldea 0 vuelve a andar **como un zombi normal** ✓ y las 
 **MEDIDA para la próxima partida**: la traza debe decir **`MOVEMENT_SPEED: 0.23`** en la aldea 0 ✓ y seguir subiendo en
 las siguientes ✓.
 
-### I218 · EL ANILLO CERRADO: EL MURO ESTABA ENTERRADO VEINTE BLOQUES (y el asedio ya tiene que abrir brecha)
+### I219 · LOS PORTONES DEL MURO: EL ASEDIO YA TIENE QUE ROMPERLOS
+
+**Lo eligió el jugador** (6-oct-2026), al ver que el anillo cerrado dejaba los cuatro portones como paso libre:
+*«portones de verdad: que el asedio tenga que ROMPERLOS»* ✓.
+
+**El mecanismo, y es de los que ya existían** ✓: se pone **puerta de valla** (`OAK_FENCE_GATE`) de dos bloques de alto
+en la celda de cada entrada cardinal, en vez del hueco de aire. La razón **no es estética, está medida**: el juego
+**no deja** que un zombi abra **ni rompa** una puerta de valla —la trata como valla, no como puerta—, así que el
+asaltante **tiene que picar el muro** ✓; y el **pueblo sí** las cruza, porque ya tiene su goal
+(`VillagerGateGoal`, **L59**), que existe justo para esto: el juego tampoco deja que un aldeano abra una puerta de
+valla ✓.
+
+**Va en el sitio único de los portones (I4)** ✓:
+- **`VillageGenerator.portonesDelMuro`** (nuevo): las cuatro celdas de las entradas cardinales.
+- Y se **suman** a `todosLosPortones`, que es la lista que usan el goal que las abre, el despeje de su hueco (I54) y el
+  filtro del plano ✓ — así el portón del muro se abre y se cierra **como los demás**, sin código nuevo de puertas.
+
+**DOS DETALLES QUE COSTARON UNA CORRIDA CADA UNO** ✓:
+1. **El portón tiene que contar como cierre en `asegurarMuro`**: si no, la comprobación ve 912 de 921, da el muro por
+   ausente y lo **reconstruye en bucle** ✗. Se añadió `s.is(Blocks.OAK_FENCE_GATE)` al recuento ✓.
+2. **Y el listón subió al 100 %** (antes 90 %): una aldea con el muro viejo, sin portones, se reconstruye **una vez**
+   para ponerlos, y a partir de ahí el portón cuenta y **no oscila** ✓.
+
+**MEDIDO** ✓ (`rapida-80.log`):
+
+```
+el muro NO esta a la cota 83 (solo 912 de 921 celdas del anillo lo tienen): se reconstruye a su nivel
+muro reconstruido al nivel del pueblo 83 (1448 restos quitados)
+ANILLO (r=62, base y=83): 921 celdas | con muro 921 | PORTONES 9 | AGUJEROS 0 | racha mas larga: 0
+```
+
+Los **1448 restos quitados** son el muro viejo **de la cota 63**: la prueba de que estaba **enterrado** veinte bloques
+✓ (I218). Y el anillo queda **cerrado del todo**: **0 agujeros**, sin una sola racha ✓.
+
+**El lector independiente, sobre el guardado** ✓ (`anillo_del_muro.py`):
+
+```
+=> LA BASE DEL MURO ES y=83 (912 de 921 celdas)
+PORTONES (puertas de valla del muro), 4 celdas: [(408,646), (470,584), (470,708), (532,646)]
+anillo: con muro 912 | con PORTON 9 | SIN nada (agujero) 0 (0.0%)
+de los agujeros, los que caen EXACTAMENTE en una entrada cardinal declarada: 0 (ninguno)
+rachas de agujeros seguidos: []
+```
+
+Los **9 portones** son las **4 celdas** de entrada (2 puertas de valla cada una) más el **dintel** de adoquín que las
+cierra por arriba ✓. Las cuatro celdas caen **exactamente** en los cuatro puntos cardinales a r=62 ✓.
+
+**Y EL ASEDIO YA TIENE QUE ROMPER** ✓ (`rapida-81.log`, 8 asaltantes a r=60):
+
+| | anillo abierto (I214) | anillo cerrado (I218) | **con portones (I219)** |
+|---|---|---|---|
+| qué pican | nieve y hielo | `cobblestone`, `oak_log` | **`oak_log` y `cobblestone`** — el muro ✓ |
+| puertas de valla rotas | — | — | **0** ✓ (el asaltante **no** puede con el portón) |
+| entran | andando ✗ | rompiendo y por el portón | **solo rompiendo el muro** ✓ |
+| final de la ola | 8 de 8 dentro | entran y algunos mueren | **8 → 0**: **la milicia los mata a todos** entre t=1200 y t=1680 ✓ |
+
+**LO QUE QUEDA, para que no se dé por redondo** ✗: no se ha medido que un **aldeano** cruce estos portones nuevos (el
+goal los tiene en su lista y son del mismo tipo que los del corral y las parcelas, que sí funcionan, pero **eso no es
+una medida**). Queda anotado como lo que hay que mirar en la próxima partida: un aldeano saliendo del pueblo por una
+entrada cardinal y el portón cerrándose detrás ✓.
+
 
 **Lo decidió el jugador** (6-oct-2026): *«cerrar el anillo y el asedio tenga que abrir brecha»* ✓. Es el pendiente de
 los huecos, y lo primero fue **medir**, como él pidió ✓.
