@@ -110,10 +110,13 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    `AggressiveZombieEntity.adjustAttributesBasedOnSpawnDistance` (**L1125-1140**): el tope se aplica al **VALOR FINAL**
    (la base se deriva dividiendo por los modificadores que ya tenga el bicho). Medido: el crio de la aldea 0 sale a
    **0,552 SIN el arreglo y a 0,230 CON el** (base 0,1533 x 1,5), y la progresion no se toca.
-5. **Traza de la milicia** (pequeno): que el reparto escriba `[Milicia] aldea N: X espadachines y Y arqueros equipados`,
-   para poder **contarlos** en el registro en vez de deducirlo. El reparto vive en `VillageManager.repartirGuardia`
-   (**L3182**, llamado desde **L3079**) y **ya alterna** los tipos (`i % 2 == 0 ? ESPADACHIN : ARQUERO`, L3222-3227), asi
-   que el **2 espadachines + 2 arqueros** ya sale solo con cuatro milicianos.
+5. **Traza de la milicia** — **HECHA** (I217). `VillageManager.repartirGuardia` (**L3216**) escribe
+   `[Milicia] aldea N: X espadachin(es) y Y arquero(s) de S sobrante(s) de A aldeano(s), milicia hasta 7 | alistados DE
+   VERDAD: G (…)` **solo cuando el reparto cambia**, y canta **los dos numeros** (lo que el bucle cree alistar y lo que
+   de verdad lleva la marca) para que una discrepancia se vea en vez de esconderse. Medido en la partida de 3 minutos:
+   `0 espadachin(es) y 0 arquero(s) de 0 sobrante(s) de 12 aldeano(s) | alistados DE VERDAD: 0` — **y el cero no es un
+   fallo**: con los puestos por oficio cubiertos no hay sobrantes y sin sobrantes no hay milicia (es la regla del
+   reparto). **Falta ver** una milicia con gente dentro (aldea con crias o mas adultos que puestos).
 
 ---
 

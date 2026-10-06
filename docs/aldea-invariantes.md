@@ -6312,6 +6312,34 @@ O sea: el crío de la aldea 0 vuelve a andar **como un zombi normal** ✓ y las 
 **MEDIDA para la próxima partida**: la traza debe decir **`MOVEMENT_SPEED: 0.23`** en la aldea 0 ✓ y seguir subiendo en
 las siguientes ✓.
 
+### I217 · LA TRAZA DE LA MILICIA (para poder contarla, no deducirla)
+
+**Lo pedía el pendiente 5** ✓: *«que el reparto escriba `[Milicia] aldea N: X espadachines y Y arqueros equipados`, para
+poder contarlos en el registro en vez de deducirlo»*. Vive en `VillageManager.repartirGuardia` (**L3216**, el reparto
+alterna los tipos en el bucle de alistamiento: `i % 2 == 0 ? ESPADACHIN : ARQUERO`) y **solo canta cuando el reparto
+cambia** —el latido reparte cada 10 s y repetir la misma línea sería ruido que tapa lo demás ✓.
+
+**Y canta los guardias DE VERDAD, no los que el bucle cree haber alistado** ✓: al final se cuentan los que llevan la
+marca de la milicia (`VillagerGuardGoal.esGuardia` y `tipoDe`) y se escriben los dos números juntos, para que la traza
+**enseñe** una discrepancia en vez de esconderla ✓.
+
+**MEDIDO** (`rapida-54.log`):
+
+```
+[Milicia] aldea 0: 0 espadachin(es) y 0 arquero(s) de 0 sobrante(s) de 12 aldeano(s), milicia hasta 7
+          | alistados DE VERDAD: 0 (0 espadachin(es), 0 arquero(s))
+```
+
+**Y el cero NO es un fallo: es la regla del reparto** ✓. El pueblo tiene **12 adultos** y los **puestos fijos** (los
+sitios por oficio, de `VillageGenerator.puestosPorOficio()`) se llevan a todos, así que **no hay sobrantes** y sin
+sobrantes **no hay milicia** ✓ — es lo que el propio método documenta: *«con 5 aldeanos —los que tiene una aldea sana— no
+hay guardia: hacen falta crías, o sea una aldea que crece»* ✓. La traza deja ese caso **cantado** en vez de silencioso,
+que es justo lo que hacía falta para poder contarlo ✓.
+
+**Lo que NO se ha visto todavía** ✗: una milicia **con gente dentro** en el registro. Para eso hace falta una aldea **con
+sobrantes** (crías que crezcan, o más adultos que puestos), y la partida de medida de 3 minutos no los tiene. Queda
+anotado con lo que hay que buscar: `[Milicia] aldea N: 2 espadachin(es) y 2 arquero(s) …` ✓.
+
 ### MILICIA · **LA REMESA INICIAL ES UNA TABLA, Y TRAE EL EQUIPO DE ARRANQUE** (5-oct-2026)
 
 **Lo que pidió el jugador**: *«dale a cada aldea también 2 arqueros y 2 guerreros con armaduras de cuero, las espadas de

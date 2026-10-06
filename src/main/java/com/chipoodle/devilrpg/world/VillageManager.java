@@ -3213,6 +3213,12 @@ public final class VillageManager {
      * El <b>tipo</b> va por número: los primeros son espadachines y el resto arqueros, en la proporción que el
      * jugador quiere para la marcha a la guarida (4 espadachines y 3 arqueros).
      */
+    /**
+     * El último reparto de milicia que se ha cantado en el registro (ver {@link #repartirGuardia}): sirve para escribir
+     * la línea <b>solo cuando cambia</b>, porque el latido reparte cada 10 s y repetirla sería ruido.
+     */
+    private static String ultimoRepartoDeLaMilicia = "";
+
     private static void repartirGuardia(ServerLevel level, List<Villager> aldeanos, BlockPos center,
                                         int objectiveIndex) {
         // Puestos fijos que NO pueden quedarse sin cubrir (cupo por oficio). Lo que sobre de cada oficio, o los
@@ -3247,18 +3253,49 @@ public final class VillageManager {
         }
 
         // Los primeros se alistan (hasta el tope de la milicia); el resto vuelve a la vida civil.
+        int espadachines = 0;
+        int arqueros = 0;
         for (int i = 0; i < sobrantes.size(); i++) {
             Villager villager = sobrantes.get(i);
             if (i >= MILICIA_MAX) {
                 desalistarGuardia(villager);
                 continue;
             }
+            int tipo = i % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO;
+            if (tipo == VillagerGuardGoal.ESPADACHIN) {
+                espadachines++;
+            } else {
+                arqueros++;
+            }
             alistarGuardia(level, villager, center, objectiveIndex, i,
                     // SE ALTERNAN (lo pidió el jugador: "tampoco he visto ningún arquero; al crearse deberían alternarse"): con el
                     // corte por número, los cuatro primeros eran espadachines y en milicias pequeñas NO HABÍA NI UN
                     // ARQUERO. Alternando salen 4 espadachines y 3 arqueros con la milicia llena (la formación de
                     // siempre) y con dos guardias ya hay uno de cada.
-                    i % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO);
+                    tipo);
+        }
+        // LA TRAZA DEL REPARTO (25-oct-2026, lo pidió el jugador): que el registro lo DIGA, para poder CONTAR la milicia
+        // en vez de deducirla del equipo que se les ve. Se canta solo cuando CAMBIA el reparto (el latido reparte cada
+        // 10 s, y repetir la misma linea cada latido es ruido que tapa lo demas).
+        // Y se cuentan los guardias DE VERDAD (la marca del mod), no los que este bucle cree haber alistado: si los dos
+        // numeros no cuadran, la traza lo enseña en vez de esconderlo.
+        int guardiasDeVerdad = 0;
+        int espadachinesDeVerdad = 0;
+        for (Villager villager : aldeanos) {
+            if (VillagerGuardGoal.esGuardia(villager)) {
+                guardiasDeVerdad++;
+                if (VillagerGuardGoal.tipoDe(villager) == VillagerGuardGoal.ESPADACHIN) {
+                    espadachinesDeVerdad++;
+                }
+            }
+        }
+        String reparto = espadachines + " espadachin(es) y " + arqueros + " arquero(s) de " + sobrantes.size()
+                + " sobrante(s) de " + aldeanos.size() + " aldeano(s), milicia hasta " + MILICIA_MAX
+                + " | alistados DE VERDAD: " + guardiasDeVerdad + " (" + espadachinesDeVerdad + " espadachin(es), "
+                + (guardiasDeVerdad - espadachinesDeVerdad) + " arquero(s))";
+        if (!reparto.equals(ultimoRepartoDeLaMilicia)) {
+            ultimoRepartoDeLaMilicia = reparto;
+            DevilRpg.LOGGER.info("[Milicia] aldea {}: {}", objectiveIndex, reparto);
         }
         // Y los que YA no sobran (murió gente, la aldea necesita su oficio) dejan la guardia: si no, la aldea se
         // quedaría sin granjero o sin herreros por tener milicia.
