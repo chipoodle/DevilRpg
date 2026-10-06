@@ -767,6 +767,29 @@ public class AggressiveZombieEntity extends Zombie {
         }
     }
 
+    /**
+     * Velocidad de un zombi normal del juego (su atributo de vanilla). Es el <b>ancla</b> de los asaltantes.
+     */
+    private static final double VELOCIDAD_DE_ZOMBI_NORMAL = 0.23D;
+
+    /**
+     * <b>Escala efectiva de un asaltante de la PRIMERA aldea</b>, <b>MEDIDA</b> en la partida del jugador (5-oct-2026,
+     * traza {@code Attributes Scaled => scaleFactor … MOVEMENT_SPEED}): {@code 0.368 = 0.23 × 1.6}, o sea la escala
+     * clavada en el tope. Es el único número que hay que revisar si cambia el perfil de spawn.
+     */
+    private static final double ESCALA_DE_LA_PRIMERA_ALDEA = 1.6D;
+
+    /**
+     * Lo que se le <b>resta</b> a la velocidad escalada para que en la primera aldea ande como un zombi normal.
+     * <p>
+     * No es un número suelto: se <b>deriva</b> de la velocidad base del perfil y del tope, así que si el perfil cambia
+     * el ajuste se recalcula solo. La <b>progresión no se toca</b>: la misma curva, desplazada hacia abajo lo justo
+     * para que el primer asaltante ande a la velocidad de vanilla y los de aldeas avanzadas sigan subiendo.
+     */
+    private static final double AJUSTE_DE_VELOCIDAD_PRIMERA_ALDEA =
+            Math.max(0.0D, SPAWN_PROFILE.baseSpeed() * Math.min(ESCALA_DE_LA_PRIMERA_ALDEA, VELOCIDAD_TOPE_DE_ESCALA)
+                    - VELOCIDAD_DE_ZOMBI_NORMAL);
+
     private void adjustAttributesBasedOnSpawnDistance() {
         if (spawnDistance < SPAWN_PROFILE.minDistance()) {
             return; // Si está en la zona de spawn, no cambia atributos
@@ -785,7 +808,12 @@ public class AggressiveZombieEntity extends Zombie {
         // de la primera aldea iba a **un 31 %** de la velocidad de un zombi de vanilla, y solo llegaba a parecer normal
         // cuando el ×4 del escalado lo empujaba a ~0.28. Ahora la base es la del zombi normal y la velocidad escala
         // **poco** (hasta +60 %): un asaltante corre siempre, y el escalado se nota en vida y daño, no en eternizarse.
-        double velocidad = SPAWN_PROFILE.baseSpeed() * Math.min(scaleFactor, VELOCIDAD_TOPE_DE_ESCALA);
+        // ANCLA DE VELOCIDAD (5-oct-2026, medido en la partida del jugador: en la aldea 0 salian a 0.368, o sea
+        // +60 % sobre el zombi normal de 0.23, y se les veia correr de mas). La curva de la progresion es la MISMA;
+        // solo se le resta el exceso de la primera aldea. El suelo evita que un perfil mas lento la deje en negativo.
+        double velocidad = Math.max(VELOCIDAD_DE_ZOMBI_NORMAL,
+                SPAWN_PROFILE.baseSpeed() * Math.min(scaleFactor, VELOCIDAD_TOPE_DE_ESCALA)
+                        - AJUSTE_DE_VELOCIDAD_PRIMERA_ALDEA);
         Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(velocidad);
         Objects.requireNonNull(this.getAttribute(Attributes.ATTACK_DAMAGE)).setBaseValue(SPAWN_PROFILE.baseDamage() * scaleFactor);
 

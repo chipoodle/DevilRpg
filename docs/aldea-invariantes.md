@@ -6254,3 +6254,27 @@ return configured.trim().equalsIgnoreCase(villager.getUUID().toString());   // v
 
 `recordIntent` ya consultaba el filtro (`if (!enabled() || !matchesFilter(villager)) return;`) ✓, asi que con esto no
 registra nada con el UUID vacio ✓.
+
+### ANCLA DE VELOCIDAD DE LOS ASEDIADOS · **MEDIDA, NO SUPUESTA** (5-oct-2026)
+
+**El jugador**: *«todavía está rápido el zombie, bájale la velocidad un poco más»* ✗. Con `logEscaladoDeSpawn` encendido,
+el asedio de la aldea 0 dejó el número en su registro ✓:
+
+```
+Attributes Scaled => scaleFactor: 1.733 | DISTANCE: 748.6 | MOVEMENT_SPEED: 0.36800000000000005
+```
+
+**0.368 = 0.23 × 1.6** ✓: la velocidad base ya era la del zombi normal (0.23 ✓) pero la escala de la PRIMERA aldea está
+**clavada en el tope** (1.6 ✗) → **+60 %** ✗. **Resta a aplicar: 0.138** ✓ (0.368 − 0.23 ✓).
+
+**ARREGLO (en `AggressiveZombieEntity`, la línea de la velocidad)**: se mantiene la curva de la progresión **intacta**
+(misma `scaleFactor`, mismo tope ✓) y solo se le **resta el exceso de la primera aldea** ✓, con el ajuste **derivado**
+de las mismas piezas (`baseSpeed × min(escala, tope) − 0.23` ✓) y un `Math.max` de suelo ✓. Aldea 0 → **0.230** ✓ (zombi
+normal ✓); aldeas siguientes → siguen subiendo ✓.
+
+**PENDIENTE, visto en la misma traza y NO tocado** ✗: **uno de los ocho** asaltantes salió a **`MOVEMENT_SPEED: 0.552`**
+(= 0.23 × 2.4 ✗) con el mismo `scaleFactor` (1.73) que los demás — o sea que ese no pasó por el tope, y hay que mirar
+por qué (¿otro perfil? ¿otro camino de creación?) antes de dar la velocidad por cerrada ✓.
+
+**MEDIDA para la próxima partida**: la traza debe decir **`MOVEMENT_SPEED: 0.23`** en la aldea 0 ✓ y seguir subiendo en
+las siguientes ✓.
