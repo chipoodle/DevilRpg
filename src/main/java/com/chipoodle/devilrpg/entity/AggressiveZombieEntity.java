@@ -132,14 +132,16 @@ public class AggressiveZombieEntity extends Zombie {
      * <p>
      * Desde el 5-oct-2026 la banda solo tiene que cubrir la <b>cara de DENTRO</b> del anillo: la de fuera (radio 62,5)
      * ya cae fuera del recinto y se pica por la regla general de fuera.
-     * <b>Y LA BANDA ES ESTRECHA, COMO EL MURO</b> (5-oct-2026, medido con el arnés): {@code MURALLA_ANCHO} era
-     * <b>5</b> —«hacia dentro y hacia fuera»— y eso hacía rompible una franja de <b>diez bloques de grueso</b>
-     * (r=57..67) a la altura del pueblo: medido, el asaltante del asedio inicial se metió <b>24 bloques dentro</b> de la
-     * aldea (r=38..46) picando tierra y piedra que la banda contaba como «muralla». El anillo de la valla es <b>una
-     * celda</b> de grueso (con sus columnas y sus diagonales), así que la banda es <b>1</b> y el veto de dentro empieza
-     * en la celda de al lado.
+     * <b>Y LA BANDA ES LA DEL ANILLO, NI UN BLOQUE MAS</b> (5-oct-2026, medido con el arnés y con
+     * `tools/arnes/verificar_recinto.py`): {@code MURALLA_ANCHO} era <b>5</b> —«hacia dentro y hacia fuera»—, o sea
+     * <b>diez bloques de grueso</b> (r=57..67) a la altura del pueblo, y con eso el asaltante del asedio inicial se
+     * metía <b>24 bloques dentro</b> (r=38..46) picando tierra y piedra que la banda contaba como «muralla». Bajó a
+     * <b>1</b>… y la verificación independiente cazó que <b>tampoco</b>: con 1 la banda es r=61..63, así que la
+     * <b>cara de DENTRO del muro (r=61,5) seguía saliendo rompible</b>. El anillo de la valla es <b>una celda</b> en
+     * r=62 (`VillageGenerator.anilloDelMuro`), así que la banda es <b>0</b>: se pica <b>el anillo</b>, y ni la celda
+     * de dentro ni la de fuera.
      */
-    private static final int MURALLA_ANCHO = 1;
+    private static final int MURALLA_ANCHO = 0;
     /** Hasta dónde llega la muralla hacia arriba (desde la cota del pueblo): es lo que se puede picar de ella. */
     private static final int MURALLA_ALTO = 6;
 
@@ -300,8 +302,16 @@ public class AggressiveZombieEntity extends Zombie {
      * (r=65 → r=44 picando tierra y piedra del pueblo); la traza enseñó la celda abierta con
      * {@code dentroDeLaAldea=true}, o sea que la puerta es la que tiene que decidir, no el que llama.
      */
+    /**
+     * <b>INTERRUPTOR DE MEDIDA</b> (5-oct-2026, se quita al cerrar la medida): con esto en {@code false} la regla del
+     * jugador queda <b>puenteada</b> en la puerta ({@link #breakBlockAt}), que es lo que mide <b>qué haría el asaltante
+     * sin la regla</b>. El arnés lo imprime en su primera línea de la medida del muro, así que ninguna corrida se puede
+     * confundir con la otra. En {@code true} —lo que va al jugador— la regla está puesta.
+     */
+    public static final boolean REGLA_DEL_MURO_ACTIVA = true;
+
     private void breakBlockAt(BlockPos pos) {
-        if (protegidoPorLaAldea(pos)) {
+        if (REGLA_DEL_MURO_ACTIVA && protegidoPorLaAldea(pos)) {
             return; // dentro de la aldea no se pica; el muro perimetral sí (es la brecha)
         }
         BlockState bs = level().getBlockState(pos);
@@ -542,9 +552,15 @@ public class AggressiveZombieEntity extends Zombie {
             return false; // fuera: campo abierto (aquí se hacen las escaleras de bloques para entrar)
         }
         if (esLaMuralla(pos, cota)) {
-            return false; // la muralla: es la brecha por la que entra un asedio
+            return false; // el anillo del muro: es la brecha por la que entra un asedio
         }
-        return elAsedioYaSeGano();
+        // DENTRO: no se pica NADA, y esto NO depende del campo de fuerza (5-oct-2026, y era el fallo grande).
+        // Aquí estaba `return elAsedioYaSeGano()`, así que con el ASEDIO INICIAL SIN RESOLVER esto devolvía FALSE
+        // para TODA la aldea: medido con el arnés, el asaltante se abrió un túnel de 36 bloques dentro del término
+        // (49 de piedra, 23 de tierra) y el veto no lo paró nunca. El campo de fuerza del jugador ("cuando se gana el
+        // asedio la aldea genera un campo de fuerza …") sigue donde le toca —expulsar bichos y negar spawneo—, pero
+        // para decidir SI SE ROMPE la regla es la del jugador y es de GEOMETRÍA: muro perimetral sí, dentro no.
+        return true;
     }
 
     /**

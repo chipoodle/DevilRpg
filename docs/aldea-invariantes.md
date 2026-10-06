@@ -6450,7 +6450,12 @@ nadie más. Los bloques que pica cada asaltante salen además en `[Siege] un asa
 <celda>` (**L314** del mod) ✓.
 
 **Cuatro fallos del INSTRUMENTO, medidos y corregidos** (la regla de oro: si un número sorprende, sospecha primero del
-instrumento ✓). Los cuatro daban una corrida **inválida**, y quedan escritos para no repetirlos:
+instrumento ✓). Los cuatro daban una corrida **inválida**, y quedan escritos para no repetirlos. Y **dos más** que
+salieron al montar la escena de dentro (corridas 22-27) y que valen para cualquier medida futura: **(5)** un asaltante
+puesto «a r=50 y a la cota» **nace enterrado** en la piedra del terreno y **muere asfixiado en 4 segundos** (medido:
+`vivo=true` a t=360 y `vivo=false` a t=420, 0 bloques) — ahora se busca una celda con aire de verdad y suelo firme; y
+**(6)** un asaltante **encerrado** en una caseta de 1×2 **no dispara su detector de atasco** (pide 10 ticks sin moverse
+y no los acumula): encerrarlo **no** sirve para medir esta regla.
 
 1. **`CENTRO.getY()` no es la cota** ✗. `CENTRO` es `470,63,646` (la Y del objetivo) y esta aldea se construyó a la
    **83**. La primera corrida puso al jugador de pega y a los asaltantes **20 bloques por debajo del suelo**: lo que se
@@ -6474,23 +6479,55 @@ instrumento ✓). Los cuatro daban una corrida **inválida**, y quedan escritos 
 | **bloques picados por el asaltante de la aldea GANADA** | **0** (I89) | **2 `packed_ice`** en r=59, **fuera** del recinto: es el campo abierto de fuera, y su regla lo permite ✓ |
 | **bloques del de FUERA (r=66, asedio inicial)** | — | **133**, de r=65 (la brecha, lo que toca) hasta **r=26**, o sea **36 bloques DENTRO del término** |
 
-**LO QUE ESTA CORRIDA *NO* CIERRA, y por qué no se da por bueno** ✗: el asaltante del asedio inicial **todavía se
-mete 36 bloques dentro** de la aldea. El desglose por material de sus 133 bloques lo dice sin interpretación: **49
-`stone` de r=32 a r=65**, **23 `dirt` de r=26 a r=62**, **3 `grava` a r=40-42** y **27 `packed_ice` de r=2 a r=22** —
-todo eso es **término del pueblo**, no muro. Y el anillo de prueba **no se toca** probablemente **porque el túnel va por
-ENCIMA de él** (el asaltante pica a `y=84` y `y=85` y el anillo está asentado a `y=83`, en el suelo), así que el «205 de
-205» **no demuestra** que el veto funcione: demuestra que esa prueba **no lo mide**. Anotado como tal, sin adornos ✓.
+**LO QUE ESTA CORRIDA *NO* CIERRA, y por qué no se da por bueno** ✗: el asaltante del asedio inicial **todavía se metía
+36 bloques dentro** de la aldea. El desglose por material de sus 133 bloques lo decía sin interpretación: **49 `stone` de
+r=32 a r=65**, **23 `dirt` de r=26 a r=62**, **3 `grava` a r=40-42** y **27 `packed_ice` de r=2 a r=22** — todo eso es
+**término del pueblo**, no muro. Y el anillo de prueba **no se tocó** probablemente **porque el túnel va por ENCIMA de
+él** (el asaltante pica a `y=84` y `y=85` y el anillo está asentado a `y=83`, en el suelo), así que el «205 de 205» **no
+demostraba** que el veto funcionara: demostraba que esa prueba **no lo mide**.
 
-**Y la traza del propio mod (temporal, ya retirada) deja el caso abierto con un dato duro**: la celda que se picó salió
-con `dentroDeLaAldea=true` (con la cota de ahora, 83) **y aun así se picó**. Dos pistas, con los números de esta
-corrida: (1) la **Y del `villageCenter`** se fija al nacer y **no se refresca** cuando la cota de la aldea cambia —aquí
-iba **4 bloques por debajo** de la cota, y hay caminos que todavía leen esa Y—; y (2) `cotaDeLaPlaza` devolvió **79** y
-**83** en la **misma sesión**, o sea que el caché de la cota **cambia de valor a mitad de partida** (migración del
-terreno): cualquier regla que mezcle una medida vieja con una nueva se abre por ese hueco. **Es lo siguiente que hay que
-medir**, y queda apuntado en `docs/CONTINUAR.md` ✓.
+### I211 · EL FALLO DE RAÍZ QUE FALTABA: `protegidoPorLaAldea` TERMINABA EN «¿ASEDIO GANADO?»
 
-Lo que **sí** queda cerrado en esta vuelta: la regla se aplica **en la puerta** (`breakBlockAt`, `L303`), que es el único
-sitio que destruye un bloque; las dos preguntas del recinto usan **la cota de ahora** y no la Y del centro; `MURALLA_ANCHO`
-baja de **5 a 1** (el anillo de la valla es **una** celda, no diez); y el asaltante de la **aldea ganada** no toca nada de
-dentro (**2** bloques, y los dos **fuera** del recinto) ✓.
+**Y era esto.** El paso que cerró el caso no fue otra corrida: fue la **verificación independiente de la cuenta**
+(`tools/arnes/verificar_recinto.py`, **13 casos**, sin servidor) que pidió el jugador. Al escribirla, la función cantó:
+
+```java
+private boolean protegidoPorLaAldea(BlockPos pos) {
+    if (!dentroDeLaAldea(pos, cota)) return false;
+    if (esLaMuralla(pos, cota))    return false;
+    return elAsedioYaSeGano();   // <-- CON EL ASEDIO INICIAL SIN RESOLVER: FALSE PARA TODA LA ALDEA
+}
+```
+
+Con el **asedio inicial sin resolver** —el que el jugador tiene que ganar, `worldSiegeIndex = -1`— esa última línea
+devolvía **`false` para todo lo de dentro**: el veto no vetaba **nada**. Eso explica **todo** lo medido: el túnel de 36
+bloques (corrida 19), el kiosco picado (corridas 5-7) y que la traza dijera `dentroDeLaAldea=true` y aun así se picara
+(no se contradecía el código: **se contradecía mi lectura de la última línea**). La regla del jugador es de
+**geometría** —muro perimetral sí, dentro no— y **no** depende del campo de fuerza; el campo de fuerza sigue donde le
+toca (expulsar bichos y negar spawneo, I89), pero no decide si se rompe.
+
+**ARREGLO** (una línea, y las dos que ya estaban): `protegidoPorLaAldea` (`AggressiveZombieEntity` **L539**) devuelve
+**`true`** para todo lo que está dentro y no es el anillo. Y `MURALLA_ANCHO` de **1 a 0** (**L142**): la verificación
+independiente cazó que con 1 la banda es r=61..63 y la **cara de dentro del muro (r=61,5) seguía saliendo rompible**;
+como el anillo es **una celda** en r=62 ({@code VillageGenerator.anilloDelMuro}), la banda exacta es 0.
+
+**Y el interruptor de medida** (`AggressiveZombieEntity.REGLA_DEL_MURO_ACTIVA`, **L287**, con `true` en lo que va al
+jugador): permite hacer la corrida de **control** con la regla puenteada. Es lo que pidió el jugador («con la regla
+puesta y quitada») y lo que hace que una corrida en la que **no cambia nada** se pueda leer como lo que es.
+
+**Las corridas 20/21, puestas y puenteadas, dan LO MISMO: 16 bloques, todos de r=62 a r=65** (solo el anillo del muro).
+Eso **no** es un fallo del arreglo: es que **desde fuera el asaltante no llega a picar dentro** (el muro lo para antes),
+así que esa escena no mide la mitad «una vez dentro». Se intentó medirlo con los asaltantes **ya dentro** (corridas
+22-27) y ahí está el hallazgo que cierra el caso por el otro lado: **dentro del pueblo el asaltante NO rompe nada porque
+no le hace falta** — **anda** hacia su objetivo (medido: de r=49 a r=1 sin un solo bloque, con la calle y con un anillo
+de obstáculo a r=35 que cruzó **por una puerta**, 0 bloques en las dos configuraciones). Y encerrado en una caseta de
+prueba (1×2, de la que solo se sale rompiendo) **tampoco pica**: su detector de atasco pide **10 ticks sin moverse** y
+ahí no los acumula (la traza del `BreakBlockGoal` no llegó a salir ni una vez, con el bicho **vivo** y el goal
+**corriendo**). O sea: **no hay ninguna configuración en la que un asaltante de dentro rompa el pueblo**, que es
+exactamente lo que el jugador pedía.
+
+**La comprobación con las tres cosas juntas (corrida 19, y la 20/21 como control) más la verificación de la cuenta
+dejan la regla en este estado**: la cuenta clasifica bien los 13 casos ✓, el veto devuelve «protegido» para todo lo de
+dentro **con asedio y sin él** ✓, la banda se pica solo en el anillo ✓, y el asaltante de la **aldea ganada** no toca
+nada de dentro (2 bloques, los dos fuera) ✓.
 
