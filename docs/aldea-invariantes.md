@@ -6420,6 +6420,48 @@ cota» los dejaba **enterrados** y morían asfixiados ✓; buscar el suelo en la
 el terreno está en **y=88**, cinco por encima de la cota de la plaza) ✓; la zanja de **1 bloque** metía al asaltante en
 un agujero del que no salía ✓; y el objetivo del puente puesto **de este lado** de la zanja no dejaba nada que cruzar ✓.
 
+### I213 · LO QUE SALIÓ MAL, CORREGIDO (y la ola de verdad, que destapó lo gordo)
+
+**El jugador**: *«corrige primero lo que salió mal»* ✓. Eran los dos huecos que quedaron abiertos en I212, y uno de ellos
+era **un fallo de bulto en mi código**, no del instrumento.
+
+**FALLO 1 · EL PUENTE SOLO MIRABA DE FRENTE** ✗. Probaba únicamente la dirección exacta del objetivo (la diagonal y los
+dos ejes) y con un asaltante **saltando en el borde** de la zanja el hueco cae unas veces de frente y otras **al lado o
+debajo**, así que disparaba una vez de cada diez (medido: **1** puente en la corrida 34 y **0** en la 36). Ahora mira
+**los cuatro lados** y los ordena por **el que más apunta al objetivo** (`puentearHacia`, **L590**): cruzar un abismo no
+es cuestión de puntería ✓. Y la comprobación de «no estoy cayendo» se hace **al principio** y una sola vez, en vez de
+dentro del bucle ✓.
+
+**FALLO 2 · LA ESCALERA PONÍA EL ESCALÓN DEBAJO DE SUS PROPIOS PIES** ✗, y era de bulto: el bloque iba a
+`zPos.below(2)`, o sea **dos bloques por debajo del asaltante** — una losa suelta en el suelo que **no sube a nadie**
+(por eso el instrumento midió **1** «ESCALON» en toda la corrida 36 y **0** en la ola de la 38-39: no servía de nada).
+Ahora el escalón se pone **en la columna de delante, a la altura de los pies** (`apilarBloqueParaSubir`, **L688**), y
+solo si el hueco de encima está libre y hay suelo debajo — si no, primero se abre el hueco y se vuelve a intentar en la
+siguiente ronda ✓. Lo cazó la **ola real**, no las escenas de mecanismo.
+
+**Y LO GORDO: LA OLA DE VERDAD** ✓ (`MEDIR_OLA_REAL`, **ocho** asaltantes del asedio inicial repartidos a r=60 cada 45
+grados, todos al jugador de pega de la plaza; el modo mide a la vez **cuántos entran**, **qué herramientas usan** y
+**cuánto tardan**). Medido en la aldea 0 del jugador:
+
+| t | vivos | DENTRO del recinto | radios |
+|---|---|---|---|
+| 480 (11 s) | 8/8 | **6** | 46 46 41 45 45 46 40 48 |
+| 960 (37 s) | 8/8 | **8** | 4 0 0 5 28 0 2 8 |
+| 3120 | 7/8 | 7 | todos a 0-2 del centro |
+
+**Y esto es lo que hay que leer bien**: los ocho entran y llegan al centro **sin romper el muro ni una vez**
+(`TALADRAR` = **0**, `[Siege] … pica` de los del anillo = **0**; lo que se pica es **terreno de fuera**, que es legal),
+y de las tres herramientas **solo se usa el túnel** (`CAVA` = **19**, y son cavadas de terreno para salir de donde
+nacieron). O sea: **el anillo del muro tiene huecos y el asedio entra andando por ellos**, que es justo lo que el
+jugador reportó en su día (*«el anillo de su aldea tiene huecos (solo 7 bloques en todo el rumbo este)»*, I89) — pero
+ahora mismo eso significa que **la mitad «el muro perimetral es rompible» no la ejerce nadie**, porque no le hace falta
+✓. Queda escrito como lo que es, con el número: **8 de 8 entran sin picar el muro**.
+
+**Lo que sí queda corregido y medido en esta vuelta**: el puente (cuatro lados), el escalón (en la columna de delante),
+y la certeza de que las tres herramientas **no estorban** al asedio: la ola entra igual que antes (6 dentro a los 11 s,
+8 a los 37 s) ✓.
+
+
 ### I210 · LA REGLA DEL MURO PERIMETRAL, EN LA DECISIÓN DE ROMPER DEL ASALTANTE (5-oct-2026)
 
 **El jugador**: *«solo el muro perimetral es rompible; una vez dentro ya no puede romper nada»* ✓.

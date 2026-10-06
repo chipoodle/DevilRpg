@@ -71,19 +71,19 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    **fuera**); y con la regla puesta o puenteada (interruptor `REGLA_DEL_MURO_ACTIVA`, **L287**) el asaltante de fuera
    pica **los mismos 16 bloques, todos r=62..65** (solo el anillo), y el de dentro **0** — porque dentro del pueblo el
    asaltante **anda** hacia su objetivo y no necesita romper nada (medido de r=49 a r=1 sin un solo bloque).
-2. **Escalera de bloques, tunel y puente** — **HECHOS** (I212), y **falta verlos en una ola de verdad**. Ya no son
-   «los que no existen»: `AggressiveZombieEntity.apilarBloqueParaSubir` (**L688**, el escalon, con tope de 8),
-   `cavarHaciaAbajo` (**L777**, el tunel hacia abajo) y `puentearHacia` (**L583**, el puente, que ya estaba escrito pero
-   **solo lo llamaba la marcha al centro**, que se apaga en cuanto el asaltante tiene objetivo: en un asedio no se
-   usaba nunca). Los usa el goal nuevo `TraverseGoal` (**L1495**), en la misma forma y prioridad que el romper
-   (pasivo, sin flags, en el mismo tick) y sirviendo a los DOS caminos (pelea y marcha al centro). **Elegidos por
-   situacion** (objetivo abajo -> cava; arriba -> escala; si no, puente) porque con el orden fijo la corrida 36 dio
-   12 cavadas y 1 escalon. **Sin detector de atasco a proposito** (lo pidio el jugador: *"no deben dudar tanto"*): la
-   corrida 35 demostro que el detector no servia, porque el asaltante **salta en el sitio** contra una pared y ese
-   salto cuenta como moverse (0 escalones en toda la corrida). Medido con `MEDIR_ATRAVESADORES` (tres escenas de
-   mecanismo): tunel **12 cavadas**, escalera **1 escalon**, puente **1**. **ABIERTO**: (a) el puente no dispara de
-   forma fiable (con el asaltante saltando en el borde, el hueco unas veces esta delante y otras debajo); (b) las tres
-   herramientas **no se han visto en una ola real** contra la aldea (las escenas las pone el arnes a mano).
+2. **Escalera de bloques, tunel y puente** — **HECHOS Y CORREGIDOS** (I212 + I213). Ya no son «los que no existen»:
+   `apilarBloqueParaSubir` (**L688**, el escalon), `cavarHaciaAbajo` (**L777**, el tunel) y `puentearHacia` (**L583**, el
+   puente, que ya estaba escrito pero **solo lo llamaba la marcha al centro**, que se apaga en cuanto el asaltante
+   tiene objetivo: en un asedio no se usaba nunca). Los usa `TraverseGoal` (**L1495**), pasivo y sin flags como el
+   romper, sirviendo a los DOS caminos y **eligiendo por situacion**. **CORREGIDO en I213** (lo que salio mal): el
+   puente **solo miraba de frente** (ahora los **cuatro lados**, ordenados por el que mas apunta al objetivo) y el
+   escalon **se ponia debajo de sus propios pies** (ahora en la **columna de delante, a la altura de los pies**; el
+   fallo lo cazo la ola real, no las escenas). **Medido con `MEDIR_OLA_REAL`** (8 asaltantes a r=60, modo nuevo):
+   **6 dentro a los 11 s y 8 a los 37 s**, y de las tres herramientas **solo se usa el tunel (19 cavadas de terreno)**
+   — el muro **no lo pica nadie** (`TALADRAR` = 0) porque el anillo **tiene huecos y la ola entra andando**. ABIERTO:
+   (a) esa mitad de la regla («el muro perimetral es rompible») **no la ejerce nadie** hoy: o los huecos del anillo se
+   cierran, o el asedio no tiene por que abrir brecha; (b) falta ver el **puente y la escalera** en una ola (en las
+   escenas de mecanismo: tunel 12, escalera 1, puente 1).
 3. **El nado del asaltante**: que avance **a velocidad normal** mientras esta en el agua (sin depender de la navegacion
    de vanilla) y revisar **`MAX_ESCAPE_TICKS = 200`** de `EscapeWaterGoal` (L851), porque hoy se rinde y se queda parado.
 4. **Un asaltante salio a `MOVEMENT_SPEED: 0.552`** (= 0.23 x 2.4) con el mismo `scaleFactor` que los demas: ese **no paso

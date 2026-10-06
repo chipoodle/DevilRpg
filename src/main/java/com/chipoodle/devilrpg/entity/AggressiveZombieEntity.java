@@ -582,8 +582,15 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
-     * <b>Puente</b>: si justo delante hay un hueco (dos bloques de aire con un vacío de 2 o más debajo), pone un
+     * <b>Puente</b>: si hay un hueco a su alrededor (dos bloques de aire con un vacío de 2 o más debajo), pone un
      * adoquín a la altura de los pies para poder pisar. Un abismo se cruza así, tablón a tablón y despacio.
+     * <p>
+     * <b>MIRA LOS CUATRO LADOS, NO SOLO DE FRENTE</b> (5-oct-2026, y esto salió de medir): antes probaba únicamente la
+     * dirección exacta del objetivo —primero la diagonal y luego los dos ejes— y con un asaltante <b>saltando en el
+     * borde</b> de la zanja el hueco unas veces caía de frente y otras <b>debajo o al lado</b>, así que el puente
+     * disparaba una vez de cada diez (medido: 1 puente en la corrida 34 y 0 en la 36). Ahora se miran los cuatro lados
+     * y se elige <b>el que más apunta al objetivo</b>: cruzar un abismo no es cuestión de puntería, y un tablón puesto
+     * en el lado bueno es el que deja seguir andando.
      *
      * @return {@code true} si ha puesto algo (entonces no hace falta taladrar)
      */
@@ -592,18 +599,18 @@ public class AggressiveZombieEntity extends Zombie {
             return false;
         }
         BlockPos zPos = blockPosition();
-        int sx = Integer.signum(towards.getX() - zPos.getX());
-        int sz = Integer.signum(towards.getZ() - zPos.getZ());
-        if (sx == 0 && sz == 0) {
+        // Si debajo ya hay vacío se está cayendo y no es el momento de tender nada.
+        if (level().getBlockState(zPos.below()).isAir()) {
             return false;
         }
-        // Delante en la dirección del objetivo: primero en diagonal (avanza en los dos ejes a la vez) y, si no,
-        // en los ejes por separado.
-        int[][] deltas = {{sx, sz}, {sx, 0}, {0, sz}};
-        for (int[] d : deltas) {
-            if (d[0] == 0 && d[1] == 0) {
-                continue;
-            }
+        double dx = towards.getX() - zPos.getX();
+        double dz = towards.getZ() - zPos.getZ();
+        int[][] lados = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        // El lado que más apunta al objetivo, primero: con cuatro candidatos y el orden fijo, un asaltante que va en
+        // diagonal tendería el tablón en el lado equivocado.
+        java.util.Arrays.sort(lados, (a, b) -> Double.compare(
+                -(a[0] * dx + a[1] * dz), -(b[0] * dx + b[1] * dz)));
+        for (int[] d : lados) {
             BlockPos delante = new BlockPos(zPos.getX() + d[0], zPos.getY(), zPos.getZ() + d[1]);
             // OJO: el puente sigue usando el disco horizontal con sus 2 bloques de margen (NO_TOCAR_LA_ALDEA), NO el
             // recinto con altura: lo que se veta aquí es TENDER TABLONES sobre la aldea y su muro, y el muro es grueso.
@@ -620,10 +627,6 @@ public class AggressiveZombieEntity extends Zombie {
                 vacio++;
             }
             if (vacio < 2) {
-                continue;
-            }
-            // Y tiene que estar EN EL BORDE: si debajo de él ya hay vacío, se está cayendo y no es el momento.
-            if (level().getBlockState(zPos.below()).isAir()) {
                 continue;
             }
             BlockState puente = Blocks.COBBLESTONE.defaultBlockState();
@@ -694,28 +697,50 @@ public class AggressiveZombieEntity extends Zombie {
         if (hacia.getY() <= zPos.getY() + 1) {
             return false; // el objetivo no está arriba: la escalera no es la herramienta
         }
-        // El hueco de delante (a la altura de la cabeza), que es lo que "estorba" para subir.
-        if (breakStepAheadHacia(hacia)) {
-            apilarEspera = APILAR_ENTRE_BLOQUES;
-            apilarRestante--;
-            return true;
-        }
-        // Y si el hueco de delante ya está abierto —o el asaltante está a media pared, no pegado a ella—, el escalón:
-        // un bloque sólido justo debajo de los pies (dos por debajo, que es donde el juego deja colocar sobre la cara
-        // de arriba del bloque de abajo). Medido en la corrida 34: el asaltante oscilaba a 3-5 bloques de la torre,
-        // donde su hueco de delante YA está abierto, y sin esto no ocupaba la escalera nunca.
-        BlockPos bajo = zPos.below(2);
-        if (level().getBlockState(bajo).isAir() && level().getBlockState(zPos.below()).isAir()
-                && !level().getBlockState(zPos.below(3)).isAir()
-                && !dentroDeLaAldea(bajo, cotaParaElRecinto())) {
-            level().setBlock(bajo, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
-            level().playSound(null, bajo, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
-            particulasDeTrabajo(bajo);
-            DevilRpg.LOGGER.info("[Siege] un asaltante pone un ESCALON en {} para subir al objetivo ({})",
-                    bajo.toShortString(), hacia.toShortString());
-            apilarEspera = APILAR_ENTRE_BLOQUES;
-            apilarRestante--;
-            return true;
+        int sx = Integer.signum(hacia.getX() - zPos.getX());
+        int sz = Integer.signum(hacia.getZ() - zPos.getZ());
+        int[][] dirs = (sx == 0 && sz == 0)
+                ? new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+                : new int[][]{{sx, 0}, {0, sz}, {sx, sz}};
+        for (int[] d : dirs) {
+            if (d[0] == 0 && d[1] == 0) {
+                continue;
+            }
+            // LA COLUMNA DE DELANTE, a un bloque y a dos (no siempre está pegado a la pared).
+            for (int dist = 1; dist <= 2; dist++) {
+                int px = zPos.getX() + d[0] * dist;
+                int pz = zPos.getZ() + d[1] * dist;
+                boolean roto = false;
+                if (breakStepAheadHacia(hacia)) {
+                    apilarEspera = APILAR_ENTRE_BLOQUES;
+                    apilarRestante--;
+                    return true; // primero se le abre el hueco; en la siguiente ronda se le pone el escalón
+                }
+                // EL ESCALÓN VA EN LA COLUMNA DE DELANTE, A LA ALTURA DE LOS PIES, y solo si el hueco de arriba está
+                // libre (si no, el asaltante no cabría y lo que toca es seguir abriendo).
+                // ESTE ERA EL FALLO (5-oct-2026): el bloque se ponía `zPos.below(2)`, o sea DEBAJO DE SUS PROPIOS
+                // PIES, que no sube a nadie — se quedaba una losa suelta en el suelo y el asaltante sin escalón (por
+                // eso el instrumento midió 1 solo «ESCALON» en toda la corrida 36 y 0 en la ola de la 38-39: no
+                // servía de nada). Lo cazó la ola real, no las escenas.
+                BlockPos escalon = new BlockPos(px, zPos.getY(), pz);
+                boolean huecoLibre = level().getBlockState(escalon.above()).isAir()
+                        && level().getBlockState(escalon.above(2)).isAir();
+                if (huecoLibre && level().getBlockState(escalon).isAir()
+                        && !level().getBlockState(escalon.below()).isAir()
+                        && !protegidoPorLaAldea(escalon)) {
+                    level().setBlock(escalon, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+                    level().playSound(null, escalon, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+                    particulasDeTrabajo(escalon);
+                    DevilRpg.LOGGER.info("[Siege] un asaltante pone un ESCALON en {} para subir al objetivo ({})",
+                            escalon.toShortString(), hacia.toShortString());
+                    apilarEspera = APILAR_ENTRE_BLOQUES;
+                    apilarRestante--;
+                    return true;
+                }
+                if (roto) {
+                    return true;
+                }
+            }
         }
         return false;
     }

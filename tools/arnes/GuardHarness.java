@@ -362,7 +362,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
         // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
         // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_HORDAS && !MEDIR_PEPITAS) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_HORDAS
+                && !MEDIR_PEPITAS) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -389,7 +390,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // de pega en la plaza cada tick (`pega.moveTo(CENTRO…)`), asi que las tres escenas —que necesitan al objetivo
         // DONDE la escena lo pone— apuntaban al centro de la aldea y lo que se midio fue el tunel del PUENTE hacia el
         // centro. Es una medida de mecanica pura (los atravesadores), no del latido, asi que no se pierde nada.
-        if (pega != null && !MEDIR_ATRAVESADORES) {
+        if (pega != null && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
@@ -409,6 +410,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElAsedioVivo(level, pega);
         } else if (MEDIR_MURO) {
             medirElAsaltoAlMuro(level, pega);
+        } else if (MEDIR_OLA_REAL) {
+            medirLaOlaReal(level, pega);
         } else if (MEDIR_ATRAVESADORES) {
             medirLosAtravesadores(level, pega);
         } else if (MEDIR_AGUJERO) {
@@ -2162,6 +2165,75 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * rumbo con mampostería, se aparece en el suelo con {@code VillageGenerator.spawnY} y se volca su IA (vivo, sin IA,
      * marcha activa, ruta, objetivo y goals) junto a la columna de la muralla capa a capa.
      */
+    /**
+     * <b>¿SE MIDE UNA OLA DE VERDAD (I212)?</b> Ocho asaltantes del asedio inicial repartidos alrededor del muro
+     * (r=60, cada 45 grados), todos apuntando al jugador de pega que está en la plaza. Mide las <b>tres cosas</b> a la
+     * vez y en una sola corrida: cuántos entran, qué herramientas usan (`ESCALON`, `CAVA`, `PUENTE`) y cuánto tarda.
+     * <p>
+     * Existe porque las escenas de {@link #MEDIR_ATRAVESADORES} son de <b>mecanismo</b> (lo pone todo a mano el arnés) y
+     * una herramienta que funciona en una escena puede no usarse nunca en un asedio real: es el «falta verlo en una
+     * ola» que quedó abierto en I212.
+     */
+    private static final boolean MEDIR_OLA_REAL = false;
+
+    /** Los asaltantes de la ola de verdad (ver {@link #MEDIR_OLA_REAL}). */
+    private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> asaltantesDeLaOla =
+            new java.util.ArrayList<>();
+
+    private static void medirLaOlaReal(ServerLevel level, FakePlayer pega) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (ticks == 300 && asaltantesDeLaOla.isEmpty()) {
+            pega.setInvulnerable(true);
+            for (int i = 0; i < 8; i++) {
+                double ang = Math.toRadians(i * 45.0D);
+                int wx = CENTRO.getX() + (int) Math.round(Math.cos(ang) * 60);
+                int wz = CENTRO.getZ() + (int) Math.round(Math.sin(ang) * 60);
+                var z = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+                if (z == null) {
+                    continue;
+                }
+                colocarAsaltanteAlSuelo(level, z, wx, wz, cota);
+                z.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+                z.setGoToCenterActive(true);
+                z.recargarTunel();
+                z.setPersistenceRequired();
+                level.addFreshEntity(z);
+                z.setTarget(pega);
+                asaltantesDeLaOla.add(z);
+            }
+            DevilRpg.LOGGER.info("[Arnes] OLA REAL: {} asaltantes colocados a r=60 alrededor del muro (cota {})",
+                    asaltantesDeLaOla.size(), cota);
+        }
+        if (asaltantesDeLaOla.isEmpty()) {
+            return;
+        }
+        // El jugador de pega, en la plaza, que es el objetivo que les hace converger (el latido no lo mueve: en esta
+        // medida tampoco se llama, porque las escenas no dependen de él pero el asedio sí necesita un objetivo fijo).
+        pega.moveTo(CENTRO.getX() + 0.5D, cota + 1, CENTRO.getZ() + 0.5D);
+        for (var z : asaltantesDeLaOla) {
+            z.setTarget(pega);
+        }
+        if (ticks % 240 != 0) {
+            return;
+        }
+        int vivos = 0;
+        int dentro = 0;
+        StringBuilder radios = new StringBuilder();
+        for (var z : asaltantesDeLaOla) {
+            if (!z.isAlive()) {
+                continue;
+            }
+            vivos++;
+            if (com.chipoodle.devilrpg.world.VillageManager.dentroDelRecinto(level, z.blockPosition(), CENTRO,
+                    com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS)) {
+                dentro++;
+            }
+            radios.append((int) Math.sqrt(z.distanceToSqr(CENTRO.getX(), z.getY(), CENTRO.getZ()))).append(' ');
+        }
+        DevilRpg.LOGGER.info("[Arnes] OLA REAL t={} : {}/{} vivos, {} DENTRO del recinto | radios: {}", ticks, vivos,
+                asaltantesDeLaOla.size(), dentro, radios.toString().trim());
+    }
+
     private static void medirElAsaltoAlMuro(ServerLevel level, FakePlayer pega) {
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
         // LA COTA MANDA, NO `CENTRO.getY()` (fallo del instrumento, medido el 5-oct-2026). `CENTRO` es 470,63,646
