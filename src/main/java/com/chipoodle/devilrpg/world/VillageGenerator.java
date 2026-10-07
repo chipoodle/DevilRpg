@@ -7176,6 +7176,9 @@ public final class VillageGenerator {
                 DoubleGateBlock.PanelSide.LEFT };
         // La JUNTURA (la celda del medio) lleva la hoja IZQUIERDA: al abrir se queda de canto en su canto izquierdo, que
         // es justo por donde las dos hojas se separan, así que el paso queda franco.
+        // lint:ok I9 porque esto NO añade construcción nueva que rehacer: son las MISMAS celdas que ya rehace
+        // `entrance` en cada pasada (el hueco del portón), y `asegurarMuro` las repone en el latido en cuanto ve que
+        // falta un portón, así que las partidas ya construidas lo reciben solas —idempotente— sin subir CURRENT_LAYOUT.
         for (int i = 0; i < 3; i++) {
             for (int alto = 0; alto <= 2; alto++) {
                 BlockState hoja = ModBlocks.PORTON_DOBLE_BLOCK.get().defaultBlockState()
