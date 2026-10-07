@@ -104,13 +104,17 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
     public static final EnumProperty<PanelSide> SIDE = EnumProperty.create("side", PanelSide.class);
     public static final EnumProperty<PanelLayer> LAYER = EnumProperty.create("layer", PanelLayer.class);
-
     /**
-     * El grosor de una hoja: <b>2 píxeles</b> (1/8 de bloque). Cerrada mide 8 de fondo (media anchura del hueco, que
-     * es de 16) y abierta se queda en sus 2 de bisagra.
+     * <b>¿Este bloque es la JUNTURA del portón?</b> (la celda del medio, donde las dos hojas se encuentran al cerrar).
+     * <p>
+     * Existe por la <b>textura</b>: el portón son <b>nueve</b> bloques (3 de ancho por 3 de alto) y cada uno tiene que
+     * coger <b>su trozo</b> de la textura para que el dibujo sea <b>continuo</b> y cubra toda la superficie. El trozo
+     * que le toca a un bloque depende de <b>dónde esté</b>, y eso es lo que dice esta propiedad ✓.
      */
+    public static final BooleanProperty JUNTURA = BooleanProperty.create("juntura");
+
+    /** El grosor de una hoja de canto (abierta): <b>2 píxeles</b> (1/8 de bloque), junto a su bisagra. */
     private static final double GROSOR = 2.0D;
-    private static final double ANCHO_HOJA = 8.0D;
 
     public DoubleGateBlock(Properties properties) {
         super(properties);
@@ -118,7 +122,8 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
                 .setValue(FACING, Direction.NORTH)
                 .setValue(OPEN, false)
                 .setValue(SIDE, PanelSide.LEFT)
-                .setValue(LAYER, PanelLayer.LOW));
+                .setValue(LAYER, PanelLayer.LOW)
+                .setValue(JUNTURA, false));
     }
 
     @Override
@@ -128,7 +133,7 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, OPEN, SIDE, LAYER);
+        builder.add(FACING, OPEN, SIDE, LAYER, JUNTURA);
     }
 
     /** ¿La hoja abate por el eje X? (la pared corre en Z cuando el portón mira al este o al oeste). */
@@ -175,26 +180,41 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
     }
 
     /**
-     * <b>El portón abate entero.</b> Al cambiar el estado de una celda hay que cambiar el de <b>las nueve</b> (las dos
-     * hojas por los tres pisos); si no, quedarían hojas a medio abrir o pisos cerrados con el resto abierto, y el
-     * hueco no se podría cruzar aunque se viera abierto. La búsqueda del resto es <b>por estado</b> (mismo
-     * {@code FACING}) y <b>alrededor de esta celda</b>, que es como se comporta un portón: no hay que saber dónde
-     * empezó.
+     * <b>El portón abate ENTERO, de una sola vez.</b> Al cambiar el estado de una celda hay que cambiar el de
+     * <b>todas</b> las del portón (tres celdas de ancho por los tres pisos = <b>nueve hojas</b>); si no, cada bloque se
+     * abre por su cuenta y lo que se ve es una puerta descosida — <b>medido y reportado por el jugador</b>: *«no parece
+     * que sea una sola pieza, pues los 3 bloques al darles click derecho cada una se abre o cierra independientemente
+     * dependiendo de a quién se le dé el click»* ✗.
+     * <p>
+     * <b>Por qué barría de menos</b>: buscaba <b>2</b> celdas en el eje perpendicular (la geometría de un portón de dos
+     * hojas de 1 de ancho cada una) cuando el portón del muro es de <b>3</b> celdas, así que solo movía las hojas de una
+     * mitad del hueco. Ahora barre <b>el ancho completo</b> (tres celdas a los dos lados de la que se ha pulsado) y
+     * todos los pisos.
+     * <p>
+     * La búsqueda es <b>por estado</b> (mismo {@code FACING}) y <b>alrededor de la celda pulsada</b>: así da igual cuál
+     * de las nueve se pulse ni en qué piso esté, que es lo que espera cualquiera que abra un portón.
      */
     public static void abatir(Level level, BlockPos pos, BlockState estado, boolean abierto) {
         Direction facing = estado.getValue(FACING);
-        boolean enX = ejeX(facing);
-        // La celda baja de la columna: las nueve celdas son 2 de ancho (eje perpendicular) por 3 de alto.
+        // El EJE DEL MURO es el perpendicular al que mira el portón: por ahí se reparten las tres celdas del ancho.
+        boolean muroEnZ = ejeX(facing);
+        // La celda baja de la columna que se ha pulsado.
         BlockPos base = pos.offset(0, -estado.getValue(LAYER).indice(), 0);
-        for (int ancho = 0; ancho <= 1; ancho++) {
+        int cambiadas = 0;
+        // Las TRES celdas del ancho (la pulsada y una a cada lado) por los TRES pisos.
+        for (int ancho = -1; ancho <= 1; ancho++) {
             for (int alto = 0; alto <= 2; alto++) {
-                BlockPos p = enX ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
+                BlockPos p = muroEnZ ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
                 BlockState s = level.getBlockState(p);
                 if (s.getBlock() instanceof DoubleGateBlock && s.getValue(FACING) == facing
                         && s.getValue(OPEN) != abierto) {
                     level.setBlock(p, s.setValue(OPEN, abierto), 3);
+                    cambiadas++;
                 }
             }
+        }
+        if (cambiadas == 0) {
+            return; // ya estaba como se pide: no hay nada que hacer
         }
     }
 
@@ -224,11 +244,13 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide) {
             Direction facing = state.getValue(FACING);
-            boolean enX = ejeX(facing);
+            // El eje del MURO (perpendicular al que mira el portón): por ahí van las TRES celdas del ancho. Antes
+            // barría dos, así que romper una celda dejaba media hoja en pie.
+            boolean muroEnZ = ejeX(facing);
             BlockPos base = pos.offset(0, -state.getValue(LAYER).indice(), 0);
-            for (int ancho = 0; ancho <= 1; ancho++) {
+            for (int ancho = -1; ancho <= 1; ancho++) {
                 for (int alto = 0; alto <= 2; alto++) {
-                    BlockPos p = enX ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
+                    BlockPos p = muroEnZ ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
                     if (!p.equals(pos) && level.getBlockState(p).getBlock() instanceof DoubleGateBlock) {
                         level.destroyBlock(p, false);
                     }

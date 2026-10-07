@@ -100,12 +100,16 @@ public final class ModBlocks {
      * la vez, con sus dos hojas abatiendo hacia fuera.
      * <p>
      * Y hay una razón dura para que sea <b>este</b> bloque y no una puerta de madera: el juego sólo deja que un zombi
-     * rompa {@code DoorBlock} en difícil, así que un portón así <b>no se rompe</b> — el asedio tiene que abrir brecha
-     * en el MURO, que es lo que el jugador pidió ✓. Se le da la dureza del hierro ({@code ofFullCopy(IRON_DOOR)}) para
-     * que quede claro que es una pieza de la muralla y no una valla de madera.
+     * rompa {@code DoorBlock} en difícil, así que un portón así <b>no se rompe por la IA del juego</b>. Pero el
+     * <b>asedio del mod SÍ lo pica</b>, y es lo que pidió el jugador (*«puede ser totalmente destructible como las
+     * puertas de las casas, es decir los zombies pueden intentar romperla hasta que lo consigan, pero también los
+     * zombies pueden romper las paredes»*): el portón está en el <b>anillo del muro</b> (r=62), y el anillo es
+     * exactamente la zona que {@code AggressiveZombieEntity.protegidoPorLaAldea} deja <b>rompible</b> ✓. Se le da la
+     * dureza de la <b>puerta de roble</b> (y no la del hierro) para que caiga al mismo ritmo que los troncos del muro:
+     * es una puerta, no una plancha blindada ✓.
      */
     public static final DeferredHolder<Block, DoubleGateBlock> PORTON_DOBLE_BLOCK = BLOCKS.register("porton_doble",
-            () -> new DoubleGateBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_DOOR)
+            () -> new DoubleGateBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_DOOR)
                     .noOcclusion()
                     .isViewBlocking((state, level, pos) -> false)
                     .isSuffocating((state, level, pos) -> false)));

@@ -7039,18 +7039,15 @@ public final class VillageGenerator {
             boolean eastEntrance = cur.getX() == center.getX() + r && cur.getZ() == center.getZ();
             boolean westEntrance = cur.getX() == center.getX() - r && cur.getZ() == center.getZ();
 
-            if (northEntrance || southEntrance || eastEntrance || westEntrance) {
+            // LAS TRES CELDAS DEL PORTÓN, no solo la de la entrada (6-oct-2026, lo reportó el jugador: *«hay troncos que
+            // se solapan en ellas, parece que son de la pared de una versión anterior»*). El portón ocupa TRES celdas
+            // del anillo, y aquí solo se saltaba la de la entrada: a las otras dos el muro les ponía sus troncos, que
+            // son justo los que se veían cruzados sobre las hojas ✗. El portón se construye entero en `entrance`, así
+            // que el muro no tiene que poner NADA en ninguna de sus tres celdas.
+            if (esCeldaDePorton(center, baseY, new BlockPos(cur.getX(), baseY, cur.getZ()))) {
                 entrance(level, center, cur, r, baseY);
                 idx++;
-                continue; // el hueco lo llena `entrance` (columnas + portón): aquí no se pone muro
-            }
-            if (esEntradaDelMuro(center, cur)) {
-                // La entrada se reconoce por el EJE, no por el índice: en un anillo de 921 celdas la entrada puede caer
-                // en cualquier `idx`, y si el índice no cuadraba el muro le ponía los troncos ENCIMA al portón (medido:
-                // `84=912` incluía las cuatro celdas de entrada, o sea el paso tapado a la altura de la cabeza).
-                entrance(level, center, cur, r, baseY);
-                idx++;
-                continue;
+                continue; // el hueco lo llena `entrance` (hojas del portón + dintel): aquí no se pone muro
             }
             if (idx % columnEvery == 0) {
                 column(level, cur, baseY);
@@ -7162,20 +7159,20 @@ public final class VillageGenerator {
         if (celdas.size() < 3) {
             return;
         }
-        // TRES bloques de portón, uno por cada celda del hueco de 3 de ancho: la HOJA IZQUIERDA, la HOJA DERECHA y la
-        // JUNTURA del medio (donde las dos hojas se encuentran al cerrar). Los tres abaten a la vez y los tres son
-        // sólidos al cerrar, así que el hueco queda sellado de verdad — que era el fallo del hueco de 3 con sólo dos
-        // hojas (la tercera celda quedaba abierta para siempre y el muro se reconstruía 3200 veces ✗).
+        // TRES bloques de portón, uno por cada celda del hueco de 3 de ancho. Y CADA UNO CON SU PAPEL, que es lo que
+        // hace que se vea de UNA PIEZA (lo reportó el jugador: *«no parece que sea una sola pieza»* y *«la textura está
+        // mal puesta»*): la hoja IZQUIERDA va en la celda de fuera de su lado, la hoja DERECHA en la de fuera del suyo,
+        // y la celda del MEDIO lleva la hoja izquierda marcada como JUNTURA — así cada bloque coge SU TROZO de la
+        // textura y entre los tres la cubren entera (medido: 5,33 + 5,33 + 5,33 = 16 px ✓).
         List<BlockPos> orden = new ArrayList<>(celdas);
         // Se ordenan a lo largo del muro para que la izquierda y la derecha queden a los extremos y la juntura en el
         // medio (el orden de cercanía a la entrada no lo garantiza, porque la entrada puede caer en cualquier celda).
         boolean muroEnZ = orden.get(0).getZ() != orden.get(1).getZ();
         orden.sort(java.util.Comparator.comparingInt(c -> muroEnZ ? c.getZ() : c.getX()));
         Direction facingPorton = muroEnZ ? Direction.EAST : Direction.SOUTH;
-        DoubleGateBlock.PanelSide[] lados = { DoubleGateBlock.PanelSide.LEFT, DoubleGateBlock.PanelSide.RIGHT,
-                DoubleGateBlock.PanelSide.LEFT };
-        // La JUNTURA (la celda del medio) lleva la hoja IZQUIERDA: al abrir se queda de canto en su canto izquierdo, que
-        // es justo por donde las dos hojas se separan, así que el paso queda franco.
+        DoubleGateBlock.PanelSide[] lados = { DoubleGateBlock.PanelSide.LEFT, DoubleGateBlock.PanelSide.LEFT,
+                DoubleGateBlock.PanelSide.RIGHT };
+        boolean[] junturas = { false, true, false };
         // lint:ok I9 porque esto NO añade construcción nueva que rehacer: son las MISMAS celdas que ya rehace
         // `entrance` en cada pasada (el hueco del portón), y `asegurarMuro` las repone en el latido en cuanto ve que
         // falta un portón, así que las partidas ya construidas lo reciben solas —idempotente— sin subir CURRENT_LAYOUT.
@@ -7185,6 +7182,7 @@ public final class VillageGenerator {
                         .setValue(DoubleGateBlock.FACING, facingPorton)
                         .setValue(DoubleGateBlock.OPEN, false)
                         .setValue(DoubleGateBlock.SIDE, lados[i])
+                        .setValue(DoubleGateBlock.JUNTURA, junturas[i])
                         .setValue(DoubleGateBlock.LAYER, DoubleGateBlock.PanelLayer.de(alto));
                 colocar(level, new BlockPos(orden.get(i).getX(), baseY + alto, orden.get(i).getZ()), hoja, 3);
             }

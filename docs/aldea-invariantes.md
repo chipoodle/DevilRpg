@@ -6455,6 +6455,47 @@ trazado un camino **a través de una puerta cerrada**, y eso no pasa ✗.
 - Y el instrumento pasó de marcar **`TAPADOS 17`** (falso) a **`TAPADOS 0`**: pedía aire en la capa del medio, que era
   la regla del portón de valla de una hoja; con el portón de tres capas la del medio **es una hoja** ✓.
 
+### I226 · LOS TRES FALLOS DEL PORTÓN QUE REPORTÓ EL JUGADOR (y la textura repartida)
+
+**Lo reportó el jugador** (6-oct-2026): *«las puertas no están bien. hay troncos que se traslapan en ellas, parece que
+son de la pared de una versión anterior. También no parece que sea una sola pieza, pues los 3 bloques al darles click
+derecho cada una se abre o cierra independientemente dependiendo de a quién se le dé el click. La textura está mal
+puesta, lo ideal es que la textura cubra la superficie de los 3 × 3 bloques de la puerta.»* ✓. Los tres son ciertos, los
+tres eran míos, y los tres están arreglados ✓.
+
+**1 · LOS TRONCOS QUE SE SOLAPABAN** ✓. El bucle del muro saltaba solo **la celda de la entrada**, no las **tres** del
+portón, así que a las otras dos les ponía sus troncos — justo los que se veían cruzados sobre las hojas ✗. Ahora el
+bucle pregunta por **las tres celdas** (`esCeldaDePorton`) y las llena `entrance` entero ✓. **MEDIDO**: las cuatro
+entradas son `83=porton_doble 84=porton_doble 85=porton_doble 86=cobblestone`, **sin un solo tronco** en la columna ✓, y
+el anillo queda `921 | con muro 921 | PORTONES 33 | TAPADOS 0 | AGUJEROS 0` ✓.
+
+**2 · CADA BLOQUE SE ABRÍA POR SU CUENTA** ✓. `abatir` barría **2 celdas** en el eje del muro (la geometría de un
+portón de dos hojas de 1 de ancho) cuando el del muro tiene **3**, así que movía solo las hojas de una mitad y el resto
+se quedaba como estaba ✗. Ahora barre **las tres celdas a los dos lados de la que se pulsa** y los tres pisos: da igual
+cuál de las nueve se pulse, **abate entero** ✓. Lo mismo en `playerWillDestroy` (romper una celda se lleva el portón) ✓.
+
+**3 · LA TEXTURA, REPARTIDA POR LA SUPERFICIE DE 3×3** ✓. Cada bloque cogía **la textura entera**, así que salía
+repetida tres veces en horizontal y tres en vertical ✗. Ahora cada bloque coge **su trozo**, con una propiedad nueva
+(`JUNTURA`) que dice si es la celda del medio o una de fuera:
+- **en vertical**: cada piso coge su tercio (low/mid/high) ✓;
+- **en horizontal**: la celda de fuera de la hoja izquierda coge el **primer tercio**, la **JUNTURA** el **del medio** y
+  la celda de fuera de la derecha el **último** ✓.
+- **MEDIDO**: los tres trozos **suman 16,00 de 16 px** (`0→5,33`, `5,33→10,67`, `10,67→16`), o sea que **la textura
+  cubre la superficie de los 3×3 sin repetirse y sin dejar nada a medias** ✓. El fleje de hierro cruza los tres bloques
+  de lado a lado y la aldaba cae partida en la juntura, que es donde van las dos hojas ✓.
+- El generador pone **cada hoja con su papel** (izquierda en la celda de fuera izquierda, juntura en el medio, derecha en
+  la de fuera derecha), y los modelos (18) y las variantes (96) los genera un script versionado ✓:
+  `tools/arnes/hacer_modelos_del_porton.py`.
+
+**4 · Y ES DESTRUCTIBLE, COMO PIDIÓ EL JUGADOR** ✓: *«puede ser totalmente destructible como las puertas de las casas,
+es decir los zombies pueden intentar romperla hasta que lo consigan, pero también los zombies pueden romper las
+paredes»*. El portón está en el **anillo del muro** (r=62), y el anillo es **exactamente la zona que
+`protegidoPorLaAldea` deja rompible**, así que el asedio **ya puede picarlo** ✓ — no hubo que tocar la regla del jugador
+(«dentro no se pica, el muro sí»). Y se le cambia la dureza: **puerta de roble** en vez de hierro, para que caiga al
+mismo ritmo que los troncos del muro (es una puerta, no una plancha blindada) ✓. **MEDIDO** (`rapida-118.log`): la ola
+rompe `oak_log` y `cobblestone` (el muro) y **la milicia los mata a los ocho**, sin que ninguno tenga que llegar al
+portón ✓.
+
 **TEXTURA PROPIA, DE ROBLE OSCURO** ✓ (6-oct-2026, lo pidió el jugador: *«que sea de roble oscuro»*):
 `devilrpg:textures/block/porton_doble.png` — 16×16 RGBA, **tablones de roble oscuro con dos flejes de hierro
 remachados y la aldaba en el centro** (la paleta es la del roble oscuro del juego: `#6B4A2A`, `#5C3F22`, `#4A331B`,
