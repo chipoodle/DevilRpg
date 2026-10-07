@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.block;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -229,6 +230,11 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
         if (!level.isClientSide) {
             boolean abierto = !state.getValue(OPEN);
             abatir(level, pos, state, abierto);
+            // TRAZA (6-oct-2026): el jugador reportó que «cuando le doy click no se abre», y desde fuera no hay forma de
+            // saber si el golpe llega al bloque o no. Esta línea lo dice: si sale cada vez que se pulsa, el click SÍ
+            // llega y el problema está en el estado; si no sale NUNCA, el click no está llegando a este bloque.
+            DevilRpg.LOGGER.info("[Porton] click en {} ({}): paso a {}", pos.toShortString(),
+                    player.getName().getString(), abierto ? "ABIERTO" : "CERRADO");
             level.playSound(null, pos, abierto ? SoundEvents.IRON_DOOR_OPEN : SoundEvents.IRON_DOOR_CLOSE,
                     SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.1F + 0.9F);
         }

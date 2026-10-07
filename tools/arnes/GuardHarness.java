@@ -426,6 +426,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElCruceDelPorton(level);
         } else if (MEDIR_ALDEANO_CRUZA) {
             medirSiElAldeanoCruza(level);
+        } else if (MEDIR_CLICK_DEL_PORTON) {
+            medirElClickDelPorton(level, pega);
         } else if (MEDIR_AGUA) {
             medirElNado(level, pega);
         } else if (MEDIR_VELOCIDAD) {
@@ -2194,6 +2196,87 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static final boolean MEDIR_AGUA = false;
 
     /**
+     * <b>¿FUNCIONA EL CLICK DEL PORTÓN?</b> (6-oct-2026). El jugador reportó *«cuando le doy click no se abre»*, así que
+     * aquí se le da el click <b>desde el código</b> —con el mismo camino que usa el jugador
+     * ({@code DoubleGateBlock.useWithoutItem})— y se comprueba si <b>las nueve celdas</b> cambian de estado a la vez.
+     * Es la única forma de separar «el click no llega» de «el click llega y el portón no abate entero».
+     */
+    private static final boolean MEDIR_CLICK_DEL_PORTON = false;
+
+    private static void medirElClickDelPorton(ServerLevel level, FakePlayer pega) {
+        if (ticks != 400) {
+            return;
+        }
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        java.util.List<BlockPos> celdas = new java.util.ArrayList<>();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = 0; dy <= 2; dy++) {
+                BlockPos p = new BlockPos(CENTRO.getX() + 62 + dx, cota + dy, CENTRO.getZ());
+                if (level.getBlockState(p).getBlock() instanceof com.chipoodle.devilrpg.block.DoubleGateBlock) {
+                    celdas.add(p);
+                }
+            }
+        }
+        if (celdas.isEmpty()) {
+            DevilRpg.LOGGER.info("[Arnes] CLICK: no hay porton en la entrada ESTE");
+            return;
+        }
+        // ¿Y PORTONES VIEJOS MÁS ABAJO? (medido: el click cayó en y=70, no en la cota). Se cuentan TODOS los bloques de
+        // portón de la columna de la entrada, a cualquier altura: si hay más de 9, quedan portones de versiones
+        // anteriores enterrados, y son los que el jugador ve «como varias puertas» superpuestas ✗.
+        java.util.List<BlockPos> todos = new java.util.ArrayList<>();
+        for (BlockPos p : BlockPos.betweenClosed(new BlockPos(CENTRO.getX() + 60, cota - 30, CENTRO.getZ() - 3),
+                new BlockPos(CENTRO.getX() + 64, cota + 6, CENTRO.getZ() + 3))) {
+            if (level.getBlockState(p).getBlock() instanceof com.chipoodle.devilrpg.block.DoubleGateBlock) {
+                todos.add(p.immutable());
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] CLICK: bloques de porton en la entrada ESTE (toda la columna): {} -> {}",
+                todos.size(),
+                todos.stream().map(BlockPos::toShortString).collect(java.util.stream.Collectors.joining(" ")));
+        // Y SE BARREN LOS QUE NO ESTÁN A LA COTA (los viejos, enterrados). Así la prueba del click mide el portón
+        // BUENO, que es lo que el jugador va a ver cuando la limpieza del muro corra en su partida.
+        int barridos = 0;
+        for (BlockPos p : todos) {
+            if (p.getY() < cota || p.getY() > cota + 2) {
+                level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                barridos++;
+            }
+        }
+        celdas.clear();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = 0; dy <= 2; dy++) {
+                BlockPos p = new BlockPos(CENTRO.getX() + 62 + dx, cota + dy, CENTRO.getZ());
+                if (level.getBlockState(p).getBlock() instanceof com.chipoodle.devilrpg.block.DoubleGateBlock) {
+                    celdas.add(p);
+                }
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] CLICK: barridos {} portones viejos; a la cota {} quedan {} celdas",
+                barridos, cota, celdas.size());
+        int abiertasAntes = 0;
+        for (BlockPos p : celdas) {
+            if (level.getBlockState(p).getValue(com.chipoodle.devilrpg.block.DoubleGateBlock.OPEN)) {
+                abiertasAntes++;
+            }
+        }
+        BlockPos pulsada = celdas.get(0);
+        var estado = level.getBlockState(pulsada);
+        var resultado = estado.useWithoutItem(level, pega,
+                new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(pulsada),
+                        net.minecraft.core.Direction.UP, pulsada, false));
+        int abiertasDespues = 0;
+        for (BlockPos p : celdas) {
+            if (level.getBlockState(p).getValue(com.chipoodle.devilrpg.block.DoubleGateBlock.OPEN)) {
+                abiertasDespues++;
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] CLICK en {}: celdas={} abiertas antes={} despues={} resultado={} -> {}",
+                pulsada.toShortString(), celdas.size(), abiertasAntes, abiertasDespues, resultado,
+                celdas.size() == 9 && abiertasDespues == 9 ? "TODO EL PORTON ABATE" : "NO ABATE ENTERO");
+    }
+
+    /**
      * <b>¿CRUZA EL ALDEANO EL PORTÓN DEL MURO? (prueba con aldeano de verdad, 6-oct-2026)</b>
      * <p>
      * Es la medida que faltaba en I219/I220. Las anteriores no valían porque <b>de fuera el aldeano se cuela por encima
@@ -2441,7 +2524,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * Lo que se busca en el log: `[Arnes] ANILLO: … con muro M | AGUJEROS A` y el reparto por rumbo, para saber qué
      * cerrar (los cuatro portones cardinales son a propósito y se quedan).
      */
-    private static final boolean MEDIR_ANILLO = false;
+    private static final boolean MEDIR_ANILLO = true;
 
     private static void medirElAnilloDelMuro(ServerLevel level) {
         if (ticks != 300) {

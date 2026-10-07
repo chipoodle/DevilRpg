@@ -6988,12 +6988,38 @@ public final class VillageGenerator {
                 BlockState state = level.getBlockState(q);
                 boolean restosDeMuro = state.is(Blocks.OAK_LOG) || state.is(Blocks.COBBLESTONE)
                         || state.is(Blocks.COBBLESTONE_STAIRS) || state.is(Blocks.COBBLESTONE_WALL)
-                        || state.is(Blocks.COBBLESTONE_SLAB);
+                        || state.is(Blocks.COBBLESTONE_SLAB)
+                        // Y LAS HOJAS DE PORTÓN DE VERSIONES ANTERIORES (6-oct-2026, medido y reportado por el jugador:
+                        // *«son más de 3 bloques, parece como si fueran varias puertas»*). Un portón viejo NO está en el
+                        // anillo a la cota de hoy —se levantó con la cota del CENTRO (63)— así que quedaba ENTERRADO y
+                        // superpuesto: medido en el arnés, **12 bloques de portón en y=70-72** en la misma columna que
+                        // el portón nuevo, de una versión que lo hacía de 4 de ancho ✗. Aquí se barren.
+                        || state.getBlock() instanceof com.chipoodle.devilrpg.block.DoubleGateBlock;
                 if (!restosDeMuro) {
                     continue;
                 }
                 level.setBlock(q, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
                 quitados++;
+            }
+        }
+        // Y ALREDEDOR DE LAS CUATRO ENTRADAS, que es donde van los portones (6-oct-2026, medido). El barrido de arriba
+        // es de UNA celda (el anillo), y las hojas de un portón son más anchas que el anillo: un portón viejo quedaba
+        // fuera del barrido y sobrevivía enterrado. Y el rango de alturas es LARGO —de 36 por debajo a 24 por encima de
+        // la cota— a propósito: medido, la aldea de estos mundos pasó de cota **83 a 70**, así que el portón viejo
+        // quedaba **13 bloques por encima** del nuevo y el jugador lo veía como *«varias puertas»* superpuestas y con
+        // los troncos de la pared vieja cruzándolas ✗. Un portón es SIEMPRE del anillo del muro, así que barrerlo en
+        // esa columna no puede llevarse nada que no sea un portón ✓.
+        for (BlockPos entrada : portonesDelMuro(center, baseY)) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    for (int y = baseY - 40; y <= baseY + 40; y++) {
+                        BlockPos q = new BlockPos(entrada.getX() + dx, y, entrada.getZ() + dz);
+                        if (level.getBlockState(q).getBlock() instanceof com.chipoodle.devilrpg.block.DoubleGateBlock) {
+                            level.setBlock(q, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                            quitados++;
+                        }
+                    }
+                }
             }
         }
         fence(level, center);
