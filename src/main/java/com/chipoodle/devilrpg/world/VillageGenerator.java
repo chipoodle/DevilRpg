@@ -1,6 +1,8 @@
 package com.chipoodle.devilrpg.world;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.block.DoubleGateBlock;
+import com.chipoodle.devilrpg.init.ModBlocks;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
 import net.minecraft.core.BlockPos;
@@ -6893,12 +6895,14 @@ public final class VillageGenerator {
         // y a la cota+2, columnas de adoquín).
         int conMuro = 0;
         for (BlockPos p : ring) {
+            // Una celda del anillo está SELLADA si tiene bloque de muro (tronco, adoquín, escalera) o una hoja del
+            // PORTÓN. Se mira el BLOQUE, no una lista calculada aparte: cuando la comprobación y la construcción se
+            // hacían cada una su cuenta, no coincidían y el muro se reconstruía EN BUCLE (medido: 3200 veces en 3
+            // minutos, y 52 con la cuenta cruzada ✗).
             for (int dy = 0; dy <= 2; dy++) {
                 BlockState s = level.getBlockState(new BlockPos(p.getX(), cota + dy, p.getZ()));
-                // El PORTÓN también cuenta como cierre (es la puerta del pueblo): si no, `asegurarMuro` daría el muro
-                // por ausente en las cuatro entradas y lo reconstruiría en cada latido.
                 if (s.is(Blocks.OAK_LOG) || s.is(Blocks.COBBLESTONE) || s.is(Blocks.COBBLESTONE_STAIRS)
-                        || s.is(Blocks.OAK_FENCE_GATE)) {
+                        || s.getBlock() instanceof DoubleGateBlock) {
                     conMuro++;
                     break;
                 }
@@ -6927,8 +6931,32 @@ public final class VillageGenerator {
             return;
         }
         DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO esta a la cota {} (solo {} de {} celdas del anillo lo"
-                        + " tienen): se reconstruye a su nivel", center, cota, conMuro, ring.size());
+                        + " tienen): se reconstruye a su nivel. FALTAN: {}", center, cota, conMuro, ring.size(),
+                faltantes(level, ring, cota));
         rehacerMuro(level, center);
+    }
+
+    /** Las celdas del anillo que no tienen ni muro ni portón (para poder verlas en el registro). */
+    private static String faltantes(ServerLevel level, List<BlockPos> ring, int cota) {
+        StringBuilder sb = new StringBuilder();
+        for (BlockPos p : ring) {
+            boolean hay = false;
+            for (int dy = 0; dy <= 2; dy++) {
+                BlockState s = level.getBlockState(new BlockPos(p.getX(), cota + dy, p.getZ()));
+                if (s.is(Blocks.OAK_LOG) || s.is(Blocks.COBBLESTONE) || s.is(Blocks.COBBLESTONE_STAIRS)
+                        || s.getBlock() instanceof DoubleGateBlock) {
+                    hay = true;
+                    break;
+                }
+            }
+            if (!hay) {
+                sb.append(p.toShortString()).append(' ');
+                if (sb.length() > 220) {
+                    break;
+                }
+            }
+        }
+        return sb.toString().trim();
     }
 
     /**
@@ -7078,44 +7106,111 @@ public final class VillageGenerator {
      * <p>
      * El eje del portón es <b>perpendicular</b> al muro: en las entradas N/S el portón mira en X y en las E/O en Z.
      */
-    private static void entrance(ServerLevel level, BlockPos center, BlockPos p, int r, int baseY) {
-        // Eje perpendicular a la entrada (si la entrada está en N/S, los lados se reparten en X; si en E/O, en Z).
-        boolean northSouth = Math.abs(p.getZ() - center.getZ()) == r;
-        int signX = northSouth ? 1 : 0;
-        int signZ = northSouth ? 0 : 1;
-        // EL PASO, ALLANADO (6-oct-2026). Medido antes de arreglarlo, columna a columna de las cuatro entradas:
-        //   este  (532,646): 83=oak_fence_gate 84=air  85=air   -> bien ✓
-        //   oeste (408,646): 83=oak_fence_gate 84=dirt 85=stone -> TAPADO por el TERRENO
-        //   norte (470,708): 83=oak_fence_gate 84=air  85=air   -> bien ✓
-        //   sur   (470,584): 83=oak_fence_gate 84=stone 85=stone -> TAPADO por el TERRENO
-        // El anillo se allana a la cota, pero la celda de la ENTRADA se quedaba con el terreno de encima, así que en
-        // las aldeas con desnivel el portón tenía un bloque de tierra justo a la altura de la cabeza del aldeano y no
-        // se podía cruzar (el portón es de una hoja: el paso útil son los dos bloques de encima). Aquí se deja franco.
-        // lint:ok I9 porque esto NO añade construcción: quita el terreno que tapaba el paso de un portón. Y no necesita
-        // subir CURRENT_LAYOUT porque `asegurarMuro` reconstruye el anillo entero en el latido en cuanto ve que falta
-        // un portón o que hay una hoja de más, así que las partidas ya construidas lo reciben solas.
-        colocar(level, new BlockPos(p.getX(), baseY, p.getZ()), Blocks.AIR.defaultBlockState(), 3);
-        colocar(level, new BlockPos(p.getX(), baseY + 1, p.getZ()), Blocks.AIR.defaultBlockState(), 3);
-        for (int i = 0; i <= 2; i++) {
-            colocar(level, new BlockPos(p.getX() - signX, baseY + i, p.getZ() - signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
-            colocar(level, new BlockPos(p.getX() + signX, baseY + i, p.getZ() + signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
+    /**
+     * <b>EL PORTÓN DOBLE ABATIBLE DE LA ALDEA</b> (6-oct-2026, lo pidió el jugador: *«que sean de 3 de ancho x 3 de
+     * alto y que sea una puerta doble abatible personalizada»*).
+     * <p>
+     * <b>El hueco es de 3×3</b> (la celda de la entrada y su vecina a lo largo del muro, por tres de alto) y lo llenan
+     * <b>dos hojas</b> de {@link DoubleGateBlock} de 1 de ancho por 3 de alto, que abaten hacia fuera al abrirse. Las
+     * dos <b>jambas</b> del hueco son de adoquín, como el marco de la entrada de siempre.
+     * <p>
+     * <b>Por qué un bloque propio y no una puerta de valla</b> (medido): una puerta de valla mide 1,5 de alto y el
+     * hueco dejaba un solo bloque de aire encima, así que un aldeano (1,95) <b>no tenía hueco para la cabeza</b> y no
+     * podía cruzar aunque el juego le dejara trazarlo ✓. Con el portón de 3 de alto el paso es franco.
+     * <p>
+     * <b>Y el asedio no puede con él</b>: el juego sólo deja que un zombi rompa {@code DoorBlock} en difícil, y esto es
+     * un bloque propio, así que <b>tiene que abrir brecha en el MURO</b> ✓ — que es exactamente lo que pidió el jugador.
+     */
+    /**
+     * <b>LAS TRES CELDAS DEL ANILLO QUE OCUPA UN PORTÓN DOBLE</b> (6-oct-2026): la entrada y sus dos vecinas a lo
+     * largo del muro, ordenadas por cercanía a la entrada. Es la unidad del portón y vive en <b>un solo sitio</b>
+     * (I4) porque la usan las tres cosas que tienen que estar de acuerdo: el que lo <b>construye</b> ({@link #entrance}),
+     * el que lo <b>cuenta</b> ({@link #asegurarMuro}) y el que lo <b>abre</b>
+     * ({@link #abrirLosPortonesSegunElPueblo}).
+     * <p>
+     * <b>Por qué tres y no dos</b>: el anillo del muro es de <b>una sola celda de grosor</b>, así que un hueco de 3 de
+     * ancho son necesariamente <b>tres</b> celdas del anillo. Las <b>dos hojas</b> van en las dos de los extremos y el
+     * centro queda de paso — que es exactamente cómo cierra un portón de dos hojas: cada hoja tapa su mitad y las dos
+     * se juntan en el medio. Si se taparan sólo dos, la tercera celda quedaba abierta y `asegurarMuro` reconstruía el
+     * muro <b>en bucle</b> (medido: 3200 veces en 3 minutos ✗).
+     * <p>
+     * Se busca sobre el <b>anillo de verdad</b> y no con una cuenta a mano porque el anillo tiene las celdas
+     * <b>duplicadas</b> ({@code fillCardinal} añade el inicio de cada tramo) y las coordenadas exactas de cada entrada
+     * dependen del redondeo del muestreo angular: calcularlas a mano fue justo lo que puso las hojas una celda corridas
+     * ✗.
+     */
+    public static List<BlockPos> celdasDelPorton(BlockPos center, int nivel, BlockPos entrada) {
+        List<BlockPos> anillo = new ArrayList<>();
+        for (BlockPos c : anilloDelMuro(center)) {
+            BlockPos plano = new BlockPos(c.getX(), nivel, c.getZ());
+            if (!anillo.contains(plano)) {
+                anillo.add(plano);
+            }
         }
-        // EL PORTÓN: una hoja de valla, como TODOS los portones del pueblo (las parcelas y los del anexo tienen uno
-        // solo, y `VillagerGateGoal` mide su distancia para abrirlo). NO se pone una segunda hoja encima: el goal
-        // elige el portón por distancia y con dos hojas apiladas la de arriba se le queda fuera del radio de apertura
-        // (2,6) y no la abriría nunca — una hoja que se sube o se baja según por dónde mire el aldeano es una trampa,
-        // no un portón. Con una hoja el paso es franco y el cierre, total: el juego no deja que un zombi abra NI rompa
-        // una puerta de valla.
-        // Se apoya en el suelo de la aldea (baseY-1), así que su `canSurvive` va servido.
-        // lint:ok I9 porque este portón NO necesita subir CURRENT_LAYOUT: `asegurarMuro` (que lo cuenta como cierre)
-        // reconstruye el anillo entero en el latido en cuanto ve que le falta un portón, así que las partidas que ya
-        // tienen muro lo reciben solas —idempotente— sin rehacer la aldea. Medido: `con muro 912 -> 921 | PORTONES 9 |
-        // AGUJEROS 0` ✓.
-        BlockState porton = Blocks.OAK_FENCE_GATE.defaultBlockState()
-                .setValue(FenceGateBlock.FACING, northSouth ? Direction.EAST : Direction.SOUTH)
-                .setValue(FenceGateBlock.OPEN, false);
-        colocar(level, new BlockPos(p.getX(), baseY, p.getZ()), porton, 3);
-        colocar(level, new BlockPos(p.getX(), baseY + 3, p.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
+        anillo.sort(java.util.Comparator.comparingInt(c -> Math.abs(c.getX() - entrada.getX())
+                + Math.abs(c.getZ() - entrada.getZ())));
+        // DOS celdas: una por hoja. El anillo es de UNA sola celda de grosor y las hojas van EN EL PLANO DEL MURO, así
+        // que el hueco que un portón de dos hojas puede cerrar es exactamente de dos celdas — como una puerta de casa,
+        // que tiene dos hojas y no tres. Con un hueco de tres celdas la tercera se quedaba abierta para siempre y
+        // `asegurarMuro` reconstruía el muro en bucle (medido: 3200 reconstrucciones en 3 minutos, y 52 con el hueco de
+        // tres ✗).
+        return anillo.subList(0, Math.min(2, anillo.size()));
+    }
+
+    /** Las celdas del anillo que hay que rematar para sellar un portón: una por hoja. */
+    private static void sellarLasCeldasDelPorton(ServerLevel level, BlockPos center, int baseY, BlockPos entrada) {
+        List<BlockPos> celdas = celdasDelPorton(center, baseY, entrada);
+        if (celdas.size() < 2) {
+            return;
+        }
+        // Una hoja en cada celda: la DERECHA en la más cercana a la entrada y la IZQUIERDA en la siguiente. Juntas
+        // cierran el hueco entero (elf anillo es de una celda de grosor y las hojas van en el plano del muro).
+        BlockPos[] hojas = { celdas.get(0), celdas.get(1) };
+        DoubleGateBlock.PanelSide[] lados = { DoubleGateBlock.PanelSide.RIGHT, DoubleGateBlock.PanelSide.LEFT };
+        // El eje del muro lo dice el par de celdas: si cambian en Z, el muro corre en Z (portón mirando en X).
+        boolean muroEnZ = hojas[0].getZ() != hojas[1].getZ();
+        Direction facingPorton = muroEnZ ? Direction.EAST : Direction.SOUTH;
+        for (int i = 0; i < 2; i++) {
+            for (int alto = 0; alto <= 2; alto++) {
+                BlockState hoja = ModBlocks.PORTON_DOBLE_BLOCK.get().defaultBlockState()
+                        .setValue(DoubleGateBlock.FACING, facingPorton)
+                        .setValue(DoubleGateBlock.OPEN, false)
+                        .setValue(DoubleGateBlock.SIDE, lados[i])
+                        .setValue(DoubleGateBlock.LAYER, DoubleGateBlock.PanelLayer.de(alto));
+                colocar(level, new BlockPos(hojas[i].getX(), baseY + alto, hojas[i].getZ()), hoja, 3);
+            }
+        }
+    }
+
+    /** ¿Ese punto del anillo es una de las tres celdas de un portón del muro? */
+    private static boolean esCeldaDePorton(BlockPos center, int nivel, BlockPos celda) {
+        for (BlockPos entrada : portonesDelMuro(center, nivel)) {
+            if (celdasDelPorton(center, nivel, entrada).contains(celda)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void entrance(ServerLevel level, BlockPos center, BlockPos p, int r, int baseY) {
+        // LAS DOS CELDAS DEL PORTÓN, del sitio único (I4): la entrada y su vecina del anillo.
+        List<BlockPos> celdas = celdasDelPorton(center, baseY, p);
+        if (celdas.size() < 2) {
+            return;
+        }
+        // lint:ok I9 porque esto NO añade construcción nueva que rehacer: rehace el HUECO de una entrada (quita y pone
+        // en las mismas celdas) y `asegurarMuro` lo repone en el latido en cuanto ve que falta un portón, así que las
+        // partidas ya construidas lo reciben solas —idempotente— sin subir CURRENT_LAYOUT.
+        // EL HUECO, FRANCO Y DE 3×3: las tres celdas del portón, de suelo a la capa alta, al aire; y el DINTEL de
+        // adoquín justo encima (a baseY+3, por encima de las tres capas del portón).
+        for (BlockPos c : celdas) {
+            for (int alto = 0; alto <= 2; alto++) {
+                colocar(level, new BlockPos(c.getX(), baseY + alto, c.getZ()), Blocks.AIR.defaultBlockState(), 3);
+            }
+            colocar(level, new BlockPos(c.getX(), baseY + 3, c.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
+        }
+        // Y LAS DOS HOJAS, con la pieza única otra vez (así el que construye y el que cuenta no pueden discrepar).
+        sellarLasCeldasDelPorton(level, center, baseY, p);
     }
 
     /** ¿Es un bloque de vegetación que debe limpiarse? */
@@ -8336,6 +8431,69 @@ public final class VillageGenerator {
         return portones;
     }
 
+    /**
+     * <b>ABRE Y CIERRA LOS PORTONES DOBLES DEL MURO SEGÚN HAYA PUEBLO CERCA</b> (6-oct-2026). Es la pieza que hace que
+     * el portón sea <b>fiable</b>: no depende del navegador ni del destino del aldeano, sino de que <b>haya un aldeano
+     * al lado</b>. Si hay uno a menos de {@code RADIO_DE_PASO}, las dos hojas <b>abaten</b>; si no hay nadie, se
+     * cierran.
+     * <p>
+     * <b>Por qué así y no con un goal</b> (y esto está medido): un goal que abra «si va a cruzar» necesita que el
+     * navegador le haya trazado un camino <b>a través de una puerta cerrada</b>, y eso no pasa — el aldeano se queda
+     * pidiendo paso contra la hoja. Aquí basta con que <b>se acerque</b>: se abre, el navegador replanifica con el paso
+     * franco y cruza ✓.
+     * <p>
+     * <b>Y se cierra en cuanto se va</b>, que es lo que mantiene al asedio fuera: un portón abierto todo el día sería
+     * una puerta abierta para los asaltantes. El precio —unos ticks abierto mientras alguien pasa— es el mismo que
+     * tiene una puerta de pueblo de verdad.
+     */
+    public static void abrirLosPortonesSegunElPueblo(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        for (BlockPos celda : celdasDeLosPortonesDelMuro(center, cota)) {
+            BlockState estado = level.getBlockState(celda);
+            if (!(estado.getBlock() instanceof DoubleGateBlock)) {
+                continue;
+            }
+            // Solo la celda de ABAJO de cada hoja decide (las demás son la misma hoja hacia arriba).
+            if (estado.getValue(DoubleGateBlock.LAYER) != DoubleGateBlock.PanelLayer.LOW) {
+                continue;
+            }
+            boolean hayPueblo = !level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
+                    new net.minecraft.world.phys.AABB(celda).inflate(RADIO_DE_PASO)).isEmpty();
+            if (estado.getValue(DoubleGateBlock.OPEN) != hayPueblo) {
+                DoubleGateBlock.abatir(level, celda, estado, hayPueblo);
+                DevilRpg.LOGGER.info("[Porton] {} el porton del muro en {} (hay pueblo cerca: {})",
+                        hayPueblo ? "abro" : "cierro", celda.toShortString(), hayPueblo);
+            }
+        }
+    }
+
+    /**
+     * A qué distancia de un portón tiene que estar un aldeano para que se le abra. <b>4 bloques</b>: lo justo para que
+     * el paso esté franco cuando llega, y lo bastante corto para que el portón <b>no se quede abierto</b> porque haya
+     * gente paseando por la plaza (el muro está a 62 del centro, así que un aldeano en su faena no lo abre).
+     */
+    private static final double RADIO_DE_PASO = 4.0D;
+
+    /**
+     * <b>TODAS las celdas de los cuatro portones dobles del muro</b> (6-oct-2026). Cada portón ocupa <b>ocho</b>
+     * celdas: <b>2 de ancho por 3 de alto</b> (las dos hojas, cada una de 1×3). La lista es la unión de las cuatro
+     * entradas cardinales con la celda de al lado, que es la otra mitad del hueco de 3 de ancho.
+     * <p>
+     * Es la lista que usan el que <b>abre</b> los portones (el latido, con el aldeano cerca), el que los
+     * <b>cuenta</b> ({@link #asegurarMuro}) y el que los <b>mide</b>.
+     */
+    public static List<BlockPos> celdasDeLosPortonesDelMuro(BlockPos center, int nivel) {
+        List<BlockPos> celdas = new ArrayList<>();
+        // El eje del hueco: 3 de ancho (o sea, la entrada ± 1) por 3 de alto. El portón doble vive en las DOS celdas
+        // centrales del ancho y el resto del hueco es el marco de piedra.
+        celdas.addAll(portonesDelMuro(center, nivel));
+        celdas.add(new BlockPos(center.getX() + FENCE_RADIUS + 1, nivel, center.getZ()));
+        celdas.add(new BlockPos(center.getX() - FENCE_RADIUS - 1, nivel, center.getZ()));
+        celdas.add(new BlockPos(center.getX(), nivel, center.getZ() + FENCE_RADIUS + 1));
+        celdas.add(new BlockPos(center.getX(), nivel, center.getZ() - FENCE_RADIUS - 1));
+        return celdas;
+    }
+
     /** ¿Esta celda es una entrada cardinal del muro? (el hueco donde va el portón). */
     private static boolean esEntradaDelMuro(BlockPos center, BlockPos p) {
         boolean enElEjeX = p.getZ() == center.getZ() && Math.abs(p.getX() - center.getX()) == FENCE_RADIUS;
@@ -8353,7 +8511,9 @@ public final class VillageGenerator {
         List<BlockPos> portones = new ArrayList<>(portonesDeLosBancales(center, nivel));
         portones.add(portonDelCorral(center, nivel));
         portones.add(portonDelGallinero(center, nivel));
-        portones.addAll(portonesDelMuro(center, nivel));
+        // Y LAS OCHO CELDAS DE LOS CUATRO PORTONES DOBLES DEL MURO (6-oct-2026): son los que cierran la aldea y los
+        // que el latido abre cuando un aldeano se acerca. Ver `celdasDeLosPortonesDelMuro`.
+        portones.addAll(celdasDeLosPortonesDelMuro(center, nivel));
         return portones;
     }
 

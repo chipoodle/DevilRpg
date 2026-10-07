@@ -2441,7 +2441,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * Lo que se busca en el log: `[Arnes] ANILLO: … con muro M | AGUJEROS A` y el reparto por rumbo, para saber qué
      * cerrar (los cuatro portones cardinales son a propósito y se quedan).
      */
-    private static final boolean MEDIR_ANILLO = false;
+    private static final boolean MEDIR_ANILLO = true;
 
     private static void medirElAnilloDelMuro(ServerLevel level) {
         if (ticks != 300) {
@@ -2647,8 +2647,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             boolean hay = false;
             // El portón vive en la COTA (la hoja va al suelo). Mirar la hoja a cualquier altura daba por bueno un paso
             // tapado: medido, el muro ponía sus troncos ENCIMA del portón y el aldeano no tenía hueco a la cabeza.
+            // El portón es ahora el BLOQUE PROPIO de doble hoja abatible (`DoubleGateBlock`), no una puerta de valla.
             boolean porton = level.getBlockState(new BlockPos(p.getX(), y0, p.getZ())).getBlock()
-                    == net.minecraft.world.level.block.Blocks.OAK_FENCE_GATE;
+                    instanceof com.chipoodle.devilrpg.block.DoubleGateBlock;
             for (int dy = 0; dy <= 2; dy++) {
                 var b = level.getBlockState(new BlockPos(p.getX(), y0 + dy, p.getZ())).getBlock();
                 if (b == net.minecraft.world.level.block.Blocks.OAK_LOG
@@ -2660,9 +2661,13 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
             if (porton) {
                 portones++;
-                // Y EL PASO TIENE QUE ESTAR FRANCO: con la hoja en la cota, la cota+1 tiene que ser aire. Si no, el
-                // portón está tapado por arriba y el aldeano no puede cruzar.
-                if (!level.getBlockState(new BlockPos(p.getX(), y0 + 1, p.getZ())).isAir()) {
+                // Y EL PASO TIENE QUE ESTAR FRANCO: en el portón de TRES capas (el bloque propio de doble hoja abatible)
+                // la cota+1 es la hoja del MEDIO, así que lo que hay que mirar es que la hoja esté y que ARRIBA de todo
+                // (cota+3) no haya un bloque bajado que tape el paso. Antes se pedía aire en la cota+1, que era la
+                // regla del portón de valla de una hoja: con el portón de 3 alto eso marcaba TAPADOS falsos.
+                boolean hojaArriba = level.getBlockState(new BlockPos(p.getX(), y0 + 2, p.getZ())).getBlock()
+                        instanceof com.chipoodle.devilrpg.block.DoubleGateBlock;
+                if (!hojaArriba) {
                     tapados++;
                 }
             }

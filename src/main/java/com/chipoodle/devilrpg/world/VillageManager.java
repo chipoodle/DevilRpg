@@ -1032,6 +1032,10 @@ public final class VillageManager {
             // Es idempotente y barato: mira el anillo y, si el muro ya está a la cota, no toca nada.
             if (saved.isGenerated(i) && level.hasChunkAt(target)) {
                 VillageGenerator.asegurarMuro(level, target);
+                // Y LOS PORTONES DEL MURO, SEGÚN HAYA PUEBLO CERCA (6-oct-2026): abre las dos hojas si un aldeano está
+                // al lado y las cierra en cuanto se va. Va AQUÍ, en el latido de fuera del pueblo, para que funcione
+                // TAMBIÉN con el asedio dentro — que es justo cuando el portón importa. Ver abrirLosPortonesSegunElPueblo.
+                VillageGenerator.abrirLosPortonesSegunElPueblo(level, target);
             }
             if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)) {
                 if (saved.isSiegeResolved(i)) {

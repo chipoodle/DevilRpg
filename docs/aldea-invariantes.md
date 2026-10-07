@@ -6416,6 +6416,43 @@ de fuera (que está un bloque más alto) y el navegador no va; el **cerebro pisa
 `JOB_SITE` fuera el puesto salió mal colocado. **La medición queda para la partida del jugador** con la traza `[Gate]`
 ✓: hay que ver **`aldeano DENTRO · destino FUERA`** en un portón del muro y, después, al aldeano fuera ✓.
 
+### I224 · EL PORTÓN DOBLE ABATIBLE: BLOQUE PROPIO (3 de alto, dos hojas)
+
+**Lo pidió el jugador** (6-oct-2026): *«necesito que cambies los portones, que sean de 3 de ancho x 3 de alto y que sea
+una puerta doble abatible personalizada (la vas a tener que crear)»* ✓. Y antes había elegido **compuerta con el latido**
+(«C · Compuerta de hierro con el latido»), así que el portón lo abre y lo cierra el pueblo, no un goal.
+
+**NUEVO BLOQUE `DoubleGateBlock`** (`com.chipoodle.devilrpg.block`, registrado como `devilrpg:porton_doble`):
+- **Dos hojas** (`SIDE` = LEFT/RIGHT) de **1 de ancho × 3 de alto**: `LAYER` = LOW/MID/HIGH. Estado completo:
+  `FACING` (perpendicular al muro), `OPEN`, `SIDE`, `LAYER` → **48 variantes** de blockstate, con sus 12 modelos
+  ({cerrada, abierta} × {izquierda, derecha} × {bajo, medio, alto}).
+- **Abate de verdad**: **cerrada** la hoja ocupa su celda entera (las dos juntas cierran el hueco); **abierta** ha
+  girado 90° y se queda **de canto junto a su bisagra** (2 píxeles), que es por donde se pasa. La **forma de colisión es
+  la misma geometría**: lo que se ve es lo que se cruza ✓.
+- **Las nueve celdas van juntas**: `abatir` cambia las dos hojas por los tres pisos de una vez, y `playerWillDestroy`
+  se lleva el portón entero si se rompe una celda (para que no queden hojas colgando) ✓.
+- **Y no se rompe**: el juego sólo deja que un zombi rompa `DoorBlock` en difícil, y esto es un bloque propio, así que
+  **el asedio tiene que abrir brecha en el MURO** ✓ — que es lo que pidió el jugador. Se le da la dureza del hierro.
+
+**EL QUE LO ABRE ES EL LATIDO** (`VillageGenerator.abrirLosPortonesSegunElPueblo`), y aquí está el porqué de la
+arquitectura: **si hay un aldeano a menos de 4 bloques, las dos hojas abaten; si no hay nadie, se cierran** ✓. No
+depende del navegador ni del destino del aldeano: un goal que abra «si va a cruzar» necesita que el navegador le haya
+trazado un camino **a través de una puerta cerrada**, y eso no pasa ✗.
+
+**MEDIDO, y con dos fallos propios por el camino** ✓ (`rapida-113.log`):
+- Las **cuatro** entradas tienen el portón: `83=porton_doble 84=porton_doble 85=porton_doble 86=cobblestone` ✓.
+- Anillo: **`921 celdas | con muro 921 | AGUJEROS 0 | racha 0`** ✓ y **`1` reconstrucción** (se estabiliza) ✓.
+- **FALLO 1, medido**: con el portón de **3 de ancho** el anillo se reconstruía **3200 veces en 3 minutos** — el anillo
+  del muro es de **una sola celda de grosor**, así que un hueco de 3 deja **3** celdas y sólo había **2 hojas**: la
+  tercera quedaba abierta para siempre y `asegurarMuro` no paraba ✗. Se arregló midiendo **sobre el propio anillo**
+  (`celdasDelPorton`, sitio único I4) y con **una hoja por celda**.
+- **FALLO 2, medido**: `asegurarMuro` y el que construye hacían **cada uno su cuenta**, y no coincidían (52
+  reconstrucciones). Ahora la comprobación mira el **bloque que hay**, no una lista calculada aparte ✓.
+
+**LO QUE FALTA, y es del jugador** ✗: la **textura**. Va con la **puerta de roble oscuro del juego**
+(`minecraft:block/dark_oak_door_bottom`) como marcador, y el modelo ya está partido en **tres pisos** (cada bloque coge
+su tercio de la textura), así que en cuanto haya una textura propia se cambia en **un sitio** (los 12 modelos) ✓.
+
 ### I223 · LA VERDAD MEDIDA DEL PORTÓN: NO HAY DEPENDENCIA CIRCULAR (y el arreglo de I222 no era por eso)
 
 **Aquí me equivoqué en I222 y lo digo**: allí escribí que el portón cerrado **no dejaba trazar camino** y que eso era

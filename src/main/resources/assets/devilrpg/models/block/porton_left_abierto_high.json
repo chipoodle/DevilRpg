@@ -1,0 +1,76 @@
+{
+  "credit": "DevilRpg - porton doble abatible del muro",
+  "textures": {
+    "all": "minecraft:block/dark_oak_door_bottom"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        2,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            10.666666666666666,
+            16,
+            16.0
+          ],
+          "texture": "#all"
+        },
+        "south": {
+          "uv": [
+            0,
+            10.666666666666666,
+            16,
+            16.0
+          ],
+          "texture": "#all"
+        },
+        "east": {
+          "uv": [
+            0,
+            10.666666666666666,
+            16,
+            16.0
+          ],
+          "texture": "#all"
+        },
+        "west": {
+          "uv": [
+            0,
+            10.666666666666666,
+            16,
+            16.0
+          ],
+          "texture": "#all"
+        },
+        "up": {
+          "uv": [
+            0,
+            10.666666666666666,
+            16,
+            16.0
+          ],
+          "texture": "#all"
+        },
+        "down": {
+          "uv": [
+            0,
+            10.666666666666666,
+            16,
+            16.0
+          ],
+          "texture": "#all"
+        }
+      }
+    }
+  ]
+}

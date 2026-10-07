@@ -91,6 +91,26 @@ public final class ModBlocks {
     ));
 
     /**
+     * <b>PORTÓN DOBLE ABATIBLE DEL MURO DE LA ALDEA</b> (6-oct-2026, lo pidió el jugador: *«que sean de 3 de ancho x 3
+     * de alto y que sea una puerta doble abatible personalizada»*).
+     * <p>
+     * Es <b>un bloque propio</b> porque el hueco del muro es de <b>3×3</b> y una puerta de valla mide 1,5 de alto: con
+     * un solo bloque de aire encima, un aldeano (1,95) no tiene hueco para la cabeza y <b>no puede cruzar</b> aunque el
+     * juego le deje trazar el camino. Este portón ocupa las <b>nueve celdas</b> del hueco y las abre y cierra todas a
+     * la vez, con sus dos hojas abatiendo hacia fuera.
+     * <p>
+     * Y hay una razón dura para que sea <b>este</b> bloque y no una puerta de madera: el juego sólo deja que un zombi
+     * rompa {@code DoorBlock} en difícil, así que un portón así <b>no se rompe</b> — el asedio tiene que abrir brecha
+     * en el MURO, que es lo que el jugador pidió ✓. Se le da la dureza del hierro ({@code ofFullCopy(IRON_DOOR)}) para
+     * que quede claro que es una pieza de la muralla y no una valla de madera.
+     */
+    public static final DeferredHolder<Block, DoubleGateBlock> PORTON_DOBLE_BLOCK = BLOCKS.register("porton_doble",
+            () -> new DoubleGateBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_DOOR)
+                    .noOcclusion()
+                    .isViewBlocking((state, level, pos) -> false)
+                    .isSuffocating((state, level, pos) -> false)));
+
+    /**
      * Sello del sculk: caja inquebrantable que blinda el núcleo de una guarida mientras vive su cultivador.
      * Es un bloque de estructura y no se reparte en la pestaña creativa ({@code ModCreativeTabs} lo salta), pero
      * <b>sí tiene objeto</b>: {@code InitModEventSubscriber.onRegisterItems} crea un {@code BlockItem} para
