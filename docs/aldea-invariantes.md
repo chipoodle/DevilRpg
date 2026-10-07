@@ -6439,15 +6439,21 @@ arquitectura: **si hay un aldeano a menos de 4 bloques, las dos hojas abaten; si
 depende del navegador ni del destino del aldeano: un goal que abra «si va a cruzar» necesita que el navegador le haya
 trazado un camino **a través de una puerta cerrada**, y eso no pasa ✗.
 
-**MEDIDO, y con dos fallos propios por el camino** ✓ (`rapida-113.log`):
+**MEDIDO, y con dos fallos propios por el camino** ✓ (`rapida-114.log`):
 - Las **cuatro** entradas tienen el portón: `83=porton_doble 84=porton_doble 85=porton_doble 86=cobblestone` ✓.
-- Anillo: **`921 celdas | con muro 921 | AGUJEROS 0 | racha 0`** ✓ y **`1` reconstrucción** (se estabiliza) ✓.
-- **FALLO 1, medido**: con el portón de **3 de ancho** el anillo se reconstruía **3200 veces en 3 minutos** — el anillo
-  del muro es de **una sola celda de grosor**, así que un hueco de 3 deja **3** celdas y sólo había **2 hojas**: la
-  tercera quedaba abierta para siempre y `asegurarMuro` no paraba ✗. Se arregló midiendo **sobre el propio anillo**
-  (`celdasDelPorton`, sitio único I4) y con **una hoja por celda**.
+- **3 DE ANCHO × 3 DE ALTO**, que es lo que pidió el jugador ✓: el portón ocupa **tres celdas del anillo** (la entrada y
+  una a cada lado) con **tres bloques**, uno por celda — la **hoja izquierda**, la **hoja derecha** y la **juntura del
+  medio** (donde las dos hojas se encuentran al cerrar). Los tres son sólidos al cerrar, así que el hueco queda sellado
+  de verdad ✓.
+- Anillo: **`921 celdas | con muro 921 | PORTONES 19 | TAPADOS 0 | AGUJEROS 0 | racha 0`** ✓ y **`1` reconstrucción**
+  (se estabiliza) ✓.
+- **FALLO 1, medido**: con el hueco de **3 de ancho y sólo DOS hojas** el anillo se reconstruía **3200 veces en 3
+  minutos** — el anillo del muro es de **una sola celda de grosor**, así que un hueco de 3 deja **3** celdas y la
+  tercera quedaba abierta para siempre ✗. El arreglo no es encoger el portón: es **una pieza por celda** ✓.
 - **FALLO 2, medido**: `asegurarMuro` y el que construye hacían **cada uno su cuenta**, y no coincidían (52
   reconstrucciones). Ahora la comprobación mira el **bloque que hay**, no una lista calculada aparte ✓.
+- Y el instrumento pasó de marcar **`TAPADOS 17`** (falso) a **`TAPADOS 0`**: pedía aire en la capa del medio, que era
+  la regla del portón de valla de una hoja; con el portón de tres capas la del medio **es una hoja** ✓.
 
 **LO QUE FALTA, y es del jugador** ✗: la **textura**. Va con la **puerta de roble oscuro del juego**
 (`minecraft:block/dark_oak_door_bottom`) como marcador, y el modelo ya está partido en **tres pisos** (cada bloque coge

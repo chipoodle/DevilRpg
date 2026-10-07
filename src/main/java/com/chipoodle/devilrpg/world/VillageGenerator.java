@@ -7149,35 +7149,41 @@ public final class VillageGenerator {
         }
         anillo.sort(java.util.Comparator.comparingInt(c -> Math.abs(c.getX() - entrada.getX())
                 + Math.abs(c.getZ() - entrada.getZ())));
-        // DOS celdas: una por hoja. El anillo es de UNA sola celda de grosor y las hojas van EN EL PLANO DEL MURO, así
-        // que el hueco que un portón de dos hojas puede cerrar es exactamente de dos celdas — como una puerta de casa,
-        // que tiene dos hojas y no tres. Con un hueco de tres celdas la tercera se quedaba abierta para siempre y
-        // `asegurarMuro` reconstruía el muro en bucle (medido: 3200 reconstrucciones en 3 minutos, y 52 con el hueco de
-        // tres ✗).
-        return anillo.subList(0, Math.min(2, anillo.size()));
+        // TRES celdas: el hueco de 3 de ancho, que es lo que pidió el jugador (*«3 de ancho x 3 de alto»*). El anillo
+        // es de UNA sola celda de grosor y las hojas van EN EL PLANO DEL MURO, así que un portón de 3 de ancho ocupa
+        // TRES celdas del anillo: la de la entrada y una a cada lado. Las cubren los tres bloques del portón (la hoja
+        // izquierda, la derecha y la juntura del medio), que es como cierra un portón de dos hojas de verdad.
+        return anillo.subList(0, Math.min(3, anillo.size()));
     }
 
     /** Las celdas del anillo que hay que rematar para sellar un portón: una por hoja. */
     private static void sellarLasCeldasDelPorton(ServerLevel level, BlockPos center, int baseY, BlockPos entrada) {
         List<BlockPos> celdas = celdasDelPorton(center, baseY, entrada);
-        if (celdas.size() < 2) {
+        if (celdas.size() < 3) {
             return;
         }
-        // Una hoja en cada celda: la DERECHA en la más cercana a la entrada y la IZQUIERDA en la siguiente. Juntas
-        // cierran el hueco entero (elf anillo es de una celda de grosor y las hojas van en el plano del muro).
-        BlockPos[] hojas = { celdas.get(0), celdas.get(1) };
-        DoubleGateBlock.PanelSide[] lados = { DoubleGateBlock.PanelSide.RIGHT, DoubleGateBlock.PanelSide.LEFT };
-        // El eje del muro lo dice el par de celdas: si cambian en Z, el muro corre en Z (portón mirando en X).
-        boolean muroEnZ = hojas[0].getZ() != hojas[1].getZ();
+        // TRES bloques de portón, uno por cada celda del hueco de 3 de ancho: la HOJA IZQUIERDA, la HOJA DERECHA y la
+        // JUNTURA del medio (donde las dos hojas se encuentran al cerrar). Los tres abaten a la vez y los tres son
+        // sólidos al cerrar, así que el hueco queda sellado de verdad — que era el fallo del hueco de 3 con sólo dos
+        // hojas (la tercera celda quedaba abierta para siempre y el muro se reconstruía 3200 veces ✗).
+        List<BlockPos> orden = new ArrayList<>(celdas);
+        // Se ordenan a lo largo del muro para que la izquierda y la derecha queden a los extremos y la juntura en el
+        // medio (el orden de cercanía a la entrada no lo garantiza, porque la entrada puede caer en cualquier celda).
+        boolean muroEnZ = orden.get(0).getZ() != orden.get(1).getZ();
+        orden.sort(java.util.Comparator.comparingInt(c -> muroEnZ ? c.getZ() : c.getX()));
         Direction facingPorton = muroEnZ ? Direction.EAST : Direction.SOUTH;
-        for (int i = 0; i < 2; i++) {
+        DoubleGateBlock.PanelSide[] lados = { DoubleGateBlock.PanelSide.LEFT, DoubleGateBlock.PanelSide.RIGHT,
+                DoubleGateBlock.PanelSide.LEFT };
+        // La JUNTURA (la celda del medio) lleva la hoja IZQUIERDA: al abrir se queda de canto en su canto izquierdo, que
+        // es justo por donde las dos hojas se separan, así que el paso queda franco.
+        for (int i = 0; i < 3; i++) {
             for (int alto = 0; alto <= 2; alto++) {
                 BlockState hoja = ModBlocks.PORTON_DOBLE_BLOCK.get().defaultBlockState()
                         .setValue(DoubleGateBlock.FACING, facingPorton)
                         .setValue(DoubleGateBlock.OPEN, false)
                         .setValue(DoubleGateBlock.SIDE, lados[i])
                         .setValue(DoubleGateBlock.LAYER, DoubleGateBlock.PanelLayer.de(alto));
-                colocar(level, new BlockPos(hojas[i].getX(), baseY + alto, hojas[i].getZ()), hoja, 3);
+                colocar(level, new BlockPos(orden.get(i).getX(), baseY + alto, orden.get(i).getZ()), hoja, 3);
             }
         }
     }

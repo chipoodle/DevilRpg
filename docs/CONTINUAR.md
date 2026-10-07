@@ -107,18 +107,18 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    `con muro 921 | PORTONES 9 | AGUJEROS 0 | racha 0` (los 9 = 4 celdas x 2 puertas + 1 dintel), el guardado dice
    `PORTONES 4 celdas: [(408,646),(470,584),(470,708),(532,646)]` y **0 agujeros**, y la ola **ya solo entra rompiendo
    el muro** (`oak_log` y `cobblestone`), **0 puertas rotas**, y **la milicia los mata a los 8** (t=1680).
-   **HECHO: PORTON DOBLE ABATIBLE PROPIO (I224)**. El jugador pidió *«que sean de 3 de ancho x 3 de alto y que sea una
-   puerta doble abatible personalizada»* y eligió la apertura **con el latido**. Nuevo bloque
-   `devilrpg:porton_doble` (`DoubleGateBlock`): **dos hojas** de 1x3 con `SIDE`/`LAYER`, **12 modelos** y **48
-   variantes**, que **abaten** (cerrada ocupa su celda; abierta de canto en la bisagra) y **no se rompen** (el juego
-   solo deja romper `DoorBlock` en difícil), asi que **el asedio tiene que abrir brecha en el MURO**. Lo abre el latido
-   (`abrirLosPortonesSegunElPueblo`): **aldeano a menos de 4 bloques -> abren; si no, cierran**. Medido: las 4 entradas
-   con el porton (`83/84/85=porton_doble 86=cobblestone`), anillo **921/921 | AGUJEROS 0** y **1 reconstruccion**.
-   **DOS FALLOS PROPIOS medidos por el camino**: con hueco de **3** y solo 2 hojas el muro se reconstruia **3200 veces**
-   (el anillo es de UNA celda de grosor: un hueco de 3 deja 3 celdas) -> se midio sobre el propio anillo
-   (`celdasDelPorton`, sitio unico) y **una hoja por celda**; y `asegurarMuro` contaba con **su propia lista** en vez de
-   mirar el bloque -> mira el bloque. **FALTA LA TEXTURA** (va con la puerta de roble oscuro del juego como marcador; el
-   modelo ya esta partido en tres pisos, asi que se cambia en un sitio).
+   **HECHO: PORTON DOBLE ABATIBLE PROPIO, DE 3 DE ANCHO x 3 DE ALTO (I224)**. Nuevo bloque
+   `devilrpg:porton_doble` (`DoubleGateBlock`): hojas de 1x3 con `SIDE`/`LAYER`, **12 modelos** y **48 variantes**, que
+   **abaten** (cerrada ocupa su celda; abierta de canto en la bisagra) y **no se rompen** (el juego solo deja romper
+   `DoorBlock` en difícil), asi que **el asedio tiene que abrir brecha en el MURO**. El hueco son **TRES celdas del
+   anillo** cubiertas por **tres bloques** (hoja izquierda, derecha y juntura del medio), que es lo que da el **3 de
+   ancho** de verdad. Lo abre el latido (`abrirLosPortonesSegunElPueblo`): **aldeano a menos de 4 bloques -> abren; si
+   no, cierran**. Medido: las 4 entradas con el porton (`83/84/85=porton_doble 86=cobblestone`), anillo
+   **`921/921 | PORTONES 19 | TAPADOS 0 | AGUJEROS 0`** y **1 reconstruccion**.
+   **DOS FALLOS PROPIOS medidos**: con hueco de 3 y solo DOS hojas el muro se reconstruia **3200 veces** (el anillo es
+   de UNA celda de grosor: un hueco de 3 deja 3 celdas) -> **una pieza por celda**; y `asegurarMuro` contaba con **su
+   propia lista** en vez de mirar el bloque -> mira el bloque. **FALTA LA TEXTURA** (va con la puerta de roble oscuro
+   del juego como marcador; el modelo ya esta partido en tres pisos, asi que se cambia en un sitio).
 3. **El nado del asaltante** — **HECHO en I215** (falta el instrumento). El defecto estaba en la cuenta del propio
    codigo: `MAX_ESCAPE_TICKS = 200` (10 s intentando salir) **+ `retryCooldown = MAX_ESCAPE_TICKS`** en `stop()` (otros
    10 s **sin poder tocar el agua**) = **20 segundos** en los que el asaltante ni avanza ni intenta nada, que es
