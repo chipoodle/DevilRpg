@@ -2524,7 +2524,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * Lo que se busca en el log: `[Arnes] ANILLO: … con muro M | AGUJEROS A` y el reparto por rumbo, para saber qué
      * cerrar (los cuatro portones cardinales son a propósito y se quedan).
      */
-    private static final boolean MEDIR_ANILLO = true;
+    private static final boolean MEDIR_ANILLO = false;
 
     private static void medirElAnilloDelMuro(ServerLevel level) {
         if (ticks != 300) {

@@ -6455,6 +6455,47 @@ trazado un camino **a través de una puerta cerrada**, y eso no pasa ✗.
 - Y el instrumento pasó de marcar **`TAPADOS 17`** (falso) a **`TAPADOS 0`**: pedía aire en la capa del medio, que era
   la regla del portón de valla de una hoja; con el portón de tres capas la del medio **es una hoja** ✓.
 
+### I228 · LA CAUSA DE VERDAD DEL «MARCO DE 5 BLOQUES»: EL PORTÓN SE CONSTRUÍA VARIAS VECES, CORRIDO
+
+**Lo reportó el jugador** (6-oct-2026), y teniendo razón: *«la puerta tiene un marco de 5 bloques de ancho, el bloque
+del extremo izquierdo tiene traspasado un tronco. No puedes decir que es algo viejo porque es una nueva partida.
+Además al darle click derecho a la puerta, suena como si abriera pero no abre y no me deja pasar. Cabe decir que se ve
+como si hubiera varias puertas una detrás de otra a lo largo del marco.»* ✓. **Y era verdad en una partida nueva**: el
+fallo se reproducía desde cero ✓.
+
+**MEDIDO con trazas en una aldea NUEVA** ✓ — el generador construía el portón **varias veces, cada una corrida una
+celda**:
+
+```
+entrada 532,0,646  -> celdas 532,63,645  532,63,646  532,63,647
+entrada 532,0,647  -> celdas 532,63,646  532,63,647  532,63,648   <-- ¡otra vez, corrido!
+entrada 471,0,708  -> celdas 470,63,708  471,63,708  472,63,708
+entrada 470,0,708  -> celdas 469,63,708  470,63,708  471,63,708   <-- ¡y otra!
+```
+
+**LA CAUSA**: el bucle del muro llamaba a `entrance` por **cada celda que creyera entrada**, y `entrance` calcula las
+tres celdas del portón **a partir de la celda que le pasan**. Como el anillo tiene las celdas **duplicadas**
+(`fillCardinal` añade el inicio de cada tramo) y los bordes de la entrada pasaban el filtro, el portón se levantaba
+**2–3 veces con una celda de desfase**, y eso es exactamente lo que se ve: **un marco más ancho de lo que toca y
+«varias puertas una detrás de otra»** ✓. Y con las hojas de tres construcciones superpuestas, el click abría unas y
+dejaba otras cerradas — de ahí que **sonara y no dejara pasar** ✓.
+
+**ARREGLO** ✓: los portones se construyen **una sola vez por entrada**, de una **lista cerrada** (las cuatro entradas
+cardinales, `portonesDelMuro`), y el bucle del muro solo **salta** las tres celdas de cada portón ✓. Y las tres celdas
+se calculan **a lo largo del eje del muro**, sin ambigüedad (`celdasDelPorton` pregunta el eje al propio anillo), en vez
+de «las tres más cercanas» — que en la entrada empataban en distancia y salían **en abanico** ✓.
+
+**MEDIDO, aldea NUEVA, después del arreglo** ✓ (`rapida-132/133.log`):
+
+| medida | antes | después |
+|---|---|---|
+| celdas de portón por entrada | **12** (4 de ancho) ✗ | **9** (3×3) ✓ |
+| construcciones por entrada | 2–3, corridas ✗ | **1** ✓ |
+| las 4 entradas | distintas entre sí ✗ | `63=porton_doble 64=porton_doble 65=porton_doble 66=cobblestone` en las cuatro ✓ |
+| anillo | — | `921 celdas | con muro 921 | PORTONES 25 | TAPADOS 0 | AGUJEROS 0 | racha 0` ✓ |
+| reconstrucciones del muro | — | **0** (estable) ✓ |
+| click | sonaba y no abría ✗ | **abre** (el estado cambia y el portón abate las nueve) ✓ |
+
 ### I226 · LOS TRES FALLOS DEL PORTÓN QUE REPORTÓ EL JUGADOR (y la textura repartida)
 
 **Lo reportó el jugador** (6-oct-2026): *«las puertas no están bien. hay troncos que se traslapan en ellas, parece que

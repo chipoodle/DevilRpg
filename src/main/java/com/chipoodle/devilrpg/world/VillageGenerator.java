@@ -7035,11 +7035,24 @@ public final class VillageGenerator {
     private static void fence(ServerLevel level, BlockPos center) {
         int r = FENCE_RADIUS;
         List<BlockPos> ring = anilloDelMuro(center);
-
         // Altura del muro: LA COTA DE LA ALDEA (el anillo ya está allanado a esa cota). Antes se sacaba de la mediana
         // de `groundY` en el anillo, y al reconstruir el muro esa medida devolvía el tope del muro viejo: el muro
         // subía un bloque en cada migración.
         int baseY = cotaDeLaPlaza(level, center);
+        // LOS PORTONES, UNA SOLA VEZ POR ENTRADA (6-oct-2026, y este era el fallo de las «varias puertas»). Antes el
+        // bucle llamaba a `entrance` por CADA celda que creyera entrada, y `entrance` calcula las tres celdas del
+        // portón A PARTIR de la celda que le pasan: como el anillo tiene las celdas duplicadas y los bordes de la
+        // entrada pasaban el filtro, se construía el portón **varias veces, cada una corrida una celda**, y el
+        // resultado eran 4 celdas de ancho y «varias puertas una detrás de otra» a lo largo del marco ✗ (medido en una
+        // aldea NUEVA: `entrada 532,646 -> 645 646 647` y `entrada 532,647 -> 646 647 648`).
+        // Ahora los portones se construyen de una lista CERRADA (las cuatro entradas cardinales) y el bucle del muro
+        // solo tiene que SALTAR sus celdas ✓.
+        java.util.Set<BlockPos> celdasDePorton = new java.util.HashSet<>();
+        for (BlockPos entrada : portonesDelMuro(center, baseY)) {
+            entrance(level, center, entrada, r, baseY);
+            celdasDePorton.addAll(celdasDelPorton(center, baseY, entrada));
+        }
+
         // Rellenar el suelo del anillo hasta justo debajo de la superficie (sin dejar el bloque de tierra
         // que sobresalía por encima del nivel de la villa). El muro se apoya en el suelo de la aldea.
         for (BlockPos p : ring) {
@@ -7065,15 +7078,11 @@ public final class VillageGenerator {
             boolean eastEntrance = cur.getX() == center.getX() + r && cur.getZ() == center.getZ();
             boolean westEntrance = cur.getX() == center.getX() - r && cur.getZ() == center.getZ();
 
-            // LAS TRES CELDAS DEL PORTÓN, no solo la de la entrada (6-oct-2026, lo reportó el jugador: *«hay troncos que
-            // se solapan en ellas, parece que son de la pared de una versión anterior»*). El portón ocupa TRES celdas
-            // del anillo, y aquí solo se saltaba la de la entrada: a las otras dos el muro les ponía sus troncos, que
-            // son justo los que se veían cruzados sobre las hojas ✗. El portón se construye entero en `entrance`, así
-            // que el muro no tiene que poner NADA en ninguna de sus tres celdas.
-            if (esCeldaDePorton(center, baseY, new BlockPos(cur.getX(), baseY, cur.getZ()))) {
-                entrance(level, center, cur, r, baseY);
+            // LAS TRES CELDAS DEL PORTÓN se SALTAN: el portón se construye entero arriba, de una lista cerrada, así que
+            // el muro no pone NADA en ninguna de sus tres celdas (ni troncos ni columnas) ✓.
+            if (celdasDePorton.contains(new BlockPos(cur.getX(), baseY, cur.getZ()))) {
                 idx++;
-                continue; // el hueco lo llena `entrance` (hojas del portón + dintel): aquí no se pone muro
+                continue;
             }
             if (idx % columnEvery == 0) {
                 column(level, cur, baseY);
@@ -7163,20 +7172,41 @@ public final class VillageGenerator {
      * ✗.
      */
     public static List<BlockPos> celdasDelPorton(BlockPos center, int nivel, BlockPos entrada) {
-        List<BlockPos> anillo = new ArrayList<>();
+        // LAS TRES CELDAS DEL PORTÓN, CALCULADAS A LO LARGO DEL MURO. No se buscan «las más cercanas del anillo»: eso
+        // fue el fallo (6-oct-2026, medido y reportado por el jugador: *«la puerta tiene un marco de 5 bloques de ancho»
+        // y *«se ve como si hubiera varias puertas una detrás de otra a lo largo del marco»*). El anillo tiene las
+        // celdas DUPLICADAS y en la entrada hay varias a la MISMA distancia de Manhattan, así que «las tres más
+        // cercanas» salían **en abanico** —una en el eje del muro y las otras dos hacia los lados— en vez de las tres
+        // SEGUIDAS del hueco ✗. Aquí se calculan sin ambigüedad: el muro corre en el eje que NO cambia al avanzar por
+        // el anillo, y las tres celdas son la entrada y sus dos vecinas en ese eje ✓.
+        Direction.Axis ejeDelMuro = ejeDelMuroEn(center, entrada);
+        List<BlockPos> celdas = new ArrayList<>();
+        for (int i = -1; i <= 1; i++) {
+            celdas.add(ejeDelMuro == Direction.Axis.Z
+                    ? new BlockPos(entrada.getX(), nivel, entrada.getZ() + i)
+                    : new BlockPos(entrada.getX() + i, nivel, entrada.getZ()));
+        }
+        return celdas;
+    }
+
+    /**
+     * <b>¿En qué eje corre el muro en esta entrada?</b> Se mira el anillo de verdad: la celda del anillo que está
+     * pegada a la entrada (la siguiente) dice hacia dónde sigue el muro. Es una pregunta que se contesta con el mundo,
+     * no con una suposición: en las entradas N/S el muro corre en X y en las E/O en Z ✓.
+     */
+    private static Direction.Axis ejeDelMuroEn(BlockPos center, BlockPos entrada) {
         for (BlockPos c : anilloDelMuro(center)) {
-            BlockPos plano = new BlockPos(c.getX(), nivel, c.getZ());
-            if (!anillo.contains(plano)) {
-                anillo.add(plano);
+            if (c.getX() == entrada.getX() && c.getZ() == entrada.getZ()) {
+                continue;
+            }
+            int dx = Math.abs(c.getX() - entrada.getX());
+            int dz = Math.abs(c.getZ() - entrada.getZ());
+            if (dx + dz == 1) {
+                return dx == 1 ? Direction.Axis.X : Direction.Axis.Z;
             }
         }
-        anillo.sort(java.util.Comparator.comparingInt(c -> Math.abs(c.getX() - entrada.getX())
-                + Math.abs(c.getZ() - entrada.getZ())));
-        // TRES celdas: el hueco de 3 de ancho, que es lo que pidió el jugador (*«3 de ancho x 3 de alto»*). El anillo
-        // es de UNA sola celda de grosor y las hojas van EN EL PLANO DEL MURO, así que un portón de 3 de ancho ocupa
-        // TRES celdas del anillo: la de la entrada y una a cada lado. Las cubren los tres bloques del portón (la hoja
-        // izquierda, la derecha y la juntura del medio), que es como cierra un portón de dos hojas de verdad.
-        return anillo.subList(0, Math.min(3, anillo.size()));
+        // Sin vecina clara (no debería pasar): la entrada está sobre un eje cardinal, así que el muro corre en el otro.
+        return entrada.getX() == center.getX() ? Direction.Axis.X : Direction.Axis.Z;
     }
 
     /** Las celdas del anillo que hay que rematar para sellar un portón: una por hoja. */
@@ -7215,20 +7245,10 @@ public final class VillageGenerator {
         }
     }
 
-    /** ¿Ese punto del anillo es una de las tres celdas de un portón del muro? */
-    private static boolean esCeldaDePorton(BlockPos center, int nivel, BlockPos celda) {
-        for (BlockPos entrada : portonesDelMuro(center, nivel)) {
-            if (celdasDelPorton(center, nivel, entrada).contains(celda)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static void entrance(ServerLevel level, BlockPos center, BlockPos p, int r, int baseY) {
-        // LAS DOS CELDAS DEL PORTÓN, del sitio único (I4): la entrada y su vecina del anillo.
+        // LAS TRES CELDAS DEL PORTÓN, del sitio único (I4): la entrada y sus dos vecinas a lo largo del muro.
         List<BlockPos> celdas = celdasDelPorton(center, baseY, p);
-        if (celdas.size() < 2) {
+        if (celdas.size() < 3) {
             return;
         }
         // lint:ok I9 porque esto NO añade construcción nueva que rehacer: rehace el HUECO de una entrada (quita y pone
