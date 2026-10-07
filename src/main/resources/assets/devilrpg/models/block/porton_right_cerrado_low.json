@@ -1,7 +1,7 @@
 {
-  "credit": "DevilRpg - porton doble abatible del muro",
+  "credit": "DevilRpg - porton doble abatible del muro (roble oscuro con flejes de hierro)",
   "textures": {
-    "all": "minecraft:block/dark_oak_door_bottom"
+    "all": "devilrpg:block/porton_doble"
   },
   "elements": [
     {

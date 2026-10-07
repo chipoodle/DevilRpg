@@ -117,8 +117,12 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    **`921/921 | PORTONES 19 | TAPADOS 0 | AGUJEROS 0`** y **1 reconstruccion**.
    **DOS FALLOS PROPIOS medidos**: con hueco de 3 y solo DOS hojas el muro se reconstruia **3200 veces** (el anillo es
    de UNA celda de grosor: un hueco de 3 deja 3 celdas) -> **una pieza por celda**; y `asegurarMuro` contaba con **su
-   propia lista** en vez de mirar el bloque -> mira el bloque. **FALTA LA TEXTURA** (va con la puerta de roble oscuro
-   del juego como marcador; el modelo ya esta partido en tres pisos, asi que se cambia en un sitio).
+   propia lista** en vez de mirar el bloque -> mira el bloque. **TEXTURA PROPIA DE ROBLE OSCURO (hecha)**:
+   `devilrpg:textures/block/porton_doble.png` (16x16 RGBA: tablones de roble oscuro con flejes de hierro remachados y
+   aldaba), generada con `tools/arnes/hacer_textura_del_porton.py` (el PNG se escribe con la libreria estandar: en
+   esta maquina no hay PIL). Los 12 modelos apuntan a ella y los tres pisos cogen su tercio, asi que el porton se ve de
+   una pieza. Medido: **ni un aviso de modelo ni de textura** en el registro, la textura viaja al recurso del mod, y el
+   anillo sigue `921/921 | PORTONES 19 | AGUJEROS 0` con 1 reconstruccion.
 3. **El nado del asaltante** — **HECHO en I215** (falta el instrumento). El defecto estaba en la cuenta del propio
    codigo: `MAX_ESCAPE_TICKS = 200` (10 s intentando salir) **+ `retryCooldown = MAX_ESCAPE_TICKS`** en `stop()` (otros
    10 s **sin poder tocar el agua**) = **20 segundos** en los que el asaltante ni avanza ni intenta nada, que es

@@ -6455,9 +6455,17 @@ trazado un camino **a través de una puerta cerrada**, y eso no pasa ✗.
 - Y el instrumento pasó de marcar **`TAPADOS 17`** (falso) a **`TAPADOS 0`**: pedía aire en la capa del medio, que era
   la regla del portón de valla de una hoja; con el portón de tres capas la del medio **es una hoja** ✓.
 
-**LO QUE FALTA, y es del jugador** ✗: la **textura**. Va con la **puerta de roble oscuro del juego**
-(`minecraft:block/dark_oak_door_bottom`) como marcador, y el modelo ya está partido en **tres pisos** (cada bloque coge
-su tercio de la textura), así que en cuanto haya una textura propia se cambia en **un sitio** (los 12 modelos) ✓.
+**TEXTURA PROPIA, DE ROBLE OSCURO** ✓ (6-oct-2026, lo pidió el jugador: *«que sea de roble oscuro»*):
+`devilrpg:textures/block/porton_doble.png` — 16×16 RGBA, **tablones de roble oscuro con dos flejes de hierro
+remachados y la aldaba en el centro** (la paleta es la del roble oscuro del juego: `#6B4A2A`, `#5C3F22`, `#4A331B`,
+`#33230F`). Los **12 modelos** apuntan a ella y **los tres pisos cogen su tercio** de la misma textura, así que el
+portón se ve **de una pieza** aunque sean tres bloques de alto ✓.
+- **MEDIDO**: no hay **ni un aviso de modelo ni de textura** en el registro de la corrida (`rapida-115.log`) ✓, y la
+  textura viaja al recurso del mod (`build/resources/main/assets/devilrpg/textures/block/porton_doble.png`) ✓.
+- **Y sigue todo en pie**: `921 celdas | con muro 921 | PORTONES 19 | TAPADOS 0 | AGUJEROS 0` y **1 reconstrucción** ✓.
+- La herramienta que la genera queda versionada (`tools/arnes/hacer_textura_del_porton.py`): escribe el PNG con la
+  **librería estándar** (zlib + struct), porque en esta máquina no hay PIL ✓ — así la textura se puede retocar con
+  números y no a mano.
 
 ### I223 · LA VERDAD MEDIDA DEL PORTÓN: NO HAY DEPENDENCIA CIRCULAR (y el arreglo de I222 no era por eso)
 
