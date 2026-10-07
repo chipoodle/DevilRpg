@@ -6416,9 +6416,43 @@ de fuera (que está un bloque más alto) y el navegador no va; el **cerebro pisa
 `JOB_SITE` fuera el puesto salió mal colocado. **La medición queda para la partida del jugador** con la traza `[Gate]`
 ✓: hay que ver **`aldeano DENTRO · destino FUERA`** en un portón del muro y, después, al aldeano fuera ✓.
 
-**Y EL MECANISMO, DICHO COMO ES** ✗: el arreglo se apoya en la misma regla que ya funciona en los doce portones de las
-parcelas y los dos del anexo (se abre al acercarse si va a cruzar), y la traza `[Gate]` demuestra que **sí se abre** en
-cuanto un aldeano quiere salir. Pero **abrirse no es cruzar**, y cruzar es lo que no está medido ✓.
+### I223 · LA VERDAD MEDIDA DEL PORTÓN: NO HAY DEPENDENCIA CIRCULAR (y el arreglo de I222 no era por eso)
+
+**Aquí me equivoqué en I222 y lo digo**: allí escribí que el portón cerrado **no dejaba trazar camino** y que eso era
+una dependencia circular. **Es falso, y está medido** ✗.
+
+**MEDIDO** (`rapida-102.log`), con dos aldeanos de verdad y **la misma pregunta** —*¿sabes llegar a la celda del
+portón?*— con el portón **cerrado** y luego **abierto**:
+
+| estado del portón | camino a la celda del portón |
+|---|---|
+| **cerrado** | **SABE**, 4 nodos ✓ |
+| **abierto** | **SABE**, 2 nodos ✓ |
+
+O sea: **el portón cerrado NO bloquea el pathfinding** — lo que hace es encarecer el paso (4 nodos contra 2), no
+impedirlo ✓. La causa de que el aldeano de prueba de I222 no saliera no era el pathfinder.
+
+**Y LO QUE DE VERDAD PASA, medido en una partida normal** ✓ (`rapida-103.log`, 3 minutos, la aldea entera):
+
+```
+[Gate] aperturas del pueblo: 0
+```
+
+**El pueblo NO abre ni un portón en toda la corrida** — y la explicación es la más simple: **en esa aldea el pueblo no
+tiene nada que hacer fuera del muro**. Sus oficios están dentro (kiosco, taberna, huerta, almacén, mina, corral,
+arboleda) y **ningún aldeano pide ir al campo**, así que ni se acerca a los portones ✓. No es que estén bloqueados: es
+que **no los usa** ✓.
+
+**LO QUE ESTO CAMBIA** ✓:
+- El muro cumple su función **sin depender de que el pueblo salga**: **el asedio tiene que romperlo** (medido: pica
+  `oak_log` y `cobblestone`, 0 puertas rotas, y la milicia lo mata) ✓.
+- El arreglo de I222 (`vaACruzar` abre el portón del muro si el destino está al otro lado) **sigue siendo útil**, pero
+  su motivo es otro: el portón se abre **en cuanto el aldeano quiere salir**, en vez de esperar a que se acerque a 2,6
+  bloques, así que el que tenga un motivo **no se queda pegado a la puerta** ✓. No arregla ninguna circular, porque no
+  había tal circular ✗.
+- Y **la prueba del cruce de I222 se retira como prueba**: no medía lo que decía. Lo que **sí** queda es la traza
+  `[Gate]` con el **lado** (`aldeano DENTRO · destino FUERA`), que es la que dice, en la partida, si el pueblo cruza ✓.
+
 
 
 

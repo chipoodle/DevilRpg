@@ -2290,53 +2290,73 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static final boolean MEDIR_CRUCE_DEL_PORTON = false;
 
     private static void medirElCruceDelPorton(ServerLevel level) {
-        // SE NACE EN EL TICK 300 Y SE MIDE EN EL 320: el aldeano recién aparecido todavía no sabe que está en el suelo
-        // (`onGround`), y `createPath` devuelve `null` en esa situación — medido: el CONTROL de dentro del pueblo
-        // también salía `NO SABE` con el aldeano recién puesto, y eso es lo que delató que el instrumento estaba mal,
-        // no el portón. Con 20 ticks de vida la navegación ya funciona.
-        if (ticks == 300) {
-            aldeanosDeLaPrueba.clear();
-            // LA COTA DE VERDAD, no `CENTRO.getY()`: el centro del objetivo lleva la Y del ancla (63) y con ella el
-            // buscador de suelo se iba a las cuevas de debajo (medido: los cinco aldeanos nacían a y=64, en una cueva,
-            // y el «camino» de un nodo era el de una cueva cerrada: un SABE falso).
-            int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
-            for (int[] lado : ladosDelPorton()) {
-                var a = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
-                if (a == null) {
-                    continue;
-                }
-                int y = sueloDeLaColumna(level, lado[0], lado[1], cota);
-                a.moveTo(lado[0] + 0.5D, y, lado[1] + 0.5D, 0.0F, 0.0F);
-                level.addFreshEntity(a);
-                aldeanosDeLaPrueba.add(a);
-            }
-            return;
-        }
-        if (ticks != 320 || aldeanosDeLaPrueba.isEmpty()) {
+        // LA PRUEBA PURA DE PATHFINDING (6-oct-2026), que es la que NO depende del cerebro del aldeano: dos aldeanos,
+        // uno JUSTO DENTRO del portón del este y otro JUSTO FUERA, y a cada uno se le pregunta por su navegador si sabe
+        // llegar a la celda del OTRO. Primero con el portón CERRADO y luego ABIERTO.
+        //   - con el portón abierto TIENE que saber (el paso sirve, que es lo que arregla el muro);
+        //   - con el cerrado no debería (el juego no traza caminos por una puerta de valla cerrada, que es la
+        //     DEPENDENCIA CIRCULAR que arregla `vaACruzar`).
+        // Si supiera con el cerrado, es que el aldeano sale por encima del muro y el portón no cierra nada.
+        // Los aldeanos nacen 40 ticks antes de preguntarles: recién puestos no saben ni que están en el suelo y
+        // `createPath` devuelve `null` SIEMPRE (medido: el control de dentro del pueblo también fallaba).
+        if (ticks != 300 && ticks != 360 && ticks != 420) {
             return;
         }
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
-        String[] nombres = {"CONTROL (dentro)", "ESTE", "OESTE", "SUR", "NORTE"};
-        // El destino está BIEN DENTRO (a 12 bloques del muro) y el aldeano BIEN FUERA (a 4): así el viaje tiene que
-        // cruzar el muro, y el navegador no puede salirse por encima ni llegar de un salto. Con el destino pegado al
-        // portón el camino salía de UN nodo (ya estaba dentro del radio de llegada) y eso no mide un cruce.
-        int[][] destinos = {
-                { CENTRO.getX() + 30, CENTRO.getZ() },
-                { CENTRO.getX() + 50, CENTRO.getZ() },
-                { CENTRO.getX() - 50, CENTRO.getZ() },
-                { CENTRO.getX(), CENTRO.getZ() + 50 },
-                { CENTRO.getX(), CENTRO.getZ() - 50 } };
-        for (int i = 0; i < aldeanosDeLaPrueba.size(); i++) {
-            var a = aldeanosDeLaPrueba.get(i);
-            var camino = a.getNavigation()
-                    .createPath(new BlockPos(destinos[i][0], a.blockPosition().getY(), destinos[i][1]), 1);
-            DevilRpg.LOGGER.info("[Arnes] PORTON {}: el aldeano de {} {} cruzar a {} (camino={})", nombres[i],
-                    a.blockPosition(), camino != null ? "SABE" : "NO SABE",
-                    destinos[i][0] + "," + destinos[i][1],
-                    camino == null ? "null" : camino.getNodeCount() + " nodos");
-            a.discard();
+        var porton = new BlockPos(CENTRO.getX() + 62, cota, CENTRO.getZ());
+        var estado = level.getBlockState(porton);
+        if (!(estado.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock)) {
+            DevilRpg.LOGGER.info("[Arnes] PORTON: no hay puerta de valla en {} (hay {})", porton,
+                    estado.getBlock().getName().getString());
+            return;
         }
-        aldeanosDeLaPrueba.clear();
+        boolean abierto = estado.getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN);
+        var dentro = aldeanosDeLaPrueba.size() > 0 ? aldeanosDeLaPrueba.get(0) : null;
+        var fuera = aldeanosDeLaPrueba.size() > 1 ? aldeanosDeLaPrueba.get(1) : null;
+        if (ticks == 300) {
+            aldeanosDeLaPrueba.clear();
+            dentro = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+            fuera = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+            if (dentro == null || fuera == null) {
+                return;
+            }
+            int yDentro = sueloDeLaColumna(level, CENTRO.getX() + 58, CENTRO.getZ(), cota);
+            // LOS DOS ENTEROS Y JUNTOS: el de "fuera" nace también dentro (a 4 bloques del portón) porque el buscador
+            // de suelo de fuera se iba al hielo de debajo del mundo (medido: nacía a y=-1). Lo único que cambia entre
+            // las dos medidas es el estado del PORTÓN, que es justo lo que se quiere aislar.
+            dentro.moveTo(CENTRO.getX() + 58.5D, yDentro, CENTRO.getZ() + 0.5D, 0.0F, 0.0F);
+            fuera.moveTo(CENTRO.getX() + 58.5D, yDentro, CENTRO.getZ() + 2.5D, 0.0F, 0.0F);
+            level.addFreshEntity(dentro);
+            level.addFreshEntity(fuera);
+            aldeanosDeLaPrueba.add(dentro);
+            aldeanosDeLaPrueba.add(fuera);
+            DevilRpg.LOGGER.info("[Arnes] PORTON: prueba montada. dentro={} fuera={} porton={} abierto={}",
+                    dentro.blockPosition(), fuera.blockPosition(), porton, abierto);
+            return;
+        }
+        // ticks == 360: MEDIDA CON EL PORTÓN COMO ESTÉ (cerrado), y luego SE ABRE para la medida del 420.
+        if (dentro == null || fuera == null) {
+            return;
+        }
+        if (ticks == 360) {
+            // El destino es LA CELDA DEL PORTÓN: es el cruce puro, sin depender del cerebro ni de un destino lejano.
+            var caminoCerrado = dentro.getNavigation().createPath(porton, 0);
+            DevilRpg.LOGGER.info("[Arnes] PORTON (abierto={}): DENTRO -> la celda del PORTON: {} ({} nodos)", abierto,
+                    caminoCerrado != null ? "SABE" : "NO SABE",
+                    caminoCerrado == null ? "-" : caminoCerrado.getNodeCount());
+            level.setBlock(porton, estado.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, true), 3);
+        }
+        if (ticks == 420) {
+            // MEDIDA 2: el MISMO aldeano, con el portón ABIERTO.
+            var caminoAbierto = dentro.getNavigation().createPath(porton, 0);
+            DevilRpg.LOGGER.info("[Arnes] PORTON (abierto={}): DENTRO -> la celda del PORTON: {} ({} nodos)",
+                    level.getBlockState(porton).getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN),
+                    caminoAbierto != null ? "SABE" : "NO SABE",
+                    caminoAbierto == null ? "-" : caminoAbierto.getNodeCount());
+            dentro.discard();
+            fuera.discard();
+            aldeanosDeLaPrueba.clear();
+        }
     }
 
     /** Los cinco sitios de la prueba del portón: el control (dentro) y los cuatro de fuera, mirando a su entrada. */

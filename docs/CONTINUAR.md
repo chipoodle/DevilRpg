@@ -107,14 +107,14 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    `con muro 921 | PORTONES 9 | AGUJEROS 0 | racha 0` (los 9 = 4 celdas x 2 puertas + 1 dintel), el guardado dice
    `PORTONES 4 celdas: [(408,646),(470,584),(470,708),(532,646)]` y **0 agujeros**, y la ola **ya solo entra rompiendo
    el muro** (`oak_log` y `cobblestone`), **0 puertas rotas**, y **la milicia los mata a los 8** (t=1680).
-   **ERROR Y ARREGLO (I222)**: al cerrar el muro con las hojas de valla **el pueblo quedó ENCERRADO** — medido con un
-   aldeano de verdad: 3 minutos con el destino puesto fuera y **el portón `cerrado` en las 75 muestras, sin abrirlo
-   nunca** (se quedó en r=42). La causa es una **dependencia circular** en `VillagerGateGoal.vaACruzar` (L486): solo
-   abría si el destino estaba al otro lado, y el navegador **no traza caminos por un portón cerrado**. Arreglado
-   (L504): para un portón del MURO, si el aldeano y su destino están en lados distintos del recinto, **se abre**. La
-   traza `[Gate]` (L368) ahora dice el **lado**: hay que ver **`aldeano DENTRO · destino FUERA`** en un portón del muro,
-   y después al aldeano fuera. **Eso último no está medido** (cinco corridas de instrumento fallidas, cada una delatada
-   por su control): se mide en la partida con esa traza.
+   **CORRECCION MEDIDA (I223)**: el diagnostico de I222 era **FALSO** — el porton cerrado **SI deja trazar camino**
+   (medido con dos aldeanos de verdad: `SABE, 4 nodos` con el porton cerrado y `SABE, 2 nodos` con el abierto: lo
+   encarece, no lo impide). Y en una partida normal **el pueblo abre 0 portones en 3 minutos**, porque **no tiene nada
+   que hacer fuera del muro** (sus oficios estan dentro). O sea: **el muro cumple su funcion sin depender de que el
+   pueblo salga** (el asedio rompe: `oak_log`/`cobblestone`, 0 puertas rotas) y **no hay ninguna circular**. El arreglo
+   de `vaACruzar` se queda porque **abre antes** (el aldeano que quiera salir no se queda pegado a la puerta), no
+   porque hiciera falta. La traza `[Gate]` con el **lado** (`aldeano DENTRO · destino FUERA`) es la que dice, en la
+   partida, si el pueblo cruza.
 3. **El nado del asaltante** — **HECHO en I215** (falta el instrumento). El defecto estaba en la cuenta del propio
    codigo: `MAX_ESCAPE_TICKS = 200` (10 s intentando salir) **+ `retryCooldown = MAX_ESCAPE_TICKS`** en `stop()` (otros
    10 s **sin poder tocar el agua**) = **20 segundos** en los que el asaltante ni avanza ni intenta nada, que es
