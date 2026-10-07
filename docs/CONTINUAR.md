@@ -107,8 +107,13 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    `con muro 921 | PORTONES 9 | AGUJEROS 0 | racha 0` (los 9 = 4 celdas x 2 puertas + 1 dintel), el guardado dice
    `PORTONES 4 celdas: [(408,646),(470,584),(470,708),(532,646)]` y **0 agujeros**, y la ola **ya solo entra rompiendo
    el muro** (`oak_log` y `cobblestone`), **0 puertas rotas**, y **la milicia los mata a los 8** (t=1680).
-   **ABIERTO**: no se ha medido que un ALDEANO cruce estos portones nuevos (el goal los tiene en su lista y son del
-   mismo tipo que los del corral, que si funcionan, pero eso no es una medida).
+   **ABIERTO**: no se ha medido que un ALDEANO cruce estos portones. Se intento con cuatro corridas
+   (`MEDIR_CRUCE_DEL_PORTON`) y **el instrumento no aisla el cruce**: `moveTo` no calcula el camino (sale `null`
+   siempre, y el CONTROL de dentro tambien daba NO SABE), un aldeano recien nacido tampoco (con 20 ticks el control ya
+   da 11 nodos) y **de fuera el camino sale de 1 nodo** porque el terreno exterior esta a y=84, mas alto que el porton
+   (cota 83), asi que el aldeano se cuela por encima del muro. Lo que SI esta medido: porton puesto en las 4 entradas,
+   paso franco (`TAPADOS 0`) y anillo cerrado (`PORTONES 9 | AGUJEROS 0`). Mirar en la partida: un aldeano saliendo
+   por una entrada cardinal y el porton cerrándose detras.
 3. **El nado del asaltante** — **HECHO en I215** (falta el instrumento). El defecto estaba en la cuenta del propio
    codigo: `MAX_ESCAPE_TICKS = 200` (10 s intentando salir) **+ `retryCooldown = MAX_ESCAPE_TICKS`** en `stop()` (otros
    10 s **sin poder tocar el agua**) = **20 segundos** en los que el asaltante ni avanza ni intenta nada, que es

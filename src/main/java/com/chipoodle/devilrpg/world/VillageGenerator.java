@@ -6904,11 +6904,26 @@ public final class VillageGenerator {
                 }
             }
         }
-        // Si YA está CERRADO DEL TODO, no se toca nada. El listón es el 100 % a propósito: los cuatro portones del muro
-        // TAMBIÉN cuentan como cierre (son la puerta del pueblo, y sin ellos el anillo tenía cuatro boquetes de aire),
-        // así que una aldea con el muro viejo —sin portones— se reconstruye UNA vez para ponerlos, y a partir de ahí el
-        // portón cuenta y no se vuelve a tocar (no oscila) ✓.
-        if (conMuro >= ring.size()) {
+        // Y NINGUNA HOJA APILADA (6-oct-2026): una puerta de valla POR ENCIMA de la cota es una hoja de más, y hace
+        // daño de verdad — `VillagerGateGoal` elige el portón por distancia y la de arriba se le queda fuera del radio
+        // de apertura (2,6), así que el aldeano abre la de abajo y se queda mirando una hoja cerrada a un bloque de su
+        // cabeza. La primera versión de este arreglo puso dos hojas apiladas; esa comprobación las barre.
+        boolean hojaApilada = false;
+        for (BlockPos p : ring) {
+            // La hoja va SIEMPRE a la cota (el suelo), así que una puerta de valla a la cota+1 o más arriba es una hoja
+            // de más: o la de una versión anterior, o la que deja un ayudante. El paso del portón es de dos bloques
+            // (cota y cota+1) y la de arriba se le queda fuera del radio de apertura al aldeano.
+            if (level.getBlockState(new BlockPos(p.getX(), cota + 1, p.getZ())).is(Blocks.OAK_FENCE_GATE)
+                    || level.getBlockState(new BlockPos(p.getX(), cota + 2, p.getZ())).is(Blocks.OAK_FENCE_GATE)) {
+                hojaApilada = true;
+                break;
+            }
+        }
+        // Si YA está CERRADO DEL TODO y sin hojas de más, no se toca nada. El listón es el 100 % a propósito: los
+        // cuatro portones del muro TAMBIÉN cuentan como cierre (son la puerta del pueblo, y sin ellos el anillo tenía
+        // cuatro boquetes de aire), así que una aldea con el muro viejo —sin portones— se reconstruye UNA vez para
+        // ponerlos, y a partir de ahí el portón cuenta y no se vuelve a tocar (no oscila) ✓.
+        if (conMuro >= ring.size() && !hojaApilada) {
             return;
         }
         DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO esta a la cota {} (solo {} de {} celdas del anillo lo"
@@ -6998,7 +7013,18 @@ public final class VillageGenerator {
 
             if (northEntrance || southEntrance || eastEntrance || westEntrance) {
                 entrance(level, center, cur, r, baseY);
-            } else if (idx % columnEvery == 0) {
+                idx++;
+                continue; // el hueco lo llena `entrance` (columnas + portón): aquí no se pone muro
+            }
+            if (esEntradaDelMuro(center, cur)) {
+                // La entrada se reconoce por el EJE, no por el índice: en un anillo de 921 celdas la entrada puede caer
+                // en cualquier `idx`, y si el índice no cuadraba el muro le ponía los troncos ENCIMA al portón (medido:
+                // `84=912` incluía las cuatro celdas de entrada, o sea el paso tapado a la altura de la cabeza).
+                entrance(level, center, cur, r, baseY);
+                idx++;
+                continue;
+            }
+            if (idx % columnEvery == 0) {
                 column(level, cur, baseY);
             } else {
                 wall(level, cur, baseY, wallAxis);
@@ -7057,12 +7083,30 @@ public final class VillageGenerator {
         boolean northSouth = Math.abs(p.getZ() - center.getZ()) == r;
         int signX = northSouth ? 1 : 0;
         int signZ = northSouth ? 0 : 1;
+        // EL PASO, ALLANADO (6-oct-2026). Medido antes de arreglarlo, columna a columna de las cuatro entradas:
+        //   este  (532,646): 83=oak_fence_gate 84=air  85=air   -> bien ✓
+        //   oeste (408,646): 83=oak_fence_gate 84=dirt 85=stone -> TAPADO por el TERRENO
+        //   norte (470,708): 83=oak_fence_gate 84=air  85=air   -> bien ✓
+        //   sur   (470,584): 83=oak_fence_gate 84=stone 85=stone -> TAPADO por el TERRENO
+        // El anillo se allana a la cota, pero la celda de la ENTRADA se quedaba con el terreno de encima, así que en
+        // las aldeas con desnivel el portón tenía un bloque de tierra justo a la altura de la cabeza del aldeano y no
+        // se podía cruzar (el portón es de una hoja: el paso útil son los dos bloques de encima). Aquí se deja franco.
+        // lint:ok I9 porque esto NO añade construcción: quita el terreno que tapaba el paso de un portón. Y no necesita
+        // subir CURRENT_LAYOUT porque `asegurarMuro` reconstruye el anillo entero en el latido en cuanto ve que falta
+        // un portón o que hay una hoja de más, así que las partidas ya construidas lo reciben solas.
+        colocar(level, new BlockPos(p.getX(), baseY, p.getZ()), Blocks.AIR.defaultBlockState(), 3);
+        colocar(level, new BlockPos(p.getX(), baseY + 1, p.getZ()), Blocks.AIR.defaultBlockState(), 3);
         for (int i = 0; i <= 2; i++) {
             colocar(level, new BlockPos(p.getX() - signX, baseY + i, p.getZ() - signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
             colocar(level, new BlockPos(p.getX() + signX, baseY + i, p.getZ() + signZ), Blocks.COBBLESTONE.defaultBlockState(), 3);
         }
-        // EL PORTÓN: dos bloques de alto, en la celda del hueco. Se apoya en el suelo de la aldea (baseY-1), así que su
-        // `canSurvive` va servido; el de arriba se apoya en el de abajo.
+        // EL PORTÓN: una hoja de valla, como TODOS los portones del pueblo (las parcelas y los del anexo tienen uno
+        // solo, y `VillagerGateGoal` mide su distancia para abrirlo). NO se pone una segunda hoja encima: el goal
+        // elige el portón por distancia y con dos hojas apiladas la de arriba se le queda fuera del radio de apertura
+        // (2,6) y no la abriría nunca — una hoja que se sube o se baja según por dónde mire el aldeano es una trampa,
+        // no un portón. Con una hoja el paso es franco y el cierre, total: el juego no deja que un zombi abra NI rompa
+        // una puerta de valla.
+        // Se apoya en el suelo de la aldea (baseY-1), así que su `canSurvive` va servido.
         // lint:ok I9 porque este portón NO necesita subir CURRENT_LAYOUT: `asegurarMuro` (que lo cuenta como cierre)
         // reconstruye el anillo entero en el latido en cuanto ve que le falta un portón, así que las partidas que ya
         // tienen muro lo reciben solas —idempotente— sin rehacer la aldea. Medido: `con muro 912 -> 921 | PORTONES 9 |
@@ -7071,7 +7115,6 @@ public final class VillageGenerator {
                 .setValue(FenceGateBlock.FACING, northSouth ? Direction.EAST : Direction.SOUTH)
                 .setValue(FenceGateBlock.OPEN, false);
         colocar(level, new BlockPos(p.getX(), baseY, p.getZ()), porton, 3);
-        colocar(level, new BlockPos(p.getX(), baseY + 1, p.getZ()), porton, 3);
         colocar(level, new BlockPos(p.getX(), baseY + 3, p.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
     }
 
@@ -8291,6 +8334,13 @@ public final class VillageGenerator {
         portones.add(new BlockPos(center.getX(), nivel, center.getZ() + FENCE_RADIUS));
         portones.add(new BlockPos(center.getX(), nivel, center.getZ() - FENCE_RADIUS));
         return portones;
+    }
+
+    /** ¿Esta celda es una entrada cardinal del muro? (el hueco donde va el portón). */
+    private static boolean esEntradaDelMuro(BlockPos center, BlockPos p) {
+        boolean enElEjeX = p.getZ() == center.getZ() && Math.abs(p.getX() - center.getX()) == FENCE_RADIUS;
+        boolean enElEjeZ = p.getX() == center.getX() && Math.abs(p.getZ() - center.getZ()) == FENCE_RADIUS;
+        return enElEjeX || enElEjeZ;
     }
 
     /**

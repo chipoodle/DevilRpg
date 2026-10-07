@@ -418,6 +418,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirLaOlaReal(level, pega);
         } else if (MEDIR_ANILLO) {
             medirElAnilloDelMuro(level);
+        } else if (MEDIR_CRUCE_DEL_PORTON) {
+            medirElCruceDelPorton(level);
         } else if (MEDIR_AGUA) {
             medirElNado(level, pega);
         } else if (MEDIR_VELOCIDAD) {
@@ -2186,6 +2188,139 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static final boolean MEDIR_AGUA = false;
 
     /**
+     * <b>¿CRUZA EL PUEBLO LOS PORTONES DEL MURO?</b> (6-oct-2026). Fue lo que quedó abierto en I219: el portón está
+     * puesto y el paso franco (medido: `PORTONES 9 | TAPADOS 0`), pero eso <b>no es</b> una medida de que un aldeano lo
+     * cruce. Aquí se comprueba lo que de verdad decide: <b>¿sabe el aldeano llegar al pueblo desde fuera por el
+     * portón?</b> Se recorre el camino de verdad con su navegación (que es la que tiene en cuenta el hueco y el
+     * portón), desde fuera del anillo hasta la plaza.
+     * <p>
+     * Se prueba desde los cuatro lados a propósito: el este es el que estaba bien allanado, y el oeste y el sur tenían
+     * el terreno tapando el paso (medido: `84=dirt` y `84=stone`), así que si la comprobación solo valiera por un lado
+     * no probaría nada.
+     */
+    private static final boolean MEDIR_CRUCE_DEL_PORTON = false;
+
+    private static void medirElCruceDelPorton(ServerLevel level) {
+        // SE NACE EN EL TICK 300 Y SE MIDE EN EL 320: el aldeano recién aparecido todavía no sabe que está en el suelo
+        // (`onGround`), y `createPath` devuelve `null` en esa situación — medido: el CONTROL de dentro del pueblo
+        // también salía `NO SABE` con el aldeano recién puesto, y eso es lo que delató que el instrumento estaba mal,
+        // no el portón. Con 20 ticks de vida la navegación ya funciona.
+        if (ticks == 300) {
+            aldeanosDeLaPrueba.clear();
+            // LA COTA DE VERDAD, no `CENTRO.getY()`: el centro del objetivo lleva la Y del ancla (63) y con ella el
+            // buscador de suelo se iba a las cuevas de debajo (medido: los cinco aldeanos nacían a y=64, en una cueva,
+            // y el «camino» de un nodo era el de una cueva cerrada: un SABE falso).
+            int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+            for (int[] lado : ladosDelPorton()) {
+                var a = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+                if (a == null) {
+                    continue;
+                }
+                int y = sueloDeLaColumna(level, lado[0], lado[1], cota);
+                a.moveTo(lado[0] + 0.5D, y, lado[1] + 0.5D, 0.0F, 0.0F);
+                level.addFreshEntity(a);
+                aldeanosDeLaPrueba.add(a);
+            }
+            return;
+        }
+        if (ticks != 320 || aldeanosDeLaPrueba.isEmpty()) {
+            return;
+        }
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        String[] nombres = {"CONTROL (dentro)", "ESTE", "OESTE", "SUR", "NORTE"};
+        // El destino está BIEN DENTRO (a 12 bloques del muro) y el aldeano BIEN FUERA (a 4): así el viaje tiene que
+        // cruzar el muro, y el navegador no puede salirse por encima ni llegar de un salto. Con el destino pegado al
+        // portón el camino salía de UN nodo (ya estaba dentro del radio de llegada) y eso no mide un cruce.
+        int[][] destinos = {
+                { CENTRO.getX() + 30, CENTRO.getZ() },
+                { CENTRO.getX() + 50, CENTRO.getZ() },
+                { CENTRO.getX() - 50, CENTRO.getZ() },
+                { CENTRO.getX(), CENTRO.getZ() + 50 },
+                { CENTRO.getX(), CENTRO.getZ() - 50 } };
+        for (int i = 0; i < aldeanosDeLaPrueba.size(); i++) {
+            var a = aldeanosDeLaPrueba.get(i);
+            var camino = a.getNavigation()
+                    .createPath(new BlockPos(destinos[i][0], a.blockPosition().getY(), destinos[i][1]), 1);
+            DevilRpg.LOGGER.info("[Arnes] PORTON {}: el aldeano de {} {} cruzar a {} (camino={})", nombres[i],
+                    a.blockPosition(), camino != null ? "SABE" : "NO SABE",
+                    destinos[i][0] + "," + destinos[i][1],
+                    camino == null ? "null" : camino.getNodeCount() + " nodos");
+            a.discard();
+        }
+        aldeanosDeLaPrueba.clear();
+    }
+
+    /** Los cinco sitios de la prueba del portón: el control (dentro) y los cuatro de fuera, mirando a su entrada. */
+    private static java.util.List<int[]> ladosDelPorton() {
+        java.util.List<int[]> lados = new java.util.ArrayList<>();
+        lados.add(new int[] { CENTRO.getX() + 20, CENTRO.getZ() });
+        // A 4 bloques por FUERA del anillo (r=62): lo justo para estar fuera y tener que cruzar el portón, pero dentro
+        // del alcance del navegador. A 65 el aldeano ya podía quedar tan cerca del destino que el camino salía de UN
+        // nodo (ya estaba dentro del radio de llegada) y eso no mide un cruce.
+        lados.add(new int[] { CENTRO.getX() + 66, CENTRO.getZ() });
+        lados.add(new int[] { CENTRO.getX() - 66, CENTRO.getZ() });
+        lados.add(new int[] { CENTRO.getX(), CENTRO.getZ() + 66 });
+        lados.add(new int[] { CENTRO.getX(), CENTRO.getZ() - 66 });
+        return lados;
+    }
+
+    /** Los aldeanos de la prueba del portón (se sueltan al medir). */
+    private static final java.util.List<net.minecraft.world.entity.npc.Villager> aldeanosDeLaPrueba =
+            new java.util.ArrayList<>();
+
+    private static void medirElCruceDelPortonViejo(ServerLevel level) {
+        if (ticks != 300) {
+            return;
+        }
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        // CONTROL PRIMERO, si no la medida no vale: un camino CORTO de dentro a dentro. El navegador de vanilla tiene
+        // alcance limitado, así que el viaje de 62 bloques hasta la plaza puede salir `null` sin que el portón tenga
+        // nada que ver. Con este control se sabe que la navegación SÍ funciona en este mundo.
+        var control = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+        if (control != null) {
+            int yControl = sueloDeLaColumna(level, CENTRO.getX() + 20, CENTRO.getZ(), cota);
+            control.moveTo(CENTRO.getX() + 20.5D, yControl, CENTRO.getZ() + 0.5D, 0.0F, 0.0F);
+            level.addFreshEntity(control);
+            var caminoCorto = control.getNavigation()
+                    .createPath(new BlockPos(CENTRO.getX() + 30, yControl, CENTRO.getZ()), 1);
+            DevilRpg.LOGGER.info("[Arnes] PORTON CONTROL (dentro, 10 bloques, desde y={}): {} (camino={})", yControl,
+                    caminoCorto != null ? "SABE" : "NO SABE",
+                    caminoCorto == null ? "null" : caminoCorto.getNodeCount() + " nodos");
+            control.discard();
+        }
+        String[] nombres = {"ESTE", "OESTE", "SUR", "NORTE"};
+        int[][] lados = { { CENTRO.getX() + 62, CENTRO.getZ() }, { CENTRO.getX() - 62, CENTRO.getZ() },
+                { CENTRO.getX(), CENTRO.getZ() + 62 }, { CENTRO.getX(), CENTRO.getZ() - 62 } };
+        for (int i = 0; i < lados.length; i++) {
+            int px = lados[i][0];
+            int pz = lados[i][1];
+            var aldeano = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+            if (aldeano == null) {
+                continue;
+            }
+            // FUERA del anillo, mirando al portón: es el viaje que tiene que saber hacer (volver al pueblo). La celda
+            // de pie se busca en la columna (a la cota puede haber terreno y el aldeano nacería encajado en la piedra:
+            // ese fue el fallo del primer instrumento, que hacía fallar hasta el control de dentro del pueblo).
+            double sx = px + Math.signum(px - CENTRO.getX()) * 3.0D;
+            double sz = pz + Math.signum(pz - CENTRO.getZ()) * 3.0D;
+            int yFuera = sueloDeLaColumna(level, (int) sx, (int) sz, cota);
+            aldeano.moveTo(sx + 0.5D, yFuera, sz + 0.5D, 0.0F, 0.0F);
+            level.addFreshEntity(aldeano);
+            // EL CAMINO DE VERDAD (`createPath` lo calcula EN EL ACTO): es lo que dice si el aldeano sabe cruzar el
+            // portón. `moveTo` NO vale para medir: solo apunta el destino y el camino se calcula en el tick siguiente,
+            // así que `getPath()` sale `null` SIEMPRE — y con ese error el control de dentro también daba `null`, que
+            // es lo que delató al instrumento (medido: `PORTON CONTROL ... NO SABE`).
+            var camino = aldeano.getNavigation().createPath(
+                    new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()), 1);
+            DevilRpg.LOGGER.info("[Arnes] PORTON {} ({}): el aldeano de fuera ({}, {}, y={}) {} llegar a la plaza"
+                            + " (camino={})", nombres[i], px + "," + pz, (int) sx, (int) sz, yFuera,
+                    camino != null ? "SABE" : "NO SABE",
+                    camino == null ? "null" : camino.getNodeCount() + " nodos");
+            aldeano.discard();
+        }
+    }
+
+    /**
      * <b>EL ANILLO DEL MURO, MEDIDO DESDE DENTRO DEL JUEGO</b> (6-oct-2026). El jugador decidió <b>cerrar el anillo</b>
      * para que el asedio tenga que abrir brecha, y antes hay que saber dónde hay muro y dónde agujero.
      * <p>
@@ -2380,17 +2515,18 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // Y celda a celda: MURO (firma en la base o encima), PORTÓN (la puerta del pueblo) o AGUJERO.
         int muro = 0;
         int portones = 0;
+        int tapados = 0;
         java.util.Map<Integer, Integer> porRumbo = new java.util.TreeMap<>();
         int rachaLarga = 0;
         int rachaActual = 0;
         for (BlockPos p : anillo) {
             boolean hay = false;
-            boolean porton = false;
+            // El portón vive en la COTA (la hoja va al suelo). Mirar la hoja a cualquier altura daba por bueno un paso
+            // tapado: medido, el muro ponía sus troncos ENCIMA del portón y el aldeano no tenía hueco a la cabeza.
+            boolean porton = level.getBlockState(new BlockPos(p.getX(), y0, p.getZ())).getBlock()
+                    == net.minecraft.world.level.block.Blocks.OAK_FENCE_GATE;
             for (int dy = 0; dy <= 2; dy++) {
                 var b = level.getBlockState(new BlockPos(p.getX(), y0 + dy, p.getZ())).getBlock();
-                if (b == net.minecraft.world.level.block.Blocks.OAK_FENCE_GATE) {
-                    porton = true;
-                }
                 if (b == net.minecraft.world.level.block.Blocks.OAK_LOG
                         || b == net.minecraft.world.level.block.Blocks.COBBLESTONE
                         || b == net.minecraft.world.level.block.Blocks.MOSSY_COBBLESTONE) {
@@ -2400,6 +2536,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
             if (porton) {
                 portones++;
+                // Y EL PASO TIENE QUE ESTAR FRANCO: con la hoja en la cota, la cota+1 tiene que ser aire. Si no, el
+                // portón está tapado por arriba y el aldeano no puede cruzar.
+                if (!level.getBlockState(new BlockPos(p.getX(), y0 + 1, p.getZ())).isAir()) {
+                    tapados++;
+                }
             }
             if (hay || porton) {
                 muro++;
@@ -2413,12 +2554,24 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
         }
         String[] nombres = {"ESTE", "SURESTE", "SUR", "SUROESTE", "OESTE", "NOROESTE", "NORTE", "NORESTE"};
+        // LAS CUATRO ENTRADAS, COLUMNA A COLUMNA: es lo que dice —sin deducir nada— si el paso esta franco.
+        for (int[] c : new int[][] { { CENTRO.getX() + 62, CENTRO.getZ() }, { CENTRO.getX() - 62, CENTRO.getZ() },
+                { CENTRO.getX(), CENTRO.getZ() + 62 }, { CENTRO.getX(), CENTRO.getZ() - 62 } }) {
+            StringBuilder col = new StringBuilder();
+            for (int dy = -2; dy <= 4; dy++) {
+                String n = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .getKey(level.getBlockState(new BlockPos(c[0], y0 + dy, c[1])).getBlock()).getPath()
+                        .replace("minecraft:", "");
+                col.append(y0 + dy).append('=').append(n).append(' ');
+            }
+            DevilRpg.LOGGER.info("[Arnes] ANILLO entrada ({},{}): {}", c[0], c[1], col.toString().trim());
+        }
         StringBuilder reparto = new StringBuilder();
         for (var e : porRumbo.entrySet()) {
             reparto.append(nombres[e.getKey()]).append('=').append(e.getValue()).append(' ');
         }
-        DevilRpg.LOGGER.info("[Arnes] ANILLO (r=62, base y={}): {} celdas | con muro {} | PORTONES {} | AGUJEROS {} ({})"
-                        + " | racha mas larga de agujeros seguidos: {}", y0, anillo.size(), muro, portones,
+        DevilRpg.LOGGER.info("[Arnes] ANILLO (r=62, base y={}): {} celdas | con muro {} | PORTONES {} (TAPADOS por arriba:"
+                        + " {}) | AGUJEROS {} ({}) | racha mas larga: {}", y0, anillo.size(), muro, portones, tapados,
                 anillo.size() - muro, reparto.toString().trim(), rachaLarga);
         DevilRpg.LOGGER.info("[Arnes] ANILLO: lo que hay a la cota {} en el anillo: {}", cota,
                 bloqueEnLaCota(level, anillo, cota));

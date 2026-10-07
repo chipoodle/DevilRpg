@@ -6368,10 +6368,24 @@ cierra por arriba ✓. Las cuatro celdas caen **exactamente** en los cuatro punt
 | entran | andando ✗ | rompiendo y por el portón | **solo rompiendo el muro** ✓ |
 | final de la ola | 8 de 8 dentro | entran y algunos mueren | **8 → 0**: **la milicia los mata a todos** entre t=1200 y t=1680 ✓ |
 
-**LO QUE QUEDA, para que no se dé por redondo** ✗: no se ha medido que un **aldeano** cruce estos portones nuevos (el
-goal los tiene en su lista y son del mismo tipo que los del corral y las parcelas, que sí funcionan, pero **eso no es
-una medida**). Queda anotado como lo que hay que mirar en la próxima partida: un aldeano saliendo del pueblo por una
-entrada cardinal y el portón cerrándose detrás ✓.
+**LO QUE QUEDA ABIERTO, y esta vez con el instrumento fallido por delante** ✗: **no se ha medido que un ALDEANO cruce
+estos portones.** Se intentó con cuatro corridas (`MEDIR_CRUCE_DEL_PORTON`) y **el instrumento no aísla el cruce**,
+medido así:
+1. **`moveTo` no vale para medir**: solo apunta el destino, el camino se calcula en el tick siguiente, así que
+   `getPath()` sale `null` **siempre** — y el **control** (un aldeano de dentro a dentro, 10 bloques) también daba
+   `NO SABE`, que es lo que delató el error ✗.
+2. **Recién nacido tampoco**: un aldeano recién aparecido aún no sabe que está en el suelo y `createPath` devuelve
+   `null`. Con **20 ticks** de vida el control ya da **11 nodos** ✓.
+3. **Y de fuera, el camino sale de UN nodo**: el terreno de fuera del anillo está a **y=84** (más alto que el portón,
+   que va a la cota **83**), así que el aldeano **se cuela por encima** del muro y el navegador no necesita el portón
+   (`camino=1 nodos` en los cuatro lados, con el destino a 12 bloques dentro) ✗.
+
+O sea: el instrumento mide el terreno, no el portón. Lo que **sí** está medido de este arreglo es lo que decide: el
+portón **puesto** en las cuatro entradas, el paso **franco** (`TAPADOS 0`) y el anillo **cerrado del todo**
+(`PORTONES 9 | AGUJEROS 0`) ✓. El **mecanismo** es el mismo que ya funciona en los doce portones de las parcelas y los
+dos del anexo — y eso **no es una medida**, es un argumento. Queda como lo primero que hay que mirar en la partida:
+**un aldeano saliendo del pueblo por una entrada cardinal y el portón cerrándose detrás** ✓.
+
 
 
 **Lo decidió el jugador** (6-oct-2026): *«cerrar el anillo y el asedio tenga que abrir brecha»* ✓. Es el pendiente de
