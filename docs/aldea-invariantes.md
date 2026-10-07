@@ -6383,23 +6383,42 @@ r=58 (dy:0=5  1=34)   r=61 (dy:0=6  1=42)   r=62 (dy:1=60)   r=63 (dy:0=3  1=38)
   bloques de troncos** (cota y cota+1) con las columnas de adoquín subiendo a la cota+2, así que el escalón de fuera no
   da para pasar por encima ✓.
 
-**LO QUE QUEDA ABIERTO, y esta vez con el instrumento fallido por delante** ✗: **no se ha medido que un ALDEANO cruce
-estos portones.** Se intentó con cuatro corridas (`MEDIR_CRUCE_DEL_PORTON`) y **el instrumento no aísla el cruce**,
-medido así:
-1. **`moveTo` no vale para medir**: solo apunta el destino, el camino se calcula en el tick siguiente, así que
-   `getPath()` sale `null` **siempre** — y el **control** (un aldeano de dentro a dentro, 10 bloques) también daba
-   `NO SABE`, que es lo que delató el error ✗.
-2. **Recién nacido tampoco**: un aldeano recién aparecido aún no sabe que está en el suelo y `createPath` devuelve
-   `null`. Con **20 ticks** de vida el control ya da **11 nodos** ✓.
-3. **Y de fuera, el camino sale de UN nodo**: el terreno de fuera del anillo está a **y=84** (más alto que el portón,
-   que va a la cota **83**), así que el aldeano **se cuela por encima** del muro y el navegador no necesita el portón
-   (`camino=1 nodos` en los cuatro lados, con el destino a 12 bloques dentro) ✗.
+### I222 · EL PORTÓN ENCERRABA AL PUEBLO (y es el error que introduje yo en I219)
 
-O sea: el instrumento mide el terreno, no el portón. Lo que **sí** está medido de este arreglo es lo que decide: el
-portón **puesto** en las cuatro entradas, el paso **franco** (`TAPADOS 0`) y el anillo **cerrado del todo**
-(`PORTONES 9 | AGUJEROS 0`) ✓. El **mecanismo** es el mismo que ya funciona en los doce portones de las parcelas y los
-dos del anexo — y eso **no es una medida**, es un argumento. Queda como lo primero que hay que mirar en la partida:
-**un aldeano saliendo del pueblo por una entrada cardinal y el portón cerrándose detrás** ✓.
+**SÍ HABÍA UN ERROR, y es mío: al poner la hoja de valla en los portones del muro, el pueblo quedó ENCERRADO** ✓.
+
+**MEDIDO con un aldeano de verdad** ✓ (`rapida-96.log`): un aldeano de prueba en la plaza, con el destino puesto a mano
+**fuera** del anillo, se pasó **3 minutos** (75 muestras) dando vueltas por dentro — se quedó en **r=42** — y el portón
+del este puso **`cerrado`** en **las 75 muestras** ✓. **Nunca lo abrió**, así que **nunca salió**.
+
+**LA CAUSA, leída en el código y confirmada por esa medida** ✓: `VillagerGateGoal.vaACruzar` (**L486**) solo abre el
+portón si el destino del aldeano está **al otro lado** del plano de la puerta. Pero el juego **no traza caminos por una
+puerta de valla cerrada**, así que el destino nunca queda al otro lado y **el portón no se abre nunca**: es una
+**dependencia circular** (no abre porque el camino no pasa; el camino no pasa porque no abre) ✓. En los portones que ya
+existían (parcelas y anexo) no se nota porque el aldeano trabaja **a los dos lados** y acaba cruzándolos; **el muro no
+tiene esa suerte: el pueblo no tiene nada que hacer fuera**, así que el círculo nunca se rompe ✓. Antes de I219 los
+huecos del muro eran **aire** y el pueblo salía sin más: **al cerrarlos, lo encerré** ✓.
+
+**ARREGLO** (`VillagerGateGoal`, **L504**, nuevo): para un **portón del muro**, si el aldeano y su destino están en
+**lados distintos del recinto** (medido con `VillageGenerator.FENCE_RADIUS` y un margen de 6), **el portón se abre** —
+sin mirar el plano de la puerta, porque el navegador todavía no puede haber trazado el camino ✓. Eso rompe el círculo:
+se abre, el navegador replanifica, y cruza ✓. Para los demás portones **no cambia nada** (la regla nueva solo se aplica
+a los cuatro del muro: `esPortonDelMuro`) ✓.
+
+**Y LA TRAZA `[Gate]` AHORA DICE EL LADO** ✓ (**L368**), que es lo que permite medirlo en la partida del jugador:
+`[Gate] <uuid> <nombre>: abro el porton <pos> (aldeano DENTRO) · destino=<pos> (destino FUERA) …` — con un portón del
+muro, **`aldeano DENTRO · destino FUERA`** es la firma de que el pueblo está cruzando el anillo ✓.
+
+**LO QUE NO SE HA MEDIDO, y es lo que queda** ✗: **que cruce**. Se intentó con **cinco corridas** y el instrumento no
+aísla el cruce (cada intento lo delató su propio control): el aldeano recién nacido no sabe que está en el suelo
+(`createPath` = `null`, y el control de dentro también fallaba); el destino puesto a `cota` cae **dentro del terreno**
+de fuera (que está un bloque más alto) y el navegador no va; el **cerebro pisa** el `WALK_TARGET` cada tick; y con
+`JOB_SITE` fuera el puesto salió mal colocado. **La medición queda para la partida del jugador** con la traza `[Gate]`
+✓: hay que ver **`aldeano DENTRO · destino FUERA`** en un portón del muro y, después, al aldeano fuera ✓.
+
+**Y EL MECANISMO, DICHO COMO ES** ✗: el arreglo se apoya en la misma regla que ya funciona en los doce portones de las
+parcelas y los dos del anexo (se abre al acercarse si va a cruzar), y la traza `[Gate]` demuestra que **sí se abre** en
+cuanto un aldeano quiere salir. Pero **abrirse no es cruzar**, y cruzar es lo que no está medido ✓.
 
 
 

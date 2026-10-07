@@ -394,7 +394,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // latido de la aldea —y con él la comprobación del MURO— no corriera en toda la corrida: medía una aldea sin
         // latido y el muro no se levantaba. Ahora corre hasta el tick 300 (hasta que se colocan los asaltantes) y
         // después se deja quieto, que es lo que la medida de la ola necesita.
-        if (pega != null && (!MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL || ticks < 300)) {
+        // Y EN LA PRUEBA DEL ALDEANO TAMBIÉN SE LLAMA (6-oct-2026): es lo que le pone el goal de los portones al aldeano
+        // de prueba (`prepareRepairs` -> `asegurarGoalDePortones`), y sin ese goal el aldeano no puede abrir nada — así
+        // que sin el latido la prueba medía un aldeano CAPACITADO de menos y salía que no cruza por el goal, no por el
+        // portón.
+        if (pega != null && ((!MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL) || ticks < 300 || MEDIR_ALDEANO_CRUZA)) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
@@ -420,6 +424,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElAnilloDelMuro(level);
         } else if (MEDIR_CRUCE_DEL_PORTON) {
             medirElCruceDelPorton(level);
+        } else if (MEDIR_ALDEANO_CRUZA) {
+            medirSiElAldeanoCruza(level);
         } else if (MEDIR_AGUA) {
             medirElNado(level, pega);
         } else if (MEDIR_VELOCIDAD) {
@@ -2186,6 +2192,89 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * `AGUA: SALE DEL AGUA a los N ticks` (o `NO SALE` si se queda).
      */
     private static final boolean MEDIR_AGUA = false;
+
+    /**
+     * <b>¿CRUZA EL ALDEANO EL PORTÓN DEL MURO? (prueba con aldeano de verdad, 6-oct-2026)</b>
+     * <p>
+     * Es la medida que faltaba en I219/I220. Las anteriores no valían porque <b>de fuera el aldeano se cuela por encima
+     * del muro</b> (el terreno exterior está un bloque más alto) y porque el camino corto salía de un nodo.
+     * <p>
+     * Esta prueba va <b>de dentro hacia fuera</b>, que es el viaje en el que el muro no se puede rodear: se pone al
+     * aldeano en la plaza <b>con el destino puesto a mano fuera del anillo</b> (memoria {@code WALK_TARGET} del
+     * cerebro, que es lo mismo que consulta {@code VillagerGateGoal.vaACruzar}) y se le deja andar. En el registro se ve
+     * si <b>llega fuera</b> (`FUERA`) o si se queda pegado al muro (`DENTRO`), y el estado del portón en cada vuelta.
+     * <p>
+     * POR QUÉ IMPORTA: si el aldeano no cruza, es que el goal no se dispara — y hay una razón para sospecharlo, leída
+     * en el código: {@code vaACruzar} (L486) solo abre el portón si el destino está <b>al otro lado</b>, y el navegador
+     * no traza caminos por un portón <b>cerrado</b>. Es una <b>dependencia circular</b> (no abre porque el camino no
+     * pasa, y el camino no pasa porque no abre) que dejaría al pueblo encerrado.
+     */
+    private static final boolean MEDIR_ALDEANO_CRUZA = false;
+
+    /** El aldeano de la prueba del cruce (uno solo, y se le sigue en cada vuelta). */
+    private static net.minecraft.world.entity.npc.Villager aldeanoDelCruce;
+
+    private static void medirSiElAldeanoCruza(ServerLevel level) {
+        if (ticks == 300) {
+            var a = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+            if (a == null) {
+                return;
+            }
+            int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+            a.moveTo(CENTRO.getX() + 0.5D, cota, CENTRO.getZ() + 0.5D, 0.0F, 0.0F);
+            a.setPersistenceRequired();
+            level.addFreshEntity(a);
+            aldeanoDelCruce = a;
+            // Y SE LE ABRE EL PORTÓN DEL ESTE A MANO: el goal no puede abrirlo desde aquí (el navegador no traza camino
+            // por un portón cerrado — es la dependencia circular que arregla el cambio en `vaACruzar`), así que esta
+            // prueba mide lo que de verdad importa: que el PASO sirva cuando está abierto.
+            int cota0 = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+            var porton0 = new BlockPos(CENTRO.getX() + 62, cota0, CENTRO.getZ());
+            var estado0 = level.getBlockState(porton0);
+            if (estado0.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) {
+                level.setBlock(porton0, estado0.setValue(net.minecraft.world.level.block.FenceGateBlock.OPEN, true), 3);
+                DevilRpg.LOGGER.info("[Arnes] CRUCE: porton del este ABIERTO a mano para la prueba ({})", porton0);
+            }
+            DevilRpg.LOGGER.info("[Arnes] CRUCE: aldeano de prueba en la plaza {} (cota {})", a.blockPosition(), cota0);
+            return;
+        }
+        if (ticks == 320) {
+            int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+            // Y SE LE DA UN PUESTO DE TRABAJO FUERA DEL MURO (JOB_SITE): es una memoria que el CEREBRO respeta, así que
+            // el viaje de ida y vuelta al trabajo es suyo y va a cruzar el portón por su propio pie. Ponerle el
+            // WALK_TARGET a mano NO sirve: el cerebro lo pisa cada tick con su actividad — medido en la corrida 98, a los
+            // 200 ticks ya iba de vuelta al centro aunque se le repusiera el destino cada 10.
+            int yPuesto = sueloDeLaColumna(level, CENTRO.getX() + 70, CENTRO.getZ(), cota);
+            BlockPos puesto = new BlockPos(CENTRO.getX() + 70, yPuesto, CENTRO.getZ());
+            level.setBlock(puesto, net.minecraft.world.level.block.Blocks.LECTERN.defaultBlockState(), 3);
+            aldeanoDelCruce.getBrain().setMemory(MemoryModuleType.JOB_SITE,
+                    net.minecraft.core.GlobalPos.of(level.dimension(), puesto));
+            if (aldeanoDelCruce.getVillagerData().getProfession() == net.minecraft.world.entity.npc.VillagerProfession.NONE) {
+                aldeanoDelCruce.setVillagerData(aldeanoDelCruce.getVillagerData().setProfession(
+                        net.minecraft.world.entity.npc.VillagerProfession.LIBRARIAN));
+            }
+            DevilRpg.LOGGER.info("[Arnes] CRUCE: puesto de trabajo del aldeano FUERA del muro en {} (el viaje cruza el"
+                    + " portón del este)", puesto);
+            return;
+        }
+        if (aldeanoDelCruce == null) {
+            return;
+        }
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (ticks >= 320 && ticks % 40 == 0) {
+            var porton = new BlockPos(CENTRO.getX() + 62, cota, CENTRO.getZ());
+            var estado = level.getBlockState(porton);
+            int r = (int) Math.round(Math.sqrt(Math.pow(aldeanoDelCruce.getX() - CENTRO.getX(), 2)
+                    + Math.pow(aldeanoDelCruce.getZ() - CENTRO.getZ(), 2)));
+            String veredicto = r > 66 ? "FUERA (ha cruzado)" : (r >= 58 ? "en el muro" : "DENTRO");
+            DevilRpg.LOGGER.info("[Arnes] CRUCE t={} pos={} r={} -> {} | porton este={} | nav={}", ticks,
+                    aldeanoDelCruce.blockPosition(), r, veredicto,
+                    estado.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock
+                            ? (estado.getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN) ? "ABIERTO" : "cerrado")
+                            : estado.getBlock().getName().getString(),
+                    aldeanoDelCruce.getNavigation().getTargetPos());
+        }
+    }
 
     /**
      * <b>¿CRUZA EL PUEBLO LOS PORTONES DEL MURO?</b> (6-oct-2026). Fue lo que quedó abierto en I219: el portón está

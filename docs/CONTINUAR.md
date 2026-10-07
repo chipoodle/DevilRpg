@@ -107,13 +107,14 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
    `con muro 921 | PORTONES 9 | AGUJEROS 0 | racha 0` (los 9 = 4 celdas x 2 puertas + 1 dintel), el guardado dice
    `PORTONES 4 celdas: [(408,646),(470,584),(470,708),(532,646)]` y **0 agujeros**, y la ola **ya solo entra rompiendo
    el muro** (`oak_log` y `cobblestone`), **0 puertas rotas**, y **la milicia los mata a los 8** (t=1680).
-   **ABIERTO**: no se ha medido que un ALDEANO cruce estos portones. Se intento con cuatro corridas
-   (`MEDIR_CRUCE_DEL_PORTON`) y **el instrumento no aisla el cruce**: `moveTo` no calcula el camino (sale `null`
-   siempre, y el CONTROL de dentro tambien daba NO SABE), un aldeano recien nacido tampoco (con 20 ticks el control ya
-   da 11 nodos) y **de fuera el camino sale de 1 nodo** porque el terreno exterior esta a y=84, mas alto que el porton
-   (cota 83), asi que el aldeano se cuela por encima del muro. Lo que SI esta medido: porton puesto en las 4 entradas,
-   paso franco (`TAPADOS 0`) y anillo cerrado (`PORTONES 9 | AGUJEROS 0`). Mirar en la partida: un aldeano saliendo
-   por una entrada cardinal y el porton cerrándose detras.
+   **ERROR Y ARREGLO (I222)**: al cerrar el muro con las hojas de valla **el pueblo quedó ENCERRADO** — medido con un
+   aldeano de verdad: 3 minutos con el destino puesto fuera y **el portón `cerrado` en las 75 muestras, sin abrirlo
+   nunca** (se quedó en r=42). La causa es una **dependencia circular** en `VillagerGateGoal.vaACruzar` (L486): solo
+   abría si el destino estaba al otro lado, y el navegador **no traza caminos por un portón cerrado**. Arreglado
+   (L504): para un portón del MURO, si el aldeano y su destino están en lados distintos del recinto, **se abre**. La
+   traza `[Gate]` (L368) ahora dice el **lado**: hay que ver **`aldeano DENTRO · destino FUERA`** en un portón del muro,
+   y después al aldeano fuera. **Eso último no está medido** (cinco corridas de instrumento fallidas, cada una delatada
+   por su control): se mide en la partida con esa traza.
 3. **El nado del asaltante** — **HECHO en I215** (falta el instrumento). El defecto estaba en la cuenta del propio
    codigo: `MAX_ESCAPE_TICKS = 200` (10 s intentando salir) **+ `retryCooldown = MAX_ESCAPE_TICKS`** en `stop()` (otros
    10 s **sin poder tocar el agua**) = **20 segundos** en los que el asaltante ni avanza ni intenta nada, que es

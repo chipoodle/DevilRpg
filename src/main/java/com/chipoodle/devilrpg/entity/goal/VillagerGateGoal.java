@@ -365,11 +365,21 @@ public class VillagerGateGoal extends Goal {
                 goalsCorriendo.append(w.getGoal().getClass().getSimpleName()).append(' ');
             }
         }
-        DevilRpg.LOGGER.info("[Gate] {} {}: abro el porton {} · destino={} rutaViva={} alcanzaba={} · goals=[{}]",
+        DevilRpg.LOGGER.info("[Gate] {} {}: abro el porton {} ({}) · destino={} ({}) rutaViva={} alcanzaba={} ·"
+                        + " goals=[{}]",
                 villager.getUUID().toString().substring(0, 8),
                 villager.getCustomName() == null ? "-" : villager.getCustomName().getString().replace("\n", " / "),
                 porton.toShortString(),
+                // EL LADO, QUE ES LO QUE MIDE EL MURO (6-oct-2026): para un portón del muro, «aldeano DENTRO y destino
+                // FUERA» es la prueba de que el pueblo está cruzando el anillo ✓, y si un aldeano se queda en
+                // «DENTRO -> FUERA» sin llegar nunca, se verá aquí mismo. Sin este dato la línea no distingue una
+                // compuerta de parcela de un portón del muro.
+                ladoDelMuro(villager.getX(), villager.getZ()) ? "aldeano FUERA" : "aldeano DENTRO",
                 objetivo == null ? "SIN DESTINO" : objetivo.getTarget().currentBlockPosition().toShortString(),
+                objetivo == null ? "-"
+                        : (ladoDelMuro(objetivo.getTarget().currentBlockPosition().getX() + 0.5D,
+                                objetivo.getTarget().currentBlockPosition().getZ() + 0.5D)
+                                ? "destino FUERA" : "destino DENTRO"),
                 rutaViva == null ? "sin ruta" : rutaViva.getNodeCount() + " nodos", yaLlegaba ? "SI" : "NO",
                 goalsCorriendo.toString().trim());
         // Y SE LE HACE REHACER EL CAMINO CON LA COMPUERTA YA ABIERTA. La ruta que traía el aldeano se calculó con ella
@@ -492,9 +502,58 @@ public class VillagerGateGoal extends Goal {
         if (destino.equals(porton)) {
             return true; // va a la puerta: solo se va a una puerta para cruzarla
         }
+        // EL MURO DE LA ALDEA: SI VA DE DENTRO A FUERA (o al revés), EL PORTÓN SE ABRE (6-oct-2026, medido).
+        // Sin esta regla el pueblo se queda ENCERRADO, y está medido: un aldeano de prueba con el destino puesto a mano
+        // fuera del anillo se pasó 3 MINUTOS dando vueltas por dentro (r=42) y el portón del este puso `cerrado` las 75
+        // muestras del registro ✓. La razón es una DEPENDENCIA CIRCULAR: esta función solo abría si el destino estaba
+        // al otro lado, pero el navegador NO traza caminos por un portón cerrado, así que el destino nunca queda al
+        // otro lado y el portón no se abre nunca. Antes los huecos del muro eran AIRE y el pueblo salía sin más: al
+        // poner la hoja de valla (I219) quedó encerrado.
+        // Aquí se mira el RECINTO, no el plano del portón: si él está dentro del muro y su destino está fuera (o al
+        // revés), va a cruzar, y el portón tiene que abrirse para que el navegador pueda trazar el camino.
+        if (esPortonDelMuro(porton) && cruzaElMuro(destino)) {
+            return true;
+        }
         int mio = lado(estado, porton, villager.getX(), villager.getZ());
         int suyo = lado(estado, porton, destino.getX() + 0.5D, destino.getZ() + 0.5D);
         return suyo != 0 && suyo != mio;
+    }
+
+    /** ¿Ese portón es uno de los cuatro del MURO perimetral? (los que cierran la aldea). */
+    private boolean esPortonDelMuro(BlockPos porton) {
+        return VillageGenerator.portonesDelMuro(center, porton.getY()).contains(porton);
+    }
+
+    /**
+     * ¿Ese punto está <b>fuera del muro</b>? Solo para la <b>traza</b> {@code [Gate]}: no decide nada. Se mide contra el
+     * radio del muro, para el aldeano y para su destino por separado.
+     */
+    private boolean ladoDelMuro(double x, double z) {
+        return distanciaAlCentro(x, z) > VillageGenerator.FENCE_RADIUS;
+    }
+
+    /**
+     * ¿El destino del aldeano está al otro lado del <b>muro</b> que él? Se mide con el radio del muro
+     * ({@code VillageGenerator.FENCE_RADIUS}) y un margen: por dentro, el pueblo; por fuera, el campo. El margen existe
+     * para que un destino justo encima del muro (o en la puerta) no se tome por un cruce.
+     */
+    private boolean cruzaElMuro(BlockPos destino) {
+        double radio = VillageGenerator.FENCE_RADIUS;
+        double margen = 6.0D;
+        double yo = distanciaAlCentro(villager.getX(), villager.getZ());
+        double el = distanciaAlCentro(destino.getX() + 0.5D, destino.getZ() + 0.5D);
+        boolean yoDentro = yo < radio - margen;
+        boolean yoFuera = yo > radio + margen;
+        boolean elDentro = el < radio - margen;
+        boolean elFuera = el > radio + margen;
+        return (yoDentro && elFuera) || (yoFuera && elDentro);
+    }
+
+    /** Distancia horizontal (XZ) al centro de la aldea: el muro vive en {@code FENCE_RADIUS}. */
+    private double distanciaAlCentro(double x, double z) {
+        double dx = x - (center.getX() + 0.5D);
+        double dz = z - (center.getZ() + 0.5D);
+        return Math.sqrt(dx * dx + dz * dz);
     }
 
     /** ¿Ha pasado ya el aldeano al otro lado del portón que abrió él? (entonces se cierra en el acto). */
