@@ -2499,6 +2499,21 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         int y0 = firma.entrySet().stream().max(java.util.Map.Entry.comparingByValue()).get().getKey();
         DevilRpg.LOGGER.info("[Arnes] ANILLO: firma del muro en y={} ({} de {} celdas). Capas: {}", y0,
                 firma.get(y0), anillo.size(), firma);
+        // ¿Y EL TERRENO DE FUERA? Si el suelo exterior queda a la altura del tope del muro (cota+1) o más arriba, el
+        // asaltante SUBE por el escalón y CRUZA por encima sin romper nada, y el portón no serviría de nada. Se mira el
+        // suelo a varias distancias, dentro y fuera del anillo (en dy respecto a la cota).
+        StringBuilder suelos = new StringBuilder();
+        for (int dr : new int[] { -4, -2, -1, 0, 1, 2, 4 }) {
+            java.util.Map<Integer, Integer> cuenta = new java.util.TreeMap<>();
+            for (int a = 0; a < 360; a += 6) {
+                double ang = Math.toRadians(a);
+                int x = CENTRO.getX() + (int) Math.round(Math.cos(ang) * (62 + dr));
+                int z = CENTRO.getZ() + (int) Math.round(Math.sin(ang) * (62 + dr));
+                cuenta.merge(sueloDeLaColumna(level, x, z, cota) - cota, 1, Integer::sum);
+            }
+            suelos.append("r=").append(62 + dr).append("(dy:").append(cuenta).append(") ");
+        }
+        DevilRpg.LOGGER.info("[Arnes] ANILLO suelos (dy respecto a la cota {}): {}", cota, suelos.toString().trim());
         // Y LAS COLUMNAS DE UN TRAMO, crudas: qué hay en 8 celdas seguidas del anillo, de y0-6 a y0+4.
         StringBuilder tramo = new StringBuilder();
         for (int i = 40; i < 48 && i < anillo.size(); i++) {

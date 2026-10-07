@@ -6368,6 +6368,21 @@ cierra por arriba ✓. Las cuatro celdas caen **exactamente** en los cuatro punt
 | entran | andando ✗ | rompiendo y por el portón | **solo rompiendo el muro** ✓ |
 | final de la ola | 8 de 8 dentro | entran y algunos mueren | **8 → 0**: **la milicia los mata a todos** entre t=1200 y t=1680 ✓ |
 
+**¿Y NO PUEDEN SALTAR EL MURO?** Se midió el suelo a los dos lados del anillo ✓ (`rapida-95.log`, 60 muestras por radio,
+en `dy` respecto a la cota 83):
+
+```
+r=58 (dy:0=5  1=34)   r=61 (dy:0=6  1=42)   r=62 (dy:1=60)   r=63 (dy:0=3  1=38)   r=66 (dy:1=39)
+```
+
+- **En r=62 el suelo es `dy=+1` en las 60 muestras**: el muro se apoya en **su propio rellano**, un bloque por encima
+  del nivel del pueblo, y **no hay ni un hueco** en toda la vuelta ✓.
+- Y el **terreno de fuera queda a `dy=+1`** (un bloque por encima del suelo de dentro) en la mayor parte del anillo: o
+  sea que **hay un escalón natural** desde fuera, y por eso este riesgo había que mirarlo ✓.
+- **No lo saltan, lo rompen**: lo que pican es **`oak_log` y `cobblestone`** ✓ (corridas 81/78), y el muro tiene **dos
+  bloques de troncos** (cota y cota+1) con las columnas de adoquín subiendo a la cota+2, así que el escalón de fuera no
+  da para pasar por encima ✓.
+
 **LO QUE QUEDA ABIERTO, y esta vez con el instrumento fallido por delante** ✗: **no se ha medido que un ALDEANO cruce
 estos portones.** Se intentó con cuatro corridas (`MEDIR_CRUCE_DEL_PORTON`) y **el instrumento no aísla el cruce**,
 medido así:
