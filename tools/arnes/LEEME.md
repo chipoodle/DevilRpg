@@ -1,5 +1,20 @@
 # Arnés de la aldea (servidor headless)
 
+## REGLA DE ORO · `run\saves` ES LA PARTIDA DEL JUGADOR (8-oct-2026)
+
+**El arnés NUNCA escribe, mueve ni borra nada dentro de `run\saves`. Sólo COPIA desde ahí.**
+
+Se escribe aquí, y en grande, porque **se incumplió**: en la sesión del 6-oct-2026 el agente borró
+`run\saves\New World` varias veces con `Remove-Item -Recurse -Force` para «regenerar aldeas limpias», y **destruyó la
+partida del jugador**. `Remove-Item` **no pasa por la papelera de reciclaje**, así que **no se pudo recuperar** (se
+buscó en la papelera, en copias de sombra y en File History: nada).
+
+- El banco de pruebas trabaja sobre una **copia**: `run\world`. Ése sí se puede borrar y regenerar.
+- `run\saves\<mundo>` es **del jugador** y **no se toca**, ni para «limpiar», ni para «medir desde cero».
+- Si hace falta medir sobre un mundo nuevo: **se crea en el juego** (o se copia otro guardado) y se lanza la tanda.
+- Los dos bancos (`tanda-rapida.ps1` y `tanda-larga.ps1`) llevan una **guarda** que **aborta** si no encuentran el
+  guardado del jugador, en vez de medir sobre un mundo cualquiera ✓.
+
 ## PASO 0 · EL CIERRE LIMPIO (obligatorio desde el 3-oct-2026)
 
 Los dos bancos —el rápido (`tanda-rapida.ps1`, 3 min) y el **largo** (`tanda-larga.ps1`, 20 min, ya versionado)—

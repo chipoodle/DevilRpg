@@ -23,14 +23,34 @@ foreach ($a in $args) { if ("$a" -eq '-Conservar') { $Conservar = $true } else {
 $arnes = 'src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java'
 if (-not (Test-Path $arnes)) { Write-Output 'ABORTADO: falta el arnes (copiar tools\arnes\GuardHarness.java)'; exit 1 }
 
+# =====================================================================================================================
+# REGLA DE ORO (8-oct-2026): `run\saves` ES LA PARTIDA DEL JUGADOR. EL ARNES NUNCA ESCRIBE NI BORRA AHI.
+# ---------------------------------------------------------------------------------------------------------------------
+# POR QUE ESTA AQUI Y GRITANDO: en la sesion del 6-oct-2026 el agente (yo) borro `run\saves\New World` varias veces
+# para «regenerar aldeas limpias», y **destruyo la partida del jugador** — `Remove-Item -Recurse -Force` NO pasa por la
+# papelera de reciclaje, asi que no se pudo recuperar ✓. El banco de pruebas siempre ha trabajado sobre una COPIA
+# (`run\world`); lo que estaba mal era que el agente borrase el ORIGEN.
+# A partir de aqui: si el guardado del jugador no esta, la tanda SE ABORTA con un mensaje claro en vez de medir sobre un
+# mundo cualquiera, y NUNCA se borra nada de `run\saves`.
+# =====================================================================================================================
+$guardadoDelJugador = 'run\saves\New World'
+if (-not (Test-Path "$guardadoDelJugador\level.dat")) {
+    Write-Output 'ABORTADO: no existe el guardado del jugador en run\saves\New World.'
+    Write-Output '  El arnes mide sobre una COPIA (run\world) y necesita ese origen. NO teclees nunca un Remove-Item'
+    Write-Output '  sobre run\saves: ahi vive la partida del jugador. Si quieres medir un mundo nuevo, crea el guardado'
+    Write-Output '  en el juego (o copia otro) y vuelve a lanzar la tanda.'
+    exit 1
+}
+
 foreach ($i in $numeros) {
     Write-Output "=== CORRIDA RAPIDA $i : $(Get-Date -Format 'HH:mm:ss') ==="
     $vivos = (Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
         Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' }).Count
     if ($vivos -gt 0) { Write-Output "ABORTADO en la corrida ${i}: $vivos servidor(es) vivo(s)"; exit 1 }
     if (-not $Conservar -or -not (Test-Path run\world\level.dat)) {
+        # SOLO se borra la COPIA (run\world). `run\saves` no se toca jamas.
         Remove-Item run\world -Recurse -Force -ErrorAction SilentlyContinue
-        Copy-Item 'run\saves\New World' run\world -Recurse
+        Copy-Item $guardadoDelJugador run\world -Recurse
     } else {
         Write-Output "   (mundo conservado: el pueblo ya no migra, se mide asentado)"
     }

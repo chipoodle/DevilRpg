@@ -27,14 +27,25 @@ if (-not (Test-Path $arnes)) { Write-Output 'ABORTADO: falta el arnes (copiar to
 $numeros = @()
 foreach ($a in $args) { if ("$a" -ne '-Conservar') { $numeros += $a } }
 
+# REGLA DE ORO (8-oct-2026): `run\saves` ES LA PARTIDA DEL JUGADOR. El arnes NUNCA escribe ni borra ahi — solo COPIA
+# de ahi. Se puso despues de que el agente borrase `run\saves\New World` y destruyera la partida del jugador (y
+# `Remove-Item -Recurse -Force` no pasa por la papelera). Ver el comentario largo en `tanda-rapida.ps1`.
+$guardadoDelJugador = 'run\saves\New World'
+if (-not (Test-Path "$guardadoDelJugador\level.dat")) {
+    Write-Output 'ABORTADO: no existe el guardado del jugador en run\saves\New World.'
+    Write-Output '  El arnes mide sobre una COPIA (run\world). NO borres nunca nada de run\saves.'
+    exit 1
+}
+
 foreach ($i in $numeros) {
     Write-Output "=== CORRIDA $i : $(Get-Date -Format 'HH:mm:ss') ==="
     $vivos = (Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
         Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' }).Count
     if ($vivos -gt 0) { Write-Output "ABORTADO en la corrida ${i}: $vivos servidor(es) vivo(s)"; exit 1 }
     if (-not $Conservar -or -not (Test-Path run\world\level.dat)) {
+        # SOLO se borra la COPIA (run\world).
         Remove-Item run\world -Recurse -Force -ErrorAction SilentlyContinue
-        Copy-Item 'run\saves\New World' run\world -Recurse
+        Copy-Item $guardadoDelJugador run\world -Recurse
     } else {
         Write-Output "   (mundo conservado: el pueblo ya no migra, se mide asentado)"
     }
