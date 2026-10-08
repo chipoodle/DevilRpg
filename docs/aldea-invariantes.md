@@ -6455,6 +6455,39 @@ trazado un camino **a través de una puerta cerrada**, y eso no pasa ✗.
 - Y el instrumento pasó de marcar **`TAPADOS 17`** (falso) a **`TAPADOS 0`**: pedía aire en la capa del medio, que era
   la regla del portón de valla de una hoja; con el portón de tres capas la del medio **es una hoja** ✓.
 
+### I231 · LA ALDEA YA CONSTRUIDA NO SE CURABA: `asegurarMuro` SOLO MIRABA EL MURO
+
+**El caso del jugador** (6-oct-2026): probó el portón en su partida y **el click funcionaba** —el registro lo demuestra,
+seis aciertos alternando `ABIERTO`/`CERRADO`— pero **el portón no abría**: parecía volver a su sitio y no dejaba pasar.
+Y no había **ni una** línea `[Porton] abro/cierro el porton del muro`, así que **no era el latido cerrándolo** ✓.
+
+**MEDIDO, y el código estaba bien** ✓ (`rapida-141.log`, aldea nueva): el barrido del portón hace
+**`abatir en …: encontradas=9 cambiadas=9`** — abre **las nueve hojas** de una vez, en las dos orientaciones ✓. O sea
+que el fallo **no estaba en el portón, sino en que su aldea tenía portones de una versión ANTERIOR** (construidos antes
+de los arreglos I226–I229) y **nadie los cambiaba** ✗.
+
+**LA CAUSA** ✓: `asegurarMuro` (la única pieza que reconstruye el muro en el latido) **solo miraba el muro**: contaba
+celdas selladas y, si el anillo estaba entero, **se iba sin tocar nada**. En su aldea el muro está entero y los portones
+están mal → `921 de 921` → **no hacía nada, y los portones viejos se quedaban para siempre** ✓. Es el fallo de fondo: un
+arreglo en el generador **no llega a las aldeas ya construidas** si la comprobación no sabe ver lo que hay que arreglar.
+
+**ARREGLO** ✓ (`VillageGenerator.asegurarMuro`): además del muro, se comprueba **que los portones estén bien puestos**:
+1. las **TRES celdas** de cada entrada tienen que tener bloque de portón ✓, y
+2. **ningún** bloque de portón puede estar fuera de ellas — ni **corrido de columna** ni **en la misma columna a otra
+   altura** (la franja buena es `cota … cota+2`) ✓. Esto es lo que caza los portones superpuestos de versiones
+   anteriores, que es como quedaban al moverse la cota ✓.
+
+**MEDIDO, las dos caras** ✓:
+- **No dispara bucle** en una aldea sana (`rapida-142.log`): **0 reconstrucciones** y el anillo
+  `921 | con muro 921 | PORTONES 25 | AGUJEROS 0` ✓.
+- **Y sí caza un portón viejo** (`rapida-143.log`): plantado uno a mano **en la columna de la entrada pero 12 bloques
+  más arriba**, el latido dijo **`solo 921 de 921 … portones mal puestos: true`**, reconstruyó (**1473 restos
+  quitados**) y el portón viejo **`SE HA LIMPIADO`** ✓.
+
+**Y una traza para medir el abatido en la partida** ✓ (`DoubleGateBlock.abatir`): la línea del click dice «paso a
+ABIERTO» **siempre**, así que no distinguía «abre entero» de «abre sólo la hoja que pulsas». Ahora `abatir` canta
+**`encontradas=N cambiadas=M`** y qué celdas tienen **otro `FACING`** — que es lo que dejaría hojas quietas ✓.
+
 ### I228 · LA CAUSA DE VERDAD DEL «MARCO DE 5 BLOQUES»: EL PORTÓN SE CONSTRUÍA VARIAS VECES, CORRIDO
 
 **Lo reportó el jugador** (6-oct-2026), y teniendo razón: *«la puerta tiene un marco de 5 bloques de ancho, el bloque

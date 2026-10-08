@@ -432,6 +432,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElPasoDelPorton(level);
         } else if (MEDIR_SE_QUEDA_ABIERTO) {
             medirSiSeQuedaAbierto(level, pega);
+        } else if (MEDIR_PORTON_VIEJO) {
+            medirElPortonViejo(level);
         } else if (MEDIR_AGUA) {
             medirElNado(level, pega);
         } else if (MEDIR_VELOCIDAD) {
@@ -2222,6 +2224,31 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * de abrirlo a mano.
      */
     private static final boolean MEDIR_SE_QUEDA_ABIERTO = false;
+
+    /**
+     * <b>¿DETECTA Y LIMPIA UN PORTÓN VIEJO?</b> (6-oct-2026). El jugador tenía portones de una versión anterior en su
+     * aldea y `asegurarMuro` no los tocaba (miraba solo el muro). Esta prueba <b>planta un portón viejo a mano</b> —en
+     * la columna de la entrada pero a otra altura, que es como quedaban— y comprueba que el latido lo detecta, se
+     * reconstruye el muro y el portón viejo <b>desaparece</b> ✓.
+     */
+    private static final boolean MEDIR_PORTON_VIEJO = false;
+
+    private static void medirElPortonViejo(ServerLevel level) {
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        BlockPos viejo = new BlockPos(CENTRO.getX() + 62, cota + 12, CENTRO.getZ());
+        if (ticks == 320) {
+            level.setBlock(viejo, com.chipoodle.devilrpg.init.ModBlocks.PORTON_DOBLE_BLOCK.get().defaultBlockState(), 3);
+            DevilRpg.LOGGER.info("[Arnes] VIEJO: plantado un porton de una version anterior en {} (cota={})",
+                    viejo.toShortString(), cota);
+            return;
+        }
+        if (ticks == 900) {
+            boolean sigue = level.getBlockState(viejo).getBlock()
+                    instanceof com.chipoodle.devilrpg.block.DoubleGateBlock;
+            DevilRpg.LOGGER.info("[Arnes] VIEJO t=900: el porton viejo {} -> {}", viejo.toShortString(),
+                    sigue ? "SIGUE AHI (no se ha limpiado)" : "SE HA LIMPIADO");
+        }
+    }
 
     private static void medirSiSeQuedaAbierto(ServerLevel level, FakePlayer pega) {
         if (ticks != 400 && ticks != 420 && ticks != 500 && ticks != 600) {

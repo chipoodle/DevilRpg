@@ -6923,16 +6923,57 @@ public final class VillageGenerator {
                 break;
             }
         }
-        // Si YA está CERRADO DEL TODO y sin hojas de más, no se toca nada. El listón es el 100 % a propósito: los
-        // cuatro portones del muro TAMBIÉN cuentan como cierre (son la puerta del pueblo, y sin ellos el anillo tenía
-        // cuatro boquetes de aire), así que una aldea con el muro viejo —sin portones— se reconstruye UNA vez para
-        // ponerlos, y a partir de ahí el portón cuenta y no se vuelve a tocar (no oscila) ✓.
-        if (conMuro >= ring.size() && !hojaApilada) {
+        // Y LOS PORTONES, ¿ESTÁN BIEN PUESTOS? (6-oct-2026, y este era el fallo que quedaba en una aldea YA construida).
+        // Antes solo se miraba el MURO, así que una aldea con el anillo entero pero con **portones de una versión
+        // anterior** (superpuestos, o corridos, o de cuatro celdas) se daba por buena y **los portones viejos se
+        // quedaban para siempre** — el jugador los veía «como si hubiera varias puertas una detrás de otra» y al abrir
+        // una, las otras cerradas le tapaban el hueco ✗. Aquí se comprueba lo que de verdad tiene que haber:
+        //   (1) las TRES celdas de cada entrada con un bloque de portón, y
+        //   (2) NINGÚN bloque de portón fuera de esas tres (es decir: nada de portones viejos alrededor).
+        boolean portonesMal = false;
+        for (BlockPos entrada : portonesDelMuro(center, cota)) {
+            for (BlockPos esperada : celdasDelPorton(center, cota, entrada)) {
+                if (!(level.getBlockState(esperada).getBlock() instanceof DoubleGateBlock)) {
+                    portonesMal = true;
+                    break;
+                }
+            }
+            if (portonesMal) {
+                break;
+            }
+            // Y se busca un portón viejo ALREDEDOR de la entrada (la limpieza de `rehacerMuro` barre justo esta caja).
+            // Un bloque de portón está BIEN solo si su columna es una de las TRES esperadas **y** está en la franja de
+            // altura del portón (cota, cota+1, cota+2). Cualquier otro —corrido de columna, o en la misma columna pero a
+            // otra altura— es un portón de una versión anterior y hace que se reconstruya ✓ (medido: en estos mundos la
+            // cota pasó de 83 a 70 y el portón viejo quedaba 13 bloques por encima del nuevo, superpuesto).
+            java.util.Set<BlockPos> esperadas = new java.util.HashSet<>(celdasDelPorton(center, cota, entrada));
+            for (int dx = -3; dx <= 3 && !portonesMal; dx++) {
+                for (int dz = -3; dz <= 3 && !portonesMal; dz++) {
+                    for (int y = cota - 40; y <= cota + 40; y++) {
+                        BlockPos q = new BlockPos(entrada.getX() + dx, y, entrada.getZ() + dz);
+                        if (!(level.getBlockState(q).getBlock() instanceof DoubleGateBlock)) {
+                            continue;
+                        }
+                        boolean columnaBuena = esperadas.contains(new BlockPos(q.getX(), cota, q.getZ()));
+                        boolean alturaBuena = y >= cota && y <= cota + 2;
+                        if (!columnaBuena || !alturaBuena) {
+                            portonesMal = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        // Si YA está CERRADO DEL TODO y sin hojas de más NI portones mal puestos, no se toca nada. El listón es el 100 %
+        // a propósito: los cuatro portones del muro TAMBIÉN cuentan como cierre (son la puerta del pueblo, y sin ellos
+        // el anillo tenía cuatro boquetes de aire), así que una aldea con el muro viejo —sin portones— se reconstruye UNA
+        // vez para ponerlos, y a partir de ahí el portón cuenta y no se vuelve a tocar (no oscila) ✓.
+        if (conMuro >= ring.size() && !hojaApilada && !portonesMal) {
             return;
         }
         DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO esta a la cota {} (solo {} de {} celdas del anillo lo"
-                        + " tienen): se reconstruye a su nivel. FALTAN: {}", center, cota, conMuro, ring.size(),
-                faltantes(level, ring, cota));
+                        + " tienen; hojas apiladas: {}; portones mal puestos: {}): se reconstruye a su nivel. FALTAN: {}",
+                center, cota, conMuro, ring.size(), hojaApilada, portonesMal, faltantes(level, ring, cota));
         rehacerMuro(level, center);
     }
 

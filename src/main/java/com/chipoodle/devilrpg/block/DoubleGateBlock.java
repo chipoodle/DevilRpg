@@ -206,18 +206,32 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
         // La celda baja de la columna que se ha pulsado.
         BlockPos base = pos.offset(0, -estado.getValue(LAYER).indice(), 0);
         int cambiadas = 0;
+        int encontradas = 0;
+        StringBuilder donde = new StringBuilder();
         // Las TRES celdas del ancho (la pulsada y una a cada lado) por los TRES pisos.
         for (int ancho = -1; ancho <= 1; ancho++) {
             for (int alto = 0; alto <= 2; alto++) {
                 BlockPos p = muroEnZ ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
                 BlockState s = level.getBlockState(p);
-                if (s.getBlock() instanceof DoubleGateBlock && s.getValue(FACING) == facing
-                        && s.getValue(OPEN) != abierto) {
+                if (!(s.getBlock() instanceof DoubleGateBlock)) {
+                    continue;
+                }
+                encontradas++;
+                if (s.getValue(FACING) == facing && s.getValue(OPEN) != abierto) {
                     level.setBlock(p, s.setValue(OPEN, abierto), 3);
                     cambiadas++;
+                } else if (s.getValue(FACING) != facing) {
+                    donde.append(p.toShortString()).append("(facing ").append(s.getValue(FACING)).append(") ");
                 }
             }
         }
+        // TRAZA (6-oct-2026): el jugador reportó que «parece que va a abrirse … pero regresa a su posición original». La
+        // línea del click dice «paso a ABIERTO» SIEMPRE, así que no distingue «abre entero» de «abre sólo la hoja que
+        // pulsas». Esto sí: cuántas celdas ha encontrado alrededor, cuántas ha movido, y cuáles tienen OTRO `FACING`
+        // (que es lo que dejaría hojas quietas y daría esa sensación de que se vuelve a cerrar ✗).
+        DevilRpg.LOGGER.info("[Porton] abatir en {}: encontradas={} cambiadas={} {} (facing de la pulsada={})",
+                pos.toShortString(), encontradas, cambiadas,
+                donde.length() == 0 ? "" : "CON OTRO FACING: " + donde.toString().trim(), facing);
         if (cambiadas == 0) {
             return; // ya estaba como se pide: no hay nada que hacer
         }
