@@ -1,5 +1,29 @@
 # Arnés de la aldea (servidor headless)
 
+## SI UN MODELO O UNA TEXTURA NO APARECEN: LA COPIA INCREMENTAL DE GRADLE (8-oct-2026)
+
+Síntoma medido en la partida del jugador: el portón salía **con la textura de «modelo que falta»** (el damero negro y
+magenta) en una parte, esa parte **no se movía**, y el log del cliente decía:
+
+```
+Unable to load model: 'devilrpg:block/porton_right_abierto_low' ... java.io.FileNotFoundException
+```
+
+…**con el fichero presente en `build/resources/main`** ✓. La causa: `processResources` de Gradle es **incremental**, y si
+el contenido de `build/resources` se desincroniza (ficheros que Gradle cree copiados y no lo están), **el cliente hornea
+el blockstate nuevo con modelos viejos o ausentes** → el juego dibuja el modelo de reemplazo, que es un cubo con el
+damero ✗.
+
+**El remedio, y es lo que hay que hacer a la primera ante este síntoma** ✓:
+
+```powershell
+Remove-Item 'build\resources\main\assets\devilrpg' -Recurse -Force
+.\gradlew.bat processResources
+```
+
+Y se comprueba que el blockstate **no nombre ningún modelo que no esté** (24 modelos, 96 variantes, 0 faltas). Es un
+directorio de **salida de compilación**: se borra y se regenera sin riesgo. **Nunca** se toca `run\saves` para esto.
+
 ## REGLA DE ORO · `run\saves` ES LA PARTIDA DEL JUGADOR (8-oct-2026)
 
 **El arnés NUNCA escribe, mueve ni borra nada dentro de `run\saves`. Sólo COPIA desde ahí.**
