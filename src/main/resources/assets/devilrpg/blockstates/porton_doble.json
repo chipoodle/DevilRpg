@@ -1,15 +1,15 @@
 {
   "variants": {
     "facing=north,open=true,side=left,layer=low,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_low",
+      "model": "devilrpg:block/porton_left_abierto_low_juntura",
       "y": 90
     },
     "facing=north,open=true,side=left,layer=mid,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_mid",
+      "model": "devilrpg:block/porton_left_abierto_mid_juntura",
       "y": 90
     },
     "facing=north,open=true,side=left,layer=high,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_high",
+      "model": "devilrpg:block/porton_left_abierto_high_juntura",
       "y": 90
     },
     "facing=north,open=true,side=left,layer=low,juntura=false": {
@@ -49,15 +49,15 @@
       "y": 90
     },
     "facing=north,open=true,side=right,layer=low,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_low",
+      "model": "devilrpg:block/porton_right_abierto_low_juntura",
       "y": 270
     },
     "facing=north,open=true,side=right,layer=mid,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_mid",
+      "model": "devilrpg:block/porton_right_abierto_mid_juntura",
       "y": 270
     },
     "facing=north,open=true,side=right,layer=high,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_high",
+      "model": "devilrpg:block/porton_right_abierto_high_juntura",
       "y": 270
     },
     "facing=north,open=true,side=right,layer=low,juntura=false": {
@@ -97,15 +97,15 @@
       "y": 270
     },
     "facing=south,open=true,side=left,layer=low,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_low",
+      "model": "devilrpg:block/porton_left_abierto_low_juntura",
       "y": 90
     },
     "facing=south,open=true,side=left,layer=mid,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_mid",
+      "model": "devilrpg:block/porton_left_abierto_mid_juntura",
       "y": 90
     },
     "facing=south,open=true,side=left,layer=high,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_high",
+      "model": "devilrpg:block/porton_left_abierto_high_juntura",
       "y": 90
     },
     "facing=south,open=true,side=left,layer=low,juntura=false": {
@@ -145,15 +145,15 @@
       "y": 90
     },
     "facing=south,open=true,side=right,layer=low,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_low",
+      "model": "devilrpg:block/porton_right_abierto_low_juntura",
       "y": 270
     },
     "facing=south,open=true,side=right,layer=mid,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_mid",
+      "model": "devilrpg:block/porton_right_abierto_mid_juntura",
       "y": 270
     },
     "facing=south,open=true,side=right,layer=high,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_high",
+      "model": "devilrpg:block/porton_right_abierto_high_juntura",
       "y": 270
     },
     "facing=south,open=true,side=right,layer=low,juntura=false": {
@@ -193,15 +193,15 @@
       "y": 270
     },
     "facing=east,open=true,side=left,layer=low,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_low",
+      "model": "devilrpg:block/porton_left_abierto_low_juntura",
       "y": 0
     },
     "facing=east,open=true,side=left,layer=mid,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_mid",
+      "model": "devilrpg:block/porton_left_abierto_mid_juntura",
       "y": 0
     },
     "facing=east,open=true,side=left,layer=high,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_high",
+      "model": "devilrpg:block/porton_left_abierto_high_juntura",
       "y": 0
     },
     "facing=east,open=true,side=left,layer=low,juntura=false": {
@@ -241,15 +241,15 @@
       "y": 0
     },
     "facing=east,open=true,side=right,layer=low,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_low",
+      "model": "devilrpg:block/porton_right_abierto_low_juntura",
       "y": 180
     },
     "facing=east,open=true,side=right,layer=mid,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_mid",
+      "model": "devilrpg:block/porton_right_abierto_mid_juntura",
       "y": 180
     },
     "facing=east,open=true,side=right,layer=high,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_high",
+      "model": "devilrpg:block/porton_right_abierto_high_juntura",
       "y": 180
     },
     "facing=east,open=true,side=right,layer=low,juntura=false": {
@@ -289,15 +289,15 @@
       "y": 180
     },
     "facing=west,open=true,side=left,layer=low,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_low",
+      "model": "devilrpg:block/porton_left_abierto_low_juntura",
       "y": 0
     },
     "facing=west,open=true,side=left,layer=mid,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_mid",
+      "model": "devilrpg:block/porton_left_abierto_mid_juntura",
       "y": 0
     },
     "facing=west,open=true,side=left,layer=high,juntura=true": {
-      "model": "devilrpg:block/porton_left_abierto_high",
+      "model": "devilrpg:block/porton_left_abierto_high_juntura",
       "y": 0
     },
     "facing=west,open=true,side=left,layer=low,juntura=false": {
@@ -337,15 +337,15 @@
       "y": 0
     },
     "facing=west,open=true,side=right,layer=low,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_low",
+      "model": "devilrpg:block/porton_right_abierto_low_juntura",
       "y": 180
     },
     "facing=west,open=true,side=right,layer=mid,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_mid",
+      "model": "devilrpg:block/porton_right_abierto_mid_juntura",
       "y": 180
     },
     "facing=west,open=true,side=right,layer=high,juntura=true": {
-      "model": "devilrpg:block/porton_right_abierto_high",
+      "model": "devilrpg:block/porton_right_abierto_high_juntura",
       "y": 180
     },
     "facing=west,open=true,side=right,layer=low,juntura=false": {

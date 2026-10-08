@@ -114,15 +114,11 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
      */
     public static final BooleanProperty JUNTURA = BooleanProperty.create("juntura");
 
-    /** El grosor de una hoja de canto (abierta): <b>2 píxeles</b> (1/8 de bloque), junto a su bisagra. */
-    private static final double GROSOR = 2.0D;
-
     /**
-     * Cuánto se mete la hoja abierta hacia dentro del paso, por la <b>normal</b> del muro: <b>8 píxeles</b> (medio
-     * bloque), que es lo que ocupaba de ancho al estar cerrada. Es lo que hace que al abrir se vea un <b>giro de 90°</b>
-     * de verdad y no una hoja que se queda en su sitio ✓.
+     * El <b>grosor</b> de una hoja: <b>2 píxeles</b> (1/8 de bloque). Cerrada mide lo que su celda; abierta es el canto
+     * del panel que ha girado 90° ✓.
      */
-    private static final double ABANICO = 8.0D;
+    private static final double GROSOR = 2.0D;
 
     public DoubleGateBlock(Properties properties) {
         super(properties);
@@ -149,40 +145,16 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
         return facing.getAxis() == Direction.Axis.X;
     }
 
-    /**
-     * <b>La forma del bloque: la geometría de la hoja abatida.</b>
-     * <p>
-     * Cerrada, la hoja está <b>tumbada en el plano de la pared</b> y ocupa toda su celda (16×16): el portón cierra el
-     * hueco del todo. Abierta, la hoja ha <b>abierto 90°</b> y se queda <b>de canto</b>: sólo sus {@value #GROSOR}
-     * píxeles pegados a la <b>bisagra</b>, que por eso se puede cruzar.
-     * <p>
-     * La bisagra está en el canto por el que la hoja toca la jamba: la hoja IZQUIERDA abate desde el lado negativo del
-     * eje de la pared y la DERECHA desde el positivo. En un portón doble las bisagras están <b>en los extremos</b> y las
-     * hojas se encuentran en el centro al cerrarse — de ahí que cada una mida media anchura exacta.
-     */
-    private static VoxelShape forma(Direction facing, PanelSide side, boolean abierto) {
-        boolean enX = ejeX(facing);
-        if (!abierto) {
-            return Shapes.block(); // cerrada: la celda entera -> el portón cierra el hueco del todo
-        }
-        // ABIERTA: LA HOJA HA GIRADO 90° Y QUEDA PERPENDICULAR AL MURO (6-oct-2026, y este era el fallo que reportó el
-        // jugador: *«al abrir la puerta no gira en uno de los lados y se pone abierta, sino que se queda en su lugar»*).
-        // Antes la hoja abierta seguía DENTRO DEL PLANO del muro (sólo más fina), así que no se veía ningún giro ✗.
-        // Ahora se mete en el paso por la NORMAL: `ABANICO` píxeles hacia dentro y sólo `GROSOR` de canto en la línea
-        // del muro, pegada a su bisagra (que está en el canto del extremo que le toca) ✓.
-        if (enX) {
-            // El muro corre en Z: la hoja se mete por X.
-            return side == PanelSide.LEFT ? Block.box(0.0D, 0.0D, 0.0D, ABANICO, 16.0D, GROSOR)
-                    : Block.box(0.0D, 0.0D, 16.0D - GROSOR, ABANICO, 16.0D, 16.0D);
-        }
-        // El muro corre en X: la hoja se mete por Z.
-        return side == PanelSide.LEFT ? Block.box(0.0D, 0.0D, 0.0D, GROSOR, 16.0D, ABANICO)
-                : Block.box(16.0D - GROSOR, 0.0D, 0.0D, 16.0D, 16.0D, ABANICO);
-    }
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return forma(state.getValue(FACING), state.getValue(SIDE), state.getValue(OPEN));
+        // LA SILUETA CON LA QUE SE PULSA ES LA CELDA ENTERA, SIEMPRE (6-oct-2026, lo pidió el jugador: *«la superficie
+        // donde hacer click es muy pequeña, tendría que ocupar toda la superficie de la puerta»*). Ésta es la forma que
+        // usa el juego para el **rayo del ratón** al apuntar y pulsar, así que con ella entera se acierta en cualquier
+        // punto de la puerta — también con el portón ABIERTO, que es cuando antes había que acertarle a un listón de
+        // {@value #GROSOR} píxeles ✗. La geometría fina de la hoja sigue estando en el MODELO (lo que se ve) y en
+        // {@link #getCollisionShape} (lo que bloquea).
+        return Shapes.block();
     }
 
     @Override

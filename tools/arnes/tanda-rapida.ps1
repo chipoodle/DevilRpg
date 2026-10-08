@@ -17,8 +17,9 @@ $MINUTOS = 3
 # la medida con sus avisos de rendicion: con -Conservar, la primera corrida deja el mundo ya migrado y las siguientes
 # miden el pueblo ASENTADO. La partida del jugador NO se toca (siempre se trabaja sobre la copia `run\world`).
 $Conservar = $false
+$MundoNuevo = $false
 $numeros = @()
-foreach ($a in $args) { if ("$a" -eq '-Conservar') { $Conservar = $true } else { $numeros += $a } }
+foreach ($a in $args) { if ("$a" -eq '-Conservar') { $Conservar = $true } elseif ("$a" -eq '-MundoNuevo') { $MundoNuevo = $true } else { $numeros += $a } }
 
 $arnes = 'src\main\java\com\chipoodle\devilrpg\debug\GuardHarness.java'
 if (-not (Test-Path $arnes)) { Write-Output 'ABORTADO: falta el arnes (copiar tools\arnes\GuardHarness.java)'; exit 1 }
@@ -34,11 +35,16 @@ if (-not (Test-Path $arnes)) { Write-Output 'ABORTADO: falta el arnes (copiar to
 # mundo cualquiera, y NUNCA se borra nada de `run\saves`.
 # =====================================================================================================================
 $guardadoDelJugador = 'run\saves\New World'
-if (-not (Test-Path "$guardadoDelJugador\level.dat")) {
+# MUNDO NUEVO (8-oct-2026): con -MundoNuevo la tanda NO copia nada de `run\saves` y deja que el servidor genere un mundo
+# limpio en `run\world`. Es la forma legitima de medir cuando no hay partida del jugador (o cuando se quiere un mundo
+# recien hecho a proposito) SIN tocar `run\saves` para nada ✓.
+if ($MundoNuevo) {
+    Write-Output '   (MUNDO NUEVO: se mide sobre un mundo generado; run\saves no se toca)'
+} elseif (-not (Test-Path "$guardadoDelJugador\level.dat")) {
     Write-Output 'ABORTADO: no existe el guardado del jugador en run\saves\New World.'
     Write-Output '  El arnes mide sobre una COPIA (run\world) y necesita ese origen. NO teclees nunca un Remove-Item'
-    Write-Output '  sobre run\saves: ahi vive la partida del jugador. Si quieres medir un mundo nuevo, crea el guardado'
-    Write-Output '  en el juego (o copia otro) y vuelve a lanzar la tanda.'
+    Write-Output '  sobre run\saves: ahi vive la partida del jugador. Si quieres medir un mundo nuevo, lanza la tanda'
+    Write-Output '  con -MundoNuevo (genera uno limpio y no toca run\saves).'
     exit 1
 }
 
@@ -47,10 +53,10 @@ foreach ($i in $numeros) {
     $vivos = (Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
         Where-Object { $_.CommandLine -match 'fml.modFolders|forgeserverdev' }).Count
     if ($vivos -gt 0) { Write-Output "ABORTADO en la corrida ${i}: $vivos servidor(es) vivo(s)"; exit 1 }
-    if (-not $Conservar -or -not (Test-Path run\world\level.dat)) {
+    if ($MundoNuevo -or -not $Conservar -or -not (Test-Path run\world\level.dat)) {
         # SOLO se borra la COPIA (run\world). `run\saves` no se toca jamas.
         Remove-Item run\world -Recurse -Force -ErrorAction SilentlyContinue
-        Copy-Item $guardadoDelJugador run\world -Recurse
+        if (-not $MundoNuevo) { Copy-Item $guardadoDelJugador run\world -Recurse }
     } else {
         Write-Output "   (mundo conservado: el pueblo ya no migra, se mide asentado)"
     }
