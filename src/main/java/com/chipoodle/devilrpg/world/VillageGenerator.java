@@ -7273,6 +7273,9 @@ public final class VillageGenerator {
         // portón (tres capas): sin esto el portón quedaba pegado a los troncos del muro sin marco, que es lo que se
         // veía. Se pone ADOQUÍN, como el resto de las columnas del muro, para que el portón se lea como una puerta en
         // su marco y no como tres bloques sueltos en un agujero ✓.
+        // lint:ok I9 porque esto NO añade construcción nueva que rehacer: las jambas son las MISMAS dos celdas que el
+        // muro ya levantaba a los lados de la entrada (aquí se fuerzan a adoquín), y `asegurarMuro` rehace la entrada
+        // entera en el latido, así que las partidas ya construidas lo reciben solas —idempotente— sin subir el trazado.
         Direction.Axis ejeMuro = ejeDelMuroEn(center, p);
         for (int lado : new int[] { -2, 2 }) {
             BlockPos jamba = ejeMuro == Direction.Axis.Z
