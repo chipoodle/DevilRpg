@@ -8534,6 +8534,14 @@ public final class VillageGenerator {
             if (estado.getValue(DoubleGateBlock.LAYER) != DoubleGateBlock.PanelLayer.LOW) {
                 continue;
             }
+            // Y SI EL JUGADOR ACABA DE ABRIRLO, SE LE DEJA EN PAZ (6-oct-2026, y este era el fallo que reportó:
+            // *«al darle click parece que va a abrirse e inclusive hace el sonido pero regresa a su posición original y
+            // no me deja pasar, cierra inmediatamente»*). El latido cierra el portón en cuanto no hay aldeanos cerca, y
+            // **corre cada tick**: la orden del jugador duraba un suspiro. Ahora, tras un click, el portón se queda como
+            // el jugador lo dejó durante {@link #TICKS_DE_CORTESIA} ✓.
+            if (tickDeUsoDelJugador(level, celda) > 0) {
+                continue;
+            }
             boolean hayPueblo = !level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
                     new net.minecraft.world.phys.AABB(celda).inflate(RADIO_DE_PASO)).isEmpty();
             if (estado.getValue(DoubleGateBlock.OPEN) != hayPueblo) {
@@ -8542,6 +8550,51 @@ public final class VillageGenerator {
                         hayPueblo ? "abro" : "cierro", celda.toShortString(), hayPueblo);
             }
         }
+    }
+
+    /**
+     * <b>Cuánto se le respeta al jugador el portón que acaba de abrir</b>: 10 segundos. Es el tiempo de cruzarlo, y
+     * mientras corre el <b>latido del pueblo no lo toca</b> — sin esto el portón se cerraba en el tick siguiente y el
+     * jugador no podía pasar ✓.
+     */
+    private static final int TICKS_DE_CORTESIA = 200;
+
+    /**
+     * Marca de tiempo (tick) del último uso del portón por el jugador, por celda. Es un mapa pequeño y de vida corta
+     * (una entrada por cada celda que alguien toque, y se van limpiando solas al leerse), así que no crece.
+     */
+    private static final java.util.Map<Long, Long> USO_DEL_JUGADOR = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * <b>El jugador ha usado este portón</b>: lo llama el bloque al recibir el click. A partir de aquí se le deja como
+     * él lo deje durante {@link #TICKS_DE_CORTESIA} ✓.
+     */
+    public static void marcarUsoDelJugador(ServerLevel level, BlockPos porton) {
+        USO_DEL_JUGADOR.put(porton.asLong(), level.getGameTime());
+    }
+
+    /** Si el jugador acaba de usar este portón, devuelve el tick del uso (0 si no). */
+    private static long tickDeUsoDelJugador(ServerLevel level, BlockPos celda) {
+        Long cuando = USO_DEL_JUGADOR.get(celda.asLong());
+        if (cuando == null) {
+            // La celda que se consulta es la de abajo de la hoja; el click puede haber sido en cualquiera de los tres
+            // pisos, así que se mira también hacia arriba (los pisos de la misma columna comparten decisión).
+            for (int dy = 1; dy <= 2; dy++) {
+                cuando = USO_DEL_JUGADOR.get(celda.offset(0, dy, 0).asLong());
+                if (cuando != null) {
+                    break;
+                }
+            }
+        }
+        if (cuando == null) {
+            return 0;
+        }
+        long pasados = level.getGameTime() - cuando;
+        if (pasados > TICKS_DE_CORTESIA) {
+            USO_DEL_JUGADOR.remove(celda.asLong());
+            return 0;
+        }
+        return cuando;
     }
 
     /**

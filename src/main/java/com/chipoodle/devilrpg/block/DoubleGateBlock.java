@@ -234,6 +234,13 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
         if (!level.isClientSide) {
             boolean abierto = !state.getValue(OPEN);
             abatir(level, pos, state, abierto);
+            // Y SE LE DICE AL LANDIDO QUE EL JUGADOR ACABA DE ABRIRLO, para que no lo cierre en el tick siguiente (es
+            // justo el fallo que reportó: «hace el sonido pero regresa a su posición original y no me deja pasar»). El
+            // pueblo abre y cierra los portones según si hay aldeanos cerca, y eso corre CADA TICK: sin este margen, la
+            // orden del jugador no dura nada ✓.
+            if (level instanceof net.minecraft.server.level.ServerLevel servidor) {
+                com.chipoodle.devilrpg.world.VillageGenerator.marcarUsoDelJugador(servidor, pos);
+            }
             // TRAZA (6-oct-2026): el jugador reportó que «cuando le doy click no se abre», y desde fuera no hay forma de
             // saber si el golpe llega al bloque o no. Esta línea lo dice: si sale cada vez que se pulsa, el click SÍ
             // llega y el problema está en el estado; si no sale NUNCA, el click no está llegando a este bloque.

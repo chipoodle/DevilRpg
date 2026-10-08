@@ -430,6 +430,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElClickDelPorton(level, pega);
         } else if (MEDIR_PASO_DEL_PORTON) {
             medirElPasoDelPorton(level);
+        } else if (MEDIR_SE_QUEDA_ABIERTO) {
+            medirSiSeQuedaAbierto(level, pega);
         } else if (MEDIR_AGUA) {
             medirElNado(level, pega);
         } else if (MEDIR_VELOCIDAD) {
@@ -2212,6 +2214,33 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * vea abierto ✗.
      */
     private static final boolean MEDIR_PASO_DEL_PORTON = false;
+
+    /**
+     * <b>¿SE QUEDA ABIERTO EL PORTÓN DESPUÉS DEL CLICK?</b> (6-oct-2026). El jugador reportó *«hace el sonido pero
+     * regresa a su posición original y no me deja pasar, cierra inmediatamente»*: el latido del pueblo lo cierra en
+     * cuanto no hay aldeanos cerca. Esto mide lo que de verdad importa — <b>si sigue abierto unos segundos después</b>
+     * de abrirlo a mano.
+     */
+    private static final boolean MEDIR_SE_QUEDA_ABIERTO = false;
+
+    private static void medirSiSeQuedaAbierto(ServerLevel level, FakePlayer pega) {
+        if (ticks != 400 && ticks != 420 && ticks != 500 && ticks != 600) {
+            return;
+        }
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        BlockPos celda = new BlockPos(CENTRO.getX() + 62, cota, CENTRO.getZ());
+        var estado = level.getBlockState(celda);
+        if (!(estado.getBlock() instanceof com.chipoodle.devilrpg.block.DoubleGateBlock)) {
+            return;
+        }
+        if (ticks == 400) {
+            // EL CLICK, por el mismo camino que el jugador.
+            estado.useWithoutItem(level, pega, new net.minecraft.world.phys.BlockHitResult(
+                    net.minecraft.world.phys.Vec3.atCenterOf(celda), net.minecraft.core.Direction.UP, celda, false));
+        }
+        boolean abierto = level.getBlockState(celda).getValue(com.chipoodle.devilrpg.block.DoubleGateBlock.OPEN);
+        DevilRpg.LOGGER.info("[Arnes] QUEDA t={}: el porton pulsado esta {}", ticks, abierto ? "ABIERTO" : "CERRADO");
+    }
 
     private static void medirElPasoDelPorton(ServerLevel level) {
         if (ticks != 400) {
