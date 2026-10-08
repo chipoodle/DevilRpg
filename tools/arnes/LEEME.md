@@ -1,28 +1,40 @@
 # Arnés de la aldea (servidor headless)
 
-## SI UN MODELO O UNA TEXTURA NO APARECEN: LA COPIA INCREMENTAL DE GRADLE (8-oct-2026)
+## EL LÍMITE DEL MOTOR QUE PARECÍA UN FICHERO PERDIDO: LA GEOMETRÍA VA DE −16 A 32 (8-oct-2026)
 
-Síntoma medido en la partida del jugador: el portón salía **con la textura de «modelo que falta»** (el damero negro y
-magenta) en una parte, esa parte **no se movía**, y el log del cliente decía:
+**Síntoma**: el portón salía con el **damero negro y magenta** (la textura de «modelo que falta») en una parte, esa
+parte **no se movía**, y el log del cliente decía:
 
 ```
 Unable to load model: 'devilrpg:block/porton_right_abierto_low' ... java.io.FileNotFoundException
 ```
 
-…**con el fichero presente en `build/resources/main`** ✓. La causa: `processResources` de Gradle es **incremental**, y si
-el contenido de `build/resources` se desincroniza (ficheros que Gradle cree copiados y no lo están), **el cliente hornea
-el blockstate nuevo con modelos viejos o ausentes** → el juego dibuja el modelo de reemplazo, que es un cubo con el
-damero ✗.
+…**con el fichero presente** en `build/resources/main` (mismo tamaño y mismo hash que el fuente ✓). El mensaje
+**miente**: no falta ningún fichero.
 
-**El remedio, y es lo que hay que hacer a la primera ante este síntoma** ✓:
+**LA CAUSA DE VERDAD** ✓: Minecraft **sólo admite geometría de modelo entre −16 y 32 píxeles** en cada eje
+(`BlockElement`). Un modelo cuyos `from`/`to` se salgan de ahí **se rechaza al leerlo**, y el juego lo reporta como si el
+recurso no existiera ✗. Los modelos del portón repartían la hoja abierta entre tres celdas encadenadas, y las partes 1 y
+2 llegaban a **−32 y −48** → 9 de los 12 modelos abiertos se rechazaban.
+
+**La prueba, y es lo que hay que mirar siempre** ✓: de los 12 modelos abiertos cargaba **sólo el de la bisagra**, que es
+el único cuyo `from.x` es **exactamente −16** (justo en el límite). Los tres que fallaban tenían `from.x` de −32 y −48.
+Cuando el reparto de fallos coincide **exactamente** con los que se salen del rango, no hay nada que buscar en el disco.
+
+**CÓMO SE COMPRUEBA, en un segundo y sin abrir el juego** ✓:
 
 ```powershell
-Remove-Item 'build\resources\main\assets\devilrpg' -Recurse -Force
-.\gradlew.bat processResources
+python -c "import json,glob;
+[print('FUERA',p,e[k]) for p in glob.glob(r'src\main\resources\assets\devilrpg\models\block\*.json')
+ for e in json.load(open(p,encoding='utf-8')).get('elements',[])
+ for k in ('from','to') if min(e[k]) < -16 or max(e[k]) > 32]"
 ```
 
-Y se comprueba que el blockstate **no nombre ningún modelo que no esté** (24 modelos, 96 variantes, 0 faltas). Es un
-directorio de **salida de compilación**: se borra y se regenera sin riesgo. **Nunca** se toca `run\saves` para esto.
+**Y DOS TRAMPAS DEL ENTORNO que costaron tiempo** ✓:
+- **`gradlew compileJava` NO copia los recursos.** Eso lo hace **`processResources`** (que sí corre dentro de `runClient`
+  y de `classes`). Si se tocan modelos o texturas y sólo se compila, **el build se queda con los viejos** ✗.
+- **Gradle copia conservando la fecha del origen** en algunos casos, así que **la fecha de un fichero del build no
+  prueba cuándo se copió**. Para eso está la hora del commit.
 
 ## REGLA DE ORO · `run\saves` ES LA PARTIDA DEL JUGADOR (8-oct-2026)
 

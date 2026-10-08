@@ -54,25 +54,39 @@ def caja_cerrada(parte):
 
 
 def caja_abierta(parte):
-    """El trozo del panel largo que dibuja esta celda, saliendose de su propia celda hacia la normal (-X)."""
-    x2 = -16.0 * parte
-    x1 = x2 - 16.0
-    z1 = -16.0 * parte
-    return (x1, x2, z1, z1 + GROSOR)
+    """LA PUERTA ABIERTA: UN SOLO PANEL DE 3 BLOQUES, DIBUJADO POR LA CELDA DE LA BISAGRA.
+
+    Y AQUÍ ESTÁ EL LÍMITE DEL MOTOR QUE COSTÓ UNA TARDE (8-oct-2026): Minecraft **sólo admite geometría entre -16 y
+    32 píxeles** en cada eje (`BlockElement`). La versión anterior repartía el panel entre las tres celdas, encadenadas,
+    y las partes 1 y 2 llegaban a **-32 y -48** -> el juego **rechazaba el modelo** y lo reportaba como
+    «FileNotFoundException» (mensaje engañoso: el fichero estaba ahí) ✗. Medido en la partida del jugador: de los 12
+    modelos abiertos cargaba **sólo el de la bisagra**, que es el único cuyo `from.x` es exactamente **-16** ✓.
+
+    Así que ahora **una sola celda dibuja la puerta entera**, de -16 a 32 = 48 píxeles = **3 bloques** ✓, y las otras dos
+    **no dibujan nada** al abrirse. Resultado: en el hueco se ve **UNA sola puerta girada de 3 bloques**, que es lo que
+    pidió el jugador (*«debería ser UNA sola puerta abierta, aunque se abra ocupando 3 bloques»*) ✓.
+    """
+    if parte != 0:
+        return None  # las celdas 1 y 2 no dibujan nada con el portón abierto: la puerta es una sola pieza
+    return (-16.0, 32.0, 0.0, GROSOR)
 
 
 def escribe_modelo(nombre, caja, u0, u1, v0, v1):
-    x1, x2, z1, z2 = caja
-    caras = {}
-    for cara in ('up', 'down', 'north', 'south', 'east', 'west'):
-        if cara in ('east', 'west'):
-            caras[cara] = {'uv': [0, v0, 16, v1], 'texture': '#all'}
-        else:
-            caras[cara] = {'uv': [u0, v0, u1, v1], 'texture': '#all'}
+    # caja = None -> el modelo NO dibuja nada (la celda está abierta pero la puerta entera la dibuja la bisagra).
+    elementos = []
+    if caja is not None:
+        x1, x2, z1, z2 = caja
+        caras = {}
+        for cara in ('up', 'down', 'north', 'south', 'east', 'west'):
+            if cara in ('east', 'west'):
+                caras[cara] = {'uv': [0, v0, 16, v1], 'texture': '#all'}
+            else:
+                caras[cara] = {'uv': [u0, v0, u1, v1], 'texture': '#all'}
+        elementos.append({'from': [x1, 0, z1], 'to': [x2, 16, z2], 'faces': caras})
     modelo = {
         'credit': 'DevilRpg - porton doble abatible del muro (roble oscuro con flejes de hierro)',
         'textures': {'all': TEX},
-        'elements': [{'from': [x1, 0, z1], 'to': [x2, 16, z2], 'faces': caras}],
+        'elements': elementos,
     }
     with open(os.path.join(RAIZ_MODELOS, nombre + '.json'), 'w', encoding='utf-8') as f:
         json.dump(modelo, f, indent=2)
@@ -116,7 +130,7 @@ def main():
         json.dump({'variants': variantes}, f, indent=2)
     print('%d variantes' % len(variantes))
     print('CERRADA: cada celda llena la suya con su tercio de textura')
-    print('ABIERTA: panel encadenado -> parte 0: x -16..0 | parte 1: x -32..-16 | parte 2: x -48..-32')
+    print('ABIERTA: UNA sola puerta de 3 bloques (x -16..32) dibujada por la BISAGRA; las celdas 1 y 2 no dibujan')
 
 
 if __name__ == '__main__':
