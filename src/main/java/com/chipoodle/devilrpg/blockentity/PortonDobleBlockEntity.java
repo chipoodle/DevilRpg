@@ -58,18 +58,6 @@ public class PortonDobleBlockEntity extends BlockEntity {
      */
     private float progresoDelGiroAnterior;
 
-    /**
-     * <b>¿Ha corrido ya el ticker de esta entidad en este lado?</b> Sirve para una sola cosa, y es la que evita el
-     * parpadeo al final del giro: mientras el portón está CERRADO lo dibuja su <b>modelo</b> (el estado cerrado no se
-     * toca: se ve bien), y dibujarlo además el renderizador sería dibujar <b>dos veces la misma cara en el mismo
-     * píxel</b> (parpadeo). Pero al terminar de CERRARSE el progreso vuelve a 0 y el estado está cerrado: con sólo
-     * mirar el progreso, el renderizador apagaría su hoja <b>el mismo tick</b> en que el modelo vuelve a dibujar su
-     * posición de reposo, y en ese tick la hoja estaría ya en su sitio… salvo por la interpolación del cliente
-     * (`partialTick`), que la deja a medio camino ✗. Con esta bandera el renderizador <b>sólo se retira si de verdad no
-     * ha llegado a girar</b> (recién cargado el trozo), que es cuando el modelo ya está puesto y no hay nada que
-     * interpolar ✓.
-     */
-    private boolean tickeada;
 
     public PortonDobleBlockEntity(BlockPos pos, BlockState state) {
         super(ModEntityBlocks.PORTON_DOBLE_ENTITY_BLOCK.get(), pos, state);
@@ -88,7 +76,6 @@ public class PortonDobleBlockEntity extends BlockEntity {
 
     /** El ticker del portón: mueve el giro hacia donde dice el estado del bloque. Vale para cliente y servidor. */
     public void tick(@NotNull BlockState estado) {
-        this.tickeada = true;
         this.progresoDelGiroAnterior = this.progresoDelGiro;
         float objetivo = estado.getValue(DoubleGateBlock.OPEN) ? 1.0F : 0.0F;
         if (this.progresoDelGiro < objetivo) {
@@ -109,9 +96,6 @@ public class PortonDobleBlockEntity extends BlockEntity {
     }
 
     /** Para el renderizador: no hay nada que dibujar mientras el portón esté cerrado y no haya llegado a girar. */
-    public boolean estaEnReposo() {
-        return !this.tickeada;
-    }
 
     /**
      * <b>Dónde está la bisagra</b>, en coordenadas de mundo, y con la orientación del portón.

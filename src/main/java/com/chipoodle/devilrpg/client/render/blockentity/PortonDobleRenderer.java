@@ -73,6 +73,22 @@ public class PortonDobleRenderer implements BlockEntityRenderer<PortonDobleBlock
      */
     private static final float CENTRO = 0.5F - GROSOR / 2.0F;
 
+    /**
+     * <b>DÓNDE ESTÁ EL EJE DE GIRO, medido por la NORMAL: en el CANTO del marco</b>, que es la cara de la hoja por la
+     * que abre ({@code CENTRO + GROSOR}), y no en el centro del muro ni en la cara de fuera.
+     * <p>
+     * <b>Y esto era un fallo que se veía en el juego</b> ✗ (lo describió el jugador: *«el eje de la puerta está justo
+     * en medio del pilar… cuando se abre atraviesa una parte del pilar»*). Con el eje en {@code n = 0} —la cara del
+     * muro—, al girar 90° el canto de la hoja aterriza en {@code w = −0,44…−0,56}, o sea <b>medio bloque DENTRO del
+     * pilar</b> ✓ (por eso parecía que el eje estaba en medio del pilar: la hoja abierta se metía allí). Poniéndolo en
+     * el canto, el canto de la hoja queda en {@code w = 0…0,125}: <b>pegado al marco y sin cruzar ni un píxel</b> ✓.
+     * <p>
+     * Por la <b>normal</b>, en cambio, va donde tiene que ir: la hoja se queda <b>centrada en el grosor del marco</b>
+     * (lo pidió el jugador: *«en otro eje horizontal sí debe ir en el centro, en medio del marco, para que siempre rote
+     * hacia fuera o hacia adentro en el mismo lugar»*) — eso lo da {@link #CENTRO}, que es dónde está la hoja cerrada.
+     */
+    private static final float EJE = CENTRO + GROSOR;
+
     public PortonDobleRenderer(BlockEntityRendererProvider.Context contexto) {
         // No hay nada que sacar del contexto: la textura va atada por el render type y la geometría se calcula.
     }
@@ -95,16 +111,21 @@ public class PortonDobleRenderer implements BlockEntityRenderer<PortonDobleBlock
             return;
         }
         boolean abierto = estadoDeLaBisagra.getValue(DoubleGateBlock.OPEN);
-        // EL REPOSO LO DIBUJA EL MODELO: cerrado y ya parado, la hoja la pinta su modelo (el estado cerrado se ve bien
-        // y no se toca) y dibujarla aquí otra vez sería pintar la misma cara dos veces en el mismo píxel (parpadeo) ✗.
-        // En cuanto el ticker mueve el progreso manda este renderizador, también al final del cierre, porque es el
-        // único que sabe dónde está la hoja ENTRE dos ticks ✓.
-        if (!abierto && porton.estaEnReposo()) {
+        // EL REPOSO LO DIBUJA EL MODELO, y la condición es **el progreso**, no una bandera interna: cerrado y con el
+        // giro en cero, la hoja la pinta su modelo (el estado cerrado se ve bien y no se toca) y dibujarla aquí otra vez
+        // sería pintar la misma cara dos veces en el mismo píxel (parpadeo) ✗. En cuanto el giro se mueve manda este
+        // renderizador, también al final del cierre, porque es el único que sabe dónde está la hoja ENTRE dos ticks ✓.
+        // Antes esto miraba una bandera (`PortonDobleBlockEntity.estaEnReposo`, que sólo se pone en el primer tick): con
+        // ella, entre que la entidad existe y su primer tick hay un momento en que no dibuja NI el modelo NI esto, y el
+        // portón **parpadea** (lo reportó el jugador: *«la primera vez que abro como que parpadea»*) ✗. El progreso, en
+        // cambio, es el mismo dato del que sale el dibujo: cuando vale cero no hay nada que enseñar y punto ✓.
+        float progreso;
+        if (!abierto && porton.getProgresoDelGiro() <= 0.0F && porton.getProgresoAnteriorDelGiro() <= 0.0F) {
             return;
         }
         // PROGRESO INTERPOLADO: el mundo se dibuja muchas más veces que los 20 ticks por segundo, así que sin rellenar
         // lo que falta entre el tick anterior y éste el giro se vería a saltos de 7,5° ✗.
-        float progreso = porton.getProgresoAnteriorDelGiro()
+        progreso = porton.getProgresoAnteriorDelGiro()
                 + (porton.getProgresoDelGiro() - porton.getProgresoAnteriorDelGiro()) * partialTick;
 
         // LOS DOS EJES. El del muro es el PERPENDICULAR al que mira el portón: si mira al este/oeste, el muro corre en
@@ -219,12 +240,16 @@ public class PortonDobleRenderer implements BlockEntityRenderer<PortonDobleBlock
     }
 
     /**
-     * Un punto {@code (w, n, y)} del sistema de la puerta, <b>girado</b> y llevado a coordenadas del mundo relativas al
-     * bloque de la bisagra (que es el origen que da el juego a este renderizador).
+     * Un punto {@code (w, n, y)} del sistema de la puerta, <b>girado sobre el eje</b> y llevado a coordenadas del mundo
+     * relativas al bloque de la bisagra (que es el origen que da el juego a este renderizador).
+     * <p>
+     * El giro es sobre la recta {@code (w = 0, n = EJE)}, así que primero se lleva el punto a esa recta ({@code dn}),
+     * se gira, y se devuelve — no girar sobre {@code n = 0}, que es lo que metía la hoja dentro del pilar ✗.
      */
     private static float[] vertice(float[] ejes, float cos, float sin, float w, float n, float y) {
-        float wG = w * cos + n * sin;
-        float nG = -w * sin + n * cos;
+        float dn = n - EJE;
+        float wG = w * cos + dn * sin;
+        float nG = -w * sin + dn * cos + EJE;
         return new float[] { ejes[0] * wG + ejes[2] * nG, y, ejes[1] * wG + ejes[3] * nG };
     }
 
