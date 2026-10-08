@@ -6455,6 +6455,57 @@ trazado un camino **a través de una puerta cerrada**, y eso no pasa ✗.
 - Y el instrumento pasó de marcar **`TAPADOS 17`** (falso) a **`TAPADOS 0`**: pedía aire en la capa del medio, que era
   la regla del portón de valla de una hoja; con el portón de tres capas la del medio **es una hoja** ✓.
 
+### I234 · EL DAMERO ERA EL LÍMITE DEL MOTOR (−16 a 32), Y LA PUERTA ABIERTA ES UNA PIEZA
+
+**Síntoma** (lo reportó el jugador): el portón salía con el **damero negro y magenta** —la textura de «modelo que
+falta»— en una parte, y esa parte **no se movía**; el log del cliente decía `Unable to load model:
+'devilrpg:block/porton_right_abierto_low' … java.io.FileNotFoundException` **con el fichero presente**, mismo tamaño y
+mismo hash que el fuente ✓. **El mensaje miente: no faltaba ningún fichero.**
+
+**LA CAUSA** ✓: Minecraft **sólo admite geometría de modelo entre −16 y 32 píxeles** en cada eje (`BlockElement`). Los
+modelos repartían la hoja abierta entre las tres celdas, encadenadas, y las partes 1 y 2 llegaban a **−32 y −48** → el
+motor **rechaza** el modelo y lo reporta como recurso inexistente ✗.
+
+**La prueba, y es lo que hay que mirar** ✓: de los 12 modelos abiertos cargaba **sólo el de la bisagra**, el único cuyo
+`from.x` es **exactamente −16** (el límite). Los 9 que fallaban estaban en −32 y −48 ✓. Cuando el reparto de fallos
+coincide **exactamente** con los que se salen del rango, no hay nada que buscar en el disco.
+
+**Y dos trampas del entorno** ✓: **`gradlew compileJava` NO copia los recursos** (eso es `processResources`, que sí
+corre dentro de `runClient`); y Gradle copia **conservando la fecha del origen** en algunos casos, así que la fecha de un
+fichero del build no prueba cuándo se copió. La comprobación de rango está en `tools/arnes/LEEME.md`: un segundo, y sin
+abrir el juego.
+
+**ARREGLO** ✓ (`tools/arnes/hacer_modelos_del_porton.py`): **una sola celda —la bisagra— dibuja la puerta entera**, de
+**−16 a 32 = 48 píxeles = 3 bloques**, y las otras dos **no dibujan nada** con el portón abierto ✓. Y esa cara grande
+usa la **textura ENTERA** (`u 0..16`), no el tercio de su celda: con el tercio salía **una sola puerta estirada a lo
+largo de los tres bloques** (lo reportó el jugador: *«su imagen es de una sola puerta vanilla extendida en 3 bloques»*
+✗); con la textura entera los tres bloques del panel enseñan sus tres paneles de puerta, igual que cerrado ✓.
+
+**MEDIDO** ✓: 24 modelos, **0 con geometría fuera de rango**, 9 sin geometría (las celdas que no dibujan al abrir),
+96 variantes y **0 referencias rotas**; el panel de la bisagra `[-16, 0, 0] → [32, 16, 2]` = 3 bloques ✓.
+
+**LO QUE QUEDA, y es geometría, no un fallo** ✗: como la ventana del motor es **−16 … 32** y no **0 … 48**, el panel
+queda **1 bloque a un lado del muro y 2 al otro**: **cruza el muro** en vez de abrirse entero hacia un lado (lo reportó
+el jugador: *«se queda en medio del marco, no se abre totalmente a lado»*). Con geometría de bloque **no hay forma** de
+tener 3 bloques **enteramente a un lado**. Las salidas son: (a) **2 bloques** hacia un lado; (b) que el propio portón
+**ponga un bloque más** en la celda de al lado al abrirse (**3 bloques a un lado** ✓, coste: colocar y quitar 1 bloque,
+con estado propio); o (c) una **entidad de bloque con renderizador**, que además daría el giro **suave**.
+
+### I233 · EL PORTÓN ABIERTO ES UNA SOLA PIEZA Y SE PULSA EN TODA SU SUPERFICIE
+
+**Lo reportó el jugador**: *«cuando se abre se ve en tres como si fueran 3 puertas que quedan apiladas… debería ser UNA
+sola puerta abierta»* y *«la superficie donde hacer click es muy pequeña, tendría que ocupar toda la superficie»*.
+
+**Y el hallazgo de fondo** ✓: **tres hojas son tres puertas**. Una puerta de 3 de ancho que gire como una pieza tiene que
+salir del plano del muro, y el sitio donde va a parar está **fuera** de las 3 celdas del portón, así que cada hoja se
+dibujaba a sí misma y se veían tres ✗.
+
+**ARREGLO** ✓: la **silueta con la que se pulsa** (`DoubleGateBlock.getShape`) pasa a ser **la celda entera siempre**
+—también abierto—, que es la forma que usa el juego para el rayo del ratón ✓; la colisión sigue vacía al abrir ✓. Y el
+modelo abierto pasa a ser **una sola pieza** (ver I234, que es donde se cerró del todo).
+
+**MEDIDO** ✓: `forma = AABB[0,0,0] -> [1,1,1]` también con el portón abierto, y `SIN COLISION` ✓.
+
 ### I232 · LA HOJA ABIERTA NO GIRABA: SEGUÍA EN EL PLANO DEL MURO
 
 **Lo reportó el jugador** (6-oct-2026), y con la lógica ya funcionando: *«funciona correctamente cuando abro puedo

@@ -100,14 +100,19 @@ def main():
         for piso, (v0, v1) in PISOS.items():
             sufijo = '_juntura' if juntura == 'true' else ''
             escribe_modelo('porton_%s_cerrado_%s%s' % (lado, piso, sufijo), caja_cerrada(parte), u0, u1, v0, v1)
-            escribe_modelo('porton_%s_abierto_%s%s' % (lado, piso, sufijo), caja_abierta(parte), u0, u1, v0, v1)
+            # ABIERTA: la puerta entera la dibuja la bisagra, así que ese panel de 3 bloques tiene que enseñar **la
+            # textura ENTERA** (u 0..16), no el tercio de su celda. Con el tercio salía **una sola puerta estirada a lo
+            # largo de los tres bloques** (lo reportó el jugador: *«su imagen es de una sola puerta vanilla extendida en
+            # 3 bloques»* ✗). Con la textura entera, cada bloque del panel enseña su panel de puerta y los tres se ven
+            # igual que con el portón cerrado ✓. El tercio de abajo/arriba (v) sí es el del piso que le toca.
+            escribe_modelo('porton_%s_abierto_%s%s' % (lado, piso, sufijo), caja_abierta(parte), 0.0, 16.0, v0, v1)
             escritos += 2
     # El cuarto estado (derecha + juntura) no lo usa el generador, pero el blockstate tiene que tener modelo para
     # TODOS los estados posibles o el cliente avisa: se le da el del extremo.
     for piso, (v0, v1) in PISOS.items():
         u0, u1 = TROZOS[2]
         escribe_modelo('porton_right_cerrado_%s_juntura' % piso, caja_cerrada(2), u0, u1, v0, v1)
-        escribe_modelo('porton_right_abierto_%s_juntura' % piso, caja_abierta(2), u0, u1, v0, v1)
+        escribe_modelo('porton_right_abierto_%s_juntura' % piso, caja_abierta(2), 0.0, 16.0, v0, v1)
         escritos += 2
     print('%d modelos escritos' % escritos)
 
