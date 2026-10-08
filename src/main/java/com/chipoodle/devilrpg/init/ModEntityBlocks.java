@@ -34,4 +34,14 @@ public final class ModEntityBlocks {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BloomingSanctuaryBlockEntity>> BLOOMING_SANCTUARY_ENTITY_BLOCK = BLOCK_ENTITIES.register("bloomingsanctuaryentityblock",
             () -> BlockEntityType.Builder.of(BloomingSanctuaryBlockEntity::new, ModBlocks.BLOOMING_SANCTUARY_BLOCK.get()).build(null));
+
+    /**
+     * <b>La entidad del portón doble de la aldea.</b> Es la única que no existe para hacer nada en el mundo, sino para
+     * <b>dibujarse</b>: guarda el progreso del giro de las hojas y lo mueve cada tick, y el renderizador del cliente
+     * dibuja con él la puerta entera (que con un modelo de bloque no cabe: la geometría está encerrada entre −16 y 32
+     * píxeles, I234). El tipo se registra para el bloque del portón, pero la entidad se crea <b>sólo en la celda de la
+     * bisagra</b> (`DoubleGateBlock.newBlockEntity`): con nueve entidades el portón se dibujaría nueve veces.
+     */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PortonDobleBlockEntity>> PORTON_DOBLE_ENTITY_BLOCK = BLOCK_ENTITIES.register("portondobleentityblock",
+            () -> BlockEntityType.Builder.of(PortonDobleBlockEntity::new, ModBlocks.PORTON_DOBLE_BLOCK.get()).build(null));
 }

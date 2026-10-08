@@ -13,11 +13,13 @@ import com.chipoodle.devilrpg.client.gui.hud.VillageHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.SkillsIconHudOverlay;
 import com.chipoodle.devilrpg.client.gui.hud.StaminaBarHudOverlay;
 import com.chipoodle.devilrpg.client.gui.screen.MountablePetScreen;
+import com.chipoodle.devilrpg.client.render.blockentity.PortonDobleRenderer;
 import com.chipoodle.devilrpg.client.render.entity.model.*;
 import com.chipoodle.devilrpg.client.render.entity.renderer.*;
 import com.chipoodle.devilrpg.entity.FrostVexEntity;
 import com.chipoodle.devilrpg.init.ModContainers;
 import com.chipoodle.devilrpg.init.ModEntities;
+import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.VexRenderer;
 import net.minecraft.world.entity.EntityType;
@@ -99,6 +101,10 @@ public final class ClientModRegistryEventSubscriber {
         // sobrescribe el de vanilla). Dentro, el que no es guardia se dibuja con el renderer de vanilla, así que a los
         // aldeanos normales no les cambia nada; a los guardias se les ve la armadura y la espada/arco.
         event.registerEntityRenderer(EntityType.VILLAGER, GuardVillagerRenderer::new);
+        // EL PORTÓN DOBLE DE LA ALDEA: su entidad de bloque sólo existe para dibujarse (la puerta abierta es de 3
+        // bloques enteros y la geometría de un modelo de bloque no llega a eso, I234), así que sin esta línea el
+        // portón abierto no se vería: sus modelos van con `"elements": []` a propósito ✓.
+        event.registerBlockEntityRenderer(ModEntityBlocks.PORTON_DOBLE_ENTITY_BLOCK.get(), PortonDobleRenderer::new);
         //ItemBlockRenderTypes.setRenderLayer(ModBlocks.SOUL_VINE_BLOCK.get(), RenderType.translucent());
         //event.registerEntityRenderer(ModEntityTypes.WISP.get(), SoulWispHumanoidRenderer::new);
 

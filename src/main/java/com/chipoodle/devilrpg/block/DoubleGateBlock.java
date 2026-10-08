@@ -1,6 +1,8 @@
 package com.chipoodle.devilrpg.block;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.blockentity.PortonDobleBlockEntity;
+import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -12,19 +14,23 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -51,7 +57,7 @@ import org.jetbrains.annotations.Nullable;
  * ({@link #playerWillDestroy}), para que no queden hojas colgando en el aire — que es justo el fallo que el pueblo
  * repondría mal.
  */
-public class DoubleGateBlock extends HorizontalDirectionalBlock {
+public class DoubleGateBlock extends HorizontalDirectionalBlock implements EntityBlock {
 
     public static final MapCodec<DoubleGateBlock> CODEC = simpleCodec(DoubleGateBlock::new);
 
@@ -284,5 +290,40 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
     @Override
     protected BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    /**
+     * <b>La entidad del portón va SÓLO EN LA CELDA DE LA BISAGRA</b> (el giro: ver {@link PortonDobleBlockEntity}).
+     * <p>
+     * Las nueve celdas son el MISMO bloque, así que el juego pediría una entidad en cada una: nueve entidades, nueve
+     * progresos y el portón dibujado <b>nueve veces</b>, girando sobre nueve bisagras distintas ✗. La bisagra es la
+     * celda que construye `VillageGenerator.sellarLasCeldasDelPorton` con {@code SIDE == LEFT && !JUNTURA && LAYER ==
+     * LOW} (la de fuera del lado izquierdo, la primera del barrido), y desde ella —con el {@code FACING}— se deducen
+     * las otras ocho, que es lo que hace el renderizador.
+     */
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(@NotNull BlockPos pos, @NotNull BlockState state) {
+        if (!PortonDobleBlockEntity.esLaBisagra(state)) {
+            return null; // las otras ocho celdas no llevan entidad: la puerta entera la dibuja la de la bisagra
+        }
+        return ModEntityBlocks.PORTON_DOBLE_ENTITY_BLOCK.get().create(pos, state);
+    }
+
+    /**
+     * El ticker va en <b>los dos lados</b> (a diferencia de las vids del mod, que sólo laten en el servidor): el
+     * progreso del giro lo necesita el CLIENTE para dibujar, y el estado del bloque ({@code OPEN}) le llega solo por la
+     * red, así que no hace falta ningún paquete nuevo. En el servidor se mueve también, pero no se usa para nada: la
+     * colisión abierta sigue vacía y eso lo decide el estado, no el progreso.
+     */
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NotNull BlockState state,
+            @NotNull BlockEntityType<T> type) {
+        return (nivel, pos, estado, entidad) -> {
+            if (entidad instanceof PortonDobleBlockEntity porton) {
+                porton.tick(estado);
+            }
+        };
     }
 }

@@ -54,7 +54,7 @@ def caja_cerrada(parte):
 
 
 def caja_abierta(parte):
-    """LA PUERTA ABIERTA: UN SOLO PANEL DE 3 BLOQUES, DIBUJADO POR LA CELDA DE LA BISAGRA.
+    """LA PUERTA ABIERTA YA NO LA DIBUJA NINGÚN MODELO: LA DIBUJA EL RENDERIZADOR (9-oct-2026).
 
     Y AQUÍ ESTÁ EL LÍMITE DEL MOTOR QUE COSTÓ UNA TARDE (8-oct-2026): Minecraft **sólo admite geometría entre -16 y
     32 píxeles** en cada eje (`BlockElement`). La versión anterior repartía el panel entre las tres celdas, encadenadas,
@@ -62,13 +62,21 @@ def caja_abierta(parte):
     «FileNotFoundException» (mensaje engañoso: el fichero estaba ahí) ✗. Medido en la partida del jugador: de los 12
     modelos abiertos cargaba **sólo el de la bisagra**, que es el único cuyo `from.x` es exactamente **-16** ✓.
 
-    Así que ahora **una sola celda dibuja la puerta entera**, de -16 a 32 = 48 píxeles = **3 bloques** ✓, y las otras dos
-    **no dibujan nada** al abrirse. Resultado: en el hueco se ve **UNA sola puerta girada de 3 bloques**, que es lo que
-    pidió el jugador (*«debería ser UNA sola puerta abierta, aunque se abra ocupando 3 bloques»*) ✓.
+    Después se hizo que **una sola celda (la bisagra)** dibujara la puerta entera, de -16 a 32 = 48 píxeles = 3 bloques.
+    Pero -16..32 **no es 0..48**: la celda que dibuja está en el MEDIO de su tramo, así que el panel quedaba **1 bloque
+    a un lado del muro y 2 al otro** -> **cruzaba el muro** en vez de abrirse entero hacia un lado (lo reportó el
+    jugador: *«se queda en medio del marco, no se abre totalmente a lado»*) ✗. Con geometría de bloque **no hay forma**
+    de tener 3 bloques enteramente a un lado (I234).
+
+    ASÍ QUE EL ESTADO ABIERTO NO DIBUJA NADA, a propósito: la puerta abierta la dibuja el renderizador de la entidad de
+    bloque (`PortonDobleBlockEntity` + `PortonDobleRenderer`), que sí puede ponerla entera de 3 bloques hacia un lado y
+    además girarla **interpolada** (el giro suave que pidió el jugador: *«que gire 90° sobre su bisagra de forma
+    suave»*) ✓. Si estos modelos dibujaran algo, el portón saldría DOS VECES: una con el modelo viejo, cruzando el
+    muro, y otra con la hoja girada ✗.
+
+    El estado CERRADO se queda **exactamente** como estaba: se ve bien y no se toca.
     """
-    if parte != 0:
-        return None  # las celdas 1 y 2 no dibujan nada con el portón abierto: la puerta es una sola pieza
-    return (-16.0, 32.0, 0.0, GROSOR)
+    return None  # `"elements": []` en TODAS las celdas abiertas: la puerta abierta la dibuja el renderizador
 
 
 def escribe_modelo(nombre, caja, u0, u1, v0, v1):
@@ -100,11 +108,9 @@ def main():
         for piso, (v0, v1) in PISOS.items():
             sufijo = '_juntura' if juntura == 'true' else ''
             escribe_modelo('porton_%s_cerrado_%s%s' % (lado, piso, sufijo), caja_cerrada(parte), u0, u1, v0, v1)
-            # ABIERTA: la puerta entera la dibuja la bisagra, así que ese panel de 3 bloques tiene que enseñar **la
-            # textura ENTERA** (u 0..16), no el tercio de su celda. Con el tercio salía **una sola puerta estirada a lo
-            # largo de los tres bloques** (lo reportó el jugador: *«su imagen es de una sola puerta vanilla extendida en
-            # 3 bloques»* ✗). Con la textura entera, cada bloque del panel enseña su panel de puerta y los tres se ven
-            # igual que con el portón cerrado ✓. El tercio de abajo/arriba (v) sí es el del piso que le toca.
+            # ABIERTA: `caja_abierta` devuelve None -> el modelo se escribe con `"elements": []`, o sea que NO dibuja
+            # nada. La puerta abierta la dibuja el renderizador de la entidad de bloque (ver la nota de arriba): es el
+            # único sitio donde cabe entera de 3 bloques hacia un lado y donde puede girar interpolada.
             escribe_modelo('porton_%s_abierto_%s%s' % (lado, piso, sufijo), caja_abierta(parte), 0.0, 16.0, v0, v1)
             escritos += 2
     # El cuarto estado (derecha + juntura) no lo usa el generador, pero el blockstate tiene que tener modelo para
@@ -135,7 +141,7 @@ def main():
         json.dump({'variants': variantes}, f, indent=2)
     print('%d variantes' % len(variantes))
     print('CERRADA: cada celda llena la suya con su tercio de textura')
-    print('ABIERTA: UNA sola puerta de 3 bloques (x -16..32) dibujada por la BISAGRA; las celdas 1 y 2 no dibujan')
+    print('ABIERTA: los modelos van con elements=[] (no dibujan NADA): la puerta abierta la dibuja el renderizador')
 
 
 if __name__ == '__main__':
