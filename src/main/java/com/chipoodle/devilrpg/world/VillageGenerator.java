@@ -7226,7 +7226,13 @@ public final class VillageGenerator {
         boolean muroEnZ = orden.get(0).getZ() != orden.get(1).getZ();
         orden.sort(java.util.Comparator.comparingInt(c -> muroEnZ ? c.getZ() : c.getX()));
         Direction facingPorton = muroEnZ ? Direction.EAST : Direction.SOUTH;
-        DoubleGateBlock.PanelSide[] lados = { DoubleGateBlock.PanelSide.LEFT, DoubleGateBlock.PanelSide.LEFT,
+        // LAS BISAGRAS VAN EN LOS EXTREMOS EXTERIORES DEL PORTÓN ENTERO, no en el canto de cada celda (6-oct-2026, y
+        // este era el fallo de «no se puede pasar»). Medido: con el portón abierto, la caja de colisión salía
+        // `x 0.00 + 0.13` en las TRES celdas — o sea las tres hojas se quedaban de canto **en el mismo eje y en mitad
+        // del paso**, así que seguían tapando el hueco de lado a lado ✗. Con las bisagras en los extremos (la hoja de
+        // fuera izquierda pegada a su jamba y la de fuera derecha a la suya), al abrir **todo el centro queda libre** y
+        // sólo quedan dos listones de 2 píxeles pegados a las jambas, que es como abre un portón de verdad ✓.
+        DoubleGateBlock.PanelSide[] lados = { DoubleGateBlock.PanelSide.LEFT, DoubleGateBlock.PanelSide.RIGHT,
                 DoubleGateBlock.PanelSide.RIGHT };
         boolean[] junturas = { false, true, false };
         // lint:ok I9 porque esto NO añade construcción nueva que rehacer: son las MISMAS celdas que ya rehace
@@ -7261,6 +7267,21 @@ public final class VillageGenerator {
                 colocar(level, new BlockPos(c.getX(), baseY + alto, c.getZ()), Blocks.AIR.defaultBlockState(), 3);
             }
             colocar(level, new BlockPos(c.getX(), baseY + 3, c.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
+        }
+        // Y EL MARCO DE PIEDRA, EXPLÍCITO (6-oct-2026, lo pidió el jugador: *«todavía le falta el marco de piedra»*).
+        // Las dos JAMBAS van en las celdas de al lado del hueco, a lo largo del muro, y con la misma altura que el
+        // portón (tres capas): sin esto el portón quedaba pegado a los troncos del muro sin marco, que es lo que se
+        // veía. Se pone ADOQUÍN, como el resto de las columnas del muro, para que el portón se lea como una puerta en
+        // su marco y no como tres bloques sueltos en un agujero ✓.
+        Direction.Axis ejeMuro = ejeDelMuroEn(center, p);
+        for (int lado : new int[] { -2, 2 }) {
+            BlockPos jamba = ejeMuro == Direction.Axis.Z
+                    ? new BlockPos(p.getX(), baseY, p.getZ() + lado)
+                    : new BlockPos(p.getX() + lado, baseY, p.getZ());
+            for (int alto = 0; alto <= 3; alto++) {
+                colocar(level, new BlockPos(jamba.getX(), baseY + alto, jamba.getZ()),
+                        Blocks.COBBLESTONE.defaultBlockState(), 3);
+            }
         }
         // Y LAS DOS HOJAS, con la pieza única otra vez (así el que construye y el que cuenta no pueden discrepar).
         sellarLasCeldasDelPorton(level, center, baseY, p);

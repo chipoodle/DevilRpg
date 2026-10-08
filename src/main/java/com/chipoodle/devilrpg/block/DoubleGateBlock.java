@@ -175,9 +175,13 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos,
             CollisionContext context) {
-        // La colisión es la MISMA que la forma: abierta de canto se puede cruzar, cerrada no. Y así el jugador ve lo
-        // que hay: si la hoja se ve de canto, se pasa.
-        return forma(state.getValue(FACING), state.getValue(SIDE), state.getValue(OPEN));
+        // ABIERTA NO TIENE COLISIÓN, y esto es una decisión medida (6-oct-2026). Con la hoja abierta «de canto» su
+        // listón de {@value #GROSOR} píxeles se queda DENTRO de su propia celda, y el paso útil de esa celda se queda en
+        // 0,875: un aldeano mide 0,6 y **cabe**, pero pasa rozando, y el jugador reportó que **no se podía pasar** ✗.
+        // Con la colisión a cero el paso queda LIBRE de verdad, que es lo que se le pide a una puerta abierta: se ve el
+        // listón (la `getShape`, que no se toca) y no estorba. Es la única diferencia deliberada entre lo que se VE y lo
+        // que BLOQUEA en este bloque, y está solo en el estado abierto por eso mismo.
+        return state.getValue(OPEN) ? Shapes.empty() : Shapes.block();
     }
 
     /**

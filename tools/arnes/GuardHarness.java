@@ -428,6 +428,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirSiElAldeanoCruza(level);
         } else if (MEDIR_CLICK_DEL_PORTON) {
             medirElClickDelPorton(level, pega);
+        } else if (MEDIR_PASO_DEL_PORTON) {
+            medirElPasoDelPorton(level);
         } else if (MEDIR_AGUA) {
             medirElNado(level, pega);
         } else if (MEDIR_VELOCIDAD) {
@@ -2202,6 +2204,54 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * Es la única forma de separar «el click no llega» de «el click llega y el portón no abate entero».
      */
     private static final boolean MEDIR_CLICK_DEL_PORTON = false;
+
+    /**
+     * <b>¿SE PUEDE PASAR POR EL PORTÓN?</b> (6-oct-2026). El jugador reportó *«todavía no se puede pasar por ella»*, y
+     * eso no se contesta mirando: se mide <b>la caja de colisión</b> del bloque en cada estado y, sobre todo, <b>si cabe
+     * un aldeano</b> dentro de la celda. Un portón «abierto» que siga ocupando la celda entera no deja pasar aunque se
+     * vea abierto ✗.
+     */
+    private static final boolean MEDIR_PASO_DEL_PORTON = false;
+
+    private static void medirElPasoDelPorton(ServerLevel level) {
+        if (ticks != 400) {
+            return;
+        }
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        // La celda del MEDIO del portón del este (la juntura), y su vecina.
+        for (int dz = -1; dz <= 1; dz++) {
+            BlockPos celda = new BlockPos(CENTRO.getX() + 62, cota, CENTRO.getZ() + dz);
+            var estado = level.getBlockState(celda);
+            if (!(estado.getBlock() instanceof com.chipoodle.devilrpg.block.DoubleGateBlock)) {
+                DevilRpg.LOGGER.info("[Arnes] PASO: no hay porton en {}", celda.toShortString());
+                continue;
+            }
+            for (boolean abierto : new boolean[] { false, true }) {
+                level.setBlock(celda, estado.setValue(com.chipoodle.devilrpg.block.DoubleGateBlock.OPEN, abierto), 3);
+                var forma = level.getBlockState(celda).getCollisionShape(level, celda);
+                boolean vacia = forma.isEmpty();
+                if (vacia) {
+                    DevilRpg.LOGGER.info("[Arnes] PASO {} (abierto={}): SIN COLISION (se pasa libre)", celda.toShortString(),
+                            abierto);
+                    continue;
+                }
+                var caja = forma.bounds();
+                DevilRpg.LOGGER.info("[Arnes] PASO {} (abierto={}): caja={} (x {}+{}, y {}+{}, z {}+{})", celda.toShortString(),
+                        abierto, caja, String.format("%.2f", caja.minX), String.format("%.2f", caja.maxX - caja.minX),
+                        String.format("%.2f", caja.minY), String.format("%.2f", caja.maxY - caja.minY),
+                        String.format("%.2f", caja.minZ), String.format("%.2f", caja.maxZ - caja.minZ));
+            }
+            // Y LA PREGUNTA QUE IMPORTA: ¿hay un PASILLO LIBRE por el centro del portón abierto? (mirar la caja entera
+            // daba «NO CABE» hasta con el portón perfecto: el aldeano colocado DENTRO de la celda choca con el bloque
+            // en el que está. Lo que hay que medir es si el CENTRO de la celda está libre, que es por donde se anda.)
+            level.setBlock(celda, estado.setValue(com.chipoodle.devilrpg.block.DoubleGateBlock.OPEN, true), 3);
+            var formaAbierta = level.getBlockState(celda).getCollisionShape(level, celda);
+            boolean centroLibre = formaAbierta.isEmpty()
+                    || !formaAbierta.bounds().inflate(-0.001D).contains(0.5D, 1.0D, 0.5D);
+            DevilRpg.LOGGER.info("[Arnes] PASO {}: el CENTRO de la celda con el porton ABIERTO: {}",
+                    celda.toShortString(), centroLibre ? "LIBRE (se puede pasar)" : "BLOQUEADO (no se pasa)");
+        }
+    }
 
     private static void medirElClickDelPorton(ServerLevel level, FakePlayer pega) {
         if (ticks != 400) {
