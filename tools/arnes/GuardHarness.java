@@ -2284,11 +2284,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
             for (boolean abierto : new boolean[] { false, true }) {
                 level.setBlock(celda, estado.setValue(com.chipoodle.devilrpg.block.DoubleGateBlock.OPEN, abierto), 3);
-                var forma = level.getBlockState(celda).getCollisionShape(level, celda);
-                boolean vacia = forma.isEmpty();
+                var forma = level.getBlockState(celda).getShape(level, celda); var colision = level.getBlockState(celda).getCollisionShape(level, celda);
+                boolean vacia = colision.isEmpty();
                 if (vacia) {
-                    DevilRpg.LOGGER.info("[Arnes] PASO {} (abierto={}): SIN COLISION (se pasa libre)", celda.toShortString(),
-                            abierto);
+                    DevilRpg.LOGGER.info("[Arnes] PASO {} (abierto={}): SIN COLISION (se pasa libre); forma={}", celda.toShortString(),
+                            abierto, forma.isEmpty() ? "vacia" : forma.bounds());
                     continue;
                 }
                 var caja = forma.bounds();

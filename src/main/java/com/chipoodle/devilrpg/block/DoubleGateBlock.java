@@ -117,6 +117,13 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
     /** El grosor de una hoja de canto (abierta): <b>2 píxeles</b> (1/8 de bloque), junto a su bisagra. */
     private static final double GROSOR = 2.0D;
 
+    /**
+     * Cuánto se mete la hoja abierta hacia dentro del paso, por la <b>normal</b> del muro: <b>8 píxeles</b> (medio
+     * bloque), que es lo que ocupaba de ancho al estar cerrada. Es lo que hace que al abrir se vea un <b>giro de 90°</b>
+     * de verdad y no una hoja que se queda en su sitio ✓.
+     */
+    private static final double ABANICO = 8.0D;
+
     public DoubleGateBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any()
@@ -156,15 +163,21 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock {
     private static VoxelShape forma(Direction facing, PanelSide side, boolean abierto) {
         boolean enX = ejeX(facing);
         if (!abierto) {
-            return Shapes.block(); // cerrada: la celda entera, las dos hojas se juntan en el centro
+            return Shapes.block(); // cerrada: la celda entera -> el portón cierra el hueco del todo
         }
-        // Abierta: de canto junto a la bisagra (lado negativo para la hoja izquierda, positivo para la derecha).
+        // ABIERTA: LA HOJA HA GIRADO 90° Y QUEDA PERPENDICULAR AL MURO (6-oct-2026, y este era el fallo que reportó el
+        // jugador: *«al abrir la puerta no gira en uno de los lados y se pone abierta, sino que se queda en su lugar»*).
+        // Antes la hoja abierta seguía DENTRO DEL PLANO del muro (sólo más fina), así que no se veía ningún giro ✗.
+        // Ahora se mete en el paso por la NORMAL: `ABANICO` píxeles hacia dentro y sólo `GROSOR` de canto en la línea
+        // del muro, pegada a su bisagra (que está en el canto del extremo que le toca) ✓.
         if (enX) {
-            return side == PanelSide.LEFT ? Block.box(0.0D, 0.0D, 0.0D, GROSOR, 16.0D, 16.0D)
-                    : Block.box(16.0D - GROSOR, 0.0D, 0.0D, 16.0D, 16.0D, 16.0D);
+            // El muro corre en Z: la hoja se mete por X.
+            return side == PanelSide.LEFT ? Block.box(0.0D, 0.0D, 0.0D, ABANICO, 16.0D, GROSOR)
+                    : Block.box(0.0D, 0.0D, 16.0D - GROSOR, ABANICO, 16.0D, 16.0D);
         }
-        return side == PanelSide.LEFT ? Block.box(0.0D, 0.0D, 0.0D, 16.0D, 16.0D, GROSOR)
-                : Block.box(0.0D, 0.0D, 16.0D - GROSOR, 16.0D, 16.0D, 16.0D);
+        // El muro corre en X: la hoja se mete por Z.
+        return side == PanelSide.LEFT ? Block.box(0.0D, 0.0D, 0.0D, GROSOR, 16.0D, ABANICO)
+                : Block.box(16.0D - GROSOR, 0.0D, 0.0D, 16.0D, 16.0D, ABANICO);
     }
 
     @Override

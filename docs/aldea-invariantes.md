@@ -6455,6 +6455,44 @@ trazado un camino **a través de una puerta cerrada**, y eso no pasa ✗.
 - Y el instrumento pasó de marcar **`TAPADOS 17`** (falso) a **`TAPADOS 0`**: pedía aire en la capa del medio, que era
   la regla del portón de valla de una hoja; con el portón de tres capas la del medio **es una hoja** ✓.
 
+### I232 · LA HOJA ABIERTA NO GIRABA: SEGUÍA EN EL PLANO DEL MURO
+
+**Lo reportó el jugador** (6-oct-2026), y con la lógica ya funcionando: *«funciona correctamente cuando abro puedo
+entrar y salir, y cuando cierro no puedo pasar… los marcos son correctos y la puerta se ve bien, una sola pieza. El
+único problema es que no tienen animación de puerta abierta, es decir al abrir la puerta no gira en uno de los lados y
+se pone abierta, sino que se queda en su lugar aunque se puede atravesar»* ✓.
+
+**LA CAUSA, vista en los modelos** ✓: la hoja «abierta» **seguía dentro del plano del muro** — sólo se hacía **más
+fina** (`x 0..2` en vez de `x 0..8`). O sea que **nunca salía del plano de la puerta**: no había ningún giro que ver ✗.
+Medido en los ficheros antes del arreglo:
+
+```
+porton_left_cerrado_low    from=0,0,0  to=8,16,16
+porton_left_abierto_low    from=0,0,0  to=2,16,16     <-- ¡misma orientación, sólo más fina!
+```
+
+**ARREGLO** ✓, en los **dos** sitios que tienen que decir lo mismo (el modelo es lo que se VE y `forma()` es la
+geometría que el juego usa para la silueta y la colisión):
+- **Los modelos** (`tools/arnes/hacer_modelos_del_porton.py`): la hoja **cerrada llena su celda** (`0,0,0 → 16,16,16`)
+  y la **abierta gira 90° y queda PERPENDICULAR al muro** — 8 píxeles metida en el paso **por la normal** y sólo 2 de
+  canto **en la línea del muro**, pegada a su bisagra ✓.
+- **`DoubleGateBlock.forma`**: lo mismo en la geometría del juego, con `ABANICO = 8` (lo que la hoja ocupaba de ancho al
+  estar cerrada) por la normal y `GROSOR = 2` por la línea del muro ✓.
+
+**MEDIDO EN EL JUEGO** ✓ (`rapida-144.log`), leído de la **forma** del bloque (no de la colisión, que a propósito está
+vacía para poder pasar):
+
+| estado | caja (en la celda) |
+|---|---|
+| **cerrada** | `1.00 × 1.00 × 1.00` — la celda entera ✓ |
+| **abierta, hoja izquierda** | `x 0.00+0.50`, `z 0.00+0.125` → **8 por la normal, 2 por el muro = PERPENDICULAR** ✓ |
+| **abierta, hoja derecha** | `x 0.00+0.50`, `z 0.875+0.125` → perpendicular en el otro canto ✓ |
+| **colisión abierta** | **SIN COLISIÓN** → se pasa ✓ y el centro de la celda queda **LIBRE** ✓ |
+
+**Lo que NO se puede hacer con modelos de bloque** ✗, y hay que decirlo: el cambio es **instantáneo**. Un giro
+**interpolado** (que se vea la hoja recorriendo el arco) necesita una **entidad de bloque con su renderizador**, que es
+una obra bastante mayor. Lo que hay ahora es el giro completo de golpe, que es como se comporta una puerta del juego.
+
 ### I231 · LA ALDEA YA CONSTRUIDA NO SE CURABA: `asegurarMuro` SOLO MIRABA EL MURO
 
 **El caso del jugador** (6-oct-2026): probó el portón en su partida y **el click funcionaba** —el registro lo demuestra,

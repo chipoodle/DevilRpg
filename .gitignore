@@ -41,3 +41,6 @@ __pycache__/
 # Copia de trabajo del arnes de medida (tools/arnes/GuardHarness.java): se borra al acabar cada tanda
 src/main/java/com/chipoodle/devilrpg/debug/
 
+
+# Salida de trabajo de la skill archify (diagramas): se itera aqui y lo bueno se copia a docs/
+.archify/

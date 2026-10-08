@@ -23,12 +23,18 @@ TEX = 'devilrpg:block/porton_doble'
 V3 = 16.0 / 3.0
 PISOS = {'low': (0.0, V3), 'mid': (V3, 2 * V3), 'high': (2 * V3, 16.0)}
 
-# (lado, abierto) -> (x1, x2, z1, z2) ; y el trozo de textura que le toca a cada hoja y piso.
+# GEOMETRIA, EN EL ESPACIO LOCAL DEL MODELO (el blockstate lo gira a su sitio):
+#   local X = la NORMAL del muro (hacia donde mira el portón)
+#   local Z = la LÍNEA del muro (por donde se reparten las celdas)
+# CERRADA: llena su celda (16×16 en planta) -> el portón se ve macizo y de una pieza.
+# ABIERTA: ha girado 90° sobre su bisagra y queda PERPENDICULAR al muro: 8 píxeles hacia dentro por la normal y sólo 2
+#          de canto en la línea del muro. ESTE ERA EL FALLO: antes la hoja abierta seguía EN EL PLANO del muro (sólo más
+#          fina), así que el jugador veía que «no gira en uno de los lados y se queda en su lugar» aunque ya se pasara ✗.
 GEOM = {
-    ('left', False): (0, 8, 0, 16),
-    ('right', False): (8, 16, 0, 16),
-    ('left', True): (0, 2, 0, 16),
-    ('right', True): (14, 16, 0, 16),
+    ('left', False): (0, 16, 0, 16),
+    ('right', False): (0, 16, 0, 16),
+    ('left', True): (0, 8, 0, 2),
+    ('right', True): (0, 8, 14, 16),
 }
 # El trozo de ANCHO (u) de cada bloque, de forma que entre los tres CUBRAN la textura entera sin repetirla ni dejarla a
 # medias: la celda de fuera de la hoja izquierda coge el primer tercio, la JUNTURA el trozo con el que las dos hojas se
