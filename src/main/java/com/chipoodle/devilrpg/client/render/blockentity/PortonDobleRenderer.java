@@ -63,13 +63,25 @@ public class PortonDobleRenderer implements BlockEntityRenderer<PortonDobleBlock
         return RenderType.entityCutout(TEXTURA);
     }
 
-    /** El grosor de la hoja: <b>2 de los 16 píxeles</b> de la celda (1/8 de bloque), el mismo que declara el bloque. */
-    private static final float GROSOR = 2.0F / 16.0F;
+    /**
+     * El grosor de la hoja: <b>un bloque entero</b>, el mismo que el modelo del estado CERRADO.
+     * <p>
+     * <b>Y esto era lo último que chirriaba</b> ✗ (lo describió el jugador: *«cuando está cerrada ocupa un cuadro de
+     * espesor… sin embargo cuando se abre se hace muy delgado su espesor… se ve antinatural»*). La hoja medía
+     * {@code 2/16} y el modelo cerrado es un cubo de bloque entero, así que el portón <b>cambiaba de grosor</b> al
+     * abrirse y, además, en el primer y el último fotograma del giro había un salto de grosor (16 → 2 píxeles) ✓.
+     * <p>
+     * Poniéndolo a <b>1,0</b> los dos espesores son <b>el mismo</b>: la hoja cerrada ocupa exactamente su celda —igual
+     * que el modelo— y <b>no hay salto ninguno</b>, ni al empezar ni al terminar ✓. La puerta abierta queda gruesa, que
+     * es como se ve un portón de verdad y como pidió el jugador, en vez de una hoja fina que parecía de otro bloque.
+     */
+    private static final float GROSOR = 1.0F;
 
     /**
-     * El centro de la hoja dentro de su celda, medido por la normal: {@code 0,5 − grosor/2}. Se <b>centra</b> para que
-     * el salto desde el modelo cerrado —que ocupa la celda entera— sea lo más pequeño y simétrico posible: la hoja no
-     * puede nacer con el grosor del modelo, así que se pone en su centro para que el cambio no se note de un lado ✓.
+     * Dónde empieza la hoja dentro de su celda, medido por la normal: {@code 0,5 − grosor/2}. Con el grosor a un bloque
+     * entero sale <b>0</b>, o sea que la hoja cerrada ocupa su celda <b>exactamente igual que el modelo</b>: por eso ya
+     * no hay ningún salto de grosor al empezar ni al terminar el giro ✓ (antes, con la hoja fina, había que centrarla
+     * para disimular el cambio, y aun así se notaba).
      */
     private static final float CENTRO = 0.5F - GROSOR / 2.0F;
 
