@@ -2573,6 +2573,8 @@ ella) sigue necesitando entrar. Y entrar al corralillo es poco fiable por constr
 cierra sola a los 5 s (I22). Lo que sí se midió es que, con el portón abierto, el ganadero **entra y trabaja dentro**
 (`PORTON … open=true` en los volcados, con los huevos del corralillo desapareciendo y el inventario subiendo).
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el huevo que cae dentro de la valla ya no se persigue —se **descarta el que está dentro de un bloque** (I147, `buscarDropEnElCorral`)— y el corral pasó a tener **dos portones** (I197, `Bajando lo del corral` 49 → **1**), así que entrar dejó de ser el problema. Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+
 ### I98 · Una horda del mundo va por el RELOJ del mundo (y la presión se acumula en el latido)
 
 El jugador: *"¿y qué pasó con los raids del mundo? ¿por qué no llega ninguno al pueblo?"*.
@@ -2680,6 +2682,8 @@ haya flechas. ¿Qué otra cosa se necesitaría?"*.
 falta una **cantera de grava**: una meta que cave grava, que hoy no existe). Como el agua embotellada del clérigo
 (I87), hoy es material **que trae el jugador**: con pedernal en el almacén el herrero hace flechas (tiene palos y
 las plumas salen de los pollos) y los arqueros se rearman solos.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la aldea **sí produce pedernal** desde **I102**: el minero filtra el adoquín que saca (**4 adoquines → 1 pedernal** en la balsa de su caseta) y la grava le da su 10 % de vanilla, así que no hace falta ninguna cantera nueva. Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 > **ACTUALIZADO EN LA ETAPA I (I102):** el jugador contestó a esto pidiendo un **MINERO** que *"excave el suelo hacia
 > abajo… y el cobblestone que recoja, que lo filtre en agua para sacar algunos pedernales"*. La aldea **sí** produce
@@ -2971,6 +2975,8 @@ hogazas** (`horneo 2 pan(es)` ×8) sin que se le sembrara nada. Ver `tools/arnes
 (`426/432,63,629`, 17 veces) y los aldeanos **lejanos** (a 50-60 bloques, p. ej. el guardia en la barraca o la
 recolectora en la plaza) sacan `almacen=NO(nulo)` simplemente porque el planificador no da ruta desde tan lejos; los
 herreros y el minero, que vienen del norte, siguen llegando.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el leñador **tala** (I104: **6 árboles** y **6 entregas** en la corrida, con los avisos de arboleda reducidos a los 2 primeros) y los viajes largos dejaron de depender de una ruta directa porque van **por TIRONES** (I105). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 ### I104 · Nadie trabaja de pie encima de una CAMA (el leñador que no salía de casa)
 
@@ -3353,6 +3359,8 @@ sin cazarse.)
 3. **Granjeros**: `596e09a8` se rinde en `484,63,658` **desde `484,63,659`** (¡a UN bloque!) con `destino=wheat` y
    `alcanza=SI` — es el mismo patrón (la mata es un bloque) y le toca el mismo arreglo.
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: los tres salieron: el punto de la ronda pasó a exigir **estar en la calle y tener ruta** (`puestoLibre`/`calleDeLaPlaza`, I115) y el minero encajado **vuelve a su caseta** (3 → **0** rendiciones, I115); el granjero se arregló con `caminarHaciaExacto` (I129: `no consigue entrar al parcela` 5 → **0**). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+
 ### I115 · El que se queda ENCAJADO sin ruta vuelve a un sitio del que SÍ haya ruta (y el punto de la ronda es de la aldea, no de cada guardia)
 
 Segunda vuelta de I114, con la misma medida (MEDIR_MINERO, `arnes`, 24-25-sep-2026):
@@ -3394,6 +3402,8 @@ veces le encuentra la puerta (`ruta=30 nodos hasta 423,63,671 alcanza=SI`) y otr
 **inconsistente** para esa casilla y el mío no la distingue. Lo que queda por hacer es que la ronda **no elija puntos
 dentro de ninguna construcción** usando el **plano** de la aldea (`blueprintState`, que ya existe), en vez de pruebas
 locales: el plano sabe qué celdas son edificio y cuáles calle.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: se hizo con **el plano**, como pedía la nota: `VillageGenerator` sabe qué celda es de un edificio y cuál es calle (**I116**, y **I117** lo usa para caminar a una casilla de pie), y el puesto que caía dentro del recinto amurallado se sacó al **patio** (`puestoDeEntrenamiento` → `424,63,675`, I119), con las rendiciones `Yendo a entrenar` a **CERO** al dar a cada guardia su propia casilla (I122). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 ### I116 · El PLANO dice quién está dentro de un edificio (y a un tronco no se le busca la casilla: se descarta el árbol)
 
@@ -3493,6 +3503,8 @@ plano en un radio de 2-3), que es lo que distingue una plaza de un patio.
 Lo pidió el jugador: *"¿por qué no pones el puesto de entrenamiento en un campo abierto justo al lado de las
 barracas? así haces las barracas de un solo nivel junto con sus camas"*. Hecho **lo primero** (el campo); lo del
 un-piso queda pendiente y apuntado abajo.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la barraca de un piso **se hizo** para aldeas nuevas (`BARRACA_PISO2 = 0`, I121) y **se migró la aldea del jugador** subiendo `CURRENT_LAYOUT` 72 → 73 (I123, medido con `MEDIR_NOCHE`: 19 aldeanos, 19 con cama, 0 compartidas). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 **Lo que se ha movido:**
 - `BARRACA_DIANA` y `BARRACA_DIANA_DOBLE` pasan del **interior** de la sala de armas (`422,671` y `426,666` en su
@@ -3626,6 +3638,8 @@ camas arriba"*; con el trazado de un piso esa frase ya no es cierta (es solo tex
 Lo pidió el jugador junto con lo del campo de entrenamiento: *"así haces las barracas de un solo nivel junto con sus
 camas"*. Es la parte del encargo que **queda pendiente**, y esto es lo que hay y lo que costaría.
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el estudio se ejecutó: con `BARRACA_PISO2 = 0` la barraca de un piso sale sola (I121) y la aldea ya construida se migró con `CURRENT_LAYOUT` 73 y las arcas vaciadas al almacén (I123). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+
 **Lo que hay hoy** (`VillageGenerator.barraca`, 9×9 con `BARRACA_RADIO = 4`):
 - planta baja: la **sala de armas** (dos maniquíes de paca, el **arca** doble, el **hogar** del patio que es el
   **testigo** de `barracaConstruida`, y las dianas —ya movidas al patio, I119—);
@@ -3691,6 +3705,8 @@ al compilar: *"Si el mundo ya construido tiene que rehacerse, sube `CURRENT_LAYO
 Así que el encargo queda: **el campo de entrenamiento y su migración, hechos y medidos** (7 → 2 rendiciones); **la
 barraca de un piso, hecha para aldeas nuevas y probada a compilar/lint**; y **pendiente** (a) subir `CURRENT_LAYOUT`
 con las arcas vaciadas y (b) cerrar las 2 rendiciones que quedan del entrenamiento.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: (a) se subió `CURRENT_LAYOUT` **72 → 73** con las arcas vaciadas y el testigo bueno (I123, medido: 8 camas abajo, nada flotando arriba, 19/19 con cama) y (b) las rendiciones del entrenamiento bajaron a **CERO** al dar a cada guardia **su propia casilla** (I122) y al reafirmar el destino (I125). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 ### I124 · El aviso de "no llegué" dice también QUÉ GOALS van corriendo (25-sep-2026)
 
@@ -3786,6 +3802,8 @@ desde `507,46,613` y ahí hay un **acuífero**. Queda por medir el mecanismo fin
 comprobación y el picado, y por qué `sellosSeguidos` no llega a `SELLOS_MAXIMOS`), y de paso que el minero se queda
 **sin pico** con el inventario lleno de adoquín y con la ruta a su taller **2 corta**
 (`rutaFaena=[a1=38n alcance=NO fin=501,63,613 dFin=2.00]`).
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el acuífero de la galería se midió y se cerró en **I127**: eran tres fallos encadenados (el agua pasaba por la guarda de «es del pueblo», la galería picaba dos veces la misma celda y el contador de 13 sellos) y ahora la mina **sella y se para** (`sella agua/lava` **4**, `TOPE=SI`) y el minero sale a `515,63,662`. Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 #### Los PORTONES: medido, y el arreglo RETIRADO (misma sesión)
 
@@ -4033,6 +4051,8 @@ la mina**: era **`16x Filomena (Recolector) / Yendo a la taberna`** — dos terc
 atasco **nuevo**. Y nuevo **por mi propio arreglo**: al dejar de quedarse encerrada en los parcelas (I130), la
 recolectora **llega a la taberna**, y ahí se rinde. Es decir: el "ruido" escondía un **efecto colateral real**, que la
 cuenta normalizada y el desglose por etiquetas han sacado a la luz. **Siguiente pendiente, ya con nombre y número.**
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el atasco que salió con nombre —`Filomena (Recolector) / Yendo a la taberna`— bajó a **0 avisos** en la tanda de **I139** (tabla de la corrida `medida-s7-final.log`: `Yendo a la taberna` 1-2 → **0**) al caminar a una **casilla de pie** en vez de a la celda cruda del objeto (I114/I131) y al pasar a los viajes por tiros. Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 Lo que sigue es la nota original de la pregunta abierta:
 atravesando el agua) es **la más alta de la sesión (2,73)** — hay que **mirar sus etiquetas** (`--etiquetas`) para ver
@@ -5293,6 +5313,8 @@ no mejora la media se retira y se apunta**. El módulo y esta invariante se qued
 OFICIO** —el círculo cerrado del ganadero encerrado (`ruta=1 nodos … alcanza=NO`) es **real**; lo que no está medido es
 que abrirle el portón a **todos** mejore nada.
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: se rehízo **por recado**, que es lo que pedía esta nota: `VillageErrands.abrirLaPuertaSiHaceFalta` ya **no lo llama nadie** y en su lugar va `VillageErrands.abrirLoQueCierreElPaso` en el punto único por el que caminan todos los goals (`VillageManager.caminarHacia` L5620, I169), que **solo abre la puerta que de verdad separa** al aldeano de su recado (y por eso **no** se abren las del corral). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+
 ### I154 · LAS TRES CLASES DE FALLO, ARREGLADAS **EN UN SOLO SITIO** (29-sep-2026)
 
 Clasificando **todas** las rendiciones que el despachador destapó (I150) salieron **tres clases**, no doce problemas:
@@ -6205,6 +6227,8 @@ enmendado después (`e504d1e`). Regla: **compilar y commitear van en pasos separ
    para medir el baile fino ✗ (salieron 160 en una sesión larga). La métrica buena para el caminar es `[Rumbo]`
    (peticiones vs saltadas) y `no consigue llegar`.
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**, y sólo el **punto 3** de la lista: «el goal de reparar camina al bloque que repara» ya estaba resuelto —`VillagerRepairGoal` **L163-L178** camina a una **casilla de pie** (`sitioDeCamino`, I114/I117) y suelta el hueco si no la hay (I153)—, y lo dice el apartado siguiente («PUNTO 3 DE LA AUDITORÍA · VERIFICADO, YA ESTABA RESUELTO», 5-oct-2026). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+
 ### PUNTO 3 DE LA AUDITORÍA · **VERIFICADO, YA ESTABA RESUELTO** (5-oct-2026) — no se toca
 
 Figuraba como abierto («el goal de reparar camina al bloque que repara», `586,84,539` = aire sobre el tejado ✗). **Se
@@ -6490,6 +6514,8 @@ el jugador: *«se queda en medio del marco, no se abre totalmente a lado»*). Co
 tener 3 bloques **enteramente a un lado**. Las salidas son: (a) **2 bloques** hacia un lado; (b) que el propio portón
 **ponga un bloque más** en la celda de al lado al abrirse (**3 bloques a un lado** ✓, coste: colocar y quitar 1 bloque,
 con estado propio); o (c) una **entidad de bloque con renderizador**, que además daría el giro **suave**.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: se tomó la salida **(c)**: el portón doble tiene **`PortonDobleBlockEntity`** y **`PortonDobleRenderer`** (I224, `blockentity/PortonDobleBlockEntity.java` L40 y `client/render/blockentity/PortonDobleRenderer.java` L48), el giro **se anima** (`HOJA_FUERA` separa la vista de la lógica, commit `b586a0d`, I232/I233) y la hoja abate entera sobre el canto del marco. Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 ### I233 · EL PORTÓN ABIERTO ES UNA SOLA PIEZA Y SE PULSA EN TODA SU SUPERFICIE
 
@@ -6786,6 +6812,8 @@ tienen su función: por ahí sale y entra el pueblo), pero **no** con que el ase
 los portones se cierran —y con qué (portones que el pueblo abre, o muralla maciza)— es una decisión de diseño del
 jugador, y **no se toca sin que la tome** ✓.
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el jugador tomó la decisión y se hicieron **portones de verdad**: primero puertas de valla que el asedio **no puede** abrir ni romper (I219: `PORTONES 9 | AGUJEROS 0`, **0** puertas rotas, «solo rompiendo el muro») y después el **portón doble abatible** (I224), que abre y cierra el pueblo (`VillageGenerator.abrirLosPortonesSegunElPueblo` L8567). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+
 ### I217 · LA TRAZA DE LA MILICIA (para poder contarla, no deducirla)
 
 **Lo pedía el pendiente 5** ✓: *«que el reparto escriba `[Milicia] aldea N: X espadachines y Y arqueros equipados`, para
@@ -7008,6 +7036,8 @@ de 40 bloques **aguanta y la aldea se salva**, que es exactamente lo que pidió 
 y con presupuesto de túnel nuevo»*), y quien asigna centro es una **horda nueva** (`HordeManager`) o el arranque de la
 marcha: o sea, **cada ola vuelve con 40 bloques** ✓. **Lo que NO está medido** ✗ es una **segunda ola contra la misma
 montaña** (que volvería a taladrar 40): está leído, no medido.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la **segunda marcha también se midió**: al volver a asignarle centro al asaltante el contador del túnel **vuelve a su tope** y sigue taladrando (I243, corrida 177: `5 → 1` y otra vez `5`). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 ### I240 · LA MONTAÑA: EL TÚNEL DE FRENTE **SÍ** CUMPLE LO QUE PIDIÓ EL JUGADOR (y un cambio mío que sobraba)
 
@@ -7426,6 +7456,8 @@ cota» los dejaba **enterrados** y morían asfixiados ✓; buscar el suelo en la
 el terreno está en **y=88**, cinco por encima de la cota de la plaza) ✓; la zanja de **1 bloque** metía al asaltante en
 un agujero del que no salía ✓; y el objetivo del puente puesto **de este lado** de la zanja no dejaba nada que cruzar ✓.
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: los dos huecos se cerraron en **I213** (el puente pasa a mirar **los cuatro lados** y el escalón se pone en la columna de delante) y las tres herramientas se vieron **en olas de verdad**: el puente **8 de 8** en la ola con el muro entero y el foso (I236) y la escalera con **65-103** escalones (I238/I242). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+
 ### I213 · LO QUE SALIÓ MAL, CORREGIDO (y la ola de verdad, que destapó lo gordo)
 
 **El jugador**: *«corrige primero lo que salió mal»* ✓. Eran los dos huecos que quedaron abiertos en I212, y uno de ellos
@@ -7499,6 +7531,8 @@ rompe el parseo de `nbtdump` (el mismo que usan `columna_mina.py` y `ruta_atasco
 cuentas de «celdas con muro» que salieron (**563 de 921**, **38,9 % de huecos**) **no son fiables** y se retiraron con la
 herramienta ✓. Queda **anotado como pendiente con la trampa escrita**: para cerrar los huecos hay que medirlos primero
 con un lector que funcione (`columna_mina.py` es el modelo), no con uno nuevo a medio hacer.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: los huecos se midieron con un lector que **sí** funciona: `anillo_del_muro.py` sobre el guardado da **912 de 921** celdas de muro y **9 agujeros que caen exactamente en los cuatro portones** (I219, el apartado «El lector independiente, sobre el guardado»), y el muro se volvió a levantar a la cota 83 sin un solo agujero (`VillageGenerator.asegurarMuro`, I218). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
 
 
 

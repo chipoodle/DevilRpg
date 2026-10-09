@@ -258,6 +258,10 @@ sin spawn de monstruos y **barriendo cada segundo los monstruos que ya venían e
 bloquea el latido del pueblo entero: sin barrerlos, no se reparten oficios ni se alista la guardia; se nota porque
 en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún `nuevo puesto`).
 
+> ⚠️ **CORREGIDO el 9-oct-2026**: hoy `CENTRO` e `INDICE` **no** apuntan a la aldea 2: valen
+> `CENTRO = 470, 63, 646` e `INDICE = 0` (`GuardHarness.java` L36-L37), o sea la **aldea 0 del jugador**; el ejemplo
+> de la aldea 2 (`1414,120,1414`) es de cuando el arnés medía ésa.
+
 - `MONSTRUO_DENTRO = true` → **lo contrario, a propósito**: en vez de barrer los monstruos se planta **UNO** dentro de la  aldea y se mantiene ahí. Es un **aldeano-zombi** (`NoAI`, invulnerable, persistente) porque es un `Monster` —cuenta
   para `hayEnemigosDentro`— y el sello **no lo expulsa** (`expulsarHostilesDeLaAldea` deja en paz a los aldeanos-zombi:
   puede ser una curación en marcha), así que el latido se queda **cortado** toda la corrida. Es lo que reproduce la
@@ -330,6 +334,11 @@ en la celda de al lado toca la puerta con el hombro). Y cada `PUERTA CERRADA` di
   granjera estaba `job=SIN PUESTO` con el compostero del bancal 0 **libre y sin dueño**, y que su bancal se quedaba
   con 37 plantas maduras que no bajaban ni una en cuatro minutos.
 
+> ✅ **YA ESTÁ MEDIDO (comprobado el 9-oct-2026)**: eso era el **antes**, y está **cerrado**: el reparto de estaciones
+> (se coge la libre o la ocupada **sin dueño**) y el orden **cosechar antes de compostar** se arreglaron en **I103**
+> (`docs/aldea-invariantes.md` L2822-L2862), y allí está la medida del después: las maduras bajan **37 → 10 → 0** y
+> `Ursula` reclama su estación.
+
 ### `MEDIR_ALDEAS = true` — las aldeas con NOMBRE, el revelado y el DIARIO DEL INVOCADO (I87)
 
 Modo de **solo lectura** (no siembra, no barre monstruos, no cambia la hora): deja correr el latido con el jugador de
@@ -355,6 +364,13 @@ que llama a los **mismos métodos** que corren en juego (`VillageManager.elCleri
 revelados son idempotentes. **No cubre** la barra dibujada (es del cliente: lo medido es el texto, no el píxel) ni el
 **clic** en la piedra (se mide el método que el clic ejecuta).
 
+> ⚠️ **CORREGIDO el 9-oct-2026**: `VillageManager.elClerigoSenalaLaSiguiente` **ya no existe**: el método se llama hoy
+> `elClerigoSenalaLaAldeaActual` (`VillageManager.java` L7567). Y el clérigo **ya no revela nada al vencer** el asedio:
+> al salvarse una aldea sólo se anuncia su **nombre** y se pone al día el Diario (`VillageManager.java` L7540-L7554); la
+> **dirección** de la siguiente la da **hablar con el clérigo**. El escenario del revelado deja constancia de eso
+> (`GuardHarness.java` L2029-L2033) y quien mide la charla es `probarElLibroYElClerigo` (`GuardHarness.java` L4607,
+> trazas `[Arnes] CLERIGO-CHARLA` L4628 y `[Arnes] CHARLA-TRAS-GANAR` L4654).
+
 **OJO con el jugador de pega**: no trae **ancla** en la capability (el arnés se la pasa por parámetro al latido), así
 que el escenario se la pone antes de medir. Sin ella, la piedra **no revela nada** — y así se descubrió que lo hacía
 en silencio: ahora deja un `WARN` con el motivo.
@@ -368,6 +384,12 @@ jugador de verdad el reloj no corre**: el reloj solo avanza con el jugador del a
 (I86) y un `FakePlayer` **no está en ella** → `distanciaAlCentro` = `MAX_VALUE` → EN PAUSA → la ola nunca sale
 (medido: `agresivos=0` toda la corrida y `revelada(4)=false`). Para ver al **clérigo revelar al vencer** hay que
 **jugar el asedio** con un cliente conectado.
+
+> ⚠️ **CORREGIDO el 9-oct-2026**: el clérigo **ya no revela al vencer**. Hoy, al salvarse una aldea, sólo se anuncia su
+> **nombre** y se pone al día el Diario (`VillageManager.java` L7540-L7554); la **dirección** de la siguiente la da
+> **hablar con el clérigo** (`elClerigoSenalaLaAldeaActual`, `VillageManager.java` L7567), y eso sí está medido en el
+> arnés (`GuardHarness.java` L4607-L4667). Lo que sigue sin poder cerrarse headless es el **asedio de principio a fin**:
+> el reloj solo corre con un jugador de verdad en la lista del servidor (I86).
 
 La 1.ª corrida destapó además que el jugador de pega **no carga chunks**: la aldea 3 se descargaba
 (`aldeanos3=11` → `0`). El modo fuerza sus chunks al arrancar y con eso se mantienen los 11 aldeanos.
@@ -438,6 +460,11 @@ repartidos cada 45° fuera del foso**, con el **objetivo dentro del muro**. Se l
 pueblo** (fuera del disco de la aldea) y **sobre el agua/terreno de la zona**, así que no depende del mundo: se mide
 igual en un mundo nuevo que en el mar.
 
+> ✅ **YA ESTÁ MEDIDO (comprobado el 9-oct-2026)**: el **pendiente 2** («que el puente y la escalera se vean en una
+> ola») está **cerrado y medido**: el **puente** se tiende **8 de 8** y la **escalera** da **103** líneas `ESCALON`
+> (`docs/aldea-invariantes.md` I236 e I238, y I242 para el escalón que sale del pozo), con parte de la ola entrando
+> **por debajo** del muro. `docs/CONTINUAR.md` §2.0 ya lo lista como CERRADA.
+
 Se mide en **TRES VUELTAS** en la misma corrida, porque cada herramienta pide una geometría distinta: en la **vuelta 1**
 el objetivo está **al mismo nivel** (le toca al **puente**); a los **1200 ticks** la escena se rehace y el objetivo se
 **sube 4 bloques** (vuelta 2); y a los **2000 ticks** se **rellena el foso**, se **quita el muro** y el objetivo se pone
@@ -466,6 +493,10 @@ asaltante **de fuera** pica el **anillo del muro** (16 bloques, **todos de r=62 
 dentro**; y que un asaltante **ya dentro** **no rompe nada** (anda: 0 bloques en las dos configuraciones). Lo que
 **no** se ha visto en juego es la brecha **a ojo del jugador** (es una medida de arnés).
 
+> ✅ **YA ESTÁ MEDIDO (comprobado el 9-oct-2026)**: la **brecha está medida** en **I211**
+> (`docs/aldea-invariantes.md` L7625). Lo único que no cubre el arnés es **verla a ojo en el juego**, y eso es del
+> **cliente** (el arnés no tiene ventana, ver «Lo que NO se puede medir con él»): **no es un pendiente**.
+
 ### `MEDIR_MONTANA = true` — LA MONTAÑA: el anillo cerrado y el taladro de frente (I240/I243)
 
 Un **anillo de piedra CERRADO** (no se puede rodear) alrededor de la aldea, con el asaltante **fuera y SIN objetivo**
@@ -476,9 +507,19 @@ asignar centro, que es lo que hace una ola nueva: sirve para ver que el **tope d
 1. **El anillo se apoya en el TERRENO de cada columna** (`getHeight(MOTION_BLOCKING)`): si se levanta desde la cota de la
    aldea puede quedar **enterrado** donde el terreno es más alto y el asaltante **lo pasa andando** (medido: de r=95 a
    r=66 en 40 s con 3 celdas abiertas ✗).
+
+   > ✅ **YA ESTÁ MEDIDO (comprobado el 9-oct-2026)**: el anillo **ya se apoya en el terreno de cada columna**
+   > (`getHeight(MOTION_BLOCKING)`) desde el arreglo de **I243** (`docs/aldea-invariantes.md` L6934-L6939), y la montaña
+   > gruesa se volvió a medir con la escena buena (corrida 178: **r=92→88 en 150 s, 11 taladros, sin atravesarla**).
+
 2. **El testigo `celdas del anillo abiertas` puede marcar 0 aunque esté taladrando** (mira una celda fija por columna y
    el taladro va a la altura del suelo del monstruo): lo que dice la verdad es **su radio** y **el contador de la traza**
    (`le quedan N de tunel`).
+
+   > ⚠️ **SIGUE PENDIENTE (comprobado el 9-oct-2026)**: el testigo `celdas del anillo abiertas` marca **0** aunque esté
+   > taladrando, porque mira **una celda fija por columna** y el taladro va a la altura del suelo del monstruo; es el
+   > cabo suelto de **I243** (`docs/aldea-invariantes.md` L6947-L6950), se arregla mirando la **columna entera** — está
+   > en `docs/CONTINUAR.md` §2.0 (punto 2).
 
 Las dos variantes y sus números (fina y gruesa) están en el javadoc de `medirLaMontana`.
 
@@ -623,6 +664,9 @@ búsquedas de ruta del juego.
 > `run/logs/<fecha>-N.log.gz` y `latest.log`; contar solo `latest.log` da números **falsos** (8 rendiciones y 71
 > portones en el trozo final, cuando la corrida tenía 159 y 868). Hay que juntar el `.gz` con `latest.log` (el
 > comando está en `docs/PENDIENTE.md`) **antes** de sacar conclusiones.
+>
+> ⚠️ **CORREGIDO el 9-oct-2026**: ese comando sigue estando en `docs/PENDIENTE.md` (L1238-L1245), pero ese fichero ya es
+> el **traspaso VIEJO**: el traspaso vivo hoy es `docs/CONTINUAR.md` (su §2.0), que lo dice en L86 y L326.
 
 
 ### `una_columna.py` (versionada) — UNA COLUMNA DEL GUARDADO, celda a celda, SIN levantar servidor
@@ -665,10 +709,20 @@ compuerta. La línea deja, en cada apertura, la ruta viva y si **ya alcanzaba** 
         rutaViva=7 nodos alcanzaba=SI · goals=[VillagerFarmGoal VillagerGateGoal]
 ```
 
+> ⚠️ **CORREGIDO el 9-oct-2026**: la traza `[Gate]` ahora dice también **el lado** de cada uno, así:
+> `… abro el porton 441,63,684 (aldeano DENTRO) · destino=443,63,686 (destino FUERA) rutaViva=7 nodos alcanzaba=SI …`
+> (`VillageGateGoal.java` L368). Es lo que permite ver el **cruce del anillo** en la partida del jugador
+> (**I222**, `docs/aldea-invariantes.md` L6408-L6410).
+
 Medido en una corrida de 127.680 ticks: **499 de 868 aperturas (57 %)** tenían la ruta viva alcanzando ya, o sea que
 ahí se le estaba quitando el destino a un aldeano que iba llegando. **El arreglo (no borrárselo en ese caso) se
 probó y NO cambia nada medible** (las rendiciones salen a 1,25 por 1.000 ticks con él y a 1,37 sin él), así que se
 **retiró** según la regla del proyecto; la línea se queda porque es el instrumento que lo midió.
+
+> ⚠️ **SIGUE PENDIENTE (comprobado el 9-oct-2026)**: que un aldeano **cruce de verdad** el portón del muro **no está
+> medido**: cinco corridas y el instrumento no aisló el cruce (**I222**, `docs/aldea-invariantes.md` L6412-L6417). La
+> firma a buscar en el registro del jugador es `[Gate] … aldeano DENTRO · destino FUERA` y, después, el aldeano fuera —
+> está en `docs/CONTINUAR.md` §2.0 (punto 1).
 
 ### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
 
