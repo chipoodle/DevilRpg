@@ -6919,8 +6919,13 @@ así que **agotar 40 bloques pide 8-10 minutos** y **el banco de 3 minutos no ll
   final de la corrida (t=3120) y el monstruo **parado en r=91**, sin picar un bloque más ✓.
 
 O sea: **el tope corta el taladro de verdad** y, cuando se agota, **el que se queda es el asaltante**: una montaña de más
-de 40 bloques **aguanta y la aldea se salva**, que es exactamente lo que pidió el jugador ✓. (Lo que **no** está medido es
-si el tope se **recarga** en una marcha nueva: `recargarTunel()` se llama al empezar la marcha, y eso no se ha medido.)
+de 40 bloques **aguanta y la aldea se salva**, que es exactamente lo que pidió el jugador ✓.
+
+**¿Y SE RECARGA?** Leído en el código: **sí, con cada centro que se le asigna** —
+`setGoToCenterActive(true)` (**L199**) llama a `recargarTunel()` (*«siempre que se asigne centro, el asedio arranca activo
+y con presupuesto de túnel nuevo»*), y quien asigna centro es una **horda nueva** (`HordeManager`) o el arranque de la
+marcha: o sea, **cada ola vuelve con 40 bloques** ✓. **Lo que NO está medido** ✗ es una **segunda ola contra la misma
+montaña** (que volvería a taladrar 40): está leído, no medido.
 
 ### I240 · LA MONTAÑA: EL TÚNEL DE FRENTE **SÍ** CUMPLE LO QUE PIDIÓ EL JUGADOR (y un cambio mío que sobraba)
 
