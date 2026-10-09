@@ -92,15 +92,43 @@ del que sea: zombi, esqueleto…).
 
 ### 2.0 · LO QUE ESTA ABIERTO **HOY** (puesto al dia el 9-oct-2026)
 
-**LO ABIERTO HOY, en dos lineas** (esto es lo unico pendiente de verdad; lo de mas abajo es el historial, con lo que se
-fue cerrando y **como** se cerro):
-1. **El cruce del aldeano por el porton del muro** (nota de **I222** en `docs/aldea-invariantes.md`): **sigue abierto** ✗
-   — cinco corridas del arnes y ninguna aislo el cruce. Se ve **en la partida del jugador**: en el registro tiene que
-   salir `[Gate] … aldeano DENTRO · destino FUERA` y despues el aldeano fuera.
-2. **Un testigo del arnes que no marca** ✗ (cabo suelto de **I243**): en la escena de la montaña, `celdas del anillo
-   abiertas` marca **0** aunque este taladrando (mira una celda fija por columna; el taladro va a la altura del suelo del
-   monstruo). Lo que dice la verdad es **su radio** y **el contador** (`le quedan N de tunel`). Se arregla mirando la
-   **columna entera**.
+**LO ABIERTO HOY, entero y comprobado contra el acta** (9-oct-2026; lo de mas abajo es el historial, con lo que se fue
+cerrando y **como**). Va separado por **quien puede cerrarlo**:
+
+**(a) SOLO SE PUEDEN CERRAR JUGANDO** (el arnes no tiene ventana ni jugador de verdad):
+1. **El cruce del aldeano por el porton del muro** (**I222**, acta L6436): cinco corridas del arnes y ninguna aislo el
+   cruce; el pueblo abre **0** portones en una corrida normal (**I223**). En el registro tiene que salir
+   `[Gate] … aldeano DENTRO · destino FUERA` y despues el aldeano fuera.
+2. **El asedio EN VIVO, entero** (**I86**/**I89**, acta L2262 y L6220-6222): **una oleada de verdad** (el arnes coloca los
+   asaltantes a mano, y `HordeManager` usa `level.players()`, asi que headless **no se puede**) y **la pausa**: alejarse
+   **mas de 128 bloques** y volver (hoy solo esta medido con **jugador de pega**, I237: `EN PAUSA`). La prueba que se
+   pide es `OLEADA de N asediadores intentados, M colocados` y `Aldea 0 salvada` **en el registro**.
+3. **La barra dibujada en el cliente y el clic en la piedra** (**I87**, acta L2138): la tabla de nombres si esta (30
+   nombres), pero lo medido es el **texto** de `VillageBarText`, no el **pixel** en pantalla ni el clic en vivo.
+4. **Los 14 faroles de la aldea 0** (**I13**, acta L238): quedaron pendientes «hasta que el jugador pase por ella».
+
+**(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA**:
+5. **El testigo del arnes que no marca** ✗ (**I243**, acta L6975): en la escena de la montaña, `celdas del anillo
+   abiertas` marca **0** aunque taladre (mira una celda fija por columna). Se arregla mirando la **columna entera**; hoy
+   lo que dice la verdad es **el radio** y **el contador** (`le quedan N de tunel`).
+6. **Las losas del tejado a +11** ✗ (**I60**, acta L1470): 27 losas del tejado de la taberna por encima de la banda del
+   obrero (`REPAIR_MAX_UP = 5`, `VillageManager.java` L852-853, filtro en L6974) → **nadie las repone**.
+7. **El compostero que algo vuelve a poner en alto** ✗ (**I162**/**I163**, acta L5046): la limpieza actua **9-23 veces
+   por corrida**; falta el arreglo de raiz (que el repositor no lo ponga ahi).
+8. **El aviso cosmetico del registro** ✗ (**I123**, acta L3633): `VillageGenerator.java` L1398 sigue escribiendo «(dos
+   pisos: sala de armas abajo y 8 camas arriba)» en una casa de un piso.
+9. **La zanja de la mina en `x=603`** ✗ (auditoria, acta L6213-6226, punto 4): pulido de mundo.
+10. **Objetos flotando y `repuso farmland en y=61`** ✗ (misma auditoria, punto 2): queda vigilarlo.
+11. **La metrica `PARAR`** ✗ (misma auditoria, punto 5): va **limitada a una linea cada 2 s por aldeano**, asi que no
+    sirve para el baile fino (por eso se usan `[Rumbo]` y `no consigue llegar`).
+12. **Una cama sin acceso no se le da a nadie** (**I43**, acta L994): la celda de espera exige estar a **≤2,0 bloques**,
+    asi que una cama encerrada se queda sin dueño (limite conocido).
+
+**(c) ACEPTADO A PROPOSITO (no se toca, y se dice)**:
+13. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
+    migracion de casas; **no se toco**, y lo que hay es la **red de seguridad** (`bajarDeLasCamas` + el rescate de I103).
+14. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
+    («no hay medida que lo pida») y nada posterior lo ha cambiado.
 
 Lo de abajo es el historial de los cinco pendientes que se cerraron en esta ronda; debajo del todo esta el historial
 antiguo. Y las tres cosas de **instrumento** con las que empezo la ronda: **la primera ya esta cerrada con numeros**:
@@ -307,6 +335,10 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
   de reconstruccion en las partidas.
 - **El asedio funciona de principio a fin**: `OLEADA de 8 asediadores intentados, 8 colocados` y luego `Aldea 0 salvada`
   (arreglado: una oleada vacia no escribe victoria, reintentos, segunda pasada de spawn).
+  > ⚠️ **ESTO NO TIENE PRUEBA CITADA, y el acta dice lo contrario** (comprobado el 9-oct-2026): I86/I89 (acta L2262 y
+  > L6220-6222) dicen que **el asedio en vivo NO se ha visto** — «0 lineas de `ASEDIO`/`OLEADA`» —, y **ningun registro
+  > guardado** de `build/rapida-*.log` tiene la traza `OLEADA` ✗. Se deja la afirmacion porque cuenta la intencion, pero
+  > **lo que falta es verlo en la partida**: esta en **§2.0 (a), punto 2**.
 - **Los aldeanos no bailan**: I205 (traza + un goal sin MOVE no pisa camino ajeno + el empujon ya no para a quien anda),
   I206 (el embudo `ponerRumbo` no reescribe el destino cada tick: `[Rumbo]` = 94-96 % saltadas), I207 (puertas: se abren
   en vez de sacarlos a empujones), I208 (`parar` idempotente por tick), I209 (una celda de paso no es un encajamiento).
