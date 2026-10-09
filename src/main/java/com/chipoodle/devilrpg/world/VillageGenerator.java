@@ -1395,8 +1395,13 @@ public final class VillageGenerator {
         BlockPos puerta = barraca(level, base, nivel);
         // Camino de la plaza a su puerta (si no, los guardias tienen que trepar por el césped).
         paths(level, center, doorApproach(level, puerta));
-        DevilRpg.LOGGER.info("[Village] Aldea en {}: barraca de la milicia construida en {} (dos pisos: sala de"
-                + " armas abajo y {} camas arriba)", center, base, BARRACA_CAMAS);
+        // EL AVISO DICE EL TRAZADO DE VERDAD (I244, 9-oct-2026): decia «dos pisos: sala de armas abajo y 8 camas
+        // arriba» SIEMPRE, y con `BARRACA_PISO2 = 0` —el trazado de UN piso que pidio el jugador en I121/I123— eso es
+        // falso: el registro mentia (era el punto 8 de la lista viva de CONTINUAR 2.0).
+        String trazado = BARRACA_PISO2 > 0
+                ? "dos pisos: sala de armas abajo y " + BARRACA_CAMAS + " camas arriba"
+                : "un piso: sala de armas y " + BARRACA_CAMAS + " camas";
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: barraca de la milicia construida en {} ({})", center, base, trazado);
     }
 
     /**

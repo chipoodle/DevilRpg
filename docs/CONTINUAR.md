@@ -108,15 +108,18 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
 4. **Los 14 faroles de la aldea 0** (**I13**, acta L238): quedaron pendientes «hasta que el jugador pase por ella».
 
 **(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA**:
-5. **El dato de control del arnes que no marca** ✗ (**I243**, acta L6975): en la escena de la montaña, `celdas del anillo
-   abiertas` marca **0** aunque taladre (mira una celda fija por columna). Se arregla mirando la **columna entera**; hoy
-   lo que dice la verdad es **el radio** y **el contador** (`le quedan N de tunel`).
+5. ~~**El dato de control del arnes que no marca**~~ — **CERRADO Y MEDIDO** ✓ (9-oct-2026, **I244**): ahora cuenta la
+   **columna entera** (`columnas del anillo abiertas`) y en la corrida 181 marca **8/4320** mientras taladra, donde
+   antes marcaba **0** ✗. Y de paso se arreglaron **dos fallos de la escena** (el asaltante se colaba por una **cueva**
+   por debajo del anillo, corridas 179 y 180): el anillo es ahora **macizo hasta `cota−30`**.
 6. **Las losas del tejado a +11** ✗ (**I60**, acta L1470): 27 losas del tejado de la taberna por encima de la banda del
    obrero (`REPAIR_MAX_UP = 5`, `VillageManager.java` L852-853, filtro en L6974) → **nadie las repone**.
 7. **El compostero que algo vuelve a poner en alto** ✗ (**I162**/**I163**, acta L5046): la limpieza actua **9-23 veces
    por corrida**; falta el arreglo de raiz (que el repositor no lo ponga ahi).
-8. **El aviso cosmetico del registro** ✗ (**I123**, acta L3633): `VillageGenerator.java` L1398 sigue escribiendo «(dos
-   pisos: sala de armas abajo y 8 camas arriba)» en una casa de un piso.
+8. ~~**El aviso cosmetico del registro**~~ — **ARREGLADO** ✓ (9-oct-2026, **I244**): el aviso se compone segun el
+   trazado de verdad (`VillageGenerator.java` L1397-1403) y con `BARRACA_PISO2 = 0` dice «un piso: sala de armas y 8
+   camas». **Lo que falta es verlo**: ese aviso solo se escribe **al construir la barraca**, o sea en una **aldea
+   nueva** (`-MundoNuevo`); en las corridas con el pueblo ya hecho no sale.
 9. **La zanja de la mina en `x=603`** ✗ (auditoria, acta L6213-6226, punto 4): pulido de mundo.
 10. **Objetos flotando y `repuso farmland en y=61`** ✗ (misma auditoria, punto 2): queda vigilarlo.
 11. **La metrica `PARAR`** ✗ (misma auditoria, punto 5): va **limitada a una linea cada 2 s por aldeano**, asi que no

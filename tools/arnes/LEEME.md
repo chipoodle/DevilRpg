@@ -512,9 +512,11 @@ asignar centro, que es lo que hace una ola nueva: sirve para ver que el **tope d
    > (`getHeight(MOTION_BLOCKING)`) desde el arreglo de **I243** (`docs/aldea-invariantes.md` L6934-L6939), y la montaña
    > gruesa se volvió a medir con la escena buena (corrida 178: **r=92→88 en 150 s, 11 taladros, sin atravesarla**).
 
-2. **La prueba `celdas del anillo abiertas` puede marcar 0 aunque esté taladrando** (mira una celda fija por columna y
-   el taladro va a la altura del suelo del monstruo): lo que dice la verdad es **su radio** y **el contador de la traza**
-   (`le quedan N de tunel`).
+2. ~~**El dato marcaba 0 aunque estuviera taladrando**~~: **ARREGLADO Y MEDIDO** ✓ (I244, corrida 181): ahora
+   cuenta la **columna entera** y se llama **`columnas del anillo abiertas`** (marcó **8/4320** taladrando, donde antes
+   marcaba **0**). **Y OJO con dos cosas de la escena, las dos medidas**: el anillo es **macizo hasta `cota−30`** porque
+   el mundo tiene **cuevas** y el asaltante se colaba **por debajo** (corridas 179 y 180, con `columnas abiertas=0` y
+   el monstruo llegando al centro ✗); y el aviso de la barraca solo se ve en **aldea nueva**.
 
    > ⚠️ **SIGUE PENDIENTE (comprobado el 9-oct-2026)**: la prueba `celdas del anillo abiertas` marca **0** aunque esté
    > taladrando, porque mira **una celda fija por columna** y el taladro va a la altura del suelo del monstruo; es el

@@ -3791,10 +3791,10 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      *       jugador quería que aguantara («una montaña grande aguanta y la aldea se salva»).</li>
      * </ul>
      */
-    private static final int MONTANA_RADIO = 66;
-    private static final int MONTANA_GROSOR = 26;
+    private static final int MONTANA_RADIO = 70;
+    private static final int MONTANA_GROSOR = 3;
     private static final int MONTANA_ALTO = 9;
-    private static final int MONTANA_ASALTANTE = 95;
+    private static final int MONTANA_ASALTANTE = 80;
     /** Prueba del barrido (ver {@link #medirLaMontana}): si el arnés borra al monstruo, la medida NO vale. */
     private static boolean montanaBarridoAvisado = false;
     /** ¿Se le ha vuelto a asignar centro (la "segunda ola") en esta corrida? Ver {@link #medirLaMontana}. */
@@ -3803,6 +3803,14 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static void medirLaMontana(ServerLevel level, FakePlayer pega) {
         final int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
         if (ticks == 300 && montanero == null) {
+            // LA BASE DEL ASALTANTE MANDA TAMBIEN HACIA ABAJO (I244, medido en la corrida 179): en esa corrida el
+            // asaltante nacio en una hondonada (y=63 con el pueblo a 66), se cayo a una cueva y paso POR DEBAJO del
+            // anillo —de r=80 a r=19 sin picar un bloque, `columnas del anillo abiertas=0` ✗—. Ahora cada columna del
+            // anillo baja hasta 3 bloques por debajo del suelo del asaltante.
+            final int asaltanteX = CENTRO.getX() + MONTANA_ASALTANTE;
+            final int asaltanteZ = CENTRO.getZ();
+            final int sueloDelAsaltante = level.getHeight(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, asaltanteX, asaltanteZ);
             // EL ANILLO: cerrado (no se puede rodear), macizo y alto, a MONTANA_RADIO del centro y por FUERA del disco
             // de la aldea (el disco llega a 64), que es donde el asaltante SI puede picar.
             for (int paso = 0; paso < 1440; paso++) {
@@ -3818,27 +3826,32 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     // montaña este DONDE SE VE.
                     int base = Math.max(cota, level.getHeight(
                             net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z));
-                    for (int dy = -3; dy <= MONTANA_ALTO; dy++) {
-                        level.setBlock(new BlockPos(x, base + dy, z),
+                    // Y MACIZO HASTA DEBAJO DE LAS CUEVAS (I244, corrida 180): el mundo tiene cuevas a y=41 y
+                    // el asaltante se colaba por ahi (llego al centro con `columnas abiertas=0`). El fondo se
+                    // fija en `cota - 30`, que es lo que hace que el anillo SEA el obstaculo de la medida.
+                    int fondo = Math.min(Math.min(base, sueloDelAsaltante), cota - 30) - 3;
+                    for (int y = fondo; y <= base + MONTANA_ALTO; y++) {
+                        level.setBlock(new BlockPos(x, y, z),
                                 net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 2);
                     }
-                    anilloDeLaMontana.add(new BlockPos(x, base + 1, z));
+                    // SE GUARDA LA BASE DE LA COLUMNA, NO UNA CELDA SUELTA (I244, medido el 9-oct-2026): antes se
+                    // guardaba `base + 1` y el dato marcaba 0 aunque el monstruo taladrara, porque el taladro va a
+                    // la altura de SU suelo. Ahora se cuenta la columna entera (ver el recuento).
+                    anilloDeLaMontana.add(new BlockPos(x, base, z));
                 }
             }
             // EL ASALTANTE, FUERA Y SIN OBJETIVO: así corre la MARCHA al centro (la que taladra). Si se le pusiera un
             // objetivo, la marcha se apaga y lo que se mediría sería otra cosa.
             montanero = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
             if (montanero != null) {
-                int ax = CENTRO.getX() + MONTANA_ASALTANTE;
-                int az = CENTRO.getZ();
-                colocarAsaltanteAlSuelo(level, montanero, ax, az, cota);
+                colocarAsaltanteAlSuelo(level, montanero, asaltanteX, asaltanteZ, cota);
                 montanero.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
                 montanero.setGoToCenterActive(true);
                 montanero.recargarTunel();
                 montanero.setPersistenceRequired();
                 level.addFreshEntity(montanero);
                 DevilRpg.LOGGER.info("[Arnes] MONTANA: escena montada — anillo de piedra CERRADO a r={} ({} de grueso y"
-                                + " {} de alto, {} celdas de prueba) con el asaltante FUERA en {} (r={}) y SIN objetivo,"
+                                + " {} de alto, {} columnas de prueba) con el asaltante FUERA en {} (r={}) y SIN objetivo,"
                                 + " marchando al centro (cota {}). Aquí no se puede rodear: o taladra de frente, o se"
                                 + " queda",
                         MONTANA_RADIO, MONTANA_GROSOR, MONTANA_ALTO, anilloDeLaMontana.size(),
@@ -3860,10 +3873,15 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     + " (presupuesto de tunel nuevo: si el tope se recarga, vuelve a taladrar)", ticks,
                     montanero.getId());
         }
+        // LA COLUMNA ENTERA, no una celda (I244): una columna cuenta como ABIERTA si CUALQUIER celda de su altura
+        // dejo de ser piedra. Es lo que hace que el dato sirva para creerse la medida (antes marcaba 0 taladrando).
         int abiertas = 0;
         for (BlockPos p : anilloDeLaMontana) {
-            if (!level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.STONE)) {
-                abiertas++;
+            for (int dy = -3; dy <= MONTANA_ALTO; dy++) {
+                if (!level.getBlockState(p.offset(0, dy, 0)).is(net.minecraft.world.level.block.Blocks.STONE)) {
+                    abiertas++;
+                    break;
+                }
             }
         }
         int r = (int) Math.hypot(montanero.getX() - CENTRO.getX(), montanero.getZ() - CENTRO.getZ());
@@ -3879,7 +3897,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             DevilRpg.LOGGER.warn("[Arnes] MONTANA: EL INSTRUMENTO HA BORRADO AL ASALTANTE en t={} (el barrido de monstruos"
                     + " del arnes): LA MEDIDA NO VALE", ticks);
         }
-        DevilRpg.LOGGER.info("[Arnes] MONTANA t={} pos={} r={} DENTRO={} borrado={} vivo={} | celdas del anillo"
+        DevilRpg.LOGGER.info("[Arnes] MONTANA t={} pos={} r={} DENTRO={} borrado={} vivo={} | columnas del anillo"
                         + " abiertas={}/{} | goals=[{}]", ticks, montanero.blockPosition(), r, dentro ? "SI" : "no",
                 montanero.isRemoved() ? "SI" : "NO", montanero.isAlive() ? "SI" : "NO", abiertas,
                 anilloDeLaMontana.size(), goalsCorriendo(montanero));

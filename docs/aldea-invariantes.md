@@ -6949,6 +6949,39 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I244 · EL AVISO DE LA BARRACA Y EL DATO DE LA MONTAÑA (dos cabos de la lista viva, cerrados)
+
+Los dos primeros puntos del orden que se propuso al jugador: el **8** (el aviso cosmético del registro) y el **5** (el
+dato de control de la montaña que no marcaba).
+
+**8 · EL AVISO DECÍA UN TRAZADO FALSO** ✗. `VillageGenerator` escribía **siempre** «(dos pisos: sala de armas abajo y 8
+camas arriba)», y con **`BARRACA_PISO2 = 0`** (el trazado de **un piso** que pidió el jugador, I121/I123) eso es falso:
+**el registro mentía** ✓. **ARREGLO** (`VillageGenerator.java` L1397-1403): el aviso se compone según el trazado de
+verdad (`BARRACA_PISO2 > 0` → dos pisos; si no → «un piso: sala de armas y 8 camas»). Es texto: se ve **al construir la
+barraca**, o sea en una **aldea nueva** (la receta de dos tandas: `-MundoNuevo` y luego `-Conservar`); en las corridas de
+hoy, con el pueblo ya construido, ese aviso no se escribe.
+
+**5 · EL DATO DE LA MONTAÑA MIRABA UNA CELDA SUELTA** ✗. `celdas del anillo abiertas` guardaba **una celda fija por
+columna** (la `base+1`) y marcaba **0 aunque el monstruo estuviera taladrando** (medido en I243, corrida 178), porque el
+taladro va a **la altura del suelo del monstruo**, no a `base+1`. **ARREGLO** (`GuardHarness`, `medirLaMontana`): se
+guarda **la base de cada columna** y una columna cuenta como **abierta si CUALQUIER celda de su altura** dejó de ser
+piedra; la etiqueta pasa a ser **`columnas del anillo abiertas`** ✓ (lo que de verdad se cuenta).
+
+**Y AL MEDIRLO SALIERON DOS FALLOS MÁS DE LA ESCENA** ✗ (los dos, medidos):
+1. **Corrida 179**: el asaltante nació en una hondonada (`y=63` con el pueblo a `66`), se cayó a una **cueva** y pasó
+   **por debajo** del anillo — de **r=80 a r=19 sin picar un bloque** (`columnas abiertas=0`) ✗.
+2. **Corrida 180** (ya con el anillo bajando a `min(base, suelo)−3` = **59**): volvió a colarse por la cueva hasta
+   **y=41** y llegó al centro (`columnas abiertas=0`). Cruzar por una cueva es **legítimo** en el juego, pero para medir
+   el **taladro de frente** el anillo tiene que ser el obstáculo.
+   **ARREGLO**: el anillo es **macizo hasta `cota − 30`** (`y=36` con la cota 66), o sea por debajo de las cuevas de esa
+   zona ✓.
+
+**MEDIDO, YA CON EL DATO Y LA ESCENA BUENOS** ✓ (corrida **181**, `-Conservar`, anillo de 3 de grueso a r=70 y el
+asaltante fuera a r=80):
+- el dato pasa de **`0/4320`** (con el monstruo taladrando, I243) a **`8/4320` columnas abiertas** ✓ — el número cuadra
+  con el túnel que se ve en la traza (**21 `pica`** de ese asaltante, `#422`);
+- y el asaltante **atraviesa** el anillo (llega a **r=0** a los ~90 s) ✓, que es lo que ya se midió en I240.
+
 ### I243 · LA SEGUNDA MARCHA RECARGA EL TALADRO **Y** LA MONTAÑA SE APOYA EN EL TERRENO (un fallo de la escena)
 
 Cierra la última casilla de I241 («¿se recarga el tope de 40?») y arregla un fallo de la **escena** que salió al medirlo.
