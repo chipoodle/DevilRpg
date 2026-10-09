@@ -73,6 +73,18 @@ del que sea: zombi, esqueleto…).
     **registro vivo en `run/logs/latest.log`** (el agente lo lee el solo, no hay que pegarlo); config de servidor en
     `run/config/devilrpg-server.toml` (`logEscaladoDeSpawn` se enciende para medir las velocidades del asedio).
 18. **No hay rama nueva por ahora**: se trabaja en `migration-neoforge-1.21.1` hasta cerrar los pendientes.
+19. **LO CERRADO SE MARCA, Y LAS NOTAS VIEJAS NO SE BORRAN** (9-oct-2026, y lo pidio el jugador: *«corrige toda la
+    documentacion y anota como cerrado lo que ya esta»*). La documentacion acumula anos y **miente sin querer**: una nota
+    que decia «queda abierto: el giro interpolado del porton» hizo que el agente propusiera **hacer lo que ya estaba
+    hecho** (`PortonDobleBlockEntity` + `PortonDobleRenderer`): lo cazo el jugador. **Regla**: cuando una nota vieja dice
+    que algo esta pendiente, **se comprueba** (en el acta, en el codigo o en los registros) y:
+    - si **ya esta hecho/medido**, se le pone DEBAJO la marca
+      `> ✅ **CERRADO (comprobado el <fecha>)**: <que lo cerro, con I### y/o `Clase` L###>`;
+    - si **sigue abierto**, se le pone `> ⚠️ **SIGUE ABIERTO (comprobado el <fecha>)**: <por que> — esta en
+      `docs/CONTINUAR.md` §2.0`;
+    - y **el texto viejo NO se borra** (cuenta el camino y las hipotesis falsas, que son parte de la medida).
+    **El unico traspaso vivo es este fichero** (`docs/CONTINUAR.md`, su §2.0); `docs/PENDIENTE.md` es el viejo y esta
+    marcado como tal; y las entradas del acta son **actas**, no listas de tareas.
 
 ---
 
@@ -80,8 +92,18 @@ del que sea: zombi, esqueleto…).
 
 ### 2.0 · LO QUE ESTA ABIERTO **HOY** (puesto al dia el 9-oct-2026)
 
-Lo de abajo es el historial; **esto** es lo que falta de verdad. Eran tres cosas de **instrumento** (medir algo que ya
-esta escrito) y **la primera ya esta cerrada con numeros**:
+**LO ABIERTO HOY, en dos lineas** (esto es lo unico pendiente de verdad; lo de mas abajo es el historial, con lo que se
+fue cerrando y **como** se cerro):
+1. **El cruce del aldeano por el porton del muro** (nota de **I222** en `docs/aldea-invariantes.md`): **sigue abierto** ✗
+   — cinco corridas del arnes y ninguna aislo el cruce. Se ve **en la partida del jugador**: en el registro tiene que
+   salir `[Gate] … aldeano DENTRO · destino FUERA` y despues el aldeano fuera.
+2. **Un testigo del arnes que no marca** ✗ (cabo suelto de **I243**): en la escena de la montaña, `celdas del anillo
+   abiertas` marca **0** aunque este taladrando (mira una celda fija por columna; el taladro va a la altura del suelo del
+   monstruo). Lo que dice la verdad es **su radio** y **el contador** (`le quedan N de tunel`). Se arregla mirando la
+   **columna entera**.
+
+Lo de abajo es el historial de los cinco pendientes que se cerraron en esta ronda; debajo del todo esta el historial
+antiguo. Y las tres cosas de **instrumento** con las que empezo la ronda: **la primera ya esta cerrada con numeros**:
 
 1. **La escena del nado** (`MEDIR_AGUA`) — **CERRADA Y MEDIDA** ✓ (9-oct-2026, **I235** en `docs/aldea-invariantes.md`).
    Y salieron **tres** cosas, no una: (a) el **barrido de monstruos del arnes** borraba al asaltante en el primer barrido
@@ -213,7 +235,7 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
    **6 dentro a los 11 s y 8 a los 37 s**, y de las tres herramientas **solo se usa el tunel (19 cavadas de terreno)**
    — el muro **no lo pica nadie** (`TALADRAR` = 0) porque el anillo **tiene huecos y la ola entra andando**. ABIERTO:
    (a) esa mitad de la regla («el muro perimetral es rompible») **no la ejerce nadie** hoy: o los huecos del anillo se
-   cierran, o el asedio no tiene por que abrir brecha; (b) falta ver el **puente y la escalera** en una ola.
+   cierran, o el asedio no tiene por que abrir brecha; (b) falta ver el **puente y la escalera** en una ola — **CERRADO el 9-oct-2026**: los dos se ven (el **puente** 8 de 8 y la **escalera** 103 lineas `ESCALON`), ver **I236/I238/I242** ✓.
    **CORREGIDO Y MEDIDO en I214**: con el muro de prueba **en r=62** (el radio del muro de verdad), el asaltante
    **ABRE LA BRECHA** (el muro paso de **15 bloques a 10**: pico 5) y **entro** — es la primera medida de esa mitad de
    la regla, y sale **si**. Y entro **andando por el hueco**, sin necesitar la escalera. Ademas, tres fallos de flujo
@@ -254,7 +276,7 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
    esta maquina no hay PIL). Los 12 modelos apuntan a ella y los tres pisos cogen su tercio, asi que el porton se ve de
    una pieza. Medido: **ni un aviso de modelo ni de textura** en el registro, la textura viaja al recurso del mod, y el
    anillo sigue `921/921 | PORTONES 19 | AGUJEROS 0` con 1 reconstruccion.
-3. **El nado del asaltante** — **HECHO en I215** (falta el instrumento). El defecto estaba en la cuenta del propio
+3. **El nado del asaltante** — **HECHO en I215** y el **instrumento YA ESTA** (**I235**, 9-oct-2026: el goal arranca 3 veces y saca al monstruo del agua en **2-4 ticks**) ✓. El defecto estaba en la cuenta del propio
    codigo: `MAX_ESCAPE_TICKS = 200` (10 s intentando salir) **+ `retryCooldown = MAX_ESCAPE_TICKS`** en `stop()` (otros
    10 s **sin poder tocar el agua**) = **20 segundos** en los que el asaltante ni avanza ni intenta nada, que es
    exactamente el *"se quedan ahi y avanzan muy lento"* del jugador. Arreglado en `EscapeWaterGoal` (**L1162**): no se
@@ -275,7 +297,7 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
    de verdad lleva la marca) para que una discrepancia se vea en vez de esconderse. Medido en la partida de 3 minutos:
    `0 espadachin(es) y 0 arquero(s) de 0 sobrante(s) de 12 aldeano(s) | alistados DE VERDAD: 0` — **y el cero no es un
    fallo**: con los puestos por oficio cubiertos no hay sobrantes y sin sobrantes no hay milicia (es la regla del
-   reparto). **Falta ver** una milicia con gente dentro (aldea con crias o mas adultos que puestos).
+   reparto). **Falta ver** una milicia con gente dentro (aldea con crias o mas adultos que puestos) — **CERRADO el 9-oct-2026**: visto y medido en **I237** (4 espadachines y 3 arqueros de 12 sobrantes, y las crias **nunca** se alistan) ✓.
 
 ---
 
@@ -301,7 +323,7 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 
 - `docs/aldea-invariantes.md` — **el acta**: cada cambio con su clase+linea, su medida, y las hipotesis falsas.
 - `docs/aldea-cerebro.md` — el plan de arquitectura del aldeano y **por que se retiro** la fase que se probo (§3).
-- `docs/PENDIENTE.md` — la lista historica de pendientes y el acta de cierre.
+- `docs/PENDIENTE.md` — el traspaso **VIEJO** (27-sep a 3-oct): se conserva como **acta** (el porque medido de la sesion de los oficios), **no** como lista de pendientes, y lleva su aviso arriba. **Lo vivo es este fichero.**
 - `tools/arnes/tanda-rapida.ps1` (~3 min) y `tanda-larga.ps1` (~20 min) — los bancos de medida (copian el arnes a un
   directorio ignorado y levantan el servidor **sin el jugador**).
 - `tools/lint_aldea.py --strict` — el guardian (I8: mutar el mundo en el latido, etc.; las excepciones se justifican con
