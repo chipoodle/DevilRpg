@@ -6896,6 +6896,90 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I235 · EL NADO, MEDIDO: EL INSTRUMENTO ERA EL QUE ENCERRABA AL BICHO, Y EL GOAL DE I215 NO ARRANCABA NUNCA
+
+Era el **pendiente 1** de `docs/CONTINUAR.md` (§2.0): *«la escena del nado no mide»*. Se ha medido, y al medirla
+salieron **tres cosas**, de las cuales la tercera es un fallo de raíz del mod que **I215 no podía arreglar** porque su
+goal **no llegaba a arrancar**.
+
+#### 1) LO PRIMERO QUE ESTABA MAL ERA EL ARNÉS: EL BARRIDO DE BICHOS SE COMÍA AL ASALTANTE (hipótesis mía, falsa)
+
+La conclusión que quedó escrita el 6-oct-2026 («el pozo lo encierra») **era falsa** ✗. En `build/rapida-49.log` los **73
+volcados** son **la misma celda** (510, 83, 646), la misma velocidad (**0,012**) y `enAgua=SI` **de principio a fin**, y
+el **primer** volcado (t=320) es **exactamente la celda de aparición**: un bicho que se está moviendo no hace eso. La
+causa: el barrido de bichos de `GuardHarness.onServerTick` (**L369**) corre `ticks % 20 == 0` y **no tenía `MEDIR_AGUA`
+en su lista de excepciones**, así que borraba al asaltante en el **primer** barrido (t=320, un segundo después de
+aparecer) y lo que se estaba midiendo era **un bicho congelado** ✓. **ARREGLO**: `MEDIR_AGUA` entra en la lista (**L369**)
+y —esto es lo que evita que vuelva a pasar— la traza lleva **testigo**: cada volcado dice `borrado=SI/NO` y `vivo=SI/NO`
+y, si el instrumento borra al bicho, escribe **`EL INSTRUMENTO HA BORRADO AL ASALTANTE … LA MEDIDA NO VALE`**.
+Medido después: **`borrado=NO vivo=SI` en los 39 volcados** de la corrida 147 y en las 149 y 150 ✓.
+
+#### 2) Y LO SEGUNDO, TAMBIÉN DEL INSTRUMENTO: LA CHARCA SE JUNTABA CON EL MAR
+
+La escena se montaba a la **cota de la aldea**, y en la copia del guardado de hoy esa cota es **46** porque **el entorno
+es mar**: comprobado **celda a celda** en el guardado con `tools/arnes/una_columna.py` (herramienta nueva de esta
+ronda), que en el centro del pueblo escribe **`470,36..43 = diorite`, `470,44 = sand`, `470,45..62 = water`,
+`470,63.. = air`** — o sea, **agua de la 45 a la 62: mar abierto** donde el arnés busca la aldea. El propio registro lo
+dice: `[Village] Aldea en
+470,63,646: el muro NO esta a la cota 46 … muro reconstruido al nivel del pueblo 46`, con **`aldeanos=0`** y **0** de
+trabajo en la tanda. Con la charca a esa cota, **el agua de la escena y el océano son la misma agua**: la corrida 146
+(escena vieja) son **73 volcados** del bicho **subiendo de y=44 a y=62** y siguiendo hacia el **este** por el mar a
+**0,45 bloques/s**, **sin salir del agua ni una vez** ✓ (lo que se medía era el mar, no la charca).
+**ARREGLO** (`medirElNado`, **L2999**): la escena se levanta **por encima** del agua/terreno de la zona
+(`level.getHeight(MOTION_BLOCKING)`, **L3013**), sobre una **plancha de piedra de 21×21** con la **charca 5×5 de 4 de
+calado** y el agua **a ras de la orilla** (sin escalón) y el **objetivo en la propia orilla**, a 8 bloques al oeste
+(`AGUA_OBJETIVO`, **L3238**; el jugador de pega deja de devolverse a la plaza en **L408**). Así la escena **no depende del
+mundo**: se mide igual en el mar que en tierra ✓.
+
+#### 3) LO GORDO: EL GOAL DEL NADO NO ARRANCABA **NUNCA**, Y NO ERA CULPA DEL AGUA
+
+Con la escena arreglada, la **vuelta 1** (orilla a ras) sale limpia: **sale del agua a los 120 ticks (6,0 s)**, con
+**3,4 bloques** andados dentro del agua a **0,57 bloques/s** de media, y en tierra **2,12–2,28 bloques/s**, llegando al
+objetivo (8 bloques) a los **240 ticks (12 s)** ✓. Pero para verificar **I215** había que ponerle un **escalón** (una
+orilla **levantada un bloque**), y ahí el bicho se quedaba atascado **20 segundos** dentro del agua… y el **testigo**
+dijo lo que faltaba: **`ticks con el goal del nado corriendo = 0`** en las dos vueltas, y **ni un solo `ARRANCA`** ✗.
+
+**LA CAUSA ESTÁ EN EL MOTOR, y se leyó en el código de Mojang** (`GoalSelector.tick` y `WrappedGoal.canBeReplacedBy`,
+1.21.1): un goal que no está corriendo **solo entra** si el que tiene el flag puede ser reemplazado por él, y
+
+```java
+public boolean canBeReplacedBy(WrappedGoal otro) {
+    return this.isInterruptable() && otro.getPriority() < this.getPriority();   // ESTRICTAMENTE MENOR
+}
+```
+
+El asaltante hereda de `Zombie` el **`ZombieAttackGoal` registrado en la prioridad 2** (`Zombie.registerGoals`), que es
+un `MeleeAttackGoal` y pide los flags **MOVE y LOOK**; y `EscapeWaterGoal`, que también pide **MOVE**, estaba **en la 2**
+(`AggressiveZombieEntity.registerGoals`, antes **L845**). **Con las dos en 2 y el ataque corriendo, el nado no puede
+entrar jamás**: mientras el asaltante tenga objetivo —o sea, **todo el asedio**— el goal del agua era **código muerto**
+✓. Y el comentario que había en el propio goal («con MOVE manda él sobre la manada (4) y el ataque (**5**)») partía de un
+número equivocado: el ataque del zombi no es el `MeleeAttackGoal` del mod (**L867**, prioridad 5), es el **de vanilla, en
+la 2** ✓.
+
+**ARREGLO (una línea)**: `this.goalSelector.addGoal(1, new EscapeWaterGoal(this))` (**L854**). En **1** entra él, y el
+ataque (prioridad **mayor**) no puede quitárselo; `FloatGoal`, que también es 1, **solo pide el flag JUMP**, así que no
+estorba ✓. Los dos comentarios que decían lo contrario quedan corregidos (**L846-853** y **L1220-1225**).
+
+**MEDIDO ANTES Y DESPUÉS, con la misma escena y la misma corrida de 3 minutos**:
+
+| | goal del nado corriendo | qué pasó en la vuelta del escalón |
+|---|---|---|
+| **antes** (`rapida-149.log`, prioridad 2) | **0 ticks** en las dos vueltas; el testigo **no vio ni un arranque** | atascado 20 s en el agua; salió **picando la piedra** de la plancha (`[Siege] … pica Block{minecraft:stone}`), no nadando |
+| **después** (`rapida-150.log`, prioridad 1) | **arranca 3 veces** (t=892, t=950, t=1896) y **saca al bicho del agua en 2–4 ticks** cada vez | en la orilla con escalón, cada atasco en el agua lo resuelve el goal; el bicho acaba llegando al objetivo |
+
+Y la **vuelta 1 no cambia** (0 ticks corriendo también después): con la orilla a ras **no hace falta** el goal, el
+asaltante cruza nadando solo ✓ — o sea, el arreglo **no introduce** un goal que pise el camino cuando no toca (I205).
+
+#### LO QUE ESTE INSTRUMENTO DEJA DICHO, Y LO QUE NO
+
+- **La vuelta del escalón mezcla dos cosas** y hay que leerla con cuidado: el asaltante del arnés pica la plancha (su
+  `protegidoPorLaAldea` no veta nada: en el registro sale como **`aldea -1`**, el asedio inicial), así que los 74 s de
+  esa vuelta incluyen cavar. Lo que mide el asunto es **el goal**: arranca y saca al bicho del agua **en 2–4 ticks**.
+- **La aldea de la copia del guardado no tiene aldeanos** (`aldeanos=0`, 0 avisos de rendición, todos los contadores de
+  trabajo a 0). No afecta a esta medida —la escena es autosuficiente—, pero **sí afecta a los pendientes 2 y 3**
+  (la ola con muro entero y foso, y la milicia con sobrantes): hace falta una aldea **con gente**. Queda apuntado en
+  `docs/CONTINUAR.md` §2.0, para decidirlo con el jugador ✓.
+
 ### I215 · EL NADO: SE LE QUITA EL «RENDIRSE» Y EL CASTIGO
 
 **El jugador**: *«cuando están en el agua se quedan ahí y avanzan muy lento»* ✓ → *«deben desplazarse a velocidad normal
@@ -6927,6 +7011,13 @@ escena no vale**: el asaltante queda **flotando en el borde del agua** (navegaci
 pozo, velocidad **0,012**, `enAgua=SI` toda la corrida) y no sale **ni con el arreglo ni sin él** ✓ — o sea que lo que
 estaba midiendo era **mi pozo**, no el nado. El instrumento queda anotado para arreglarlo antes de dar el nado por
 cerrado: hay que **quitar las paredes** del pozo (o darle una orilla a la que la navegación llegue de verdad) ✓.
+
+**CERRADO Y MEDIDO EN I235 (9-oct-2026)**, y con un hallazgo que este apartado no podía ver: el instrumento estaba mal
+por **dos** motivos (el barrido de bichos del arnés se comía al asaltante, y la charca se juntaba con el mar de la copia
+del guardado) y, con la escena ya buena, resultó que **este goal no arrancaba nunca**: `ZombieAttackGoal` (vanilla,
+prioridad **2**, flags MOVE+LOOK) le bloqueaba el flag al estar los dos en la **misma** prioridad, así que el arreglo de
+aquí era **código muerto** mientras el asaltante tuviera objetivo. Arreglado a la **prioridad 1** y verificado **antes y
+después** (0 ticks corriendo → arranca y saca al bicho del agua en 2–4 ticks): ver **I235** ✓.
 
 ### I212 · LOS TRES ATRAVESADORES: ESCALERA DE BLOQUES, TÚNEL Y PUENTE
 

@@ -842,7 +842,16 @@ public class AggressiveZombieEntity extends Zombie {
         super.registerGoals();
         this.goalSelector.addGoal(1, new FloatGoal(this)); // Flotar en agua
         // Si está en el agua atascado, nadar hacia la orilla más cercana (prioridad alta, antes de romper).
-        this.goalSelector.addGoal(2, new EscapeWaterGoal(this));
+        // LA PRIORIDAD ES 1, NO 2, Y ESO ES EL ARREGLO (I235, medido el 9-oct-2026): en 2 NO ARRANCABA NUNCA. El
+        // asaltante de vanilla registra `ZombieAttackGoal` en la prioridad 2 (`Zombie.registerGoals`) y ese goal es un
+        // `MeleeAttackGoal`, que pide los flags MOVE y LOOK; `GoalSelector.tick` solo deja entrar a un goal si el que
+        // tiene el flag puede ser reemplazado por él, y `WrappedGoal.canBeReplacedBy` exige una prioridad
+        // ESTRICTAMENTE MENOR. Con las dos en 2, mientras el asaltante tuviera objetivo (o sea, siempre en un asedio)
+        // el ataque tenía el MOVE y el nado no podía entrar: medido con el arnés, 0 ticks corriendo en 60 s dentro
+        // del agua y ni un solo arranque, con un bicho atascado 20 s contra el borde. En 1 entra él (y `FloatGoal`, que
+        // también es prioridad 1, solo pide el flag JUMP, así que no le estorba) y el ataque, al ser de prioridad
+        // mayor, no puede quitárselo: mientras esté en el agua, el agua es su camino.
+        this.goalSelector.addGoal(1, new EscapeWaterGoal(this));
         // Romper el bloque que le estorba cuando está atascado (pero no atacar casas si puede pasar).
         this.goalSelector.addGoal(3, new BreakBlockGoal(this));
         // Y LOS TRES ATRAVESADORES (I212): puente, escalera de bloques y túnel, a velocidad normal. Va justo DESPUES
@@ -1208,17 +1217,19 @@ public class AggressiveZombieEntity extends Zombie {
 
         public EscapeWaterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
-            // Este goal NAVEGA (nada hacia la orilla), así que declara MOVE: sin flags, GoalSelector lo deja
-            // arrancar aunque otro goal de más prioridad esté corriendo y no lo bloquea — y los flags son el
-            // ÚNICO mecanismo de prioridad. Con MOVE, mientras sale del agua manda él (prioridad 2) sobre la
-            // manada (4) y el ataque (5).
+            // Este goal NAVEGA (nada hacia la orilla), así que declara MOVE: los flags son el ÚNICO mecanismo de
+            // prioridad de `GoalSelector`. Y CON MOVE SOLO NO BASTA (I235, medido el 9-oct-2026): un goal solo puede
+            // quitarle el flag a otro si tiene una prioridad ESTRICTAMENTE MENOR (`WrappedGoal.canBeReplacedBy`), así
+            // que este tiene que ir en la prioridad 1 —por delante del `ZombieAttackGoal` de vanilla, que es un
+            // `MeleeAttackGoal` con MOVE en la prioridad 2— o no arranca nunca mientras el asaltante tenga objetivo.
+            // (En la prioridad 2 compartida con el ataque, medido: 0 ticks corriendo en 60 s.)
             this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE));
         }
 
         /**
          * Solo se activa si de verdad está <b>atascado</b> en el agua (nada y no avanza). Antes se activaba
          * con solo tocar agua (el antiguo {@code isReallyStuck()} devolvía {@code true} siempre), y como tiene
-         * prioridad 2 eso le bloqueaba TODO lo demás —romper bloques, marchar al centro y atacar—, así que
+         * prioridad alta eso le bloqueaba TODO lo demás —romper bloques, marchar al centro y atacar—, así que
          * un zombie en el agua se quedaba nadando en el sitio sin hacer nada. Con la aldea flotante rodeada de
          * agua y las oleadas saliendo a 32–40 bloques (en el agua), eso dejaba al asedio entero inútil.
          */

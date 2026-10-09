@@ -1,7 +1,7 @@
 # CONTINUAR AQUÍ — acuerdos, convenciones y pendientes (leer lo PRIMERO)
 
 Rama: **`migration-neoforge-1.21.1`** (estable, compilada, con `lint --strict` verde y **subida a GitHub**).
-Ultima actualizacion: 5-oct-2026, al cerrar la ronda de la milicia y de los asaltantes.
+Ultima actualizacion: 9-oct-2026, al cerrar el pendiente del nado (I235: el goal del nado no arrancaba nunca).
 
 ---
 
@@ -67,15 +67,23 @@ comentarios del codigo y para los mensajes del registro.
 
 ## 2 · PENDIENTES, EN ORDEN (con clase y numero de linea)
 
-### 2.0 · LO QUE ESTA ABIERTO **HOY** (puesto al dia el 8-oct-2026)
+### 2.0 · LO QUE ESTA ABIERTO **HOY** (puesto al dia el 9-oct-2026)
 
-Lo de abajo es el historial; **esto** es lo que falta de verdad, y son tres cosas. Las tres son **de instrumento**
-(medir algo que ya esta escrito), no de logica nueva:
+Lo de abajo es el historial; **esto** es lo que falta de verdad. Eran tres cosas de **instrumento** (medir algo que ya
+esta escrito) y **la primera ya esta cerrada con numeros**:
 
-1. **La escena del nado no mide** (`MEDIR_AGUA`, arnes). El arreglo del nado ya esta hecho (I215) pero **no se ha podido
-   verificar**: en la escena el asaltante **se queda flotando en el borde del pozo** (velocidad 0,012) y no sale ni con
-   el arreglo ni sin el. **Lo que hay que hacer**: quitarle las paredes al pozo (o hacerlo orilla de verdad) para que el
-   bicho tenga por donde salir, y entonces medir. Es el unico modo de dar por bueno un arreglo que ya esta en el codigo.
+1. **La escena del nado** (`MEDIR_AGUA`) — **CERRADA Y MEDIDA** ✓ (9-oct-2026, **I235** en `docs/aldea-invariantes.md`).
+   Y salieron **tres** cosas, no una: (a) el **barrido de bichos del arnes** borraba al asaltante en el primer barrido
+   (por eso los 73 volcados de `rapida-49.log` eran la misma celda y la misma velocidad: se midio **un bicho
+   congelado**, no un pozo que lo encerrara ✗); (b) la charca se **juntaba con el mar**, porque en la copia del guardado
+   el pueblo esta a la **cota 46 y todo alrededor es agua** (`470,45..62 = water`, comprobado celda a celda): ahora la
+   escena se levanta **sobre** el agua y no depende del mundo ✓; y (c) lo gordo: **el goal del nado no arrancaba
+   NUNCA** —`ZombieAttackGoal` de vanilla esta en la prioridad **2** con el flag MOVE, igual que `EscapeWaterGoal`, y el
+   motor solo deja entrar a un goal si tiene prioridad **estrictamente menor** (`WrappedGoal.canBeReplacedBy`)—, asi que
+   el arreglo de I215 era **codigo muerto** mientras el asaltante tuviera objetivo. Arreglado a la **prioridad 1**
+   (`AggressiveZombieEntity` **L854**) y medido **antes y despues**: **0 ticks** corriendo en 60 s de atasco → **arranca
+   3 veces y saca al bicho del agua en 2-4 ticks**. La vuelta de orilla a ras ya salia sola: **sale del agua a los 6,0 s**
+   (3,4 bloques a 0,57 bloques/s dentro del agua) y anda en tierra a **2,2 bloques/s** ✓.
 2. **El puente y la escalera no se han visto en una ola** (`MEDIR_OLA_REAL` / `MEDIR_ATRAVESADORES`). Los dos mecanismos
    existen y estan corregidos (I212 + I213 + I214), pero en las olas medidas **solo se usa el tunel**: entran por los
    huecos del anillo, asi que **no necesitan ni puente ni escalera**. **Lo que hay que hacer**: una escena donde el muro
@@ -85,6 +93,19 @@ Lo de abajo es el historial; **esto** es lo que falta de verdad, y son tres cosa
    prueba **no hay sobrantes** (todos los adultos tienen su oficio), asi que sale `0 espadachines y 0 arqueros` — y el
    cero **no es un fallo**, es la regla del reparto. **Lo que hay que hacer**: una aldea con **mas adultos que puestos**
    (o con crias) para ver el reparto llenarse y a los guardias entrenar.
+
+**Y OJO CON EL MUNDO DE LA TANDA (9-oct-2026, hay que decidirlo con el jugador)** ✗. La copia del guardado que usa el
+banco (`run\saves\New World` → `run\world`) **no tiene aldea donde el arnes la busca**: en el centro que usa el arnes
+(470,63,646) hay **mar** (`tools\arnes\una_columna.py`: `470,44 = sand`, `470,45..62 = water`, `470,63.. = air`), asi que
+el mod **funda una aldea nueva a la cota 46, bajo el agua** (su propio aviso: `muro reconstruido al nivel del pueblo 46`;
+y `anillo_del_muro.py` encuentra ese muro recien hecho a **y=46, 896 de 921 celdas**, con los cuatro portones) y salen
+**`aldeanos=0`**, **0 avisos de rendicion** y **todos los contadores de trabajo a 0** en las corridas 146-150. La deriva
+de la cota en las corridas lo dice: **83** (7-oct 01:34) → **70** (7-oct 12:37) → **68** (8-oct 09:37) → **46** (9-oct
+00:51), y los ficheros de region del guardado son del **8-oct 11:48** (todo un mundo escrito de golpe). La medida del
+nado **no se resiente** (esa escena es autosuficiente), pero **los pendientes 2 y 3 sí necesitan una aldea con gente**.
+Opciones: (a) medir en un **mundo nuevo** (`tanda-rapida.ps1 -MundoNuevo`, que no toca `run\saves`), (b) que el jugador
+diga **que guardado** es el bueno (o si su aldea esta en otro sitio de ese mundo), o (c) que confirme si quiere que el
+mod **no funde aldea en el mar** cuando el objetivo cae en el oceano. **Regla de oro intacta: `run\saves` no se toca.**
 
 **Y EL PORTON DOBLE ABATIBLE: CERRADO** ✓ (8-oct-2026, I224–I234 en `docs/aldea-invariantes.md`). Abre y cierra
 animado con **entidad de bloque + renderizador propio**, la hoja abate sobre el **canto del marco** sin atravesar el

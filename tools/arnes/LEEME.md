@@ -381,6 +381,34 @@ arriba** (la capa del suelo queda de **hierba** y la capa de tránsito se queda 
 tapa y **por qué** antes no lo tapaba nadie (medido: los tres obreros devolvían como destino **su propia posición**, y
 el recolector tenía la reparación a prioridad 5 y no llegaba a ejecutarla nunca).
 
+### `MEDIR_AGUA = true` — EL NADO: la orilla a ras y la orilla con escalón (I215/I235)
+
+La escena se monta **sola y por encima del agua/terreno de la zona** (así se mide igual en tierra que en el mar, que es
+lo que hizo falta el 9-oct-2026: en la copia del guardado el pueblo está a la cota 46 y todo alrededor es océano):
+**plancha de piedra de 21×21**, **charca de 5×5 con 4 de calado** y el agua **a ras de la orilla**, y el objetivo (el
+jugador de pega, **invulnerable, y ya no se le devuelve a la plaza**) **en la orilla, a 8 bloques al oeste**
+(`AGUA_ORILLA`/`AGUA_OBJETIVO`, en `medirElNado`). El asaltante aparece **en el fondo de la charca** y la corrida mide
+**dos vueltas**:
+
+- **vuelta 1, orilla A RAS**: lo normal (¿cruza el agua y sale andando?). Medido: **sale del agua a los 6,0 s**, con
+  **3,4 bloques** dentro del agua a **0,57 bloques/s** de media, y en tierra **2,2 bloques/s** hasta el objetivo.
+- **vuelta 2, orilla LEVANTADA UN BLOQUE** (cuando el asaltante llega al objetivo, la escena levanta el borde y lo
+  devuelve al fondo): aquí la navegación **no puede salir** —un escalón de 1 bloque es más alto que su paso— y la única
+  salida es **`EscapeWaterGoal`**, que es lo que hay que medir.
+
+**El testigo que hace falta para creer la medida** (y que costó una corrida descubrir): la traza lleva
+`borrado=SI/NO`/`vivo=SI/NO` **en cada volcado** (si el barrido de bichos del arnés se come al asaltante, lo dice a
+gritos y la medida se tira: eso fue exactamente lo que pasó en `rapida-49.log`, donde los 73 volcados eran el mismo
+bicho congelado), y escribe **`AGUA: el goal del nado (EscapeWaterGoal) ARRANCA/PARA en t=…`** mirando los goals
+**tick a tick** (un atasco de 9 ticks puede caer entero entre dos volcados de 1 s). El resumen de cada vuelta dice
+`ticks con el goal del nado corriendo=N`: **0** es la firma de que el goal **no puede arrancar** (le pasa el flag MOVE
+otro goal de la misma prioridad), que es el fallo que se cazó en I235.
+
+Lo que se busca en el registro: `[Arnes] AGUA: escena montada en …` (dice la cota de la aldea y la altura del terreno o
+del agua de la zona), los volcados `[Arnes] AGUA t=… vuelta=… enAgua=… aLaOrilla=… alObjetivo=…`,
+`AGUA: SALE DEL AGUA (vuelta N) a los N ticks`, `AGUA: LLEGA AL OBJETIVO`, los `ARRANCA`/`PARA` del goal del nado y
+`AGUA RESUMEN (vuelta N)` (o `AGUA: NO SALE DEL AGUA en 60 s` si se queda).
+
 ### `MEDIR_MURO = true` — la brecha en la muralla (I89)
 
 Pone un asaltante **sin objetivo** fuera de la muralla (radio 66) para que corra la **marcha** (la que taladra) y va
@@ -529,6 +557,17 @@ búsquedas de ruta del juego.
 > portones en el trozo final, cuando la corrida tenía 159 y 868). Hay que juntar el `.gz` con `latest.log` (el
 > comando está en `docs/PENDIENTE.md`) **antes** de sacar conclusiones.
 
+
+### `una_columna.py` (versionada) — UNA COLUMNA DEL GUARDADO, celda a celda, SIN levantar servidor
+
+```powershell
+python tools\arnes\una_columna.py world 470 646 30 95      # mundo, x, z, yMin, yMax
+```
+
+Dice **qué hay en cada tramo de esa columna** (agrupado: `y=45..62 water`). Existe porque el 9-oct-2026 el arnés medía
+`aldeanos=0` y cero trabajo en todas las corridas y la columna del centro lo explicó en un segundo: **el centro de la
+aldea que usa el arnés (470,646) era MAR** (`470,44 = sand`, `470,45..62 = water`), así que el mod fundaba una aldea
+nueva **bajo el agua** (cota 46). Reutiliza el lector de `tools/nbtdump.py` (el de `columna_mina.py`): **solo lee**.
 
 ### `columna_mina.py` (versionada) — LA COLUMNA DEL POZO, celda a celda, SIN levantar servidor
 

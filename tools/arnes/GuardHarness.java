@@ -362,7 +362,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
         // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
         // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS) {
+        // Y EN LA MEDIDA DEL NADO TAMPOCO (9-oct-2026, Y ESTO ERA EL FALLO DE LA ESCENA): este modo no estaba en la
+        // lista y el asaltante de la charca se borraba en el PRIMER barrido (t=320, un segundo despues de aparecer).
+        // Lo que se midio entonces ("el bicho flota en el borde y no sale, velocidad 0,012") era ESTO: un bicho
+        // congelado por el barrido, no un pozo que lo encerrara (ver `medirElNado`).
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS && !MEDIR_AGUA) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -398,7 +402,10 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // de prueba (`prepareRepairs` -> `asegurarGoalDePortones`), y sin ese goal el aldeano no puede abrir nada — así
         // que sin el latido la prueba medía un aldeano CAPACITADO de menos y salía que no cruza por el goal, no por el
         // portón.
-        if (pega != null && ((!MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL) || ticks < 300 || MEDIR_ALDEANO_CRUZA)) {
+        // Y EN LA MEDIDA DEL NADO TAMPOCO (9-oct-2026): la escena pone al jugador de pega EN LA ORILLA de la charca, a
+        // 8 bloques del bicho, y este bloque lo devolvia a la plaza en cada tick (con lo que el objetivo se iba a 40
+        // bloques y el bicho salia del agua para nada). Aqui el objetivo lo fija la escena y no se toca.
+        if (pega != null && ((!MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_AGUA) || ticks < 300 || MEDIR_ALDEANO_CRUZA)) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
@@ -2192,14 +2199,21 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * marcha activa, ruta, objetivo y goals) junto a la columna de la muralla capa a capa.
      */
     /**
-     * <b>¿SE MIDE EL NADO (I215)?</b> Un asaltante en el fondo de un pozo de agua, a 14 bloques de la orilla, y se mide
-     * <b>cuánto tarda en salir y a qué velocidad avanza</b>. Es lo que pidió el jugador: *«cuando están en el agua se
-     * quedan ahí y avanzan muy lento»* → *«deben desplazarse a velocidad normal»*.
+     * <b>¿SE MIDE EL NADO (I215)?</b> Un asaltante en el fondo de una charca, con su objetivo (el jugador de pega) a 40
+     * bloques al oeste, y se mide <b>cuánto tarda en salir del agua, cuánto avanza por dentro y a qué velocidad</b> —y,
+     * ya en tierra, a qué velocidad anda—. Es lo que pidió el jugador: *«cuando están en el agua se quedan ahí y avanzan
+     * muy lento»* → *«deben desplazarse a velocidad normal»*.
      * <p>
-     * Lo que se busca en el log: `[Arnes] AGUA t=… pos=… r=… fueraDelAgua=SI/NO` con el radio BAJANDO de 14 a 0, y
-     * `AGUA: SALE DEL AGUA a los N ticks` (o `NO SALE` si se queda).
+     * <b>CÓMO SE MONTA LA ESCENA, Y POR QUÉ ASÍ</b> (9-oct-2026; el porqué está medido en {@link #medirElNado}): el agua
+     * va <b>a ras de la orilla</b> (misma altura, sin paredes que sobresalgan) sobre una esplanada de piedra de 15x15, y
+     * el bicho se pone <b>en el fondo</b> (4 de calado) para que la medida incluya subir a la superficie y salir andando.
+     * <p>
+     * Lo que se busca en el registro: `[Arnes] AGUA t=… pos=… enAgua=SI/NO aLaOrilla=… recorrido=… velMedia=… borrado=…`
+     * con `aLaOrilla` BAJANDO, `[Arnes] AGUA: SALE DEL AGUA a los N ticks`, `[Arnes] AGUA RESUMEN` (o
+     * `AGUA: NO SALE DEL AGUA` si se queda). Y `borrado=SI` avisa de que <b>el instrumento se ha comido al bicho</b>:
+     * con eso, la medida NO vale.
      */
-    private static final boolean MEDIR_AGUA = false;
+    private static final boolean MEDIR_AGUA = true;
 
     /**
      * <b>¿FUNCIONA EL CLICK DEL PORTÓN?</b> (6-oct-2026). El jugador reportó *«cuando le doy click no se abre»*, así que
@@ -2959,58 +2973,300 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         z.discard();
     }
 
+    /**
+     * <b>LA ESCENA DEL NADO, REHECHA (9-oct-2026): EL FALLO ESTABA EN EL INSTRUMENTO, NO EN EL POZO.</b>
+     * <p>
+     * La primera version de esta escena ({@code build\rapida-49.log}, 6-oct-2026) dio <b>73 volcados seguidos con el
+     * asaltante en la MISMA celda</b> (510, 83, 646), la misma velocidad (0,012) y {@code enAgua=SI}, y de ahí salió
+     * la conclusión de que «el pozo lo encierra» ✗. Se ha vuelto a mirar el registro y <b>esa conclusión era falsa</b>:
+     * el bicho no se movía porque <b>lo borraba el propio arnés</b> — el barrido de bichos de {@code onServerTick} no
+     * tenía este modo en su lista de excepciones, así que el asaltante recién puesto se borraba en el <b>primer</b>
+     * barrido (t=320, un segundo después de aparecer) y lo que se estaba midiendo era <b>un bicho congelado</b>. El
+     * pozo, además, estaba mal montado: paredes de piedra hasta el rasante del agua y, como destino de la navegación,
+     * una celda <b>de dentro del muro</b> (el barrido en espiral devolvía el bloque de piedra de al lado, no la celda de
+     * pie). Las dos cosas se arreglan aquí, y la traza incorpora un <b>testigo</b> ({@code borrado=SI/NO}) para que un
+     * barrido se vea en la medida en vez de parecer un atasco del bicho.
+     * <p>
+     * <b>La escena, ahora</b>: una charca <b>a ras de la orilla</b> (el agua y la orilla comparten el bloque de arriba,
+     * así que <b>no hay escalón</b> que trepar) dentro de una <b>plancha de piedra de 21x21</b> con el aire despejado; el
+     * asaltante aparece <b>en el fondo</b> (4 de calado) y su objetivo —el jugador de pega, invulnerable— está <b>en la
+     * orilla, 8 bloques al oeste</b> (no en la plaza: así la escena no depende del pueblo). Y la plancha se levanta
+     * <b>por encima del agua de la zona</b> (medido el 9-oct-2026: en la copia del guardado de hoy el pueblo está a la
+     * cota 46 y todo alrededor es mar), para que la charca no se junte con el océano. Lo que se mide: cuánto tarda en
+     * salir del agua, cuánto avanza por dentro y a qué velocidad, y ya en tierra, la velocidad a la que anda hasta el
+     * objetivo (la referencia del *«avanzan muy lento»* del jugador).
+     */
     private static void medirElNado(ServerLevel level, FakePlayer pega) {
-        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        final int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
         final int bx = CENTRO.getX() + 40;
         final int bz = CENTRO.getZ();
         if (ticks == 300 && asaltante == null) {
-            // El pozo: 5x5 de agua de 12 de hondo, con suelo de piedra, y su orilla en +x (a 3 del borde).
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
-                    for (int dy = -12; dy <= 0; dy++) {
-                        BlockPos p = new BlockPos(bx + dx, cota + dy, bz + dz);
-                        level.setBlock(p, dy == -12 || Math.abs(dx) == 2 || Math.abs(dz) == 2
-                                ? net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()
-                                : net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+            // 1) DONDE VA LA ESCENA (medido el 9-oct-2026, corrida 146): en la copia del guardado de hoy la aldea esta a
+            //    la COTA 46 y todo el entorno es MAR — la columna del centro del pueblo es agua de 45 a 62, comprobado
+            //    celda a celda en el guardado (`run\world`: 470,46,646 = water) —, asi que una charca a la cota de la
+            //    aldea se junta con el oceano: los 73 volcados de esa corrida son el bicho SUBIENDO de 44 a 62 y
+            //    siguiendo hacia el ESTE por el mar a 0,45 bloques/s, sin salir del agua ni una vez. Para que la medida
+            //    no dependa del terreno, la escena se levanta SOBRE el agua: la plancha de piedra va a la altura del
+            //    primer bloque de aire de la zona, o a la cota de la aldea si es mas alta.
+            int yTerreno = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, bx, bz);
+            int ySuelo = Math.max(cota, yTerreno);
+            aguaSueloY = ySuelo;
+            // 2) EL CIELO DESPEJADO de la plancha (si hay una loma o una cascada encima, la medida miente).
+            for (int dx = -AGUA_ORILLA; dx <= AGUA_ORILLA; dx++) {
+                for (int dz = -AGUA_ORILLA; dz <= AGUA_ORILLA; dz++) {
+                    for (int dy = 1; dy <= 8; dy++) {
+                        level.setBlock(new BlockPos(bx + dx, ySuelo + dy, bz + dz),
+                                net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
+            // 3) LA PLANCHA (la orilla) Y LA CHARCA A RAS: agua en el 5x5 de dentro y PIEDRA en el suelo y en toda la
+            //    orilla, los dos con el bloque de arriba a la MISMA altura (ySuelo). Es lo que hace que se pueda salir
+            //    andando: no hay escalon que trepar.
+            for (int dx = -AGUA_ORILLA; dx <= AGUA_ORILLA; dx++) {
+                for (int dz = -AGUA_ORILLA; dz <= AGUA_ORILLA; dz++) {
+                    boolean dentroDelAgua = Math.abs(dx) <= AGUA_MEDIA && Math.abs(dz) <= AGUA_MEDIA;
+                    for (int dy = -AGUA_HONDO; dy <= 0; dy++) {
+                        boolean esSuelo = dy == -AGUA_HONDO;
+                        level.setBlock(new BlockPos(bx + dx, ySuelo + dy, bz + dz),
+                                esSuelo || !dentroDelAgua
+                                        ? net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()
+                                        : net.minecraft.world.level.block.Blocks.WATER.defaultBlockState(), 3);
+                    }
+                }
+            }
+            // 4) SE CUENTA EL AGUA QUE HA QUEDADO (si sale 0, la escena no vale y hay que decirlo, no medir).
+            aguaColocada = 0;
+            for (int dx = -AGUA_MEDIA; dx <= AGUA_MEDIA; dx++) {
+                for (int dz = -AGUA_MEDIA; dz <= AGUA_MEDIA; dz++) {
+                    for (int dy = -AGUA_HONDO + 1; dy <= 0; dy++) {
+                        if (level.getBlockState(new BlockPos(bx + dx, ySuelo + dy, bz + dz))
+                                .is(net.minecraft.world.level.block.Blocks.WATER)) {
+                            aguaColocada++;
+                        }
+                    }
+                }
+            }
+            aguaArranqueX = bx + 0.5D;
+            aguaArranqueZ = bz + 0.5D;
+            aguaUltimaX = aguaArranqueX;
+            aguaUltimaZ = aguaArranqueZ;
+            aguaUltimoTick = ticks;
+            // 5) EL OBJETIVO, EN LA ORILLA (a AGUA_OBJETIVO bloques al oeste del centro de la charca): asi el bicho
+            //    tiene que cruzar el agua, salir a la piedra y ANDAR hasta el. El jugador de pega va invulnerable (esta
+            //    medida no es el combate) y, al no llamarse el latido del pueblo, nadie lo devuelve a la plaza.
+            pega.setInvulnerable(true);
+            pega.moveTo(bx - AGUA_OBJETIVO + 0.5D, ySuelo + 1, bz + 0.5D);
             asaltante = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
             if (asaltante != null) {
-                asaltante.moveTo(bx + 0.5D, cota - 1, bz + 0.5D, 0.0F, 0.0F);
-                asaltante.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+                // EN EL FONDO (ySuelo - AGUA_HONDO + 1): asi la medida incluye subir a la superficie y salir andando.
+                asaltante.moveTo(aguaArranqueX, ySuelo - AGUA_HONDO + 1, aguaArranqueZ, 0.0F, 0.0F);
+                asaltante.setVillageCenter(new BlockPos(CENTRO.getX(), ySuelo, CENTRO.getZ()));
                 asaltante.setGoToCenterActive(true);
                 asaltante.recargarTunel();
                 asaltante.setPersistenceRequired();
                 level.addFreshEntity(asaltante);
                 asaltante.setTarget(pega);
-                DevilRpg.LOGGER.info("[Arnes] AGUA: asaltante en el fondo del pozo en {} (cota {}, orilla a {} bloques"
-                                + " en +x)", asaltante.blockPosition(), cota, 14);
+                DevilRpg.LOGGER.info("[Arnes] AGUA: escena montada en {} — plancha de piedra de {}x{} y charca de {}x{}"
+                                + " con {} de calado ({} bloques de agua), agua A RAS de la orilla; el suelo va a {}"
+                                + " (cota de la aldea {}, terreno/agua de la zona {}), el asaltante nace en el fondo ({})"
+                                + " y el objetivo esta en la orilla, {} bloques al oeste ({})",
+                        new BlockPos(bx, ySuelo, bz), AGUA_ORILLA * 2 + 1, AGUA_ORILLA * 2 + 1, AGUA_MEDIA * 2 + 1,
+                        AGUA_MEDIA * 2 + 1, AGUA_HONDO, aguaColocada, ySuelo, cota, yTerreno,
+                        asaltante.blockPosition(), AGUA_OBJETIVO, pega.blockPosition());
             }
             return;
         }
         if (asaltante == null) {
             return;
         }
+        // El objetivo es el jugador de pega (en la orilla, 8 bloques al oeste): tiene que salir del agua e ir a por el.
         asaltante.setTarget(pega);
-        if (ticks % 40 != 0) {
+        // EL TESTIGO DEL GOAL DEL NADO (I215), TICK A TICK Y NO CADA SEGUNDO: un atasco de 9 ticks (lo que tarda el
+        // goal en decidirse) puede caer entero entre dos volcados, asi que aqui se mira CADA tick y solo se escribe
+        // cuando el goal ARRANCA o PARA. Por que puede no arrancar nunca: `GoalSelector.tick` solo deja entrar a un
+        // goal si el que tiene el flag MOVE puede ser reemplazado por el
+        // (`WrappedGoal.canBeReplacedBy` = `isInterruptable() && el.prioridad < la del que lo tiene`), y
+        // `ZombieAttackGoal` (que es `MeleeAttackGoal`, con flags MOVE y LOOK) esta registrado en la MISMA prioridad 2
+        // que el nado: mientras el asaltante tenga objetivo, el nado no puede entrar.
+        boolean nadoAhora = false;
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal w : asaltante.goalSelector.getAvailableGoals()) {
+            if (w.isRunning() && w.getGoal().getClass().getSimpleName().equals("EscapeWaterGoal")) {
+                nadoAhora = true;
+            }
+        }
+        if (nadoAhora) {
+            aguaTicksConElNado++;
+        }
+        if (nadoAhora != aguaNadoCorriendo) {
+            aguaNadoCorriendo = nadoAhora;
+            DevilRpg.LOGGER.info("[Arnes] AGUA: el goal del nado (EscapeWaterGoal) {} en t={} (vuelta {}, enAgua={},"
+                            + " pos={}, goals=[{}])", nadoAhora ? "ARRANCA" : "PARA", ticks, aguaVuelta,
+                    asaltante.isInWater() ? "SI" : "NO", asaltante.blockPosition(), goalsCorriendo(asaltante));
+        }
+        if (ticks % 20 != 0) {
             return;
         }
-        boolean enAgua = asaltante.isInWater();
-        if (!enAgua && ticksDeSalida < 0) {
-            ticksDeSalida = ticks - 300;
-            DevilRpg.LOGGER.info("[Arnes] AGUA: SALE DEL AGUA a los {} ticks ({} s) de empezar, en {}",
-                    ticksDeSalida, ticksDeSalida / 20, asaltante.blockPosition());
+        // TRAS LLEGAR AL OBJETIVO EN LA SEGUNDA VUELTA SE DEJAN 3 s MAS DE VOLCADOS Y SE CORTA: la escena ya esta
+        // medida y no hace falta llenar el registro de un bicho parado al lado del objetivo.
+        if (aguaVuelta == 2 && aguaLlego && ticks > aguaLlegadaTick + 60) {
+            return;
         }
-        DevilRpg.LOGGER.info("[Arnes] AGUA t={} pos={} r={} vel={} enAgua={} nav={} goals=[{}]", ticks,
-                asaltante.blockPosition(),
-                (int) asaltante.distanceToSqr(bx + 0.5D, asaltante.getY(), bz + 0.5D),
+        aguaMuestras++;
+        boolean enAgua = asaltante.isInWater();
+        // La velocidad del ULTIMO SEGUNDO (bloques por segundo), que es la que se puede comparar con la de tierra: el
+        // `vel` de un tick suelto oscila demasiado.
+        double velMedia = -1.0D;
+        if (ticks > aguaUltimoTick) {
+            velMedia = Math.hypot(asaltante.getX() - aguaUltimaX, asaltante.getZ() - aguaUltimaZ)
+                    / ((ticks - aguaUltimoTick) / 20.0D);
+        }
+        aguaUltimaX = asaltante.getX();
+        aguaUltimaZ = asaltante.getZ();
+        aguaUltimoTick = ticks;
+        double aLaOrilla = Math.hypot(asaltante.getX() - (bx - AGUA_MEDIA - 0.5D), asaltante.getZ() - (bz + 0.5D));
+        double recorrido = Math.hypot(asaltante.getX() - aguaArranqueX, asaltante.getZ() - aguaArranqueZ);
+        double alObjetivo = Math.hypot(asaltante.getX() - pega.getX(), asaltante.getZ() - pega.getZ());
+        if (enAgua) {
+            aguaMuestrasEnAgua++;
+            aguaEstabaEnElAgua = true;
+        } else if (aguaEstabaEnElAgua && aguaTicksFuera < 0) {
+            aguaTicksFuera = ticks - aguaInicioTick;
+            DevilRpg.LOGGER.info("[Arnes] AGUA: SALE DEL AGUA (vuelta {}) a los {} ticks ({} s) de arrancar, en {}:"
+                            + " recorrido {} bloques dentro del agua a {} bloques/s de media (la orilla queda a {}"
+                            + " bloques)", aguaVuelta, aguaTicksFuera,
+                    String.format("%.1f", aguaTicksFuera / 20.0D), asaltante.blockPosition(),
+                    String.format("%.1f", recorrido),
+                    String.format("%.2f", recorrido / Math.max(0.05D, aguaTicksFuera / 20.0D)),
+                    String.format("%.1f", aLaOrilla));
+        } else if (!aguaEstabaEnElAgua && !aguaEscenaAvisada && aguaVuelta == 1) {
+            aguaEscenaAvisada = true;
+            DevilRpg.LOGGER.warn("[Arnes] AGUA: LA ESCENA NO VALE — el asaltante NO esta en el agua en el primer"
+                    + " volcado (pos={}, {} de agua colocada): esto mide otra cosa", asaltante.blockPosition(),
+                    aguaColocada);
+        }
+        DevilRpg.LOGGER.info("[Arnes] AGUA t={} vuelta={} pos={} {} aLaOrilla={} alObjetivo={} recorrido={} vel={}"
+                        + " velMedia={} borrado={} vivo={} nav={} goals=[{}]", ticks, aguaVuelta,
+                asaltante.blockPosition(), enAgua ? "enAgua=SI" : "enAgua=NO", String.format("%.1f", aLaOrilla),
+                String.format("%.1f", alObjetivo), String.format("%.1f", recorrido),
                 String.format("%.3f", asaltante.getDeltaMovement().horizontalDistance()),
-                enAgua ? "SI" : "NO", asaltante.getNavigation().getTargetPos(), goalsCorriendo(asaltante));
+                velMedia < 0.0D ? "-" : String.format("%.2f", velMedia), asaltante.isRemoved() ? "SI" : "NO",
+                asaltante.isAlive() ? "SI" : "NO", asaltante.getNavigation().getTargetPos(), goalsCorriendo(asaltante));
+        // EL TESTIGO DEL BARRIDO: si el instrumento borra al bicho, se dice EN VOZ ALTA (es el fallo que dejo la
+        // escena sin valor el 6-oct-2026, y no puede volver a parecer un atasco del asaltante).
+        if (asaltante.isRemoved() && !aguaBarridoAvisado) {
+            aguaBarridoAvisado = true;
+            DevilRpg.LOGGER.warn("[Arnes] AGUA: EL INSTRUMENTO HA BORRADO AL ASALTANTE en t={} (el barrido de bichos"
+                    + " del arnes): LA MEDIDA NO VALE", ticks);
+        }
+        // Y CUANDO LLEGA AL OBJETIVO, SE DICE (es el final de la vuelta: sin esto, el volcado se queda en "enAgua=NO"
+        // para siempre y no se sabe si llego o se quedo parado a medio camino).
+        if (!aguaLlego && alObjetivo <= 2.5D && aguaTicksFuera >= 0) {
+            aguaLlego = true;
+            aguaLlegadaTick = ticks;
+            DevilRpg.LOGGER.info("[Arnes] AGUA: LLEGA AL OBJETIVO (vuelta {}) a los {} ticks ({}) de arrancar — {} s"
+                            + " desde que salio del agua, a {} bloques/s", aguaVuelta, ticks - aguaInicioTick,
+                    String.format("%.1f", (ticks - aguaInicioTick) / 20.0D),
+                    String.format("%.1f", (ticks - aguaInicioTick - aguaTicksFuera) / 20.0D),
+                    String.format("%.2f", Math.max(0.0D, velMedia)));
+            // SEGUNDA VUELTA: EL ESCALON, que es cuando el goal del nado tiene que trabajar. La orilla se levanta UN
+            // BLOQUE (una piedra a ySuelo+1 alrededor del agua) y el bicho vuelve al fondo. Ahora la navegacion no
+            // puede salir —un escalon de 1 bloque es mas alto que su paso de 0,6— y dentro de la aldea el romper y el
+            // apilar estan VETADOS (`protegidoPorLaAldea`: esta escena esta a 40 bloques del centro), asi que la unica
+            // salida es `EscapeWaterGoal` (I215). O sale empujando, o se queda: eso es lo que se mide.
+            if (aguaVuelta == 1) {
+                for (int dx = -AGUA_MEDIA - 1; dx <= AGUA_MEDIA + 1; dx++) {
+                    for (int dz = -AGUA_MEDIA - 1; dz <= AGUA_MEDIA + 1; dz++) {
+                        if (Math.abs(dx) == AGUA_MEDIA + 1 || Math.abs(dz) == AGUA_MEDIA + 1) {
+                            level.setBlock(new BlockPos(bx + dx, aguaSueloY + 1, bz + dz),
+                                    net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                        }
+                    }
+                }
+                asaltante.getNavigation().stop();
+                asaltante.setDeltaMovement(Vec3.ZERO);
+                asaltante.moveTo(bx + 0.5D, aguaSueloY - AGUA_HONDO + 1, bz + 0.5D, 0.0F, 0.0F);
+                aguaVuelta = 2;
+                aguaInicioTick = ticks;
+                aguaEstabaEnElAgua = false;
+                aguaTicksFuera = -1;
+                aguaLlego = false;
+                aguaMuestras = 0;
+                aguaMuestrasEnAgua = 0;
+                aguaNoSaleAvisado = false;
+                aguaResumenHecho = false;
+                aguaTicksConElNado = 0;
+                aguaNadoCorriendo = false;
+                aguaArranqueX = bx + 0.5D;
+                aguaArranqueZ = bz + 0.5D;
+                aguaUltimaX = aguaArranqueX;
+                aguaUltimaZ = aguaArranqueZ;
+                aguaUltimoTick = ticks;
+                DevilRpg.LOGGER.info("[Arnes] AGUA: SEGUNDA VUELTA (el escalon) — orilla levantada un bloque alrededor"
+                        + " del agua y el asaltante de vuelta al fondo ({}); el objetivo sigue en la orilla, {} bloques"
+                        + " al oeste", asaltante.blockPosition(), AGUA_OBJETIVO);
+                return;
+            }
+        }
+        // Y 5 s DESPUES DE SALIR, EL RESUMEN (con la velocidad de tierra, que es la referencia del "avanza lento").
+        if (aguaTicksFuera >= 0 && !aguaResumenHecho && ticks >= aguaInicioTick + aguaTicksFuera + 100) {
+            aguaResumenHecho = true;
+            DevilRpg.LOGGER.info("[Arnes] AGUA RESUMEN (vuelta {}): salida del agua={} ticks ({} s) | volcados con el"
+                            + " bicho dentro del agua={} de {} | velocidad en tierra 5 s despues de salir={} bloques/s"
+                            + " | ticks con el goal del nado corriendo={} | borrado={}", aguaVuelta, aguaTicksFuera,
+                    String.format("%.1f", aguaTicksFuera / 20.0D), aguaMuestrasEnAgua, aguaMuestras,
+                    String.format("%.2f", Math.max(0.0D, velMedia)), aguaTicksConElNado,
+                    asaltante.isRemoved() ? "SI" : "NO");
+        }
+        // Y SI NO SALE, TAMBIEN SE DICE (sin adornos): el tope de cada vuelta son 60 s.
+        if (aguaTicksFuera < 0 && ticks >= aguaInicioTick + 1200 && !aguaNoSaleAvisado) {
+            aguaNoSaleAvisado = true;
+            DevilRpg.LOGGER.warn("[Arnes] AGUA: NO SALE DEL AGUA en 60 s (vuelta {}, pos={}, aLaOrilla={}, volcados con"
+                            + " el bicho dentro del agua={} de {}, borrado={})", aguaVuelta,
+                    asaltante.blockPosition(), String.format("%.1f", aLaOrilla), aguaMuestrasEnAgua, aguaMuestras,
+                    asaltante.isRemoved() ? "SI" : "NO");
+        }
     }
 
+    /** El agua de la charca de {@link #MEDIR_AGUA}: 5x5 (dx y dz de -2 a 2). */
+    private static final int AGUA_MEDIA = 2;
+    /** El calado de la charca: 4 bloques de agua (de la cota-3 a la cota) con suelo de piedra en la cota-4. */
+    private static final int AGUA_HONDO = 4;
+    /** Hasta donde llega la plancha de piedra alrededor de la charca: 21x21, o sea 10 bloques del centro. */
+    private static final int AGUA_ORILLA = 10;
+    /** Donde se pone el objetivo (el jugador de pega): a 8 bloques al OESTE del centro de la charca, en la orilla. */
+    private static final int AGUA_OBJETIVO = 8;
+    /** Donde arranca el asaltante y donde estaba en el volcado anterior (para el recorrido y la velocidad media). */
+    private static double aguaArranqueX = 0.0D;
+    private static double aguaArranqueZ = 0.0D;
+    private static double aguaUltimaX = 0.0D;
+    private static double aguaUltimaZ = 0.0D;
+    private static int aguaUltimoTick = -1;
+    /** Volcados hechos y volcados en los que el bicho estaba DENTRO del agua (para el resumen). */
+    private static int aguaMuestras = 0;
+    private static int aguaMuestrasEnAgua = 0;
+    /** Bloques de agua que han quedado de verdad en la charca (si sale 0, la escena no vale). */
+    private static int aguaColocada = 0;
+    /** Si alguna vez se le vio dentro del agua (sin eso, un "ha salido" en el primer volcado seria una escena rota). */
+    private static boolean aguaEstabaEnElAgua = false;
+    private static boolean aguaEscenaAvisada = false;
+    private static boolean aguaBarridoAvisado = false;
+    private static boolean aguaResumenHecho = false;
+    private static boolean aguaNoSaleAvisado = false;
+    /** Si ya llego al objetivo de la orilla y en que tick (para cortar los volcados 3 s despues). */
+    private static boolean aguaLlego = false;
+    private static int aguaLlegadaTick = -1;
     /** Ticks que tardó en salir del agua (para el volcado de {@link #MEDIR_AGUA}). */
-    private static int ticksDeSalida = -1;
+    private static int aguaTicksFuera = -1;
+    /** La vuelta de la escena del nado: 1 = orilla A RAS (se sale andando), 2 = orilla LEVANTADA un bloque (aqui la
+     * unica salida es el goal del nado, I215). Y el tick en el que arranca cada vuelta (los tiempos van desde ahi). */
+    private static int aguaVuelta = 1;
+    private static int aguaInicioTick = 300;
+    /** La altura del suelo de la escena (la cara de arriba de la plancha), que hace falta para levantar el escalón. */
+    private static int aguaSueloY = 0;
+    /** El testigo del goal del nado: si estaba corriendo en el tick anterior y cuantos ticks ha estado corriendo. */
+    private static boolean aguaNadoCorriendo = false;
+    private static int aguaTicksConElNado = 0;
 
     /**
      * <b>¿SE MIDE UNA OLA DE VERDAD (I212)?</b> Ocho asaltantes del asedio inicial repartidos alrededor del muro
