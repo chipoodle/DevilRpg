@@ -756,18 +756,17 @@ public class AggressiveZombieEntity extends Zombie {
                 // de subir. Ahora el orden es el que dice el nombre del goal: se intenta COLOCAR el escalón y, si no
                 // se puede (celda ocupada, sin suelo firme debajo, o dentro de la aldea), se abre el hueco como antes.
                 BlockPos escalon = new BlockPos(px, zPos.getY(), pz);
-                boolean huecoLibre = level().getBlockState(escalon.above()).isAir()
-                        && level().getBlockState(escalon.above(2)).isAir();
-                if (huecoLibre && level().getBlockState(escalon).isAir()
-                        && !level().getBlockState(escalon.below()).isAir()
-                        && !protegidoPorLaAldea(escalon)) {
-                    level().setBlock(escalon, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
-                    level().playSound(null, escalon, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
-                    particulasDeTrabajo(escalon);
-                    DevilRpg.LOGGER.info("[Siege] asaltante #{} pone un ESCALON en {} para subir al objetivo ({})",
-                            getId(), escalon.toShortString(), hacia.toShortString());
-                    apilarEspera = APILAR_ENTRE_BLOQUES;
-                    apilarRestante--;
+                if (ponerEscalon(escalon, hacia)) {
+                    return true;
+                }
+                // Y SI LA CELDA DE LOS PIES ESTÁ OCUPADA (una pared, o el pozo que él mismo acaba de cavar), SE APILA UN
+                // BLOQUE UN NIVEL MÁS ARRIBA (I242, medido el 9-oct-2026): es lo que le deja SALIR del pozo. Sin esto,
+                // el monstruo se quedaba en el fondo del agujero que se había cavado —medido en la corrida 154: el
+                // asaltante #0, OCHO volcados seguidos en la misma celda y OCHO bloques por debajo del suelo, con el
+                // pico y la escalera corriendo y sin poder trepar—, y el jugador lo dejó claro: *«si cavan por debajo
+                // pero después hacen algo para salir a la superficie, obligatorio, está bien; pero si no, mejor que se
+                // queden sólo cavando cuando sea montaña o algo que los bloquee»*.
+                if (ponerEscalon(escalon.above(), hacia)) {
                     return true;
                 }
                 // Y SI NO SE PUEDE COLOCAR, SE ABRE EL HUECO Y SE PICA EL SUELO de esa columna (lo que deja el escalón
@@ -780,6 +779,31 @@ public class AggressiveZombieEntity extends Zombie {
             }
         }
         return false;
+    }
+
+    /**
+     * Coloca <b>un escalón</b> en esa celda si se puede: celda vacía, hueco libre encima (dos bloques), <b>suelo firme
+     * debajo</b> y fuera de la aldea. Es la colocación de {@link #apilarBloqueParaSubir}, sacada aquí porque ahora se
+     * prueba <b>en dos alturas</b> (a los pies y uno más arriba, I242).
+     *
+     * @return {@code true} si lo ha puesto
+     */
+    private boolean ponerEscalon(BlockPos escalon, BlockPos hacia) {
+        boolean huecoLibre = level().getBlockState(escalon.above()).isAir()
+                && level().getBlockState(escalon.above(2)).isAir();
+        if (!huecoLibre || !level().getBlockState(escalon).isAir()
+                || level().getBlockState(escalon.below()).isAir()
+                || protegidoPorLaAldea(escalon)) {
+            return false;
+        }
+        level().setBlock(escalon, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+        level().playSound(null, escalon, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+        particulasDeTrabajo(escalon);
+        DevilRpg.LOGGER.info("[Siege] asaltante #{} pone un ESCALON en {} para subir al objetivo ({})",
+                getId(), escalon.toShortString(), hacia.toShortString());
+        apilarEspera = APILAR_ENTRE_BLOQUES;
+        apilarRestante--;
+        return true;
     }
 
     /**

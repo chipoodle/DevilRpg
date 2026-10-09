@@ -6896,6 +6896,35 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I242 · CAVAR POR DEBAJO **OBLIGA A SALIR**: EL ESCALÓN TAMBIÉN UN BLOQUE MÁS ARRIBA
+
+**La regla del jugador** (9-oct-2026): *«a ver, si cavan por debajo pero después hacen algo para salir a la superficie,
+obligatorio, está bien. Pero si no, mejor que se queden sólo cavando cuando sea montaña o algo que los bloquee»*.
+
+**Y NO SE CUMPLÍA SIEMPRE, medido** ✗: en la corrida **154**, el asaltante **#0** acabó **ocho bloques por debajo del
+suelo** (el foso de la escena cava siete) y **clavado en la misma celda OCHO volcados seguidos**, con el `BreakBlockGoal`
+y el `TraverseGoal` corriendo, el pico en la mano y **sin poder trepar**: se había cavado un pozo y se quedaba en el
+fondo. La herramienta que lo destapó es nueva y está versionada (`tools/arnes/vuelven_a_la_superficie.py`): lee los
+volcados por asaltante, separa *estar en el foso* (hasta 7 de hondo) de **estar bajo tierra** (más de 7) y dice si
+después se le vio en la superficie.
+
+**LA CAUSA, leída en el código**: para **colocar** el escalón, `apilarBloqueParaSubir` (**L730**) pedía que la celda de
+delante, **a la altura de los pies**, estuviera vacía **y con suelo firme debajo**. En el fondo de un pozo esa celda es
+**la pared del propio pozo** (sólida) → no se podía colocar; y el recurso siguiente (`breakStepAheadHacia`, **L775**) era
+**picar**, que además **gasta el presupuesto de escalones** (`apilarRestante`, 8): tras ocho envites de pico, el monstruo
+**ni lo intentaba** ✗. O sea: se cavaba hacia abajo y se le gastaba el presupuesto con el que tenía que subir.
+
+**ARREGLO** (`AggressiveZombieEntity`, **L758-772** y el nuevo `ponerEscalon`, **L790**): el escalón se intenta **a la
+altura de los pies** y, si esa celda está ocupada (una pared, o **el pozo que él mismo ha cavado**), **un bloque más
+arriba**: desde el fondo del pozo eso es un bloque al que **saltar**, y repitiendo **sale a la superficie** ✓.
+
+**MEDIDO ANTES Y DESPUÉS** (misma escena `MEDIR_OLA_CON_FOSO`, mundo conservado): **antes**, 1 de cada 4 corridas
+acababa con un asaltante **bajo el suelo** (154: fondo **8** bloques, clavado); **después** (corridas **173, 174 y 175**,
+**8 asaltantes cada una = 24 casos**), **el fondo máximo fue 6 bloques** —o sea *dentro* del foso, que cava 7— y
+**ninguno quedó bajo tierra** ✓. Y la escalera **sube**: **103** líneas `ESCALON` en la 173 (antes 50-76) y el puente
+sigue tendiéndose (**10**) ✓. (Es una muestra pequeña y se dice: lo medido es «nadie acaba por debajo», no «todo el que
+baja vuelve».)
+
 ### I241 · EL TOPE DEL TALADRO, MEDIDO: 40 BLOQUES POR MARCHA Y, CUANDO SE AGOTA, EL ASALTANTE SE QUEDA
 
 Venía del cabo suelto de I240: *«no se puede aislar el tope de 40 bloques porque las líneas `[Siege]` no dicen qué

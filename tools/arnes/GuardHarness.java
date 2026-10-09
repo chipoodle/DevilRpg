@@ -3403,7 +3403,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * altura, que es lo que dice si está en el fondo del foso) y las del mod `[Siege] … PONER UN PUENTE`,
      * `… pone un ESCALON`, `… CAVA hacia abajo` y `… pica Block{…}`.
      */
-    private static final boolean MEDIR_OLA_CON_FOSO = false;
+    private static final boolean MEDIR_OLA_CON_FOSO = true;
 
     /** Los ocho asaltantes de la ola del foso y su objetivo (dentro del muro). */
     private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> olaDelFoso =
@@ -3775,7 +3775,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * `[Siege] … pica Block{…} en …` (el taladro) y `CAVA hacia abajo` / `pone un ESCALON` (las otras dos, que aquí
      * serían interferencia: la aldea NO está arriba, está al mismo nivel).
      */
-    private static final boolean MEDIR_MONTANA = true;
+    private static final boolean MEDIR_MONTANA = false;
 
     /** El asaltante de la montaña (uno solo: se le sigue paso a paso). */
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity montanero = null;
