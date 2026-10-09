@@ -1,11 +1,20 @@
 # POR DÓNDE SEGUIR — traspaso de sesión (aldea / DevilRpg)
 
-> **Para la sesión nueva**: lee este fichero entero y sigue por **«Lo que está PENDIENTE»**. Cada apartado trae **lo
-> que está medido**, **por qué se hizo así** y **el paso exacto que toca**. Los datos crudos de cada medida están en
-> `tools/arnes/medidas-mina-sellada.txt` (§1–§28) y el porqué de cada regla, en `docs/aldea-invariantes.md`
-> (**I119–I135**).
+> ## ⚠️ ESTE ES EL TRASPASO **VIEJO** (27-sep a 3-oct-2026). SE CONSERVA COMO ACTA, NO COMO LISTA DE PENDIENTES
 >
-> **Para el jugador**: pégale a la sesión nueva: *«Lee `docs/PENDIENTE.md` y sigue por lo pendiente; mide con el arnés
+> **El traspaso VIVO es `docs/CONTINUAR.md`** (su apartado §2.0 es «lo que está abierto HOY» y se mantiene al día en cada
+> ronda). Este fichero se queda porque guarda el **porqué medido** de la sesión de los oficios (la mina, la boca de la
+> galería, el hierro, la taberna…) y las referencias a `docs/aldea-invariantes.md` (**I119–I135**), pero **sus marcas de
+> «PENDIENTE» pueden estar ya cerradas** ✗: comprobar en el acta antes de darlas por pendientes. *(Puesto en claro el
+> 9-oct-2026, después de que el propio agente leyera este fichero como si fuera la lista viva.)*
+
+> **Para la sesión nueva**: esto NO es lo que hay que seguir — lo vivo es `docs/CONTINUAR.md`, y su §2.0 es la lista de
+> lo que está abierto hoy. Aquí, si acaso, se viene a buscar **el porqué medido** de la sesión de los oficios: cada
+> apartado trae **lo que está medido**, **por qué se hizo así** y **el paso que tocaba**. Los datos crudos de aquellas
+> medidas están en `tools/arnes/medidas-mina-sellada.txt` (§1–§28) y el porqué de cada regla, en
+> `docs/aldea-invariantes.md` (**I119–I135**).
+>
+> **Para el jugador**: pégale a la sesión nueva: *«Lee `docs/CONTINUAR.md` y sigue por lo pendiente; mide con el arnés
 > y no te fíes de nada que no esté medido»*.
 
 ## CÓMO SE TRABAJA AQUÍ (leer antes de tocar nada)

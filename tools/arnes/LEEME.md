@@ -459,8 +459,28 @@ del arnés **no** los distingue — los distingue la línea del mod.
 ### `MEDIR_MURO = true` — la brecha en la muralla (I89)
 
 Pone un asaltante **sin objetivo** fuera de la muralla (radio 66) para que corra la **marcha** (la que taladra) y va
-volcando la línea de bloques entre él y la valla (radios 66..56). **Pendiente**: la brecha está escrita y compilada,
-pero no se ha llegado a ver en juego.
+volcando la línea de bloques entre él y la valla (radios 66..56).
+
+**YA ESTÁ MEDIDO** ✓ (y esta nota decía lo contrario hasta el 9-oct-2026 ✗): lo que se midió en **I211** es que el
+asaltante **de fuera** pica el **anillo del muro** (16 bloques, **todos de r=62 a r=65**) y que **no llega a picar
+dentro**; y que un asaltante **ya dentro** **no rompe nada** (anda: 0 bloques en las dos configuraciones). Lo que
+**no** se ha visto en juego es la brecha **a ojo del jugador** (es una medida de arnés).
+
+### `MEDIR_MONTANA = true` — LA MONTAÑA: el anillo cerrado y el taladro de frente (I240/I243)
+
+Un **anillo de piedra CERRADO** (no se puede rodear) alrededor de la aldea, con el asaltante **fuera y SIN objetivo**
+(para que corra la **marcha**, que es la que taladra de frente) y **una segunda marcha** a los t=1680 (se le vuelve a
+asignar centro, que es lo que hace una ola nueva: sirve para ver que el **tope de 40 bloques se recarga**, I243).
+
+**DOS COSAS QUE HAY QUE MIRAR ANTES DE CREERLE** (las dos medidas):
+1. **El anillo se apoya en el TERRENO de cada columna** (`getHeight(MOTION_BLOCKING)`): si se levanta desde la cota de la
+   aldea puede quedar **enterrado** donde el terreno es más alto y el asaltante **lo pasa andando** (medido: de r=95 a
+   r=66 en 40 s con 3 celdas abiertas ✗).
+2. **El testigo `celdas del anillo abiertas` puede marcar 0 aunque esté taladrando** (mira una celda fija por columna y
+   el taladro va a la altura del suelo del monstruo): lo que dice la verdad es **su radio** y **el contador de la traza**
+   (`le quedan N de tunel`).
+
+Las dos variantes y sus números (fina y gruesa) están en el javadoc de `medirLaMontana`.
 
 ### `MEDIR_ALMACEN_Y_HUEVOS = true` — el almacén y los huevos del gallinero (I95/I96/I97)
 
