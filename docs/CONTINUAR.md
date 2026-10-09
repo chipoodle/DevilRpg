@@ -59,6 +59,37 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
 
 ## 2 · PENDIENTES, EN ORDEN (con clase y numero de linea)
 
+### 2.0 · LO QUE ESTA ABIERTO **HOY** (puesto al dia el 8-oct-2026)
+
+Lo de abajo es el historial; **esto** es lo que falta de verdad, y son tres cosas. Las tres son **de instrumento**
+(medir algo que ya esta escrito), no de logica nueva:
+
+1. **La escena del nado no mide** (`MEDIR_AGUA`, arnes). El arreglo del nado ya esta hecho (I215) pero **no se ha podido
+   verificar**: en la escena el asaltante **se queda flotando en el borde del pozo** (velocidad 0,012) y no sale ni con
+   el arreglo ni sin el. **Lo que hay que hacer**: quitarle las paredes al pozo (o hacerlo orilla de verdad) para que el
+   bicho tenga por donde salir, y entonces medir. Es el unico modo de dar por bueno un arreglo que ya esta en el codigo.
+2. **El puente y la escalera no se han visto en una ola** (`MEDIR_OLA_REAL` / `MEDIR_ATRAVESADORES`). Los dos mecanismos
+   existen y estan corregidos (I212 + I213 + I214), pero en las olas medidas **solo se usa el tunel**: entran por los
+   huecos del anillo, asi que **no necesitan ni puente ni escalera**. **Lo que hay que hacer**: una escena donde el muro
+   este **entero y sin huecos** y con un **foso** delante, para que la unica salida sea el puente o el escalon. Sin eso
+   no se puede afirmar que funcionan.
+3. **Ver la milicia con gente dentro** (`MEDIR_MILICIA`). La traza esta hecha (I217) y canta bien, pero en las aldeas de
+   prueba **no hay sobrantes** (todos los adultos tienen su oficio), asi que sale `0 espadachines y 0 arqueros` — y el
+   cero **no es un fallo**, es la regla del reparto. **Lo que hay que hacer**: una aldea con **mas adultos que puestos**
+   (o con crias) para ver el reparto llenarse y a los guardias entrenar.
+
+**Y EL PORTON DOBLE ABATIBLE: CERRADO** ✓ (8-oct-2026, I224–I234 en `docs/aldea-invariantes.md`). Abre y cierra
+animado con **entidad de bloque + renderizador propio**, la hoja abate sobre el **canto del marco** sin atravesar el
+pilar, es de **un bloque de espesor** (el mismo cerrada y abierta, asi que no hay salto), se pulsa en **toda** la
+superficie y el estado abierto deja pasar. Va con **24 modelos** y **192 variantes**, y `HOJA_FUERA` separa la **vista**
+de la logica para que el cierre tambien se anime. Tres reglas que costaron caro y quedaron escritas en
+`tools/arnes/LEEME.md`: **`run\saves` no se toca nunca**, **con el cliente abierto se mata el proceso y se sigue**, y
+**la geometria de un modelo de bloque solo va de −16 a 32** (si se sale, el juego dibuja el damero y miente diciendo
+«FileNotFoundException»).
+**MEJORAS DEL PORTON, PARA EL FUTURO** (las dejo apuntadas y **fuera del alcance** por decision del jugador, 8-oct-2026):
+todavia **no estan definidas** — hay que sentarse a decidir en que merece la pena mejorarlo antes de tocar nada.
+
+---
 1. **La regla del muro perimetral** — **CERRADA** (I210 + I211 en `docs/aldea-invariantes.md`), y el fallo de raiz era
    una linea: `AggressiveZombieEntity.protegidoPorLaAldea` (**L539**) terminaba en `return elAsedioYaSeGano()`, o sea que
    **con el asedio inicial sin resolver devolvia FALSE para toda la aldea**. Lo canto la verificacion independiente de la
