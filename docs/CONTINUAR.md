@@ -112,8 +112,10 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    **columna entera** (`columnas del anillo abiertas`) y en la corrida 181 marca **8/4320** mientras taladra, donde
    antes marcaba **0** ✗. Y de paso se arreglaron **dos fallos de la escena** (el asaltante se colaba por una **cueva**
    por debajo del anillo, corridas 179 y 180): el anillo es ahora **macizo hasta `cota−30`**.
-6. **Las losas del tejado a +11** ✗ (**I60**, acta L1470): 27 losas del tejado de la taberna por encima de la banda del
-   obrero (`REPAIR_MAX_UP = 5`, `VillageManager.java` L852-853, filtro en L6974) → **nadie las repone**.
+8. ~~**Las losas del tejado a +11**~~ — **NO es un pendiente: es un LIMITE A PROPOSITO** y esta en el apartado
+   **(c), punto 14** (medido el 9-oct-2026: el guardado del jugador tiene **0 obras pendientes**). Se deja el hueco
+   numerado para que se entienda la lista.
+
 7. **El compostero que algo vuelve a poner en alto** ✗ (**I162**/**I163**, acta L5046): la limpieza actua **9-23 veces
    por corrida**; falta el arreglo de raiz (que el repositor no lo ponga ahi).
 8. ~~**El aviso cosmetico del registro**~~ — **ARREGLADO** ✓ (9-oct-2026, **I244**): el aviso se compone segun el
@@ -133,9 +135,18 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
     la frase.
 
 **(c) ACEPTADO A PROPOSITO (no se toca, y se dice)**:
-14. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
+14. **Los tejados quedan fuera del obrero** (**I60**, acta L1470): su banda es **+5/−6** sobre el nivel del pueblo
+    (`REPAIR_MAX_UP`/`REPAIR_MAX_DOWN`, `VillageManager.java` L852-853, filtro en L6974), asi que **si un tejado se
+    rompe, nadie lo sube a arreglar**. El acta lo llama *«limite conocido (dicho a proposito)»* y da la razon: *«subir a
+    un tejado es otra obra, no una reparacion de planta»*. **MEDIDO el 9-oct-2026** con `build/obras_pendientes.py`
+    (recorre **todas** las celdas del plano, en su altura): **ALDEA 0 (566,566): OBRAS PENDIENTES: 0** ✓ — las **27
+    losas a +11** de septiembre **ya no faltan**, el tejado esta entero. O sea: **no hay nada roto hoy**; lo que hay es
+    el limite. *(Estaba en el apartado (b) por error mio: lo puse como «codigo pendiente» sin leer que el acta ya lo
+    habia decidido asi. Si el jugador QUIERE que los tejados se reparen, eso es una funcion nueva —que el obrero trabaje
+    en alto—, no un arreglo.)*
+15. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
     migracion de casas; **no se toco**, y lo que hay es la **red de seguridad** (`bajarDeLasCamas` + el rescate de I103).
-15. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
+16. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
     («no hay medida que lo pida») y nada posterior lo ha cambiado.
 
 Lo de abajo es el historial de los cinco pendientes que se cerraron en esta ronda; debajo del todo esta el historial
