@@ -710,17 +710,13 @@ public class AggressiveZombieEntity extends Zombie {
             for (int dist = 1; dist <= 2; dist++) {
                 int px = zPos.getX() + d[0] * dist;
                 int pz = zPos.getZ() + d[1] * dist;
-                // PRIMERO SE ABRE EL HUECO Y TAMBIÉN SE PICA EL SUELO (el escalón), en la MISMA ronda: si se sale
-                // aquí en cuanto se pica el hueco, el escalón no se llega a poner nunca y el asaltante se queda
-                // oscilando delante del muro (medido en la corrida 44: 0 escalones y el muro intacto).
-                if (breakStepAheadHacia(hacia, true)) {
-                    apilarEspera = APILAR_ENTRE_BLOQUES;
-                    apilarRestante--;
-                    return true;
-                }
-                // Y si el hueco ya está abierto, el ESCALÓN: un bloque en la columna de delante, a la altura de los
-                // pies, para poder subir. ESTE ERA EL FALLO (5-oct-2026): antes se ponía `zPos.below(2)`, o sea DEBAJO
-                // DE SUS PROPIOS PIES, que no sube a nadie.
+                // PRIMERO EL ESCALÓN, Y DESPUÉS ABRIR EL HUECO (I238, medido el 9-oct-2026). Estaba AL REVÉS y eso hacía
+                // que la rama que COLOCA el bloque no se alcanzara nunca: `breakStepAheadHacia(..., true)` pica el
+                // suelo de delante a la altura de los pies (y uno por debajo) y devolvía `true`, así que el goal se
+                // salía sin apilar. Medido con el arnés, con el objetivo ARRIBA sobre suelo llano: **0 escalones en
+                // cinco corridas** y **266 `pica`**, casi todos `stone` de la propia plancha — cavaba el suelo en vez
+                // de subir. Ahora el orden es el que dice el nombre del goal: se intenta COLOCAR el escalón y, si no
+                // se puede (celda ocupada, sin suelo firme debajo, o dentro de la aldea), se abre el hueco como antes.
                 BlockPos escalon = new BlockPos(px, zPos.getY(), pz);
                 boolean huecoLibre = level().getBlockState(escalon.above()).isAir()
                         && level().getBlockState(escalon.above(2)).isAir();
@@ -732,6 +728,13 @@ public class AggressiveZombieEntity extends Zombie {
                     particulasDeTrabajo(escalon);
                     DevilRpg.LOGGER.info("[Siege] un asaltante pone un ESCALON en {} para subir al objetivo ({})",
                             escalon.toShortString(), hacia.toShortString());
+                    apilarEspera = APILAR_ENTRE_BLOQUES;
+                    apilarRestante--;
+                    return true;
+                }
+                // Y SI NO SE PUEDE COLOCAR, SE ABRE EL HUECO Y SE PICA EL SUELO de esa columna (lo que deja el escalón
+                // cuando lo que estorba es una pared): el camino que ya existía, ahora como último recurso.
+                if (breakStepAheadHacia(hacia, true)) {
                     apilarEspera = APILAR_ENTRE_BLOQUES;
                     apilarRestante--;
                     return true;

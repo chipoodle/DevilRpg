@@ -6896,6 +6896,34 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I238 · LA ESCALERA DE BLOQUES: **COLOCAR ANTES DE PICAR** (el arreglo que la hace existir)
+
+Viene de I236, donde quedó medido que `apilarBloqueParaSubir` **no colocaba el escalón NUNCA** (0 en cinco corridas).
+La causa estaba en su propia primera línea de acción: **picaba antes de colocar** —`breakStepAheadHacia(hacia, true)`, y
+con `conEscalon = true` esa llamada **también pica el suelo de delante**— y **se salía con `true` en cuanto picaba
+algo**, así que la rama que **coloca** el bloque era **inalcanzable** en cualquier suelo rompible (o sea, siempre).
+Medido entonces: **0 escalones y 266 `pica`**, casi todos `stone` de la propia plancha (cavaba el suelo en vez de
+subir), con el objetivo arriba sobre suelo llano y los asaltantes **debajo** de él.
+
+**ARREGLO (una vuelta de tuerca al orden, `AggressiveZombieEntity.apilarBloqueParaSubir`, L692)**: dentro del bucle de
+la columna de delante (a 1 y a 2 bloques), **primero se intenta COLOCAR el escalón** (L719-733: celda vacía, aire
+encima, **suelo firme debajo** y fuera de la aldea, con su traza `pone un ESCALON`) y **solo si no se puede** se abre el
+hueco picando como antes (**L737**). Es el orden que dice el nombre del goal y lo que pidió el jugador (*«no deben dudar
+tanto en usar escalera, túnel o puente»*): **subir apilando un bloque**, no cavar el suelo.
+
+**MEDIDO ANTES Y DESPUÉS** (misma escena, mundo conservado, `-Conservar`):
+
+| | antes (corridas 151-158) | después (corrida 159) |
+|---|---|---|
+| **`pone un ESCALON`** | **0** ✗ | **65** ✓ |
+| **`PONER UN PUENTE`** (que no se estropee) | 8-10 | **13** ✓ |
+| **vuelta 3** (suelo llano y objetivo en el aire) | cavaban agujeros bajo sus pies (`EN EL FOSO`, y=67..69) | **5 de 8 DENTRO**, con la escalera en pie (30 columnas con obra, altura 4) ✓ |
+
+**LO QUE NO SE CONCLUYE, dicho claro**: los cruces de las vueltas 1 y 2 (cuántos entran al muro) **bailan mucho entre
+corridas con el mismo código** —medido: **1 de 8** (153), **7 de 8** (154), **8 de 8** (158)—, así que de esos números
+**no se saca nada**; lo que sí queda medido es **la herramienta**: la escalera coloca (65 líneas donde antes no había
+ninguna) y el puente sigue tendiéndose (13).
+
 ### I237 · LA MILICIA CON GENTE DENTRO: EL REPARTO SE LLENA (4 ESPADACHINES Y 3 ARQUEROS) Y LOS GUARDIAS ENTRENAN
 
 Es el **pendiente 3** de `docs/CONTINUAR.md` (§2.0): *«una aldea con más adultos que puestos (o con crías) para ver el

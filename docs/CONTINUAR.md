@@ -1,7 +1,8 @@
 # CONTINUAR AQUÍ — acuerdos, convenciones y pendientes (leer lo PRIMERO)
 
 Rama: **`migration-neoforge-1.21.1`** (estable, compilada, con `lint --strict` verde y **subida a GitHub**).
-Ultima actualizacion: 9-oct-2026, al cerrar el pendiente del nado (I235: el goal del nado no arrancaba nunca).
+Ultima actualizacion: 9-oct-2026, al cerrar los tres pendientes (I235 el nado, I236 el puente y la escalera, I237 la
+milicia) y arreglar la escalera que cavaba en vez de apilar (I238).
 
 ---
 
@@ -90,20 +91,20 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    asaltantes fuera**, en **dos vueltas** (objetivo al mismo nivel y 4 bloques arriba). Medido en dos corridas de mundo
    nuevo (153 y 154, `-MundoNuevo`): **el puente lo tienden 8 de 8** ✓ y en la 154 **7 de 8 estan DENTRO del muro a los
    21 s** ✓; el puente **sube un bloque por tablon** (altura maxima 5), o sea que un foso de 4 de ancho deja al bicho
-   **mas alto que el muro: lo pasa por encima sin picarlo** ✓. **La escalera no dispara NUNCA** (0 `escalon` en las
-   **cinco** corridas), **ni dandole su caso** (vuelta 3 de la escena, corrida 158: foso **relleno**, muro **quitado** y
-   el objetivo **en el aire**: **0 escalones otra vez**, los ocho asaltantes **debajo del objetivo** y varios **cavando
-   hacia abajo**, `266 pica` casi todo `stone` de la plancha). **La causa esta medida en la linea exacta**:
-   `apilarBloqueParaSubir` (**L692**) llama **antes** a `breakStepAheadHacia(hacia, true)` (**L716**) y **se sale con
-   `true` en cuanto pica algo**; con `conEscalon = true` esa llamada **pica tambien el suelo de delante** (**L778-786**),
-   asi que en cualquier suelo rompible (siempre) **cava el suelo y no apila** — la rama que **coloca** el bloque
-   (**L724-738**) es, en la practica, **inalcanzable**. **DECISION PARA EL JUGADOR** ✗: el arreglo (colocar antes de
-   picar, o no picar el suelo de delante cuando lo que toca es apilar) **cambia el comportamiento del asaltante**, asi
-   que **no se ha tocado**. Y DOS HALLAZGOS
-   que salieron de la foto, **sin tocar nada**: los que entran lo hacen **por debajo** (tunel bajo el muro: 125 piedras
+   **mas alto que el muro: lo pasa por encima sin picarlo** ✓. **La escalera no disparaba NUNCA** (0 `escalon` en cinco
+   corridas), **ni dandole su caso** (vuelta 3 de la escena, corrida 158: foso **relleno**, muro **quitado** y el
+   objetivo **en el aire**: **0 escalones otra vez**, los ocho asaltantes **debajo del objetivo** y varios **cavando
+   hacia abajo**, `266 pica` casi todo `stone` de la plancha). **La causa quedo medida en la linea exacta**:
+   `apilarBloqueParaSubir` (**L692**) llamaba **antes** a `breakStepAheadHacia(hacia, true)` y **se salia con `true` en
+   cuanto picaba algo**; con `conEscalon = true` esa llamada **pica tambien el suelo de delante**, asi que en cualquier
+   suelo rompible (siempre) **cavaba el suelo y no apilaba**: la rama que **coloca** el bloque era **inalcanzable**.
+   **ARREGLADO EN I238** (el orden: **colocar primero, picar como ultimo recurso**) y **medido despues** (corrida 159):
+   **65 `escalones`** donde antes habia **0**, el puente sigue tendiendose (**13**) y en la vuelta 3 **5 de 8 DENTRO**
+   con la escalera en pie ✓. Y DOS HALLAZGOS
+   que salieron de la foto: los que entran lo hacen **por debajo** (tunel bajo el muro: 125 piedras
    picadas justo en r=6..7 y los 68 troncos de base **en pie**), y el **romper y el puente se pelean** (45-62 de los
-   bloques picados son `cobblestone` en r=10..11: **los tablones que ellos mismos acaban de tender**) ✗ — hay que
-   decidir con el jugador si eso se arregla.
+   bloques picados son `cobblestone` en r=10..11: **los tablones que ellos mismos acaban de tender**) ✗ — **eso es lo
+   que queda por arreglar** (siguiente ronda).
 3. **Ver la milicia con gente dentro** — **CERRADA Y MEDIDA** ✓ (9-oct-2026, **I237** en `docs/aldea-invariantes.md`).
    Escena nueva (`MEDIR_MILICIA_SOBRANTES`): pone ella misma **12 adultos SIN OFICIO** (el caso «mas adultos que
    puestos») y **3 crias** alrededor de la plaza y deja correr el latido. Medido en un mundo conservado
