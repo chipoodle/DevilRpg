@@ -6939,9 +6939,17 @@ en el candado (**L372**) y **testigo en cada volcado** (`borrado=SI/NO`, `vivo=S
 testigo quedó **afinado**: `isRemoved()` también es verdad cuando lo **matan**, así que el aviso del instrumento solo
 sale si además **le queda vida** (si no, murió peleando).
 
-**LO QUE NO ESTÁ MEDIDO, dicho claro** ✗: el **tope de 40 bloques por marcha** (una montaña más gruesa aguanta y la
-aldea se salva, que es lo que pidió el jugador para no perderla a lo tonto) está **leído en el código** pero no medido con
-una montaña de más de 40 bloques.
+**Y LA MONTAÑA GRUESA SÍ AGUANTA** ✓ (corrida 170, la segunda variante de la misma escena: anillo **cerrado** de
+**26 de fondo** —r=66..91, **37 440 celdas testigo**— y el asaltante fuera, a r=95). Medido: **NO la atraviesa** — en
+**156 s** avanza de **r=92 a r=86** y abre **29 de 37 440 celdas** (una celda cada 20-30 s), con el taladro y 18 cavadas
+debajo—, que es exactamente lo que el jugador quería (*«una montaña grande aguanta y la aldea se salva»*) ✓. Comparado con
+la fina: **3 de fondo → atravesada en 72 s**; **26 de fondo → sin atravesar en 156 s**.
+
+**LO QUE NO SE PUEDE AISLAR, y es del instrumento** ✗: las líneas del mod `[Siege] … pica Block{…}` **no dicen qué
+asaltante** pica (todas salen con la misma aldea), así que en una corrida con más atacantes del mundo **no se puede
+contar los bloques que lleva ESE bicho** y, por tanto, **no se ha medido el agotamiento exacto del tope de 40 bloques por
+marcha** (que sigue leído en el código: `TUNEL_PRESUPUESTO`, **L103**). Para medirlo haría falta que la traza llevara el
+identificador del asaltante (o un contador por bicho en el arnés).
 
 ### I239 · EL ROMPER Y EL PUENTE DEJAN DE PELEARSE: **LA OBRA DEL ASEDIO NO SE PICA**
 

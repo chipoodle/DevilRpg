@@ -3767,7 +3767,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * <b>medirlo</b>, no citarlo.
      * <p>
      * La escena monta el caso exacto: un <b>ANILLO DE PIEDRA MACIZA CERRADO</b> (no se puede rodear, que es cuando la
-     * circunferencia es demasiado grande), de radio {@value #MONTANA_RADIO}, tres de grueso y nueve de alto, y pone al
+     * circunferencia es demasiado grande), de radio {@value #MONTANA_RADIO}, {@value #MONTANA_GROSOR} de grueso y {@value #MONTANA_ALTO} de alto (la segunda medida: una montaña MAS GRUESA que el presupuesto de 40 bloques por marcha), y pone al
      * asaltante <b>fuera</b> con <b>SIN objetivo</b>: así corre la <b>MARCHA</b> al centro, que es la que taladra.
      * <p>
      * Lo que se busca en el registro: `[Arnes] MONTANA t=… pos=… r=… DENTRO=SI/NO | celdas del anillo abiertas=X/Y |
@@ -3781,10 +3781,20 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity montanero = null;
     /** Una celda testigo por columna del anillo: si deja de ser piedra, el asaltante ha abierto por ahí. */
     private static final java.util.List<BlockPos> anilloDeLaMontana = new java.util.ArrayList<>();
-    private static final int MONTANA_RADIO = 70;
-    private static final int MONTANA_GROSOR = 3;
+    /**
+     * Las DOS variantes de la montaña, con lo que se midió en cada una (I240):
+     * <ul>
+     *   <li><b>fina</b> ({@code RADIO=70, GROSOR=3, ASALTANTE=80}): el asaltante llega (r=80 -> 73 en 9 s), taladra
+     *       (0 -> 6 celdas a los 48 s, 15 a los 72 s) y <b>la atraviesa</b> (r=63 a los 72 s, ya en el muro del pueblo).</li>
+     *   <li><b>gruesa</b> ({@code RADIO=66, GROSOR=26, ASALTANTE=95}, lo que está puesto ahora): <b>NO la atraviesa</b>:
+     *       en 156 s avanza de r=92 a r=86 y abre 29 de 37440 celdas, o sea ~1 celda cada 20-30 s. Es el caso que el
+     *       jugador quería que aguantara («una montaña grande aguanta y la aldea se salva»).</li>
+     * </ul>
+     */
+    private static final int MONTANA_RADIO = 66;
+    private static final int MONTANA_GROSOR = 26;
     private static final int MONTANA_ALTO = 9;
-    private static final int MONTANA_ASALTANTE = 80;
+    private static final int MONTANA_ASALTANTE = 95;
     /** Testigo del barrido (ver {@link #medirLaMontana}): si el arnés borra al monstruo, la medida NO vale. */
     private static boolean montanaBarridoAvisado = false;
 

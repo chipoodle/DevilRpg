@@ -138,8 +138,10 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    **15** a los 72 s) y **la atraviesa** (r=63 a los 72 s, ya en el muro del pueblo; despues muere peleando con la
    milicia). El **puente** (8 de 8, I236) y la **escalera** (65-76 escalones, I238) ya estaban medidos ✓. **Un cambio mio
    que sobraba** (un «paseo a pasos cortos» para acercarse) se midio con su **corrida de control** y **se retiro**: sin el
-   el asaltante llega **antes** (72 s y 15 celdas contra 96 s y 12) ✓. **Falta medir** el tope de **40 bloques por
-   marcha** (una montaña mas gruesa aguanta: esta leido en el codigo, no medido).
+   el asaltante llega **antes** (72 s y 15 celdas contra 96 s y 12) ✓. Y **la montaña GRUESA aguanta** ✓ (corrida 170:
+   anillo de **26 de fondo**: en 156 s avanza de r=92 a r=86 y abre 29 de 37 440 celdas, **sin atravesarla**), que es lo
+   que el jugador queria. **Falta** instrumento para aislar el tope de **40 bloques por marcha**: las lineas
+   `[Siege] … pica` **no dicen que asaltante** pica, asi que no se pueden contar los de ESE monstruo.
 
 **Y EL MUNDO DE LA TANDA: LA RECETA YA ESTA MEDIDA (9-oct-2026)** ✓. Lo que salia antes eran **contadores de trabajo a
 cero** porque la copia del guardado no tiene aldea donde el arnes la busca (en `470,63,646` habia **mar**: lo dice
