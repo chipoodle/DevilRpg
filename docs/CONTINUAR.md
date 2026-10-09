@@ -145,7 +145,9 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    verdad el ritmo es **~1 bloque cada 4 s** (38 en 150 s, corrida 171) y **agotar 40 pide 8-10 minutos**, mas de lo que
    dura el banco ✗; con una **corrida de control con el tope en 5** se vio lo que pasa al agotarse: el contador baja
    **5 -> 0** en **20 bloques** y **el asaltante se queda** (anillo clavado en 5 celdas y el monstruo parado en r=91 el
-   resto de la corrida) ✓. Falta medir si el tope **se recarga** al empezar una marcha nueva.
+   resto de la corrida) ✓. Y **se recarga con cada centro que se le asigna** (`setGoToCenterActive(true)` **L199** llama a
+   `recargarTunel()`): **cada ola vuelve con 40 bloques** — leido en el codigo; **no medido** una segunda ola contra la
+   misma montaña ✗.
 
 **Y EL MUNDO DE LA TANDA: LA RECETA YA ESTA MEDIDA (9-oct-2026)** ✓. Lo que salia antes eran **contadores de trabajo a
 cero** porque la copia del guardado no tiene aldea donde el arnes la busca (en `470,63,646` habia **mar**: lo dice
