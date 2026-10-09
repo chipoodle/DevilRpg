@@ -84,11 +84,21 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    (`AggressiveZombieEntity` **L854**) y medido **antes y despues**: **0 ticks** corriendo en 60 s de atasco → **arranca
    3 veces y saca al bicho del agua en 2-4 ticks**. La vuelta de orilla a ras ya salia sola: **sale del agua a los 6,0 s**
    (3,4 bloques a 0,57 bloques/s dentro del agua) y anda en tierra a **2,2 bloques/s** ✓.
-2. **El puente y la escalera no se han visto en una ola** (`MEDIR_OLA_REAL` / `MEDIR_ATRAVESADORES`). Los dos mecanismos
-   existen y estan corregidos (I212 + I213 + I214), pero en las olas medidas **solo se usa el tunel**: entran por los
-   huecos del anillo, asi que **no necesitan ni puente ni escalera**. **Lo que hay que hacer**: una escena donde el muro
-   este **entero y sin huecos** y con un **foso** delante, para que la unica salida sea el puente o el escalon. Sin eso
-   no se puede afirmar que funcionan.
+2. **El puente y la escalera en una ola** — **EL PUENTE: MEDIDO** ✓; **LA ESCALERA: SIGUE SIN VERSE** ✗
+   (9-oct-2026, **I236** en `docs/aldea-invariantes.md`). Escena nueva (`MEDIR_OLA_CON_FOSO`, en el arnes): **muro entero
+   y sin huecos** (anillo r=7, 3 de alto, 68 troncos) con un **foso de 4 de ancho y 7 de hondo delante** y **ocho
+   asaltantes fuera**, en **dos vueltas** (objetivo al mismo nivel y 4 bloques arriba). Medido en dos corridas de mundo
+   nuevo (153 y 154, `-MundoNuevo`): **el puente lo tienden 8 de 8** ✓ y en la 154 **7 de 8 estan DENTRO del muro a los
+   21 s** ✓; el puente **sube un bloque por tablon** (altura maxima 5), o sea que un foso de 4 de ancho deja al bicho
+   **mas alto que el muro: lo pasa por encima sin picarlo** ✓. **La escalera no dispara NUNCA** (0 `escalon` en las
+   cuatro corridas) y el porque esta leido en el codigo: la rama que coloca el escalon pide **suelo firme debajo** de la
+   celda de delante (sobre un agujero no puede, y ahi gana el puente, que es lo correcto) y contra un muro **rompible**
+   el goal abre el hueco **a picos** y se sale sin colocar nada. **Lo que falta**: la escalera en una ola con el caso
+   que le toca (objetivo arriba, **suelo llano de por medio** y un obstaculo que **no se pueda picar**). Y DOS HALLAZGOS
+   que salieron de la foto, **sin tocar nada**: los que entran lo hacen **por debajo** (tunel bajo el muro: 125 piedras
+   picadas justo en r=6..7 y los 68 troncos de base **en pie**), y el **romper y el puente se pelean** (45-62 de los
+   bloques picados son `cobblestone` en r=10..11: **los tablones que ellos mismos acaban de tender**) ✗ — hay que
+   decidir con el jugador si eso se arregla.
 3. **Ver la milicia con gente dentro** (`MEDIR_MILICIA`). La traza esta hecha (I217) y escribe bien, pero en las aldeas de
    prueba **no hay sobrantes** (todos los adultos tienen su oficio), asi que sale `0 espadachines y 0 arqueros` — y el
    cero **no es un fallo**, es la regla del reparto. **Lo que hay que hacer**: una aldea con **mas adultos que puestos**

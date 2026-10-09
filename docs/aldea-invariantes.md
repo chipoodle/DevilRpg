@@ -6896,6 +6896,63 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I236 · LA OLA CON EL MURO ENTERO Y UN FOSO DELANTE: EL PUENTE SÍ, LA ESCALERA NO (Y ENTRAN POR DEBAJO)
+
+Es la mitad que quedaba del **pendiente 2** de `docs/CONTINUAR.md` (§2.0): *«una escena donde el muro esté entero y sin
+huecos y con un foso delante, para que la única salida sea el puente o el escalón»*. Escena nueva en el arnés
+(`MEDIR_OLA_CON_FOSO`, **`GuardHarness.java` L3260** y siguientes, con **dos vueltas** en la misma corrida): **plancha de
+piedra** de 29×29 a **84 bloques del centro del pueblo** (fuera del disco de la aldea), **muro entero y sin huecos**
+(anillo de radio **7**, dos de grueso y **3 de alto**: dos troncos y adoquín, **68 troncos** de base), **foso de 4 de
+ancho** (r=8..11) y **7 de hondo** justo delante, **objetivo dentro del muro** y **ocho asaltantes** repartidos cada 45°
+**fuera del foso** (r=12). Vuelta 1: objetivo **a la misma altura** (le toca al puente). Vuelta 2 (t=1200): se rehace el
+foso, el objetivo se **sube 4 bloques** y los ocho vuelven a la orilla (le toca a la escalera).
+
+**DOS FALLOS DEL INSTRUMENTO, MEDIDOS, ANTES DE QUE LA ESCENA MIDIERA NADA** (corridas 151 y 152: **0 tablones, 0
+escalones y 0 brecha** en 90 s, con `TraverseGoal` corriendo en todos los volcados):
+
+1. **El disco de la aldea se mide desde el `villageCenter` DEL PROPIO BICHO**, y la escena se lo puso **en su propio
+   centro** (`AggressiveZombieEntity.dentroDelDiscoDeLaAldea`, **L461**, y `dentroDeLaAldea`, **L444**, los dos contra
+   `villageCenter`): con eso el foso y el muro caían «dentro de la aldea» y las dos herramientas **se negaban a colocar
+   un solo bloque** (`puentearHacia` **L617**, `apilarBloqueParaSubir` **L729**). **ARREGLO** (`GuardHarness`,
+   `colocarLaOlaDelFoso`): el centro del bicho va al **pueblo de verdad** (`CENTRO`), no a la escena ✓.
+2. **Faltaba la ALTURA en la traza**: la corrida 151 no decía la Y de cada asaltante y no se sabía si estaban en el
+   fondo del foso o en el borde. La línea por asaltante (`EN EL FOSO` / `en la plancha`) es la que contestó eso ✓.
+
+**Y LO MEDIDO, CON LAS DOS CORRIDAS BUENAS** (153 y 154, mundos nuevos generados con `-MundoNuevo`, suelos a y=64 y
+y=70):
+
+| | vuelta 1 (objetivo al mismo nivel) | vuelta 2 (objetivo 4 arriba) |
+|---|---|---|
+| **puente** (`PONER UN PUENTE`, una línea por asaltante) | **8 de 8** lo tienden ✓ | **8 de 8** ✓ |
+| **obra sobre el foso** | 10-12 columnas, altura 1 | hasta **40 columnas, altura 5** (el puente sube **un bloque por tablón**) |
+| **dentro del muro** | **7 de 8** a los 21 s (corrida 154; 1 de 8 en la 153) | **4 de 8** |
+| **escalera** (`pone un ESCALON`) | **0** ✗ | **0** ✗ |
+| **túnel** (`CAVA hacia abajo`) | 34-56 | — |
+| **muro** | **68 de 68 troncos de base en pie**: no lo pican, **pasan por debajo** (125 piedras picadas justo en r=6..7, o sea el suelo *bajo* el muro, y luego el suelo del patio desde abajo) ✓ |
+
+**LAS TRES CONCLUSIONES, dichas como son**:
+
+1. **EL PUENTE SÍ: medido en una ola** ✓. Los ocho asaltantes tienden tablones sobre el foso (una línea `PONER UN
+   PUENTE` cada uno) y **cruzan**: en la corrida 154, **7 de 8 dentro del muro a los 21 s**. Y el puente **sube un bloque
+   por tablón** (medido: altura máxima 5 en la vuelta 2), así que un foso de 4 de ancho deja al asaltante **más alto que
+   el muro de 3**: el muro se puede **pasar por encima** sin picarlo ni apilar nada.
+2. **LA ESCALERA NO: 0 escalones en las cuatro corridas** ✗, y el porqué está leído en el código y confirmado por el
+   registro: la rama que **coloca** el escalón (`apilarBloqueParaSubir`, **L724-738**) exige que la celda de delante, a
+   la altura de los pies, esté **vacía y con suelo firme debajo** — **sobre un agujero no puede** (ahí gana el puente,
+   que es lo correcto) y **contra el muro** el goal empieza por **abrir el hueco a picos**
+   (`breakStepAheadHacia`, **L753**), que devuelve `true` y **se sale sin colocar el escalón**: contra un muro
+   rompible, la escalera es un pico. **Queda ABIERTO**: ver la escalera en una ola pide el caso que le toca —objetivo
+   arriba, **suelo llano de por medio** y un obstáculo que **no se pueda picar**—, que es otra escena (la dedicada
+   `MEDIR_ATRAVESADORES` ya la mide, pero **en una ola no se ha visto**) ✗.
+3. **Y LOS QUE ENTRAN, ENTRAN POR DEBAJO** ✓: con el foso delante y el muro entero, el camino que encuentran es el
+   **túnel** (`CAVA hacia abajo`, 34-56 veces) **bajo el muro** (125 piedras picadas justo en r=6..7, que es el suelo
+   bajo sus cimientos) y salen al patio desde abajo. El muro **no lo pican**: los 68 troncos de base quedan en pie.
+
+**UN DEFECTO QUE SALE EN LA FOTO** ✗: el **romper y el puente se pelean**. De los bloques que pican, **45-62 son
+`cobblestone`** y están **en r=10..11**, o sea **los tablones que ellos mismos acaban de tender**: el `BreakBlockGoal`
+(«no avanzo → pico lo de delante», **L1444**) destruye el puente del `TraverseGoal`. Queda escrito como hallazgo; **no se
+ha tocado nada** (no es lo que pedía el pendiente y hay que decidir con el jugador si se arregla).
+
 ### I235 · EL NADO, MEDIDO: EL INSTRUMENTO ERA EL QUE ENCERRABA AL BICHO, Y EL GOAL DE I215 NO ARRANCABA NUNCA
 
 Era el **pendiente 1** de `docs/CONTINUAR.md` (§2.0): *«la escena del nado no mide»*. Se ha medido, y al medirla

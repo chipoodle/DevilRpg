@@ -409,6 +409,31 @@ del agua de la zona), los volcados `[Arnes] AGUA t=… vuelta=… enAgua=… aLa
 `AGUA: SALE DEL AGUA (vuelta N) a los N ticks`, `AGUA: LLEGA AL OBJETIVO`, los `ARRANCA`/`PARA` del goal del nado y
 `AGUA RESUMEN (vuelta N)` (o `AGUA: NO SALE DEL AGUA en 60 s` si se queda).
 
+### `MEDIR_OLA_CON_FOSO = true` — LA OLA CONTRA UN MURO ENTERO CON UN FOSO DELANTE (I236)
+
+La escena que pedía el pendiente 2: **muro entero y sin huecos** (anillo de radio 7, dos de grueso y 3 de alto, como el
+del pueblo: dos troncos y adoquín) con un **foso de 4 de ancho y 7 de hondo justo delante** y **ocho asaltantes
+repartidos cada 45° fuera del foso**, con el **objetivo dentro del muro**. Se levanta **a 84 bloques del centro del
+pueblo** (fuera del disco de la aldea) y **sobre el agua/terreno de la zona**, así que no depende del mundo: se mide
+igual en un mundo nuevo que en el mar.
+
+Se mide en **DOS VUELTAS** en la misma corrida, porque cada herramienta pide una geometría distinta: en la **vuelta 1**
+el objetivo está **al mismo nivel** (le toca al **puente**) y a los **1200 ticks** la escena se rehace y el objetivo se
+**sube 4 bloques** (vuelta 2: le toca a la **escalera**).
+
+**Ojo con dos trampas del instrumento, las dos medidas** (costaron dos corridas con 0 tablones, 0 escalones y 0 brecha):
+1. **El disco de la aldea se mide desde el centro que lleva el BICHO**: si se le pone el centro en la escena, el foso y
+   el muro caen «dentro de la aldea» y `puentearHacia`/`apilarBloqueParaSubir` **se niegan a colocar nada**. El centro
+   del bicho va al **pueblo de verdad** (`colocarLaOlaDelFoso`).
+2. **Hace falta la altura por asaltante**: la traza dice `EN EL FOSO` o `en la plancha`, que es lo que distingue un
+   bicho atascado en el fondo de uno parado en el borde.
+
+Lo que se busca en el registro: `[Arnes] OLA CON FOSO vuelta=N t=… N/8 vivos, M DENTRO del muro | columnas del foso CON
+OBRA=X/Y (altura maxima=Z) | troncos del muro en pie=… (brecha=…)`, la línea por asaltante, y **las del mod**, que son
+las que dicen qué herramienta se usa: `[Siege] … PONER UN PUENTE`, `… pone un ESCALON`, `… CAVA hacia abajo` y
+`… pica Block{…}`. **Ojo**: el puente y el escalón colocan el bloque **a la altura de los pies**, así que el registro
+del arnés **no** los distingue — los distingue la línea del mod.
+
 ### `MEDIR_MURO = true` — la brecha en la muralla (I89)
 
 Pone un asaltante **sin objetivo** fuera de la muralla (radio 66) para que corra la **marcha** (la que taladra) y va

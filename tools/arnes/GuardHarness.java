@@ -366,7 +366,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // lista y el asaltante de la charca se borraba en el PRIMER barrido (t=320, un segundo despues de aparecer).
         // Lo que se midio entonces ("el bicho flota en el borde y no sale, velocidad 0,012") era ESTO: un bicho
         // congelado por el barrido, no un pozo que lo encerrara (ver `medirElNado`).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS && !MEDIR_AGUA) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS && !MEDIR_AGUA && !MEDIR_OLA_CON_FOSO) {
             if (BICHO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerBichoDentro(level);
@@ -405,7 +405,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // Y EN LA MEDIDA DEL NADO TAMPOCO (9-oct-2026): la escena pone al jugador de pega EN LA ORILLA de la charca, a
         // 8 bloques del bicho, y este bloque lo devolvia a la plaza en cada tick (con lo que el objetivo se iba a 40
         // bloques y el bicho salia del agua para nada). Aqui el objetivo lo fija la escena y no se toca.
-        if (pega != null && ((!MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_AGUA) || ticks < 300 || MEDIR_ALDEANO_CRUZA)) {
+        if (pega != null && ((!MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_AGUA && !MEDIR_OLA_CON_FOSO) || ticks < 300 || MEDIR_ALDEANO_CRUZA)) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
         }
@@ -427,6 +427,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirElAsaltoAlMuro(level, pega);
         } else if (MEDIR_OLA_REAL) {
             medirLaOlaReal(level, pega);
+        } else if (MEDIR_OLA_CON_FOSO) {
+            medirLaOlaConFoso(level, pega);
         } else if (MEDIR_ANILLO) {
             medirElAnilloDelMuro(level);
         } else if (MEDIR_CRUCE_DEL_PORTON) {
@@ -2213,7 +2215,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * `AGUA: NO SALE DEL AGUA` si se queda). Y `borrado=SI` avisa de que <b>el instrumento se ha comido al bicho</b>:
      * con eso, la medida NO vale.
      */
-    private static final boolean MEDIR_AGUA = true;
+    private static final boolean MEDIR_AGUA = false;
 
     /**
      * <b>¿FUNCIONA EL CLICK DEL PORTÓN?</b> (6-oct-2026). El jugador reportó *«cuando le doy click no se abre»*, así que
@@ -3335,6 +3337,259 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
         DevilRpg.LOGGER.info("[Arnes] OLA REAL t={} : {}/{} vivos, {} DENTRO del recinto | radios: {}", ticks, vivos,
                 asaltantesDeLaOla.size(), dentro, radios.toString().trim());
+    }
+
+    /**
+     * <b>¿SE VE EL PUENTE Y LA ESCALERA EN UNA OLA DE VERDAD? (el pendiente 2 de CONTINUAR, medido el 9-oct-2026).</b>
+     * <p>
+     * En las olas medidas hasta ahora <b>solo se usaba el túnel</b>: el asaltante entraba por los huecos del anillo (ya
+     * cerrados con los portones, I219/I224) y no necesitaba ni puente ni escalera, así que las dos herramientas estaban
+     * <b>sin ver en una ola</b>. Esta escena monta lo que faltaba: un <b>muro entero y sin huecos</b> con un <b>FOSO de
+     * 4 de ancho y 7 de hondo justo delante</b> y <b>ocho asaltantes alrededor, fuera del foso</b>, con el objetivo
+     * <b>dentro del muro</b>.
+     * <p>
+     * <b>Y SE MIDE EN DOS VUELTAS, porque cada herramienta pide una geometría distinta</b> (`TraverseGoal` la elige por
+     * dónde esté el objetivo, I212):
+     * <ul>
+     *   <li><b>vuelta 1, objetivo a la MISMA altura</b>: el camino es <b>cubrir el foso</b> (el puente) y, en el muro,
+     *       <b>apilar un escalón</b> para treparlo (el puente no puede: un muro no es un hueco).</li>
+     *   <li><b>vuelta 2, objetivo 4 bloques ARRIBA</b> (la escena se rehace: foso limpio y muro entero): aquí la
+     *       herramienta que toca es la <b>escalera de bloques</b>.</li>
+     * </ul>
+     * <p>
+     * <b>LO QUE COSTÓ DOS CORRIDAS, Y ERA LO MISMO LAS DOS VECES (9-oct-2026, medido):</b>
+     * <ol>
+     *   <li><b>El disco de la aldea se mide desde el `villageCenter` DEL PROPIO BICHO.</b> `puentearHacia` veta las
+     *       celdas que caen en ese disco (radio de la valla + 2) y `apilarBloqueParaSubir` veta las que caen en el
+     *       recinto: con el centro del bicho puesto <b>en la escena</b>, el foso y el muro quedaban «dentro de la
+     *       aldea» y los ocho asaltantes <b>no podían colocar un solo bloque</b> — dos corridas seguidas con
+     *       `TraverseGoal` corriendo y <b>0 tablones, 0 escalones y 0 brecha</b> —. El centro del bicho va al pueblo de
+     *       verdad y la escena, fuera (a 84 bloques del centro: su borde de dentro, a 70).</li>
+     *   <li><b>Hacía falta la ALTURA en la traza.</b> La primera corrida no decía la Y de cada asaltante y no se sabía
+     *       si estaban en el fondo del foso o en el borde; la línea por asaltante que dice `EN EL FOSO` / `en la plancha`
+     *       es lo que contestó eso (con el foso de 7 de hondo se paran en el borde, que es lo que hace falta para que
+     *       tiendan el puente).</li>
+     * </ol>
+     * <p>
+     * Lo que se busca en el registro: `[Arnes] OLA CON FOSO vuelta=N t=… N/8 vivos, M DENTRO del muro | columnas del
+     * foso CON OBRA=X/Y (altura maxima=Z) | troncos del muro en pie=… (brecha=…)`, la línea por asaltante (con su
+     * altura, que es lo que dice si está en el fondo del foso) y las del mod `[Siege] … PONER UN PUENTE`,
+     * `… pone un ESCALON`, `… CAVA hacia abajo` y `… pica Block{…}`.
+     */
+    private static final boolean MEDIR_OLA_CON_FOSO = true;
+
+    /** Los ocho asaltantes de la ola del foso y su objetivo (dentro del muro). */
+    private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> olaDelFoso =
+            new java.util.ArrayList<>();
+    private static net.minecraft.world.entity.LivingEntity objetivoDelFoso = null;
+    /** Las celdas que vigila el instrumento: la superficie del foso (tablones) y los troncos del muro (brecha). */
+    private static final java.util.List<BlockPos> superficieDelFoso = new java.util.ArrayList<>();
+    private static final java.util.List<BlockPos> troncosDelMuro = new java.util.ArrayList<>();
+
+    /** La geometría de la escena, en bloques (ver {@link #medirLaOlaConFoso}). */
+    private static final int FOSO_MURO_RADIO = 7;
+    private static final int FOSO_BORDE = 11;
+    private static final int FOSO_PLANCHA = 14;
+    private static final int FOSO_CALADO = 7;
+    private static final int FOSO_ASALTANTES = 12;
+    /** Tick en el que se cambia de vuelta: la 1 mide el PUENTE y la 2 la ESCALERA (el objetivo, 4 bloques arriba). */
+    private static final int FOSO_CAMBIO = 1200;
+    private static int fosoVuelta = 1;
+    private static int fosoSueloY = 0;
+    private static int fosoCentroX = 0;
+    private static int fosoCentroZ = 0;
+
+    /** La plancha de piedra de la escena (el suelo firme) y el cielo despejado encima. Se hace UNA vez. */
+    private static void montarLaPlanchaDelFoso(ServerLevel level, int bx, int bz, int ySuelo) {
+        for (int dx = -FOSO_PLANCHA; dx <= FOSO_PLANCHA; dx++) {
+            for (int dz = -FOSO_PLANCHA; dz <= FOSO_PLANCHA; dz++) {
+                for (int dy = 1; dy <= 8; dy++) {
+                    level.setBlock(new BlockPos(bx + dx, ySuelo + dy, bz + dz),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                }
+                for (int dy = 0; dy >= -(FOSO_CALADO + 2); dy--) {
+                    level.setBlock(new BlockPos(bx + dx, ySuelo + dy, bz + dz),
+                            net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 2);
+                }
+            }
+        }
+    }
+
+    /**
+     * (Re)monta el FOSO y el MURO de la escena: se llama al principio y al cambiar de vuelta, y deja el foso vacío y el
+     * muro entero (o sea, borra los tablones y los escalones de la vuelta anterior).
+     */
+    private static void montarElFosoYElMuro(ServerLevel level, int bx, int bz, int ySuelo) {
+        int rPatio2 = (FOSO_MURO_RADIO - 2) * (FOSO_MURO_RADIO - 2);
+        int rMuro2 = FOSO_MURO_RADIO * FOSO_MURO_RADIO;
+        int rBorde2 = FOSO_BORDE * FOSO_BORDE;
+        superficieDelFoso.clear();
+        troncosDelMuro.clear();
+        for (int dx = -FOSO_PLANCHA; dx <= FOSO_PLANCHA; dx++) {
+            for (int dz = -FOSO_PLANCHA; dz <= FOSO_PLANCHA; dz++) {
+                int r2 = dx * dx + dz * dz;
+                // EL FOSO: 4 de ancho (r=8..11) y FOSO_CALADO de hondo, con el aire de encima despejado.
+                if (r2 > rMuro2 && r2 <= rBorde2) {
+                    for (int dy = 1; dy <= 3; dy++) {
+                        level.setBlock(new BlockPos(bx + dx, ySuelo + dy, bz + dz),
+                                net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                    }
+                    for (int dy = 0; dy > -FOSO_CALADO; dy--) {
+                        level.setBlock(new BlockPos(bx + dx, ySuelo + dy, bz + dz),
+                                net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                    }
+                    superficieDelFoso.add(new BlockPos(bx + dx, ySuelo, bz + dz));
+                }
+                // EL MURO ENTERO Y SIN HUECOS: 2 de grueso (r=6..7), dos troncos y adoquín encima, como el del pueblo.
+                if (r2 > rPatio2 && r2 <= rMuro2) {
+                    level.setBlock(new BlockPos(bx + dx, ySuelo + 1, bz + dz),
+                            net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState(), 2);
+                    level.setBlock(new BlockPos(bx + dx, ySuelo + 2, bz + dz),
+                            net.minecraft.world.level.block.Blocks.OAK_LOG.defaultBlockState(), 2);
+                    level.setBlock(new BlockPos(bx + dx, ySuelo + 3, bz + dz),
+                            net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState(), 2);
+                    troncosDelMuro.add(new BlockPos(bx + dx, ySuelo + 1, bz + dz));
+                }
+            }
+        }
+    }
+
+    /** Coloca los ocho asaltantes alrededor, fuera del foso, con su objetivo dentro del muro (ver el centro de aldea). */
+    private static void colocarLaOlaDelFoso(ServerLevel level, int bx, int bz, int ySuelo) {
+        for (int i = 0; i < 8; i++) {
+            int[] donde = orillaDelFoso(bx, bz, i);
+            var z = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+            if (z == null) {
+                continue;
+            }
+            z.moveTo(donde[0] + 0.5D, ySuelo + 1, donde[1] + 0.5D, 0.0F, 0.0F);
+            // EL CENTRO DE LA ALDEA DEL BICHO VA AL PUEBLO DE VERDAD, NO A LA ESCENA (9-oct-2026, y esto costo DOS
+            // corridas): `puentearHacia` y `apilarBloqueParaSubir` vetan lo que cae en el disco de la aldea, y ese disco
+            // se mide desde el `villageCenter` DEL PROPIO BICHO. Con el centro puesto en la escena, el foso y el muro
+            // caian "dentro de la aldea": los ocho asaltantes se quedaban en el borde sin poder colocar un solo bloque
+            // (0 tablones, 0 escalones, 0 brecha en 90 s, con `TraverseGoal` corriendo). Con el centro en el pueblo, la
+            // escena queda fuera del disco y las herramientas trabajan.
+            z.setVillageCenter(new BlockPos(CENTRO.getX(), CENTRO.getY(), CENTRO.getZ()));
+            z.setGoToCenterActive(true);
+            z.recargarTunel();
+            z.setPersistenceRequired();
+            level.addFreshEntity(z);
+            z.setTarget(objetivoDelFoso);
+            olaDelFoso.add(z);
+        }
+    }
+
+    /** La celda de la orilla de fuera que le toca a cada asaltante (cada 45 grados). */
+    private static int[] orillaDelFoso(int bx, int bz, int i) {
+        double ang = Math.toRadians(i * 45.0D);
+        return new int[] {bx + (int) Math.round(Math.cos(ang) * FOSO_ASALTANTES),
+                bz + (int) Math.round(Math.sin(ang) * FOSO_ASALTANTES)};
+    }
+
+    private static void medirLaOlaConFoso(ServerLevel level, FakePlayer pega) {
+        final int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (ticks == 300 && olaDelFoso.isEmpty()) {
+            // LA ESCENA VA FUERA DEL DISCO DE LA ALDEA (a 84 bloques, con su borde de dentro a 70: el disco llega a 64
+            // con margen) y SOBRE el agua/terreno de la zona, para no depender del mundo (ver I235).
+            int bx = CENTRO.getX() + 84;
+            int bz = CENTRO.getZ();
+            int ySuelo = Math.max(cota + 1, level.getHeight(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, bx, bz));
+            fosoSueloY = ySuelo;
+            fosoCentroX = bx;
+            fosoCentroZ = bz;
+            montarLaPlanchaDelFoso(level, bx, bz, ySuelo);
+            montarElFosoYElMuro(level, bx, bz, ySuelo);
+            objetivoDelFoso = objetivoDeLaEscena(level, bx, ySuelo + 1, bz);
+            colocarLaOlaDelFoso(level, bx, bz, ySuelo);
+            DevilRpg.LOGGER.info("[Arnes] OLA CON FOSO: vuelta 1 montada en {} — MURO entero y sin huecos (anillo r={},"
+                            + " 3 de alto, {} troncos) con un FOSO de {} de ancho (r={}..{}) y {} de hondo DELANTE,"
+                            + " plancha de piedra hasta r={}, objetivo DENTRO del muro ({}) y {} asaltantes fuera del"
+                            + " foso (r={}). El suelo va a y={} (cota de la aldea {}, terreno/agua de la zona {})",
+                    new BlockPos(bx, ySuelo, bz), FOSO_MURO_RADIO, troncosDelMuro.size(),
+                    FOSO_BORDE - FOSO_MURO_RADIO, FOSO_MURO_RADIO + 1, FOSO_BORDE, FOSO_CALADO, FOSO_PLANCHA,
+                    objetivoDelFoso.blockPosition(), olaDelFoso.size(), FOSO_ASALTANTES, ySuelo, cota,
+                    level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, bx, bz));
+        }
+        if (ticks == FOSO_CAMBIO && fosoVuelta == 1) {
+            // VUELTA 2: LA ESCALERA. Se rehace la escena (foso limpio y muro entero, sin los tablones ni los escalones de
+            // la vuelta 1), el objetivo se SUBE 4 bloques y los asaltantes vuelven a la orilla.
+            montarElFosoYElMuro(level, fosoCentroX, fosoCentroZ, fosoSueloY);
+            objetivoDelFoso.moveTo(fosoCentroX + 0.5D, fosoSueloY + 5, fosoCentroZ + 0.5D);
+            for (int i = 0; i < olaDelFoso.size(); i++) {
+                int[] donde = orillaDelFoso(fosoCentroX, fosoCentroZ, i);
+                var z = olaDelFoso.get(i);
+                z.getNavigation().stop();
+                z.setDeltaMovement(Vec3.ZERO);
+                z.moveTo(donde[0] + 0.5D, fosoSueloY + 1, donde[1] + 0.5D, 0.0F, 0.0F);
+            }
+            fosoVuelta = 2;
+            DevilRpg.LOGGER.info("[Arnes] OLA CON FOSO: vuelta 2 montada (la ESCALERA) — foso limpio y muro entero otra"
+                            + " vez, y el objetivo SUBIDO a {} (4 bloques por encima del suelo, y={}); los {} asaltantes"
+                            + " vuelven a la orilla", objetivoDelFoso.blockPosition(), fosoSueloY + 1,
+                    olaDelFoso.size());
+        }
+        if (olaDelFoso.isEmpty()) {
+            return;
+        }
+        for (var z : olaDelFoso) {
+            z.setTarget(objetivoDelFoso);
+        }
+        if (ticks % 240 != 0) {
+            return;
+        }
+        int vivos = 0;
+        int dentro = 0;
+        StringBuilder radios = new StringBuilder();
+        for (var z : olaDelFoso) {
+            if (!z.isAlive()) {
+                continue;
+            }
+            vivos++;
+            int r = (int) Math.hypot(z.getX() - fosoCentroX, z.getZ() - fosoCentroZ);
+            if (r <= FOSO_MURO_RADIO - 2) {
+                dentro++;
+            }
+            radios.append(r).append(' ');
+        }
+        // LA LÍNEA POR ASALTANTE: la ALTURA es lo que dice si está en el fondo del foso (la primera corrida se quedó sin
+        // esta traza y no se sabía qué estaba pasando).
+        for (int i = 0; i < olaDelFoso.size(); i++) {
+            var z = olaDelFoso.get(i);
+            int r = (int) Math.hypot(z.getX() - fosoCentroX, z.getZ() - fosoCentroZ);
+            DevilRpg.LOGGER.info("[Arnes] OLA CON FOSO vuelta={} ASALTANTE {} pos={} r={} {} goals=[{}]", fosoVuelta, i,
+                    z.blockPosition(), r, z.getY() < fosoSueloY ? "EN EL FOSO" : "en la plancha", goalsCorriendo(z));
+        }
+        // LOS TESTIGOS DE LA ESCENA: cuántas COLUMNAS del foso tienen ya obra encima (y a qué altura máxima) y cuántos
+        // troncos del muro siguen en pie. OJO CON EL RÓTULO (9-oct-2026): el puente y el escalón colocan los dos el
+        // bloque A LA ALTURA DE LOS PIES del bicho, así que aquí NO se pueden distinguir por el bloque ni por la celda
+        // —los distingue el registro del mod, con `PONER UN PUENTE` y `pone un ESCALON`—; lo que mide esta parte es
+        // CUÁNTO se ha construido sobre el foso y CUÁNTO ha subido (el puente sube un bloque por tablón).
+        int conObra = 0;
+        int alturaMax = 0;
+        for (BlockPos p : superficieDelFoso) {
+            boolean tiene = false;
+            for (int dy = 1; dy <= 5; dy++) {
+                if (!level.getBlockState(p.above(dy)).isAir()) {
+                    tiene = true;
+                    alturaMax = Math.max(alturaMax, dy);
+                }
+            }
+            if (tiene) {
+                conObra++;
+            }
+        }
+        int enPie = 0;
+        for (BlockPos p : troncosDelMuro) {
+            if (level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.OAK_LOG)) {
+                enPie++;
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] OLA CON FOSO vuelta={} t={} : {}/{} vivos, {} DENTRO del muro | radios: {} |"
+                        + " columnas del foso CON OBRA={}/{} (altura maxima={}) | troncos del muro en pie={}/{}"
+                        + " (brecha={})", fosoVuelta, ticks, vivos, olaDelFoso.size(), dentro, radios.toString().trim(),
+                conObra, superficieDelFoso.size(), alturaMax, enPie, troncosDelMuro.size(),
+                troncosDelMuro.size() - enPie);
     }
 
     private static void medirElAsaltoAlMuro(ServerLevel level, FakePlayer pega) {
