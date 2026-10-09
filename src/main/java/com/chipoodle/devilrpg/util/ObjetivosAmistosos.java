@@ -20,11 +20,11 @@ import java.util.Objects;
  * ({@code SunflowerShulker}) ponían a los aldeanos de objetivo y les lanzaban las esporas encima; y la propia
  * explosión tampoco distinguía a nadie.
  * <p>
- * Regla única, para no volver a repetir la lista en cada bicho del mod:
+ * Regla única, para no volver a repetir la lista en cada monstruo del mod:
  * <ul>
  *   <li><b>Gente del pueblo</b>: aldeanos (y el comerciante errante, que es {@link AbstractVillager}), golems de
  *       hierro y llamas. Nunca se atacan.</li>
- *   <li><b>Bichos de casa</b>: mascotas ({@link TamableAnimal}) y cualquier {@link OwnableEntity} del <b>mismo
+ *   <li><b>Monstruos de casa</b>: mascotas ({@link TamableAnimal}) y cualquier {@link OwnableEntity} del <b>mismo
  *       dueño</b> — los propios minions del jugador. Tampoco se atacan.</li>
  *   <li><b>Animales de corral</b> ({@link Animal}) salvo los que <b>atacan</b> ({@link Enemy}: hoglin, zoglin), que
  *       son enemigos de verdad y sí se atacan.</li>
@@ -46,7 +46,7 @@ public final class ObjetivosAmistosos {
 
     /**
      * ¿Puede {@code atacante} ponerse a {@code objetivo} como objetivo (o tirarle una bomba)? {@code false} para todo
-     * lo que es de casa y para los bichos del <b>mismo dueño</b> (que el minion del jugador no se pegue con la
+     * lo que es de casa y para los monstruos del <b>mismo dueño</b> (que el minion del jugador no se pegue con la
      * mascota del jugador). Si el atacante no tiene dueño, solo se aplica la regla de "de casa".
      */
     public static boolean sePuedeAtacar(@Nullable Entity atacante, Entity objetivo) {

@@ -56,7 +56,7 @@ def protegido(pos, center, cota):
     exactamente lo que dejaba al asaltante abrirse un tunel de 36 bloques dentro del pueblo. La
     regla del jugador ("una vez dentro ya no puede romper nada") NO depende del campo de fuerza: lo
     de dentro esta vetado siempre, y lo unico rompible es el MURO PERIMETRAL y el campo abierto de
-    fuera. El campo de fuerza se queda como esta, para lo que SI es suyo (expulsar bichos, negar
+    fuera. El campo de fuerza se queda como esta, para lo que SI es suyo (expulsar monstruos, negar
     spawneo), no para decidir si se puede romper dentro.
     """
     if not dentro_del_recinto(pos, center, cota, FENCE_RADIUS):
@@ -111,7 +111,7 @@ CASOS = [
     ("escalera del kiosco (r=4)",
      (474, 83, 646), True,
      "dentro: obra del pueblo"),
-    # UN BICHO EN UNA CUEVA no ha pasado los muros: NO esta dentro (esto es I11).
+    # UN MONSTRUO EN UNA CUEVA no ha pasado los muros: NO esta dentro (esto es I11).
     ("cueva bajo la plaza (r=30, y=40)",
      (500, 40, 646), False,
      "dy=-43 esta por debajo de la banda: una cueva no es 'dentro'"),

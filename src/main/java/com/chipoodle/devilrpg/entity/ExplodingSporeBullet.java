@@ -125,7 +125,7 @@ public class ExplodingSporeBullet extends TamableAnimal implements NeutralMob, F
     }
 
     /**
-     * ¿Se puede lanzar una <b>espora</b> contra ese bicho? <b>NO</b> contra la gente del pueblo ni contra los bichos
+     * ¿Se puede lanzar una <b>espora</b> contra ese monstruo? <b>NO</b> contra la gente del pueblo ni contra los monstruos
      * de casa: lo pidió el jugador ("las bombas que sacan los mushroom de mi skill no deben ir contra los aldeanos").
      * <p>
      * Antes esto era una lista de exclusiones <b>comentada</b> ({@code Villager}, {@code Llama}, {@code Turtle},

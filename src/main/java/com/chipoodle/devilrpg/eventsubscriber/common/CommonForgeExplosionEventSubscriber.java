@@ -14,7 +14,7 @@ import net.neoforged.neoforge.event.level.ExplosionEvent;
  * <p>
  * Son <b>dos capas</b>, porque con una sola se seguía matando gente:
  * <ol>
- *   <li>El <b>objetivo</b>: la espora ya no <i>busca</i> aldeanos ni bichos de casa (ver
+ *   <li>El <b>objetivo</b>: la espora ya no <i>busca</i> aldeanos ni monstruos de casa (ver
  *       {@link ExplodingSporeBullet#esObjetivoDeLasEsporas}).</li>
  *   <li>El <b>estallido</b> (esto): aunque la espora fuera a por un zombie, si el zombie se mete en el pueblo la
  *       explosión salpicaba a los aldeanos que hubiera al lado. Aquí se quitan de la lista de afectados de la

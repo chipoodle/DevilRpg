@@ -322,7 +322,7 @@ public class AggressiveZombieEntity extends Zombie {
             return; // dentro de la aldea no se pica; el muro perimetral sí (es la brecha)
         }
         // Y LA OBRA DEL PROPIO ASEDIO NO SE PICA (I239, medido el 9-oct-2026): los tablones que tiende el puente son su
-        // camino, no un estorbo —el romper y el puente se peleaban y el bicho se destruía su propio puente—. Va AQUÍ, en
+        // camino, no un estorbo —el romper y el puente se peleaban y el monstruo se destruía su propio puente—. Va AQUÍ, en
         // la ÚNICA puerta que rompe, para que valga para los tres caminos que pican (el romper, el abridor de huecos y
         // el taladro del túnel) y no solo para el que me acordé de mirar.
         if (esTablonDelAsalto(pos)) {
@@ -453,7 +453,7 @@ public class AggressiveZombieEntity extends Zombie {
             return false;
         }
         // LA PREGUNTA ES LA MISMA DEL PROYECTO (`VillageManager.dentroDelRecinto`, recinto en XZ + banda de altura
-        // sobre la cota), con el bicho puesto DE PIE EN ESA CELDA: el bloque que se va a picar está dentro si un bicho
+        // sobre la cota), con el monstruo puesto DE PIE EN ESA CELDA: el bloque que se va a picar está dentro si un monstruo
         // de pie ahí lo estaría. Así la cara de FUERA del muro —el pie de la brecha, a radio 62,5— queda fuera del
         // recinto y el asedio puede abrirla, y la de dentro no.
         return VillageManager.dentroDelRecinto(pos, villageCenter, cota, VillageGenerator.FENCE_RADIUS);
@@ -572,7 +572,7 @@ public class AggressiveZombieEntity extends Zombie {
         // Aquí estaba `return elAsedioYaSeGano()`, así que con el ASEDIO INICIAL SIN RESOLVER esto devolvía FALSE
         // para TODA la aldea: medido con el arnés, el asaltante se abrió un túnel de 36 bloques dentro del término
         // (49 de piedra, 23 de tierra) y el veto no lo paró nunca. El campo de fuerza del jugador ("cuando se gana el
-        // asedio la aldea genera un campo de fuerza …") sigue donde le toca —expulsar bichos y negar spawneo—, pero
+        // asedio la aldea genera un campo de fuerza …") sigue donde le toca —expulsar monstruos y negar spawneo—, pero
         // para decidir SI SE ROMPE la regla es la del jugador y es de GEOMETRÍA: muro perimetral sí, dentro no.
         return true;
     }
@@ -683,7 +683,7 @@ public class AggressiveZombieEntity extends Zombie {
      * Sin esto, el romper y el puente se peleaban: medido con el arnés, de los bloques que picaban los asaltantes,
      * **28-39 eran `cobblestone` justo en el anillo del foso** (r=8..11), o sea **los tablones que acababan de tender**.
      * <p>
-     * Va <b>compartida entre todos los asaltantes</b> a propósito, y eso también está medido: con la lista por bicho los
+     * Va <b>compartida entre todos los asaltantes</b> a propósito, y eso también está medido: con la lista por monstruo los
      * tablones seguían rompiéndose (los otros siete los pisaban y los picaban) — 39 rotos con la lista individual frente
      * a 23 al compartirla. Con tope: al pasar de {@link #TABLONES_MAX} se vacía (los tablones viejos ya son terreno).
      */
@@ -891,7 +891,7 @@ public class AggressiveZombieEntity extends Zombie {
         // tiene el flag puede ser reemplazado por él, y `WrappedGoal.canBeReplacedBy` exige una prioridad
         // ESTRICTAMENTE MENOR. Con las dos en 2, mientras el asaltante tuviera objetivo (o sea, siempre en un asedio)
         // el ataque tenía el MOVE y el nado no podía entrar: medido con el arnés, 0 ticks corriendo en 60 s dentro
-        // del agua y ni un solo arranque, con un bicho atascado 20 s contra el borde. En 1 entra él (y `FloatGoal`, que
+        // del agua y ni un solo arranque, con un monstruo atascado 20 s contra el borde. En 1 entra él (y `FloatGoal`, que
         // también es prioridad 1, solo pide el flag JUMP, así que no le estorba) y el ataque, al ser de prioridad
         // mayor, no puede quitárselo: mientras esté en el agua, el agua es su camino.
         this.goalSelector.addGoal(1, new EscapeWaterGoal(this));
@@ -986,7 +986,7 @@ public class AggressiveZombieEntity extends Zombie {
         // El brillo de asediador es una marca de la CAMPAÑA en curso: si al cargar ya no hay asedio, se le quita
         // (si no, un asediador que se quedó descargado al resolverse el asedio volvería al mundo brillando para
         // siempre, como si siguiera en campaña). Solo se toca el brillo del que ERA asediador: así no se le
-        // apaga la marca a un bicho que brille por otra cosa.
+        // apaga la marca a un monstruo que brille por otra cosa.
         if (eraAsediador && worldSiegeIndex < 0) {
             setGlowingTag(false);
         }
@@ -1183,7 +1183,7 @@ public class AggressiveZombieEntity extends Zombie {
         // mod (base = 0,23 × 1,6 = 0,368) se quedaba corto: un asaltante CRÍO salia a `0,368 × 1,5 = 0,552`, que es
         // EXACTAMENTE el numero que el jugador vio en su registro con el mismo `scaleFactor` que los demas ✓.
         // La base se deriva del valor final que se quiere (`velocidad`), dividiendo por los modificadores que ya tenga
-        // el bicho: asi el tope vale para el crío, para el adulto y para cualquier modificador que ponga el juego.
+        // el monstruo: asi el tope vale para el crío, para el adulto y para cualquier modificador que ponga el juego.
         var atributoVelocidad = Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED));
         atributoVelocidad.setBaseValue(velocidad);
         double conModificadores = atributoVelocidad.getValue();
@@ -1751,6 +1751,12 @@ public class AggressiveZombieEntity extends Zombie {
          */
         private static final float RODEO_MULTIPLIER = 6.0F;
         private static final int REPATH_TICKS = 20;
+        /**
+         * Bloques por PASO cuando el objetivo lejano no da ruta (ver {@code MoveToVillageCenterGoal.tick}, I240): se
+         * apunta a una celda cercana en la direccion del centro, que esa ruta si se traza, y repitiendo el monstruo llega
+         * hasta el obstaculo y alli taladra. Tres bloques es lo que se midio que basta para no quedarse corto.
+         */
+        private static final int MARCHA_A_PASOS_CORTOS = 3;
         private final AggressiveZombieEntity zombie;
         private double anchorDist = Double.MAX_VALUE;
         private int evalTicks = 0;
@@ -1807,6 +1813,22 @@ public class AggressiveZombieEntity extends Zombie {
             if (--repathTicks <= 0 || zombie.getNavigation().isDone()) {
                 zombie.getNavigation().moveTo(center.getX(), center.getY(), center.getZ(), 1.0D);
                 repathTicks = REPATH_TICKS;
+            }
+            // SI NO HAY RUTA, SE CAMINA A PASOS CORTOS CONTRA LA MONTAÑA (I240, medido el 9-oct-2026). El jugador lo
+            // pidió así: *«el asediador, en vez de rodear (por si es demasiado grande la circunferencia), pueda mejor
+            // cavar de frente hasta llegar a la aldea»*. El rodeo ya lo intenta el buscador de caminos (6× presupuesto),
+            // pero con la montaña CERRANDO el paso —medido con un anillo de piedra cerrado a r=70— **no hay ruta al
+            // centro** y el asaltante se quedaba **plantado a ocho bloques del anillo, sin picar un solo bloque** ✗: el
+            // taladro (`breakBlockTowards`) solo mira las celdas de AL LADO (3×3×2). Y el control de movimiento directo
+            // tampoco basta (medido: dos bloques y se para). Lo que sí funciona es apuntar el buscador a una celda
+            // CERCANA en la dirección del centro: esa ruta corta sí se traza, y repitiéndola el monstruo llega hasta el
+            // obstáculo, donde el taladro ya tiene piedra que picar.
+            if (!zombie.getNavigation().isInProgress()) {
+                BlockPos zPos = zombie.blockPosition();
+                int paso = MARCHA_A_PASOS_CORTOS;
+                int px = zPos.getX() + Integer.signum(center.getX() - zPos.getX()) * paso;
+                int pz = zPos.getZ() + Integer.signum(center.getZ() - zPos.getZ()) * paso;
+                zombie.getNavigation().moveTo(px, zPos.getY(), pz, 1.0D);
             }
 
             // ABRIRSE PASO, en este orden: (1) el RODEO ya lo intenta el buscador de caminos (con más presupuesto);

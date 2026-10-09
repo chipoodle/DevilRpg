@@ -59,7 +59,7 @@ import java.util.function.Predicate;
  *       lingote por mineral, con <b>carbón</b> de lo que él mismo ha picado (o leña del almacén, con la reserva de
  *       {@link VillageStorage#RESERVA_LENA} como los herreros).</li>
  *   <li><b>Hace antorchas</b> (carbón + palo) y las va dejando por el túnel: una mina a oscuras es un criadero de
- *       bichos, y el pueblo no puede permitirse tener monstruos naciendo <b>dentro</b> de la muralla.</li>
+ *       monstruos, y el pueblo no puede permitirse tener monstruos naciendo <b>dentro</b> de la muralla.</li>
  *   <li><b>Sube y lo baja todo al almacén</b> (lingotes, carbón, gemas y el adoquín que saca), de donde el
  *       herrero de herramientas saca los picos y el flechero las flechas. <b>La balsa ya no es suya</b> (27-sep-2026):
  *       el adoquín → pedernal lo cuela el <b>herrero de herramientas</b> —era la faena que le comía el tiempo de la
@@ -297,7 +297,7 @@ public class VillagerMinerGoal extends Goal {
         }
         // LA LUZ QUE FALTA, ANTES DE SEGUIR CAVANDO (28-sep-2026, lo pidió el jugador). Si lleva antorchas y hay una
         // celda de la mina a la que le falta la suya (porque se cavó antes de tenerlas), va a ponerla: una mina a
-        // oscuras es un criadero de bichos DENTRO de la muralla. Va del frente hacia la boca, así que enciende la mina
+        // oscuras es un criadero de monstruos DENTRO de la muralla. Va del frente hacia la boca, así que enciende la mina
         // entera en unas pocas vueltas y sin desviarse apenas (el caracol se anda al subir y al bajar).
         if (cuantosEnInventario(Items.TORCH) > 0) {
             BlockPos hueco = buscarHuecoDeLuz(level, nivel);
@@ -342,7 +342,7 @@ public class VillagerMinerGoal extends Goal {
      * el arnés: 16 celdas en 136 s, casi todo el tiempo andando el caracol de arriba abajo) en vez de cavar.
      * <p>
      * Los disparadores: <b>mineral crudo</b> que fundir, <b>adoquín</b> de sobra para sacar pedernal
-     * ({@link #ADOQUIN_PARA_SUBIR}), que se ha quedado <b>sin antorchas</b> (una mina a oscuras cría bichos dentro de
+     * ({@link #ADOQUIN_PARA_SUBIR}), que se ha quedado <b>sin antorchas</b> (una mina a oscuras cría monstruos dentro de
      * la muralla) y el <b>inventario lleno</b> (si no, lo que saque se queda por el suelo del túnel).
      */
     private boolean hayQueSubir(ServerLevel level) {
@@ -1325,7 +1325,7 @@ public class VillagerMinerGoal extends Goal {
 
     /**
      * Deja una <b>antorcha</b> en la pared del túnel (de las que lleva hechas). Una mina a oscuras es un criadero
-     * de bichos, y estos nacen <b>dentro</b> de la muralla: la luz es parte del trabajo, no un adorno.
+     * de monstruos, y estos nacen <b>dentro</b> de la muralla: la luz es parte del trabajo, no un adorno.
      * <p>
      * Devuelve {@code true} si la ha puesto (para que {@link #buscarHuecoDeLuz} sepa si el hueco está resuelto).
      */

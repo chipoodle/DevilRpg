@@ -232,7 +232,7 @@ public class CommonForgeInteractionEventSubscriber {
      * Va por la <b>interacción</b> ({@code PlayerInteractEvent.EntityInteract}) y no por el golpe: el <b>botón
      * izquierdo</b> se queda <b>como estaba</b> (pegar a una invocación tuya no le hace nada, como siempre). Es el
      * <b>único</b> caso en que un palo despide: con cualquier otra cosa en la mano la interacción es la de siempre.
-     * Solo se tocan <b>las tuyas</b> (el dueño tiene que ser tú): las de otro jugador y los bichos salvajes no se
+     * Solo se tocan <b>las tuyas</b> (el dueño tiene que ser tú): las de otro jugador y los monstruos salvajes no se
      * tocan.
      * <p>
      * El que despide es el <b>servidor</b> (el cliente solo se queda sin interacción). Las invocaciones que el jugador
@@ -463,7 +463,7 @@ public class CommonForgeInteractionEventSubscriber {
 
     /**
      * <b>LA MILICIA APRENDE MATANDO</b> (I62, lo pidió el jugador: *"los guardias se van haciendo más fuertes y con
-     * más salud conforme van matando enemigos… la progresión es gradual"*). Cada vez que muere un <b>bicho</b> a
+     * más salud conforme van matando enemigos… la progresión es gradual"*). Cada vez que muere un <b>monstruo</b> a
      * manos de un aldeano que está <b>de guardia</b>, se le apunta la muerte y se le recalculan sus atributos.
      * <p>
      * {@code getSource().getEntity()} es el <b>dueño del disparo</b>, así que también cuenta lo que matan los

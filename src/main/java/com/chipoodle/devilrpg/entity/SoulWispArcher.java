@@ -112,7 +112,7 @@ public class SoulWispArcher extends SoulWisp implements RangedAttackMob {
     }
 
     /**
-     * ¿El dueño está atacando a <b>ese</b> bicho? Se mira el último al que atacó el jugador y también si el bicho le
+     * ¿El dueño está atacando a <b>ese</b> monstruo? Se mira el último al que atacó el jugador y también si el monstruo le
      * tiene a él como su agresor (que es lo que pasa cuando le pegas a un lobo o a un oso polar): así el wisp ayuda en
      * la pelea que ha empezado el dueño, pero no la empieza él.
      */

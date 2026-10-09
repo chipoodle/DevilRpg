@@ -1210,7 +1210,7 @@ public class VillagerGuardGoal extends Goal {
     /**
      * Dónde tiene que estar ahora: de <b>noche</b>, en una de las cuatro puertas del muro; de <b>día</b>, en el
      * siguiente punto de la ronda —y cada pocos puntos, en el <b>corral anexo</b> o en la <b>arboleda del pueblo</b>
-     * (lo que hace que también los defienda: cualquier bicho que se acerque a los animales o a los árboles lo ve
+     * (lo que hace que también los defienda: cualquier monstruo que se acerque a los animales o a los árboles lo ve
      * antes de que haga daño)—. El relevo de puertas sale del reloj de juego y del número de guardia, así que rota
      * solo y sin que dos guardias se turnen el mismo puesto.
      */
@@ -1400,7 +1400,7 @@ public class VillagerGuardGoal extends Goal {
             // Lo que **sí** queda es el dato: el residuo son aldeanos **plantados con la ruta viva** (`ANDADO 0.0` con
             // `alcanza=SI`) o **sin ruta** (`alcanza=NO`), y **no** es por re-pedir el camino cada tick ✗. El
             // siguiente paso, si se retoma, es **medir la causa** con una traza nueva (¿hay un `nav` vivo y quieto?,
-            // ¿hay bichos/aldeanos apretados alrededor?, ¿el cerebro apunta a otro sitio?), no con otro parche.
+            // ¿hay monstruos/aldeanos apretados alrededor?, ¿el cerebro apunta a otro sitio?), no con otro parche.
             if (!VillageManager.caminarHaciaExactoSiPuede(villager, punto, VELOCIDAD)) {
                 if (!reafirmadoElPasoExacto) {
                     reafirmadoElPasoExacto = true;
@@ -1493,7 +1493,7 @@ public class VillagerGuardGoal extends Goal {
             paso++;
         }
         // Y cada RONDA_CADA_ARBOLEDA puntos, a la ARBOLEDA DEL PUEBLO (dentro de la valla, en la diagonal noreste):
-        // es la madera de la aldea, y un guardia allí ve (y para) a cualquier bicho que entre a por los árboles.
+        // es la madera de la aldea, y un guardia allí ve (y para) a cualquier monstruo que entre a por los árboles.
         if (vaALaArboleda()) {
             BlockPos arboleda = VillageGenerator.puntoDeApoyoDeLaArboleda(center, nivel);
             // Un puesto distinto por guardia, y todos a UN bloque del centro de la arboleda: los cuatro plantones

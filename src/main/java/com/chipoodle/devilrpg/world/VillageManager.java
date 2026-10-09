@@ -121,7 +121,7 @@ public final class VillageManager {
     /**
      * Banda <b>vertical</b> del recinto: por debajo de la cota se admiten {@code RECINTO_DY_ABAJO} bloques (una
      * zanja, la acequia, el corral algo más bajo) y por encima {@code RECINTO_DY_ARRIBA} (el segundo piso de la
-     * taberna, un tejado, lo alto del muro). Un bicho <b>mucho</b> más abajo (una cueva bajo la plaza) o más
+     * taberna, un tejado, lo alto del muro). Un monstruo <b>mucho</b> más abajo (una cueva bajo la plaza) o más
      * arriba (una repisa del monte) NO está dentro del pueblo, aunque su distancia horizontal diga que sí.
      * <p>
      * Medido en el guardado del jugador (aldea 1, cota 95): con la regla vieja —solo horizontal— contaban como
@@ -206,7 +206,7 @@ public final class VillageManager {
 
     /**
      * <b>Cuánto aguanta el sello a un intruso antes de rechazarlo</b> (2 min). En ese rato el que defiende es el
-     * <b>pueblo</b> (la milicia): el sello solo actúa si el bicho <b>sigue dentro</b>, que es la red de seguridad que
+     * <b>pueblo</b> (la milicia): el sello solo actúa si el monstruo <b>sigue dentro</b>, que es la red de seguridad que
      * impide que uno solo deje la aldea congelada para siempre (ver {@code expulsarHostilesDeLaAldea}). Es lo que
      * hace que la defensa se <b>vea</b>: antes el sello lo echaba en el primer latido (10 s) y un agresivo que entraba
      * andando desaparecía sin pelea.
@@ -214,7 +214,7 @@ public final class VillageManager {
     private static final long SELLO_ANTES_DE_EXPULSAR_TICKS = 2L * 60L * 20L;
     /**
      * Desde cuándo lleva <b>cada intruso dentro</b> de una aldea protegida (el {@code gameTime} de la primera vez que
-     * se le vio dentro). Se olvida en cuanto sale (o muere): el reloj del sello no corre si el bicho sale y vuelve.
+     * se le vio dentro). Se olvida en cuanto sale (o muere): el reloj del sello no corre si el monstruo sale y vuelve.
      * <p>
      * La clave lleva <b>la aldea</b>: el latido de una aldea solo puede limpiar (y mirar) lo <b>suyo</b>; si no, el
      * latido de la aldea de al lado borraría el reloj de un intruso de ésta y éste no se rechazaría nunca.
@@ -969,7 +969,7 @@ public final class VillageManager {
             if (distSqr <= (double) ARRIVE_RADIUS * ARRIVE_RADIUS) {
                 // REPARACIÓN DE UNA ALDEA APILADA (versión 75, una sola vez): va AQUÍ, y no dentro del latido del
                 // pueblo, a propósito. El latido está detrás de `isUnderAttack`, de `hayEnemigosDentro` y de
-                // `vivos > 0`, así que en una aldea con un asedio en pausa, un bicho dentro o sin aldeanos cerca la
+                // `vivos > 0`, así que en una aldea con un asedio en pausa, un monstruo dentro o sin aldeanos cerca la
                 // migración NO se ejecutaba nunca (medido en el arnés: `aldeanos=0` y asedio en pausa → 0 líneas del
                 // pueblo, 0 reparaciones). Esto tiene que correr con el pueblo cargado y el jugador dentro, pase lo
                 // que pase. Ver I149.
@@ -1003,10 +1003,10 @@ public final class VillageManager {
             // Y EL SELLO EXPULSA A LOS QUE YA ESTÁN DENTRO **antes** de mirar si hay enemigos (etapa H): el aura corta
             // los spawns, pero no tocaba a los que entraron antes de vencer el asedio, a los que se colaron por un
             // portón abierto o a los que se cargan del guardado — se quedaban dentro para siempre. Y peor: con un
-            // bicho dentro, `hayEnemigosDentro` cortaba el latido ENTERO (ni oficios, ni comida, ni reparaciones, ni
+            // monstruo dentro, `hayEnemigosDentro` cortaba el latido ENTERO (ni oficios, ni comida, ni reparaciones, ni
             // milicia: la otra mitad del fallo de I11), así que el pueblo se quedaba congelado por un esqueleto en una
             // cueva. Ahora, en una aldea protegida, primero se expulsa y después se mira.
-            // Y LAS CAMAS, SIEMPRE (ni asedio ni bicho dentro lo impiden): es lo primero que se atiende y va FUERA del
+            // Y LAS CAMAS, SIEMPRE (ni asedio ni monstruo dentro lo impiden): es lo primero que se atiende y va FUERA del
             // bloque de abajo, que está detrás de `!isUnderAttack` y de `hayEnemigosDentro`. Un aldeano sin cama tiene
             // que recibirla también —y sobre todo— la noche del asedio (ver `atenderCamasDelPueblo`).
             if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i)) {
@@ -1042,7 +1042,7 @@ public final class VillageManager {
                     expulsarHostilesDeLaAldea(level, target, i);
                 }
                 if (hayEnemigosDentro(level, target)) {
-                    continue; // quedan bichos dentro (los de las cuevas de debajo, por ejemplo): no se toca el pueblo
+                    continue; // quedan monstruos dentro (los de las cuevas de debajo, por ejemplo): no se toca el pueblo
                 }
                 int vivos = observeVillagers(level, saved, i, target);
                 if (vivos > 0) {
@@ -1125,13 +1125,13 @@ public final class VillageManager {
      * a la aldea, pero no pasó mucho tiempo y fueron teletransportados a fuera; esto se ve antinatural"*—. Ahora el
      * sello <b>espera</b> {@link #SELLO_ANTES_DE_EXPULSAR_TICKS} (2 min) con el intruso dentro: en ese rato la
      * <b>milicia</b> lo ve y va a por él (los guardias persiguen a cualquier monstruo que esté <b>dentro del
-     * recinto</b>, aunque esté lejos: ver {@code VillagerGuardGoal.buscarEnemigo}) y el bicho se muere como cualquier
+     * recinto</b>, aunque esté lejos: ver {@code VillagerGuardGoal.buscarEnemigo}) y el monstruo se muere como cualquier
      * otro. Solo si <b>sigue dentro</b> pasado ese tiempo —nadie ha podido con él: está en un tejado, dentro de una
-     * casa, en un hueco— el sello lo <b>rechaza</b>, que es la red de seguridad que impide que un solo bicho deje el
+     * casa, en un hueco— el sello lo <b>rechaza</b>, que es la red de seguridad que impide que un solo monstruo deje el
      * pueblo congelado para siempre.
      * <p>
      * Se mira solo lo que está <b>a la altura del pueblo</b> (recinto en XZ + banda sobre la cota, como cualquier
-     * recuento de I11): un bicho en una cueva 20 bloques por debajo no está "dentro de la aldea" y no se toca. Se
+     * recuento de I11): un monstruo en una cueva 20 bloques por debajo no está "dentro de la aldea" y no se toca. Se
      * dejan en paz los <b>aldeanos-zombi</b> (una curación en marcha es cosa del jugador), no se corre con un asedio
      * activo (ésos son los asediadores, que están ahí a propósito) ni con una <b>horda del mundo</b> en curso
      * ({@code isUnderAttack} cubre las dos: mientras la aldea está siendo atacada, el sello no toca a nadie). Se les
@@ -1146,47 +1146,47 @@ public final class VillageManager {
         long ahora = level.getGameTime();
         java.util.Set<Intruso> vistosDentro = new HashSet<>();
         int expulsados = 0;
-        for (Monster bicho : level.getEntitiesOfClass(Monster.class,
+        for (Monster monstruo : level.getEntitiesOfClass(Monster.class,
                 new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 8.0D, 24.0D,
                         VillageGenerator.FENCE_RADIUS + 8.0D))) {
-            if (bicho.isRemoved() || bicho instanceof net.minecraft.world.entity.monster.ZombieVillager) {
+            if (monstruo.isRemoved() || monstruo instanceof net.minecraft.world.entity.monster.ZombieVillager) {
                 continue; // un aldeano-zombi puede ser una curación en marcha: no se toca
             }
-            if (!dentroDelRecinto(cota, center, bicho, VillageGenerator.FENCE_RADIUS)) {
+            if (!dentroDelRecinto(cota, center, monstruo, VillageGenerator.FENCE_RADIUS)) {
                 continue; // en XZ sí, pero en una cueva de debajo: no está "dentro"
             }
-            vistosDentro.add(new Intruso(objectiveIndex, bicho.getUUID()));
+            vistosDentro.add(new Intruso(objectiveIndex, monstruo.getUUID()));
             // ¿DESDE CUÁNDO ESTÁ DENTRO? Mientras no lleve aquí SELLO_ANTES_DE_EXPULSAR_TICKS, el que trabaja es el
             // pueblo (la milicia), no el sello: es lo que hace que la defensa se VEA.
-            long desde = INTRUSOS_DENTRO.computeIfAbsent(new Intruso(objectiveIndex, bicho.getUUID()), k -> ahora);
+            long desde = INTRUSOS_DENTRO.computeIfAbsent(new Intruso(objectiveIndex, monstruo.getUUID()), k -> ahora);
             if (ahora - desde < SELLO_ANTES_DE_EXPULSAR_TICKS) {
                 continue;
             }
-            double dx = bicho.getX() - (center.getX() + 0.5D);
-            double dz = bicho.getZ() - (center.getZ() + 0.5D);
+            double dx = monstruo.getX() - (center.getX() + 0.5D);
+            double dz = monstruo.getZ() - (center.getZ() + 0.5D);
             double distancia = Math.max(0.001D, Math.sqrt(dx * dx + dz * dz));
             double x = center.getX() + 0.5D + dx / distancia * fueraDelMuro;
             double z = center.getZ() + 0.5D + dz / distancia * fueraDelMuro;
             // `randomTeleport` busca un sitio seguro alrededor (es el teletransporte del enderman); si no lo encuentra
-            // —o el destino no está cargado— el bicho se va del pueblo igual, pero sin dejar botín.
-            if (!bicho.randomTeleport(x, cota, z, false)) {
-                bicho.discard();
+            // —o el destino no está cargado— el monstruo se va del pueblo igual, pero sin dejar botín.
+            if (!monstruo.randomTeleport(x, cota, z, false)) {
+                monstruo.discard();
             }
             level.sendParticles(net.minecraft.core.particles.ParticleTypes.SCULK_SOUL,
-                    bicho.getX(), bicho.getY() + 1.0D, bicho.getZ(), 12, 0.3D, 0.5D, 0.3D, 0.02D);
-            level.playSound(null, bicho.blockPosition(), net.minecraft.sounds.SoundEvents.SCULK_SHRIEKER_SHRIEK,
+                    monstruo.getX(), monstruo.getY() + 1.0D, monstruo.getZ(), 12, 0.3D, 0.5D, 0.3D, 0.02D);
+            level.playSound(null, monstruo.blockPosition(), net.minecraft.sounds.SoundEvents.SCULK_SHRIEKER_SHRIEK,
                     net.minecraft.sounds.SoundSource.BLOCKS, 0.7F, 1.2F);
             expulsados++;
         }
         // Se olvida SOLO lo de ESTA aldea (el latido de una aldea no puede tocar el reloj de las demás) que ya no
-        // está dentro: el bicho que salió (o murió) vuelve a empezar de cero si vuelve a entrar.
+        // está dentro: el monstruo que salió (o murió) vuelve a empezar de cero si vuelve a entrar.
         INTRUSOS_DENTRO.keySet().removeIf(k -> k.aldea() == objectiveIndex && !vistosDentro.contains(k));
         if (expulsados > 0) {
             DevilRpg.LOGGER.info("[Village] Aldea {}: el sello ha expulsado a {} hostil(es) que llevaban {} s dentro"
                             + " (la milicia no pudo con ellos)", objectiveIndex, expulsados,
                     SELLO_ANTES_DE_EXPULSAR_TICKS / 20);
             // Y SE DICE, que es lo que hace que no parezca un teletransporte raro: el jugador tiene que saber que fue
-            // el sello (y por qué) y no un bicho que desaparece solo.
+            // el sello (y por qué) y no un monstruo que desaparece solo.
             announceNearby(level, center, "El sello de la aldea ha rechazado a los intrusos.");
         }
         return expulsados;
@@ -1282,35 +1282,35 @@ public final class VillageManager {
     }
 
     /**
-     * ¿Ese bicho está <b>dentro del recinto</b> de la aldea? La aldea es un recinto en <b>XZ</b> (invariante I2:
+     * ¿Ese monstruo está <b>dentro del recinto</b> de la aldea? La aldea es un recinto en <b>XZ</b> (invariante I2:
      * un aldeano unos bloques por encima del suelo sigue estando en su pueblo), pero además hay que estar <b>a la
-     * altura del pueblo</b> ({@link #RECINTO_DY_ABAJO}/{@link #RECINTO_DY_ARRIBA} sobre la cota): un bicho en una
+     * altura del pueblo</b> ({@link #RECINTO_DY_ABAJO}/{@link #RECINTO_DY_ARRIBA} sobre la cota): un monstruo en una
      * cueva bajo la plaza no ha pasado los muros.
      * <p>
-     * Es la <b>única</b> verdad de "dentro de la aldea" para bichos (la usan el latido del pueblo, el perímetro del
+     * Es la <b>única</b> verdad de "dentro de la aldea" para monstruos (la usan el latido del pueblo, el perímetro del
      * asedio y las partículas de intrusión). Mide la cota, así que <b>no</b> se llama dentro de un bucle: para
      * bucles está la variante con la cota ya medida.
      */
-    public static boolean dentroDelRecinto(ServerLevel level, BlockPos center, net.minecraft.world.entity.Entity bicho,
+    public static boolean dentroDelRecinto(ServerLevel level, BlockPos center, net.minecraft.world.entity.Entity monstruo,
                                           double radio) {
-        return dentroDelRecinto(VillageGenerator.cotaDeLaPlaza(level, center), center, bicho, radio);
+        return dentroDelRecinto(VillageGenerator.cotaDeLaPlaza(level, center), center, monstruo, radio);
     }
 
-    /** Igual, con la cota ya medida (para bucles: la cota se pide UNA vez, no por bicho). */
-    public static boolean dentroDelRecinto(int cota, BlockPos center, net.minecraft.world.entity.Entity bicho,
+    /** Igual, con la cota ya medida (para bucles: la cota se pide UNA vez, no por monstruo). */
+    public static boolean dentroDelRecinto(int cota, BlockPos center, net.minecraft.world.entity.Entity monstruo,
                                           double radio) {
-        double dx = bicho.getX() - (center.getX() + 0.5D);
-        double dz = bicho.getZ() - (center.getZ() + 0.5D);
+        double dx = monstruo.getX() - (center.getX() + 0.5D);
+        double dz = monstruo.getZ() - (center.getZ() + 0.5D);
         if (dx * dx + dz * dz > radio * radio) {
             return false;
         }
-        double dy = bicho.getY() - cota;
+        double dy = monstruo.getY() - cota;
         return dy >= -RECINTO_DY_ABAJO && dy <= RECINTO_DY_ARRIBA;
     }
 
     /**
      * La misma pregunta para una <b>celda</b> (5-oct-2026): ¿está dentro del recinto el bloque {@code pos}?, o sea
-     * ¿lo estaría un bicho <b>de pie en esa celda</b> (los pies en la base del bloque)? La pide la regla del asaltante
+     * ¿lo estaría un monstruo <b>de pie en esa celda</b> (los pies en la base del bloque)? La pide la regla del asaltante
      * (*"solo el muro perimetral es rompible; una vez dentro ya no puede romper nada"*), que necesita decidir por
      * <b>celda</b> y no por entidad.
      * <p>
@@ -1645,7 +1645,7 @@ public final class VillageManager {
         return dentro;
     }
 
-    /** Brillo de asediador: saber a QUIÉN hay que matar sin adivinarlo entre los bichos de la noche. */
+    /** Brillo de asediador: saber a QUIÉN hay que matar sin adivinarlo entre los monstruos de la noche. */
     private static void marcarAsediadores(ServerLevel level, List<UUID> wave, boolean brillo) {
         for (UUID uuid : wave) {
             net.minecraft.world.entity.Entity e = level.getEntity(uuid);
@@ -1714,7 +1714,7 @@ public final class VillageManager {
         DevilRpg.LOGGER.info("[Village] Aldea {}: OLEADA de {} asediadores intentados, {} colocados (radio {}-{})",
                 d.objectiveIndex, count, d.wave.size(), WAVE_SPAWN_MIN, WAVE_SPAWN_MAX);
         // Los asediadores van marcados con brillo (ver `marcarAsediadores`): sin la marca, en una noche con
-        // decenas de bichos alrededor el jugador no puede saber a quién tiene que matar.
+        // decenas de monstruos alrededor el jugador no puede saber a quién tiene que matar.
         marcarAsediadores(level, d.wave, true);
     }
 
@@ -1758,11 +1758,11 @@ public final class VillageManager {
             if (e instanceof AggressiveZombieEntity zombie) {
                 zombie.setGoToCenterActive(false);
                 // Y se le quita la marca de asediador: con eso vuelve a poder DESCARTARSE por alejarse como cualquier
-                // otro bicho (mientras estaba en campaña no se desprendía de él a propósito, ver
+                // otro monstruo (mientras estaba en campaña no se desprendía de él a propósito, ver
                 // `AggressiveZombieEntity.removeWhenFarAway`). Si no, los supervivientes de cada asedio se quedarían
                 // por el mundo para siempre.
                 zombie.setWorldSiegeIndex(-1);
-                // Y el brillo de asediador: si el asedio ya se resolvió, ese bicho es un zombie agresivo normal.
+                // Y el brillo de asediador: si el asedio ya se resolvió, ese monstruo es un zombie agresivo normal.
                 zombie.setGlowingTag(false);
             }
         }
@@ -1901,7 +1901,7 @@ public final class VillageManager {
         WORLD_SIEGES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave));
         // Los que marchan contra la aldea van marcados con brillo, igual que la ola del asedio clásico: es la
-        // única forma de saber a quién hay que parar cuando llegan de noche entre los bichos del campo.
+        // única forma de saber a quién hay que parar cuando llegan de noche entre los monstruos del campo.
         marcarAsediadores(level, wave, true);
         DevilRpg.LOGGER.info("[Horda] la aldea {} esta siendo atacada: {} enemigos marchan a por ella",
                 settlement.objectiveIndex(), wave.size());
@@ -1976,7 +1976,7 @@ public final class VillageManager {
      * <b>El estado de una aldea, dicho en una línea</b>: es lo que enseña el <b>Diario del Invocado</b> (I87) y lo que
      * vuelca el arnés, así que la regla vive <b>aquí y en un solo sitio</b> (no copiada dentro del objeto).
      * <p>
-     * El orden importa: una aldea caída está caída aunque haya bichos dentro; y el asedio se mira <b>antes</b> que el
+     * El orden importa: una aldea caída está caída aunque haya monstruos dentro; y el asedio se mira <b>antes</b> que el
      * sello, porque una aldea con el sello puesto puede estar siendo atacada otra vez (el sello corta los spawns de
      * dentro, no las hordas que ya vienen de fuera).
      */
@@ -2380,7 +2380,7 @@ public final class VillageManager {
         VillageGenerator.rehacerMuro(level, center);
         VillageGenerator.farm(level, center);
         // Y SE LEVANTA TODO LO DEMÁS AQUÍ MISMO, con las mismas funciones que usa el latido para reponer lo que
-        // falta. Si se dejara al latido, la reparación quedaría a medias mientras haya un asedio en pausa, un bicho
+        // falta. Si se dejara al latido, la reparación quedaría a medias mientras haya un asedio en pausa, un monstruo
         // dentro o ningún aldeano cerca (el latido está detrás de esos tres guardias): medido en el arnés, el pueblo
         // se quedaba sin kiosco, sin almacén y sin taberna. Son todas "asegurar" (cada una mira su testigo), así que
         // llamarlas de más no hace nada.
@@ -2891,7 +2891,7 @@ public final class VillageManager {
         // "el aldeano que da vueltas sobre su eje" y el rol huérfano que quedaba en el reparto.
         reclamarEstacionesDelPueblo(level, aldeanos, center, objectiveIndex);
         // OJO: LAS CAMAS NO SE REPARTEN AQUÍ. Este método (y todo `tickVillageLife`) solo corre en la aldea EN PAZ:
-        // `manageNearby` lo salta entero mientras hay un asedio o un bicho dentro del recinto. Con las camas aquí
+        // `manageNearby` lo salta entero mientras hay un asedio o un monstruo dentro del recinto. Con las camas aquí
         // dentro, el aldeano al que le faltaba cama se quedaba sin ella justo la noche en que más falta hace (la del
         // asedio, con monstruos dentro) y el jugador lo veía plantado con "Sin cama" para siempre. Ahora van en
         // `atenderCamasDelPueblo`, que se llama pase lo que pase (ver `manageNearby`).
@@ -4053,7 +4053,7 @@ public final class VillageManager {
      * "aldea en paz".
      * <p>
      * <b>POR QUÉ NO PUEDE IR CON EL RESTO DEL LATIDO</b> (lo reportó el jugador: *"Mauricio sigue sin ir a buscar cama
-     * y hay varias en la taberna"*, con la etiqueta <b>"Sin cama"</b> y de noche con los bichos dentro). El latido
+     * y hay varias en la taberna"*, con la etiqueta <b>"Sin cama"</b> y de noche con los monstruos dentro). El latido
      * entero —{@code tickVillageLife}, y con él {@code prepareRepairs}, donde vivía el reparto de camas— está detrás
      * de dos guardas: {@code !isUnderAttack(...)} y {@code hayEnemigosDentro(...) -> continue}. Las dos tienen sentido
      * para lo que repuebla y para lo que administra oficios (no se repone gente mientras los monstruos la están
@@ -4698,7 +4698,7 @@ public final class VillageManager {
         // I202 · Y LA FICHA DEL PLANTADO, cada 20 s por aldeano (solo registro, no cambia nada): es lo que hace falta
         // para encontrar la causa del residuo sin adivinar. Tres preguntas y tres respuestas:
         //   1) ¿la navegación tiene camino y no lo anda?  -> nav=[nodos, anda=si/no, llega=si/no]
-        //   2) ¿tiene gente apretada alrededor?          -> aldeanosCerca / bichosCerca
+        //   2) ¿tiene gente apretada alrededor?          -> aldeanosCerca / monstruosCerca
         //   3) ¿a dónde apunta su cerebro?               -> cerebro=
         Long ultimaFicha = FICHAS_DEL_PLANTADO.get(villager.getUUID());
         if (ultimaFicha == null || ahora - ultimaFicha >= 400L) {
@@ -4714,7 +4714,7 @@ public final class VillageManager {
                     new AABB(villager.blockPosition()).inflate(1.5D)).size() - 1;
             // lint:ok I11 porque esto NO es un recuento de invasores de la aldea (no decide nada): es una medida LOCAL
             // de apiñamiento alrededor del aldeano plantado, para el registro, y a 4 bloques la altura es la suya.
-            int bichosCerca = level.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class,
+            int monstruosCerca = level.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class,
                     new AABB(villager.blockPosition()).inflate(4.0D)).size();
             StringBuilder goals = new StringBuilder();
             for (net.minecraft.world.entity.ai.goal.WrappedGoal w : villager.goalSelector.getAvailableGoals()) {
@@ -4722,10 +4722,10 @@ public final class VillageManager {
                     goals.append(w.getGoal().getClass().getSimpleName()).append(' ');
                 }
             }
-            DevilRpg.LOGGER.info("[Planta] {} en {}: nav=[{}] cerebro={} aldeanosCerca={} bichosCerca={} goals=[{}] "
+            DevilRpg.LOGGER.info("[Planta] {} en {}: nav=[{}] cerebro={} aldeanosCerca={} monstruosCerca={} goals=[{}] "
                             + "posAnterior={}",
                     villager.getUUID().toString().substring(0, 8), villager.blockPosition().toShortString(), nav,
-                    cerebro, aldeanosCerca, bichosCerca, goals.toString().trim(),
+                    cerebro, aldeanosCerca, monstruosCerca, goals.toString().trim(),
                     villager.getPersistentData().contains("DevilRpgUltimoX")
                             ? String.format(java.util.Locale.ROOT, "%.1f,%.1f",
                                     villager.getPersistentData().getDouble("DevilRpgUltimoX"),
@@ -7107,7 +7107,7 @@ public final class VillageManager {
     private static final int AGUJERO_MAX_PROFUNDIDAD = 4;
 
     /**
-     * <b>¿Es un AGUJERO DEL SUELO de la aldea?</b> (lo que deja un creeper al estallar, o lo que cave un bicho): una
+     * <b>¿Es un AGUJERO DEL SUELO de la aldea?</b> (lo que deja un creeper al estallar, o lo que cave un monstruo): una
      * celda de <b>aire</b> dentro del recinto, en la banda de la cota, con <b>suelo justo debajo</b>.
      * <p>
      * Hace falta porque la reparación de siempre va <b>por el plano</b>, y un cráter en terreno natural <b>no está en
@@ -7316,7 +7316,7 @@ public final class VillageManager {
         // LA COMIDA LA MANDA EL RELOJ DE LOS ALDEANOS, NO UN TICK DEL MUNDO. Aquí había una puerta
         // `gameTime % EAT_INTERVAL_TICKS != 0 -> return 0` ("las raciones se reparten en el latido del minuto") que
         // ataba la comida de TODO el pueblo a UN tick exacto de cada minuto: si en ese tick el latido no corría —el
-        // jugador lejos, o el latido cortado porque hay bichos dentro (I12/I46)— el pueblo entero se saltaba esa
+        // jugador lejos, o el latido cortado porque hay monstruos dentro (I12/I46)— el pueblo entero se saltaba esa
         // comida aunque los aldeanos llevaran su minuto esperando, y la siguiente no llegaba hasta el minuto
         // siguiente. Ahora la comida la pide **el aldeano que hace más tiempo que no come**: cuando ese cumple su
         // intervalo, come el pueblo que esté esperando (el grupo sigue sincronizado porque una comida los marca a
@@ -7672,17 +7672,17 @@ public final class VillageManager {
                 }
             }
             // INTRUSIÓN: chispas oscuras sobre los enemigos que están dentro del perímetro de la aldea. Se marcan
-            // los que de verdad están DENTRO (recinto + altura): un bicho en una cueva bajo la plaza no es un
+            // los que de verdad están DENTRO (recinto + altura): un monstruo en una cueva bajo la plaza no es un
             // invasor, y marcarlo hacía creer al jugador que la aldea estaba tomada.
             if (distSqr < 160.0D * 160.0D) {
-                List<net.minecraft.world.entity.Mob> bichos = level.getEntitiesOfClass(
+                List<net.minecraft.world.entity.Mob> monstruos = level.getEntitiesOfClass(
                         net.minecraft.world.entity.Mob.class,
                         new AABB(centro).inflate(VillageGenerator.FENCE_RADIUS + 8.0D),
                         mob -> mob.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER);
-                if (!bichos.isEmpty()) {
-                    int cotaBichos = VillageGenerator.cotaDeLaPlaza(level, centro);
-                    for (net.minecraft.world.entity.Mob mob : bichos) {
-                        if (dentroDelRecinto(cotaBichos, centro, mob, VillageGenerator.FENCE_RADIUS)) {
+                if (!monstruos.isEmpty()) {
+                    int cotaMonstruos = VillageGenerator.cotaDeLaPlaza(level, centro);
+                    for (net.minecraft.world.entity.Mob mob : monstruos) {
+                        if (dentroDelRecinto(cotaMonstruos, centro, mob, VillageGenerator.FENCE_RADIUS)) {
                             level.sendParticles(net.minecraft.core.particles.ParticleTypes.SCULK_SOUL,
                                     mob.getX(), mob.getY() + 1.9D, mob.getZ(), 2, 0.25D, 0.15D, 0.25D, 0.01D);
                         }

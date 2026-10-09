@@ -270,7 +270,7 @@ Las dos trazas del escalado (`"Zombie Spawned at: ..."` y `"Attributes Scaled =>
 - **Para medir**: ponlo en `true` (o `/reloadconfig`, o reinicia) y tendrás **una línea por enemigo** con el sitio
   donde salió, el **ancla del jugador** (no su posición: con ese punto se escala), la distancia y los atributos.
 - **Por qué no sale siempre**: una tanda de 3 zombis dejaba **~12 líneas INFO** por tres motivos, y los tres están
-  arreglados: (1) `setPos` corre también en el **cliente**, así que cada bicho se registraba dos veces y con números
+  arreglados: (1) `setPos` corre también en el **cliente**, así que cada monstruo se registraba dos veces y con números
   distintos (el ataque salía hasta 5 puntos diferente); (2) el primer `setPos` de la construcción de la entidad es el
   **origen**, así que la mitad de las líneas decían `BlockPos{x=0, y=0, z=0}`; y (3) iban a nivel INFO.
 - **Con el flag apagado no queda ni una línea**, y encendido solo las escribe el **servidor** y solo con la entidad

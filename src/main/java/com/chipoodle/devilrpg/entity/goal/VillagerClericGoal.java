@@ -35,7 +35,7 @@ import java.util.Optional;
  * del mod: su faena era la actividad de trabajar de vanilla y, como no reclamaba su puesto, caía a IDLE (el fallo de
  * "da vueltas sobre su eje").
  * <p>
- * <b>La cadena es la del pueblo, no magia</b>: los guardias y el jugador matan bichos, el <b>recolector</b> barre el
+ * <b>La cadena es la del pueblo, no magia</b>: los guardias y el jugador matan monstruos, el <b>recolector</b> barre el
  * botín del suelo y lo deja en el <b>almacén</b> (pepitas de oro, ojos de araña, pólvora, carne podrida), el
  * <b>granjero</b> cría zanahorias, y el clérigo <b>toma de allí</b> lo que necesita. Lo que el pueblo no puede
  * conseguir (la <b>verruga del Nether</b>, el <b>polvo de blaze</b> y las <b>botellas de agua</b>) lo trae el jugador
@@ -350,7 +350,7 @@ public class VillagerClericGoal extends Goal {
     // --- SANAR: el clérigo, de sanador de la aldea ----------------------------------------------------
 
     /**
-     * <b>El herido al que va a atender</b>: primero un <b>soldado</b> (es el que se pelea con los bichos), y si no hay
+     * <b>El herido al que va a atender</b>: primero un <b>soldado</b> (es el que se pelea con los monstruos), y si no hay
      * ninguno herido, un <b>vecino</b>. Solo cuenta quien esté de verdad tocado (por debajo del 75 % de su vida) y
      * dentro de {@link #RADIO_SANAR}.
      */

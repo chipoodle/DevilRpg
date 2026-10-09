@@ -844,7 +844,7 @@ public class SunflowerShulker extends TamableAnimal implements ITamableEntity, I
 
     class ShulkerNearestAttackGoal extends NearestAttackableTargetGoal<Mob> {
         public ShulkerNearestAttackGoal(SunflowerShulker p_33505_) {
-            // OJO: aquí NO había filtro ninguno, así que el minion ponía de objetivo a CUALQUIER bicho de al lado,
+            // OJO: aquí NO había filtro ninguno, así que el minion ponía de objetivo a CUALQUIER monstruo de al lado,
             // aldeanos incluidos, y luego les disparaba las esporas (el aviso urgente del jugador: "las bombas que
             // sacan los mushroom de mi skill no deben ir contra los aldeanos"). Ahora usa la regla común.
             super(p_33505_, Mob.class, 10, true, false,

@@ -343,7 +343,7 @@ siguiente está implementado y probado.
   (por ejemplo de huevo de spawn) no le cobra a nadie. **A los ANIMALES no los ataca por su cuenta**: su
   `NearestAttackableTargetGoal` iba a por **cualquier `Mob`** (solo excluía aldeanos, llamas, tortugas y golems), así
   que masacraba las vacas, cerdos, ovejas y mascotas del jugador al pasar. Ahora los animales (`Animal`,
-  `WaterAnimal`, `AmbientCreature`) solo son objetivo si **su dueño los está atacando** (el último bicho al que atacó
+  `WaterAnimal`, `AmbientCreature`) solo son objetivo si **su dueño los está atacando** (el último monstruo al que atacó
   el jugador, o el animal que lo tiene a él por agresor), y un wisp sin dueño no los toca nunca. Se dibuja con `textures/entity/frostball/freeze_texture.png` mediante un renderer
   billboard propio (`IceSpearRenderer`): al ser una textura de entidad (fuera de `textures/item` y
   `textures/block`) **no está en el atlas de bloques**, así que un modelo de item la mostraría como textura
@@ -844,7 +844,7 @@ no hay? … una solución orgánica que no rompa las reglas ni el lore"*.
   arboleda y la etiqueta dice **"Patrullando la arboleda"** (si el paso coincide con el corral, manda el corral: está
   fuera de la valla y es el que más lo necesita). Cada guardia tiene su **puesto** y todos van a **un bloque** del
   centro de la arboleda: los cuatro plantones están a dos, así que ninguno se queda plantado donde va a crecer un
-  tronco. Es lo que hace que un bicho que entre a por los árboles lo vea la guardia **antes** de que haga daño, igual
+  tronco. Es lo que hace que un monstruo que entre a por los árboles lo vea la guardia **antes** de que haga daño, igual
   que pasa con el corral.
 - **Migración 35** (`CURRENT_LAYOUT`): las aldeas ya construidas reciben su arboleda al latido siguiente.
 
@@ -901,7 +901,7 @@ ganadero**, oficio `SHEPHERD`, goal `VillagerAnimalFarmGoal`— **los aparee par
   corral a 2,5 bloques** del hueco, con **600 ticks** de margen para que un aldeano no se quede encerrado por una vaca
   tercosa.
 - **Reconocimiento del rebaño viejo** (una sola vez, al migrar): los animales de las especies del corral que sean
-  **persistentes** (el juego solo marca así a los que alguien ha criado o tocado: un bicho salvaje no lo es) y estén
+  **persistentes** (el juego solo marca así a los que alguien ha criado o tocado: un monstruo salvaje no lo es) y estén
   **fuera de la muralla** y a menos de **96** bloques del corral se dan por del pueblo y vuelven a casa. Lo de
   **dentro de la muralla no se toca jamás**: si el jugador tiene allí su corral, son suyos.
 
@@ -1272,7 +1272,7 @@ documéntalos y haz algo para que no se vuelvan a repetir"*.
 | *"Los pilares entre el 1er y 2do piso están defasados"* | La planta alta **volaba** un bloque (el *jetty* Tudor): los postes de arriba caían una columna al lado de los de abajo | Los dos pisos van **a plomo** (`TABERNA_VUELO = 0`): los pilares caen justo uno encima del otro | El testigo exige el pilar de la posada **sobre** el de abajo |
 | *"La chimenea del primer piso está descubierta y se ve desde afuera"* | El hogar está en la boca del muro y su cara norte daba a la calle: se veía la llama desde fuera | El caño de ladrillo va **por delante del muro** y tapa esa cara | Verificado con el arnés (`hogar_tapado=true`) |
 | *"¿Por qué el granjero está durmiendo parado?"* | La etiqueta genérica (`refrescarEtiquetas`) ponía **"Durmiendo"** a todo aldeano en la **franja de descanso** del cerebro (toda la noche), **no** a quien está en la cama: el granjero estaba de pie en la calle, despierto y con la etiqueta de dormido | `"Durmiendo"` **solo** con `isSleeping()`; en la franja de descanso, `"Yendo a la cama"` si tiene cama y **`"Sin cama"`** si no (la etiqueta avisa de lo que falta) | Medido con el arnés (chunks forzados + noche): de 9 aldeanos, **7 reclaman cama y duermen**; los 2 sin cama son el ganadero (su cama llega con el corral, en la migración) y el guardia/pescador, que van aparte |
-| *"Que mis minions no ataquen a las criaturas neutrales a menos que yo las golpee primero"* | Los minions (lobo, oso, wisps, shulker, esporas) atacaban a **todo** `Mob` salvo aldeanos, llamas, tortugas y golems: también al ganado y a los bichos que solo se defienden | `ITamableEntity.esCriaturaPacificaONeutral()`: no se ataca a animales, neutrales, peces, aldeanos ni golems; a los **hostiles** (`Enemy`) sí, como antes | La regla vive **en un solo sitio** (la interfaz de los minions) y la usan los cinco; y el "si me pegas/le pego yo primero" lo cubren `OwnerHurtTargetGoal`/`OwnerHurtByTargetGoal`, que van por encima |
+| *"Que mis minions no ataquen a las criaturas neutrales a menos que yo las golpee primero"* | Los minions (lobo, oso, wisps, shulker, esporas) atacaban a **todo** `Mob` salvo aldeanos, llamas, tortugas y golems: también al ganado y a los monstruos que solo se defienden | `ITamableEntity.esCriaturaPacificaONeutral()`: no se ataca a animales, neutrales, peces, aldeanos ni golems; a los **hostiles** (`Enemy`) sí, como antes | La regla vive **en un solo sitio** (la interfaz de los minions) y la usan los cinco; y el "si me pegas/le pego yo primero" lo cubren `OwnerHurtTargetGoal`/`OwnerHurtByTargetGoal`, que van por encima |
 | *"La basura que nadie recogía"* (plantones en las copas, puertas y camas rotas) | Los drops de las hojas caían **encima de las copas** de los árboles vecinos (inalcanzables) y las piezas del propio pueblo no estaban en la lista de nadie | El leñador **desrama** el árbol que tala; las piezas del pueblo entran en la lista del **recolector** | Documentado en 3b.27 |
 
 Y de propina, verificaciones que evitan sustos: la **migración sobre una aldea ya construida** (el camino que
@@ -1308,11 +1308,11 @@ intacta (72 cultivos antes y después).
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador (la **cerveza** de las pipas y el **pescador con su edificio y su lago**).
 
-### 3b.31 La aldea que cayó "sola" (asedio a ciegas + bichos de las cuevas)
+### 3b.31 La aldea que cayó "sola" (asedio a ciegas + monstruos de las cuevas)
 
 El jugador preguntó *"¿por qué cayó la aldea? ¿qué pasó?"* con el log delante. **La aldea 1 cayó de verdad**, y la
 causa medida fue doble: el **asedio era mudo** (no se veía cómo iba) y el **perímetro no miraba la altura** (contaba
-como invasor a cualquier bicho que estuviera en las cuevas de debajo).
+como invasor a cualquier monstruo que estuviera en las cuevas de debajo).
 
 **Qué pasó exactamente** (log + guardado `New World (1)`, que es el mundo que estaba jugando):
 
@@ -1320,7 +1320,7 @@ como invasor a cualquier bicho que estuviera en las cuevas de debajo).
 |---|---|
 | 18:46:25 | El jugador pasa por la plaza de la aldea 1 → `start()`: *"Llegaste a la aldea… los monstruos se acercan."* |
 | 18:48:09 | `GRACE_TICKS` (90 s) → la ola: *"¡Defiende la aldea de los monstruos!"* (8 + índice 1 × 2 = **10 zombies agresivos** a 65-73 bloques del centro) |
-| 18:48:09-18:50:09 | El jugador pelea **DENTRO del pueblo** contra los bichos de la noche (zombies, esqueletos, arañas, creepers, zombies agresivos: el log está lleno de `doHurtTarget`). Media hora después de la caída se midió con los **logs de depuración** (los minions se teleportan junto al dueño y el log imprime su posición cada 10 s): **32 de 32 posiciones registradas estaban dentro de las murallas**, entre **4,5 y 47,8** bloques de la plaza — y la muralla está a **62** |
+| 18:48:09-18:50:09 | El jugador pelea **DENTRO del pueblo** contra los monstruos de la noche (zombies, esqueletos, arañas, creepers, zombies agresivos: el log está lleno de `doHurtTarget`). Media hora después de la caída se midió con los **logs de depuración** (los minions se teleportan junto al dueño y el log imprime su posición cada 10 s): **32 de 32 posiciones registradas estaban dentro de las murallas**, entre **4,5 y 47,8** bloques de la plaza — y la muralla está a **62** |
 | 18:50:09 | `SIEGE_TIMEOUT_TICKS` (2 min) **justo** después de la ola → *"La aldea cayó…"* + `ruin()`: **1.483 bloques** al suelo (aire, telarañas, piedra mohosa) |
 
 **No fue "sin aldeanos"**: en el guardado había **11 aldeanos vivos** dentro del pueblo (granjero, herrero de armas,
@@ -1336,7 +1336,7 @@ la taberna**). Fue la rama del **tiempo agotado**: "los monstruos entraron y sob
 
 **Las dos causas, medidas:**
 
-1. **Un bicho en una cueva contaba como invasor.** El perímetro (`PERIMETER_RADIUS` = la valla = **62**) y el latido del
+1. **Un monstruo en una cueva contaba como invasor.** El perímetro (`PERIMETER_RADIUS` = la valla = **62**) y el latido del
    pueblo (`hayEnemigosDentro`) medían **solo** `dx*dx + dz*dz`. Medido en su guardado (centro real **(990,990)**, nivel del pueblo
    **95**, sacado del plano: x/z 928..1052 = centro ± 62): **24 monstruos** contaban como "dentro de la aldea" y **18**
    estaban en cuevas o repisas (de `y=5` a `y=89`); con la banda de altura quedan **6**, todos a la altura del pueblo.
@@ -1347,12 +1347,12 @@ la taberna**). Fue la rama del **tiempo agotado**: "los monstruos entraron y sob
      que hubiera **nadie** dentro.
 2. **El asedio era mudo.** Entre los dos avisos ("Llegaste a la aldea", "¡Defiende la aldea!") y el *"La aldea cayó…"*
    final **no había ni un solo mensaje** de cómo iba: ni cuántos quedaban, ni cuántos estaban dentro, ni cuánto tiempo
-   quedaba, y los 10 asediadores **no se distinguían** de los bichos de la noche (el jugador mató decenas **dentro del
+   quedaba, y los 10 asediadores **no se distinguían** de los monstruos de la noche (el jugador mató decenas **dentro del
    pueblo** sin saber que quedaba alguno de los marcados).
 
 **Arreglo:**
 
-- **`VillageManager.dentroDelRecinto`**: la **única** verdad de "dentro de la aldea" para un bicho = disco en XZ
+- **`VillageManager.dentroDelRecinto`**: la **única** verdad de "dentro de la aldea" para un monstruo = disco en XZ
   (invariante I2) **+ banda de altura** sobre el nivel del pueblo (`RECINTO_DY_ABAJO` = 6, `RECINTO_DY_ARRIBA` = 16: cubre la
   zanja y el segundo piso/tejado, deja fuera las cuevas). La usan el **latido** (`hayEnemigosDentro`), el **perímetro
   del asedio** (`allZombiesInsidePerimeter`) y las **partículas de intrusión**.
@@ -1372,7 +1372,7 @@ la taberna**). Fue la rama del **tiempo agotado**: "los monstruos entraron y sob
 | pozo (nivel del pueblo-7) / **cueva bajo la plaza (nivel del pueblo-30)** / repisa (nivel del pueblo+30) | **no** |
 | a 63 del centro (nivel del pueblo) / cueva a 50 del centro | **no** |
 
-**Guardias para que no vuelva**: invariante **I12** ("dentro de la aldea, para un bicho, es recinto **+ altura**") e
+**Guardias para que no vuelva**: invariante **I12** ("dentro de la aldea, para un monstruo, es recinto **+ altura**") e
 invariante **I13** ("un asedio nunca se pierde a ciegas") en `docs/aldea-invariantes.md`, y **regla I11 del lint**
 (un recuento de `Monster`/`MobCategory.MONSTER` en `VillageManager` sin `dentroDelRecinto` cerca **falla la puerta de
 commit**).
@@ -1401,7 +1401,7 @@ escalera: hay una mesa con sillas que la bloquea; quita esa mesa y dobla la esca
   de subida) y el **recorrido de un jugador con las cajas de colisión reales del juego** —a pasos de 0,25 bloques por la
   línea de la escalera— **no encuentra ni un solo escalón de más de 0,50** (el jugador sube 0,6 por escalón, así que
   todos se suben) y el pie queda abierto al comedor, sin la mesa ni las sillas que lo tapaban.
-  *(El camino de los bichos con la navegación del juego no sirvió para comprobarlo: en un bicho recién spawneado la
+  *(El camino de los monstruos con la navegación del juego no sirvió para comprobarlo: en un monstruo recién spawneado la
   navegación no encuentra camino ni en la plaza llana —se comprobó con un control— y por eso la comprobación buena es
   la de las alturas de los escalones.)*
 
@@ -2010,7 +2010,7 @@ destino de patrulla o algún goal que la zarandea)"*, sin cerrar (el diagnóstic
 **Medido ahora, sin jugar**, con el **arnés** (`tools/arnes/GuardHarness.java`, ver `tools/arnes/LEEME.md`): servidor
 headless, una **copia** de la partida en `run/world`, chunks de la aldea forzados, un **jugador de pega** en la plaza
 (el latido del pueblo necesita jugador cerca: los goals **no** se guardan con la partida) y el latido **de verdad**
-(`VillageManager.manageNearby`). De día, sin ciclo y **sin spawn de bichos** (el combate va antes que la ronda y los
+(`VillageManager.manageNearby`). De día, sin ciclo y **sin spawn de monstruos** (el combate va antes que la ronda y los
 guardias se morían peleando), la guardia espadachín del **puesto 0** (Bibiana, `9036d1d0`):
 
 - **El puesto del corral era DENTRO del cercado** (`puntoDeApoyoAnexo`, a **3,0** del portón) y **no llegaba**:
@@ -2057,7 +2057,7 @@ tira de él solo en los huecos entre rondas, que con el puesto de ronda arreglad
 corriendo, el destino que manda es el **suyo** (el cerebro escribe *después* del goal pero `MoveToTargetSink` ya ha
 consumido el del goal, y al plantarse el goal **borra** `WALK_TARGET` **y** `LOOK_TARGET` en cada tick).
 
-**Verificado con el arnés** (aldea 2, de día, sin bichos, **31 minutos de juego**, 942 muestras de la guardia del
+**Verificado con el arnés** (aldea 2, de día, sin monstruos, **31 minutos de juego**, 942 muestras de la guardia del
 puesto 0 y 896 de la del 1):
 
 | | Antes | Después |
@@ -2114,7 +2114,7 @@ vivo con el arnés**: en el log sale `[Village] 9036d1d0 ... deja la guardia y v
 **sale** de la milicia) y `[Village] Aldea 2: comida 64 puntos, **9 aldeanos**` → con los 9 puestos cubiertos la
 milicia queda **vacía** (que es el diseño: *"una aldea sana no tiene guardia: hacen falta crías"*). Compila, lint OK.
 
-*(Nota del arnés: los bichos que ya venían en el guardado **dentro del recinto** bloquean `hayEnemigosDentro` y con
+*(Nota del arnés: los monstruos que ya venían en el guardado **dentro del recinto** bloquean `hayEnemigosDentro` y con
 ello **todo** el latido —sin reparto de oficios ni milicia—; el arnés los barre cada segundo. Se nota porque en el
 log **no** sale ninguna línea `[Village] Aldea N: comida ...`.)*
 
@@ -2174,7 +2174,7 @@ del pan de `feedVillagers`) y, además, nacía con el oficio de la plaza número
 Ahora el tope es **`puestos + MILICIA_MAX` (18)** y la cría nace **SIN oficio** (`VillageGenerator.spawnBaby`): al
 crecer, el reparto le da una plaza libre o engrosa la **milicia**, que es exactamente lo que pidió el jugador.
 
-**Verificado con el arnés** (aldea 2 de su partida copiada, servidor headless, sin bichos):
+**Verificado con el arnés** (aldea 2 de su partida copiada, servidor headless, sin monstruos):
 
 | Medida | Resultado |
 |---|---|
@@ -2207,7 +2207,7 @@ actividad y caía a **IDLE** (el mismo "da vueltas sobre su eje" que ya vimos co
 
 **La cadena es la del pueblo, no magia** (`VillagerClericGoal`, prioridad 4 como el resto de oficios):
 
-1. Los guardias y el jugador matan bichos → el **recolector** barre el botín y lo deja en el **almacén** (pepitas de
+1. Los guardias y el jugador matan monstruos → el **recolector** barre el botín y lo deja en el **almacén** (pepitas de
    oro, ojos de araña, pólvora); el **granjero** cría **zanahorias**.
 2. El clérigo va a **su soporte de pociones** y **lo carga** (`BrewingStandBlockEntity`: las botellas en sus tres
    huecos, el ingrediente encima y el **polvo de blaze** de combustible): **agua + verruga del Nether = poción
@@ -2380,7 +2380,7 @@ déjalo como estaba"*). Va en `CommonForgeInteractionEventSubscriber.onInteractW
   **cualquiera de las dos manos** (principal o secundaria).
 - **El botón izquierdo se queda COMO ESTABA**: pegarle a una invocación tuya no le hace nada, como siempre. Por eso el
   manejador no está en `AttackEntityEvent`.
-- **Solo las tuyas**: se comprueba el dueño, así que las de otro jugador y los bichos salvajes no se tocan.
+- **Solo las tuyas**: se comprueba el dueño, así que las de otro jugador y los monstruos salvajes no se tocan.
 - Sin palo, la interacción es la de siempre (montar, comerciar, dar de comer): con la espada en la mano el palo no
   despide.
 - El que despide es el **servidor** y la interacción se **cancela** (el palo no hace nada más). Se van por el camino de
@@ -2653,7 +2653,7 @@ corrigió en 3b.61**: Mauricio y Leoncio no eran adultos sin cama, eran **crías
 el censo del arnés medía **64 bloques y solo adultos** (así que no los veía) y el reparto de camas las **saltaba**. Su
 etiqueta de noche —"Sin cama"— sí las nombraba, que es lo que el jugador veía. Ver 3b.61.
 
-### 3b.61 Mauricio (una CRÍA) sin cama, y el reparto de camas con bichos dentro de la aldea
+### 3b.61 Mauricio (una CRÍA) sin cama, y el reparto de camas con monstruos dentro de la aldea
 
 El jugador insistió con captura: *"Mauricio sigue sin ir a buscar cama y hay varias en la taberna"*. La etiqueta del
 aldeano decía **`Mauricio (Sin oficio) · Sin cama`**. Dos causas, las dos medidas en su guardado y con el arnés:
@@ -2674,22 +2674,22 @@ en el reparto y en el acostado como cualquier aldeano. Medido (noche fija, arné
 estaba en `prepareRepairs` (dentro de `tickVillageLife`), detrás de dos guardas de `manageNearby`:
 `!isUnderAttack(...)` y `hayEnemigosDentro(...) -> continue`. Las dos tienen sentido para lo que **repuebla** (no se
 reponen aldeanos mientras los monstruos los están matando), pero **no para las camas**: la noche del asedio es justo
-cuando hacen falta. Con un bicho dentro, el aldeano sin cama se quedaba sin ella, y como el hambre y la edad tampoco
+cuando hacen falta. Con un monstruo dentro, el aldeano sin cama se quedaba sin ella, y como el hambre y la edad tampoco
 corrían, el estado se quedaba **congelado** con él de pie y "Sin cama" delante del jugador. Ahora va en
 `atenderCamasDelPueblo`, que se llama **fuera** de las dos guardas (y sigue sin tocar una aldea caída).
 
 **Medido con el arnés**, plantando a propósito un **aldeano-zombi** dentro de la plaza (`1420,120,1420`; es un
-`Monster` que cuenta para `hayEnemigosDentro` pero el sello no expulsa) → `UN BICHO DENTRO: SI (1 monstruo(s): latido
+`Monster` que cuenta para `hayEnemigosDentro` pero el sello no expulsa) → `UN MONSTRUO DENTRO: SI (1 monstruo(s): latido
 cortado)` durante toda la corrida:
 
     ANTES  (devolviendo la guarda vieja al bloque: `&& !hayEnemigosDentro(...)`)
-    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=13 … SIN CAMA=2 2a04aa3e(none,cria) 2b322f2d(none,cria) DURMIENDO=6 · UN BICHO DENTRO: SI
+    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=13 … SIN CAMA=2 2a04aa3e(none,cria) 2b322f2d(none,cria) DURMIENDO=6 · UN MONSTRUO DENTRO: SI
 
     DESPUÉS (atenderCamasDelPueblo, sin guardas)
     [Village] 2a04aa3e-… no tenia cama: reclama la de 1372, 124, 1433 …
     [Village] 2b322f2d-… no tenia cama: reclama la de 1370, 124, 1433 …
     [Village] Aldea 2: los 15 aldeanos (crias incluidas) tienen cama
-    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=15 (camas distintas ocupadas=15) COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=12 · UN BICHO DENTRO: SI
+    [Arnes] CAMAS RESUMEN: aldeanos=15 (adultos=11 crias=4) conCama=15 (camas distintas ocupadas=15) COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=12 · UN MONSTRUO DENTRO: SI
 
 **Y EL CENSO DEL ARNÉS ESTABA MAL**: medía un radio de **64** y **solo adultos** (dos recortes que se sumaban al
 mismo error: el mod reparte camas hasta `FENCE_RADIUS + 44` = **106** y ahora también a las crías). Con eso el resumen
@@ -2896,7 +2896,7 @@ siempre, también con 986 puntos dentro. Con razón el jugador dejó de creérse
   cualquier adulto.
 - **La comida no cuelga de un tick del mundo**: `repartirRaciones` salía de vacío si
   `gameTime % EAT_INTERVAL_TICKS != 0` ("las raciones se reparten en el latido del minuto"), así que **un solo tick
-  perdido** —el jugador lejos, o el latido cortado con bichos dentro (I12/I46)— se llevaba por delante la comida de
+  perdido** —el jugador lejos, o el latido cortado con monstruos dentro (I12/I46)— se llevaba por delante la comida de
   **todo** el pueblo. Ahora la pide **el aldeano que hace más tiempo que no come**: cuando ese cumple su intervalo,
   come el pueblo que esté esperando (el grupo sigue sincronizado porque una comida los marca a todos a la vez, así
   que se sigue pagando de una sola vez y sin regalar una hogaza por boca).
@@ -3040,7 +3040,7 @@ andando desaparecía **antes del latido siguiente**, sin que la milicia lo tocar
 
 **Por qué pasaba**: la expulsión se añadió (etapa H) porque con un hostil dentro `hayEnemigosDentro` **corta el
 latido entero** (I12) y el pueblo se quedaba congelado, y el aura del sello solo corta los **spawns**, no a los que ya
-están dentro. El problema no era la red de seguridad, era que **actuaba primero**: a los 10 s el bicho ya no estaba.
+están dentro. El problema no era la red de seguridad, era que **actuaba primero**: a los 10 s el monstruo ya no estaba.
 
 **ARREGLO** (I59):
 - **Espera de 2 min** (`SELLO_ANTES_DE_EXPULSAR_TICKS`) antes de rechazar a nadie: en ese rato defiende el **pueblo**.
@@ -3048,10 +3048,10 @@ están dentro. El problema no era la red de seguridad, era que **actuaba primero
   mira todo el recinto si no hay nadie en sus 16 bloques; el aldeano-zombi queda fuera de esa búsqueda larga para no
   mandar la guardia sobre una curación en marcha).
 - **El rechazo se lee**: partículas, chillido de sculk y aviso al jugador (*"El sello de la aldea ha rechazado a los
-  intrusos."*), en vez de un bicho que se esfuma.
+  intrusos."*), en vez de un monstruo que se esfuma.
 - **Lo demás, intacto**: con `isUnderAttack` (asedio del jugador **o horda del mundo**) **no se expulsa a nadie**, y
   no se toca ni el spawn, ni el escalado, ni el botín de los zombis agresivos.
-- El reloj es **por aldea y por bicho** y se olvida cuando el bicho sale o muere.
+- El reloj es **por aldea y por monstruo** y se olvida cuando el monstruo sale o muere.
 
 ### 3b.72 La muralla dañada que nadie reparaba (el panorama no la tenía) y el recolector de flojo
 
@@ -3175,7 +3175,7 @@ texturas originales quedan respaldadas en `build/diag/*.antes`.
 Si en vez de una cara fija se quiere que cada guardia lleve **la de su propia variante** (cada aldeano tiene la suya
 en el guardado), eso ya pide una **capa de render** con el modelo del aldeano y la textura de su tipo.
 
-### 3b.77 La noche que mataron a media aldea: el sello por bicho, y la milicia que aprende
+### 3b.77 La noche que mataron a media aldea: el sello por monstruo, y la milicia que aprende
 
 El jugador, tres cosas de una: *(1)* *"cuando llegó la noche aparecieron así de la nada zombies agresivos que
 mataron a media aldea; una vez que está la barrera no puede spawnear NADA dentro de la villa, inclusive los zombies
@@ -3189,7 +3189,7 @@ zombie agresivo más fuerte… la progresión es gradual"*.
   hay ni un monstruo dentro del recinto**: los de alrededor están **todos fuera**, a **62-74** bloques del centro
   (una docena de esqueletos y zombis pegados a la muralla). La barrera **sí** corta los spawns de dentro.
 - **Pero había un agujero real**: `CustomSpawner` comprobaba el sello **solo para el ancla** y las demás posiciones
-  del grupo se **sorteaban otra vez** (`findSpawnPosition`) sin comprobación → un bicho del grupo podía aparecer
+  del grupo se **sorteaban otra vez** (`findSpawnPosition`) sin comprobación → un monstruo del grupo podía aparecer
   dentro. **Tapado** (y la altura del sello, con el nivel del pueblo, I63).
 - Y las muertes (`Onofre` en el desván, `Quintin` el guardia en la posada) dicen lo otro: **entraron andando**. El
   sello no levanta un muro: impide que **aparezcan** dentro; de **defender** se encarga la milicia.
@@ -3235,11 +3235,11 @@ minions"*.
 Dos mitades (I79 e I81):
 
 - **Los poderes suyos solo dañan a enemigos** (I79): el hongo que explota y el liquen maldito tocaban a cualquiera que
-  pasara —incluido el propio jugador y sus bichos—. Ahora el daño va **solo** a un `Enemy` o a un `Mob` que ya esté
+  pasara —incluido el propio jugador y sus monstruos—. Ahora el daño va **solo** a un `Enemy` o a un `Mob` que ya esté
   peleando (`getTarget() != null`), y la explosión del hongo es `ExplosionInteraction.NONE` con un reparto de daño a
   mano, para que no reviente la aldea ni a los vecinos.
 - **Los minions rematan** (I81): el neutral que el jugador (o un poder suyo) haya tocado pasa a ser objetivo de los
-  bichos del jugador. El predicado de los que tienen objetivo propio llevaba `!esCriaturaPacificaONeutral(entity)` **a
+  monstruos del jugador. El predicado de los que tienen objetivo propio llevaba `!esCriaturaPacificaONeutral(entity)` **a
   secas**: el neutral se descartaba antes de mirar la pelea. Ahora lleva la coletilla
   `|| ITamableEntity.elDuenoLeEstaAtacando(this.getOwner(), entity)` (ayudante compartido: mira `owner.getLastHurtMob()`
   y `entity.getLastHurtByMob()`, así que valen manos **y** poderes).
@@ -3445,7 +3445,7 @@ buscando el centro, pueden romper bloques y crear escaleras de bloques para lleg
 romper nada"* (I89, corregido).
 
 **El fallo**: el campo tiene dos mitades y solo una estaba atada a haber ganado. `expulsarHostilesDeLaAldea` (vaciar la
-aldea de bichos) ya iba con `isSiegeResolved` desde la etapa H; la **protección de romper** (`protegidoPorLaAldea`)
+aldea de monstruos) ya iba con `isSiegeResolved` desde la etapa H; la **protección de romper** (`protegidoPorLaAldea`)
 estaba activa **siempre**, así que el asedio inicial —el que el jugador tiene que ganar— se quedaba fuera sin poder
 picar. Ahora las dos van con lo mismo (`elAsedioYaSeGano`): asedio sin resolver → no hay campo (se rompe lo que haga
 falta); aldea ganada → dentro no se rompe nada, muralla y exterior sí (para que los asaltos posteriores entren).

@@ -235,7 +235,7 @@ banco rápido. Nunca al revés.
 
 ### `MEDIR_MILICIA = true` — la milicia que aprende (I62) y el clérigo que sana (I64)
 
-Pone el mundo de **día** (a diferencia de `MEDIR_NOCHE`), **no barre los bichos** (los que hay dentro son los que se
+Pone el mundo de **día** (a diferencia de `MEDIR_NOCHE`), **no barre los monstruos** (los que hay dentro son los que se
 siembran, ¡ojo: con el barrido desaparecían en el mismo segundo y la medida no valía!) y a los **150 s** —cuando la
 guardia ya está alistada: a los 30-60 s **todavía no hay guardias** y la siembra se quedaba sin heridos— hace esto:
 
@@ -254,15 +254,15 @@ con la etiqueta `Curando a X`.
 **Ajustes del arnés** (arriba del archivo): `CENTRO` e `INDICE` son la aldea que se mide (la 2 es
 `1414,120,1414`, índice 2) y el ancla del jugador se **calcula** con la misma cuenta que
 `ObjectiveTargets.targetOf` (para que el objetivo 2 caiga en ese centro). Deja el mundo **de día**, **sin ciclo**,
-sin spawn de bichos y **barriendo cada segundo los bichos que ya venían en el guardado** (`hayEnemigosDentro`
+sin spawn de monstruos y **barriendo cada segundo los monstruos que ya venían en el guardado** (`hayEnemigosDentro`
 bloquea el latido del pueblo entero: sin barrerlos, no se reparten oficios ni se alista la guardia; se nota porque
 en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún `nuevo puesto`).
 
-- `BICHO_DENTRO = true` → **lo contrario, a propósito**: en vez de barrer los bichos se planta **UNO** dentro de la  aldea y se mantiene ahí. Es un **aldeano-zombi** (`NoAI`, invulnerable, persistente) porque es un `Monster` —cuenta
+- `MONSTRUO_DENTRO = true` → **lo contrario, a propósito**: en vez de barrer los monstruos se planta **UNO** dentro de la  aldea y se mantiene ahí. Es un **aldeano-zombi** (`NoAI`, invulnerable, persistente) porque es un `Monster` —cuenta
   para `hayEnemigosDentro`— y el sello **no lo expulsa** (`expulsarHostilesDeLaAldea` deja en paz a los aldeanos-zombi:
   puede ser una curación en marcha), así que el latido se queda **cortado** toda la corrida. Es lo que reproduce la
-  partida del jugador (de noche y con bichos dentro) y lo que se midió en 3b.61. El arnés lo escribe cada segundo:
-  `CAMAS: … UN BICHO DENTRO: SI (1 monstruo(s): latido cortado)`.
+  partida del jugador (de noche y con monstruos dentro) y lo que se midió en 3b.61. El arnés lo escribe cada segundo:
+  `CAMAS: … UN MONSTRUO DENTRO: SI (1 monstruo(s): latido cortado)`.
 
 - `SEMBRAR_AGUA_EMBOTELLADA = false` → para medir el **VIAJE AL AGUA** del clérigo (deja en el almacén
   **botellas de cristal**, no pociones de agua: con agua ya embotellada las usaría y **nunca** iría a la orilla).
@@ -323,8 +323,8 @@ en la celda de al lado toca la puerta con el hombro). Y cada `PUERTA CERRADA` di
   dice si algo "se queda" en el suelo (mediana de 54 s antes del arreglo y de 6 s después).
   **AMPLIADO EN I103** (la huerta que NO se cosechaba): además vuelca, por bancal, la **tierra cultivo a cultivo**
   (`TIERRA bancal N: MADURAS … | creciendo … | VACIAS … | pisoteadas …`), la **comida de la despensa y del almacén**
-  (`COMIDA: despensa N punto(s) [trigo … semillas … harina … vegetales …]`), los **bichos dentro del recinto**
-  (`BICHOS DENTRO DEL RECINTO: N`) —que es lo que decide si el latido del pueblo corre— y, por granjero, su **puesto
+  (`COMIDA: despensa N punto(s) [trigo … semillas … harina … vegetales …]`), los **monstruos dentro del recinto**
+  (`MONSTRUOS DENTRO DEL RECINTO: N`) —que es lo que decide si el latido del pueblo corre— y, por granjero, su **puesto
   de trabajo** (`job=`/`potencial=`), si es guardia (`guardia=`) y su **destino**, más los **tres composteros con su
   dueño** (`COMPOSTERO bancal N en <celda> bloque=composter poi=SI dueno(s): …`). Fue lo que destapó que la tercera
   granjera estaba `job=SIN PUESTO` con el compostero del bancal 0 **libre y sin dueño**, y que su bancal se quedaba
@@ -332,7 +332,7 @@ en la celda de al lado toca la puerta con el hombro). Y cada `PUERTA CERRADA` di
 
 ### `MEDIR_ALDEAS = true` — las aldeas con NOMBRE, el revelado y el DIARIO DEL INVOCADO (I87)
 
-Modo de **solo lectura** (no siembra, no barre bichos, no cambia la hora): deja correr el latido con el jugador de
+Modo de **solo lectura** (no siembra, no barre monstruos, no cambia la hora): deja correr el latido con el jugador de
 pega y vuelca cada 10 s lo que sabe ese jugador y lo que **dibujaría la barra de aldea**:
 
 ```
@@ -397,9 +397,9 @@ jugador de pega, **invulnerable, y ya no se le devuelve a la plaza**) **en la or
   salida es **`EscapeWaterGoal`**, que es lo que hay que medir.
 
 **El testigo que hace falta para creer la medida** (y que costó una corrida descubrir): la traza lleva
-`borrado=SI/NO`/`vivo=SI/NO` **en cada volcado** (si el barrido de bichos del arnés se come al asaltante, lo dice a
+`borrado=SI/NO`/`vivo=SI/NO` **en cada volcado** (si el barrido de monstruos del arnés se come al asaltante, lo dice a
 gritos y la medida se tira: eso fue exactamente lo que pasó en `rapida-49.log`, donde los 73 volcados eran el mismo
-bicho congelado), y escribe **`AGUA: el goal del nado (EscapeWaterGoal) ARRANCA/PARA en t=…`** mirando los goals
+monstruo congelado), y escribe **`AGUA: el goal del nado (EscapeWaterGoal) ARRANCA/PARA en t=…`** mirando los goals
 **tick a tick** (un atasco de 9 ticks puede caer entero entre dos volcados de 1 s). El resumen de cada vuelta dice
 `ticks con el goal del nado corriendo=N`: **0** es la firma de que el goal **no puede arrancar** (le pasa el flag MOVE
 otro goal de la misma prioridad), que es el fallo que se cazó en I235.
@@ -444,11 +444,11 @@ el objetivo está **al mismo nivel** (le toca al **puente**); a los **1200 ticks
 **en el aire**, 5 por encima del suelo (vuelta 3: el caso que le toca a la **escalera de bloques**).
 
 **Ojo con dos trampas del instrumento, las dos medidas** (costaron dos corridas con 0 tablones, 0 escalones y 0 brecha):
-1. **El disco de la aldea se mide desde el centro que lleva el BICHO**: si se le pone el centro en la escena, el foso y
+1. **El disco de la aldea se mide desde el centro que lleva el MONSTRUO**: si se le pone el centro en la escena, el foso y
    el muro caen «dentro de la aldea» y `puentearHacia`/`apilarBloqueParaSubir` **se niegan a colocar nada**. El centro
-   del bicho va al **pueblo de verdad** (`colocarLaOlaDelFoso`).
+   del monstruo va al **pueblo de verdad** (`colocarLaOlaDelFoso`).
 2. **Hace falta la altura por asaltante**: la traza dice `EN EL FOSO` o `en la plancha`, que es lo que distingue un
-   bicho atascado en el fondo de uno parado en el borde.
+   monstruo atascado en el fondo de uno parado en el borde.
 
 Lo que se busca en el registro: `[Arnes] OLA CON FOSO vuelta=N t=… N/8 vivos, M DENTRO del muro | columnas del foso CON
 OBRA=X/Y (altura maxima=Z) | troncos del muro en pie=… (brecha=…)`, la línea por asaltante, y **las del mod**, que son
@@ -527,7 +527,7 @@ lo que se mide es la **presión** y la **elección**; la marcha la ve el jugador
 ### `MEDIR_MINERO = true` — la mina del minero (I102)
 
 Corre sobre la **aldea del jugador** (aldea 0, centro `470,646`, cota 63), deja el mundo **de día** (de noche el
-minero descansa) y barre los bichos (uno dentro del recinto corta el latido del pueblo entero). A los **10 s** se
+minero descansa) y barre los monstruos (uno dentro del recinto corta el latido del pueblo entero). A los **10 s** se
 asegura de que hay **minero**: si no hay ninguno con el oficio `MASON`, lo planta con la puerta del propio mod
 (`VillageGenerator.spawnOneVillager(level, CENTRO, 11, false)`: el sitio 11 es el albañil).
 

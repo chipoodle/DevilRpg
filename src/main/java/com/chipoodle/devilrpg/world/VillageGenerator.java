@@ -2708,7 +2708,7 @@ public final class VillageGenerator {
                 Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, Direction.NORTH), 3);
         // 4) EL PUESTO DEL PESCADOR: el BARRIL, en la orilla junto a la puerta. Es lo que le da el oficio.
         colocar(level, puestoDelPescador(base, nivel), Blocks.BARREL.defaultBlockState(), 3);
-        // 5) FAROLES en dos esquinas del lago: la pesquera se ve de noche y el agua no cría bichos. La casilla que se
+        // 5) FAROLES en dos esquinas del lago: la pesquera se ve de noche y el agua no cría monstruos. La casilla que se
         //    le pasa es la del POSTE (el suelo de la orilla está a `nivel - 1`), así que el farol queda justo encima.
         //    Antes se le pasaba `nivel + 2` y estos dos faroles salían FLOTANDO a tres bloques del suelo.
         farolSobreElPoste(level, new BlockPos(bx - LAGO_RADIO - 1, nivel, bz - LAGO_RADIO - 1));
@@ -4245,7 +4245,7 @@ public final class VillageGenerator {
         return animalesDelCorral(level, center).isEmpty();
     }
 
-    /** Los animales del corral (solo las especies del anexo, no cualquier bicho que pase por ahí). */
+    /** Los animales del corral (solo las especies del anexo, no cualquier monstruo que pase por ahí). */
     public static List<net.minecraft.world.entity.animal.Animal> animalesDelCorral(ServerLevel level, BlockPos center) {
         BlockPos base = baseDeAnexo(center);
         AABB caja = new AABB(base).inflate(ANEXO_RADIO + 2, 8.0D, ANEXO_RADIO + 2);
@@ -4370,7 +4370,7 @@ public final class VillageGenerator {
      * <b>otro extremo</b> del pueblo (a 112 de la base del corral) no se veía nunca.
      * <p>
      * La Y se mide desde la <b>cota</b> (invariante I1), no desde la Y del centro, y con la banda de siempre (±24): no
-     * se trae a casa a un bicho de una cueva, pero sí a uno que esté en el tejado de al lado.
+     * se trae a casa a un monstruo de una cueva, pero sí a uno que esté en el tejado de al lado.
      */
     private static AABB cajaDelGanadoPerdido(BlockPos center, int nivel) {
         BlockPos base = baseDeAnexo(center);
@@ -4387,7 +4387,7 @@ public final class VillageGenerator {
      * marca. Solo mira animales que:
      * <ul>
      *   <li>son de las especies del corral,</li>
-     *   <li>son <b>persistentes</b> (el juego solo los marca así cuando alguien los ha criado o tocado: un bicho
+     *   <li>son <b>persistentes</b> (el juego solo los marca así cuando alguien los ha criado o tocado: un monstruo
      *       salvaje no lo es, y los del pueblo sí, que se sueltan con la marca puesta),</li>
      *   <li>no van montados ni atados con una cuerda (ésos son de alguien: el jugador), y</li>
      *   <li>están <b>fuera de la muralla</b> y a menos de {@link #REBANO_ADOPCION} del corral.</li>
@@ -9931,7 +9931,7 @@ public final class VillageGenerator {
      * El <b>tejado a dos aguas</b>: la cumbrera va en el eje X, en medio del fondo, y las dos vertientes bajan hasta
      * el alero (que <b>vuela</b> dos bloques por fuera de los muros de la posada). Cada vertiente es una escalera de
      * tejas —con la cara alta mirando a la cumbrera, que es hacia donde sube— y el hueco de dentro va <b>macizo</b>,
-     * para que no quede una buhardilla a oscuras donde críen los bichos. Los <b>frontones</b> (este y oeste) se
+     * para que no quede una buhardilla a oscuras donde críen los monstruos. Los <b>frontones</b> (este y oeste) se
      * cierran con cal y entramado, con su ventana.
      * <p>
      * Desde la migración 51 ese relleno interior <b>se vacía</b> después ({@link #desvanDeLaTaberna}) para que el
@@ -10429,7 +10429,7 @@ public final class VillageGenerator {
      * Las <b>luces</b> de la taberna: faroles colgados del forjado en el comedor y del techo en la galería y en los
      * cuartos. Los del <b>porche</b> no están aquí: los cuelga del soffito del toldo su constructor
      * ({@link #porcheDeLaTaberna}), que es quien conoce esa geometría. Una taberna a oscuras es una taberna con
-     * bichos dentro.
+     * monstruos dentro.
      * <p>
      * <b>OJO CON LA ESCALERA</b>: el farol de {@code {4, 11}} colgaba <b>justo encima del primer escalón</b> (el pie de
      * la escalera está en {@code bx + TABERNA_ESCALERA_PIE_DX, nivel, bz + TABERNA_ESCALERA_MESETA_Z}) y estorbaba

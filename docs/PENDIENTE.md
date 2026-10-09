@@ -1491,7 +1491,7 @@ retirados ✓. La regla del proyecto se aplica: **lo que no arregla, se quita y 
 2. **No** es por re-pedir el camino cada tick ✗ (medido arriba).
 3. **No** es falta de red: el empujón del latido (I198) da **873-1460** por corrida ✓ y el rescate funciona ✓.
 4. **La causa sigue ABIERTA** ✗. Lo honesto es **medirla**, no parchearla: hace falta una traza nueva que diga, en el
-   momento del atasco, **si la navegación tiene camino vivo y no lo anda**, **si hay bichos o aldeanos apretados
+   momento del atasco, **si la navegación tiene camino vivo y no lo anda**, **si hay monstruos o aldeanos apretados
    alrededor** y **a dónde apunta el cerebro** — las tres cosas que el aviso no distingue hoy.
 
 **Y una nota de método que me ha costado tres intentos**: la cuenta de líneas de actividad de los guardias
@@ -1509,7 +1509,7 @@ y **a dónde apunta su cerebro**. Primeras **454 fichas** (corrida 126, en vivo)
 | **`nav = sin ruta`** | **454 de 454** ✗✗ | **no hay camino**, no es «camino que no se anda» |
 | `cerebro = "-"` (sin destino) | 113 | están **trabajando en el sitio** ✓ — eso es legítimo y **no** da aviso |
 | con aldeanos apretados | 28 | apiñamiento, minoritario |
-| con bichos cerca | **0** | descartado |
+| con monstruos cerca | **0** | descartado |
 
 Y los destinos del cerebro en las fichas con camino imposible: `606,…` (49), **`614,…` (37 = el almacén)**, `573,…`
 (23), `533/535,…` (21/20 = **las parcelas**) — todos con **`nav=sin ruta`** ✗.

@@ -137,7 +137,7 @@ public class CustomSpawner {
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
                 BlockPos pos = i == 0 ? anchor : rule.findSpawnPosition(level, player);
-                // EL SELLO SE MIRA PARA CADA BICHO, NO SOLO PARA EL PRIMERO (el agujero que mató a media aldea): las
+                // EL SELLO SE MIRA PARA CADA MONSTRUO, NO SOLO PARA EL PRIMERO (el agujero que mató a media aldea): las
                 // otras posiciones del grupo se SORTEAN otra vez (`findSpawnPosition`) y podían caer DENTRO de la
                 // aldea aunque el ancla estuviera fuera. Medido en la partida del jugador: el log del sello rechaza
                 // 9 de 9 anclas (`posicion ... dentro de aldea protegida: no se spawnea`) y esa misma noche

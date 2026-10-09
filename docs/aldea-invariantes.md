@@ -34,7 +34,7 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > | I8 | `setBlock`/`destroyBlock`/`colocar` en el latido | I6 |
 > | I9 | construcción nueva sin subir `CURRENT_LAYOUT` | I7 |
 > | I10 | nivelar la huella de una **parcela** sin preguntar antes | I11 |
-> | I11 | contar bichos "dentro de la aldea" sin la **altura** | I12 |
+> | I11 | contar monstruos "dentro de la aldea" sin la **altura** | I12 |
 > | I12 | farol **colgado del aire** (Y del farol en vez del apoyo) | I14 |
 >
 > I8, I9 y I10 de esta sección (abajo) **no tienen regla en el lint**: se vigilan a mano. **I22** (los portones del
@@ -69,7 +69,7 @@ La aldea es un **recinto en el plano XZ**. Midiendo en 3D, un aldeano a 30 bloqu
 "fuera de su pueblo" (el recolector se quedaba bloqueado en la puerta del goal) y un zombie dos bloques por encima
 del suelo contaba como "no ha entrado" en el asedio, salvando la aldea de rebote.
 **Regla:** `dx*dx + dz*dz` para "¿está dentro del radio?".
-**Ojo (I12):** para un **bicho** eso no basta: además tiene que estar **a la altura del pueblo**. La horizontal sola
+**Ojo (I12):** para un **monstruo** eso no basta: además tiene que estar **a la altura del pueblo**. La horizontal sola
 metía en el pueblo a los monstruos de las **cuevas** de debajo (ver I12).
 
 ### I3 · Atascado = NO ACERCARSE (un contador de paciencia no cuenta los ticks de camino)
@@ -161,8 +161,8 @@ tiene tierra labrada o cultivos, no se toca (la tierra de cultivo está en el pl
 El lint (**I10**) lo comprueba: un `nivelarHuella` sobre `PLOT_*` sin `bancalHecho()`/`hayCultivos()` delante
 **falla la puerta de commit**.
 
-### I12 · "Dentro de la aldea", para un BICHO, es recinto **+ altura**
-Nació de una **aldea caída en juego**. Un bicho "dentro del pueblo" se contaba **solo** con la distancia horizontal
+### I12 · "Dentro de la aldea", para un MONSTRUO, es recinto **+ altura**
+Nació de una **aldea caída en juego**. Un monstruo "dentro del pueblo" se contaba **solo** con la distancia horizontal
 (radio de la valla), y en una aldea de montaña eso mete en el pueblo a **todo lo que vive en las cuevas de debajo**.
 Medido en el guardado del jugador justo después de la caída (aldea 1, nivel del pueblo 95, centro `(990,990)`): **24** monstruos
 contaban como "dentro" y **18** estaban en cuevas o repisas (`y=5` … `y=89`); con la banda de altura quedan **6**,
@@ -176,7 +176,7 @@ todos a la altura del pueblo. Dos consecuencias, las dos vistas:
   una cueva bajo la plaza contaba como invasor: no se le ve, y habría que cavar a ciegas en 62 bloques de radio. La
   regla escrita del asedio dice justo lo contrario (*"si no llegan a los muros, no asedian y no pueden ganar"*).
 
-**Regla:** todo recuento de bichos "dentro de la aldea" (latido, perímetro del asedio, partículas de intrusión) pasa
+**Regla:** todo recuento de monstruos "dentro de la aldea" (latido, perímetro del asedio, partículas de intrusión) pasa
 por `VillageManager.dentroDelRecinto`: disco en **XZ** (I2) **y** una banda de altura sobre `cotaDeLaPlaza`
 (`RECINTO_DY_ABAJO` = 6 por debajo, `RECINTO_DY_ARRIBA` = 16 por encima: cubre la zanja y el segundo piso/tejado sin
 meter las cuevas). El lint (**I11**) vigila que no se vuelva a contar un `Monster`/`MobCategory.MONSTER` sin el
@@ -184,9 +184,9 @@ ayudante cerca.
 
 ### I13 · Un asedio NUNCA se pierde a ciegas (ni se gana en silencio)
 El jugador vio caer su aldea **peleando dentro de ella** (medido con los logs: **32 de 32 posiciones suyas dentro de
-las murallas**, entre 4,5 y 47,8 bloques de la plaza, con la valla a **62**): mató decenas de bichos y el chat solo le
+las murallas**, entre 4,5 y 47,8 bloques de la plaza, con la valla a **62**): mató decenas de monstruos y el chat solo le
 dijo *"La aldea cayó…"*, sin decir **por qué** ni cuántos atacantes quedaban dentro. Con la ola de 10 asediadores
-mezclada entre los bichos de la noche y sin ninguna marca, no había forma de saber a quién tenía que matar.
+mezclada entre los monstruos de la noche y sin ninguna marca, no había forma de saber a quién tenía que matar.
 **Regla:** mientras hay asedio, el jugador recibe (barra de acción, cada `SIEGE_STATUS_INTERVAL` = 15 s y en la cuenta
 atrás de `SIEGE_WARN_SECONDS` = 30 y 10 s) **cuántos atacantes quedan, cuántos están DENTRO del muro y cuánto tiempo
 queda**; cada baja se escribe al momento; los asediadores van **marcados con brillo** (`setGlowingTag`, se les quita al
@@ -521,7 +521,7 @@ El jugador: *"sitúa la campana justo en el centro del kiosco y quita el beacon 
 
 ### I29 · El guardián de la guarida es un GRANJERO: su faena solo se pausa por una amenaza REAL (cerca y alcanzable)
 *(Aplica a la guarida (`SculkCultivatorEntity`), no a la aldea: se apunta aquí porque es la misma lección que I3/I5
-—un contador o un radio mal puesto deja a un bicho **ciclando** y su trabajo no se hace nunca.)*
+—un contador o un radio mal puesto deja a un monstruo **ciclando** y su trabajo no se hace nunca.)*
 
 El jugador, mirando una guarida desde fuera: *"el guardián de la guarida ya no está sacrificando ningún animal"*, con
 el corral lleno de animales vivos y restos por el suelo.
@@ -538,7 +538,7 @@ el corral lleno de animales vivos y restos por el suelo.
 - Y `LairGenerator.generate` corre **otra vez** en cada sesión (la guarida se regenera al acercarse): volvía a sembrar
   **7 animales por sesión**, todos con `spawn_type=MOB_SUMMONED` (19 en una guarida y **41** en otra del guardado).
 
-**La regla**: un bicho con un trabajo que depende de una bandera tiene que **medir él mismo** cuándo el objetivo es
+**La regla**: un monstruo con un trabajo que depende de una bandera tiene que **medir él mismo** cuándo el objetivo es
 real, y **soltarlo** cuando no lo es. Concretamente: radio de amenaza **corto** (12, no los 32 del atributo que se
 documenta aparte), **soltar** lo inalcanzable (80 ticks sin acortar distancia) con **memoria** para no reelegirlo cada
 10 ticks (600), y **devolver la faena el mismo tick** en que se suelta. Y lo que **crece** tiene que **contarse**: si un
@@ -1039,7 +1039,7 @@ demás: las puertas que el jugador deja abiertas a propósito se quedan como est
 de día, cada uno con su aldeano al lado (`PUERTA CERRADA en 1443,120,1401 (aldeano(s) al lado: 9e0ed6e3)`), y el
 contador de abiertas **baja de 8-9 a 4** (las que quedan son de la posada, que nadie cruza de día).
 
-### I46 · Las CAMAS se reparten también a las CRÍAS y aunque haya bichos dentro de la aldea
+### I46 · Las CAMAS se reparten también a las CRÍAS y aunque haya monstruos dentro de la aldea
 
 Dos causas del mismo cartel, *"Mauricio sigue sin ir a buscar cama y hay varias en la taberna"* (con captura:
 `Mauricio (Sin oficio) · Sin cama`):
@@ -1056,9 +1056,9 @@ Dos causas del mismo cartel, *"Mauricio sigue sin ir a buscar cama y hay varias 
    (solo se salta una aldea **caída**).
 
 **Regla:** todo aldeano **adulto o cría** con `FENCE_RADIUS + 44` de la plaza acaba con **cama propia**, y la recibe
-**también** con la aldea bajo asedio o con bichos dentro. **Quien mide tiene que contar lo mismo que el mod**: el censo
+**también** con la aldea bajo asedio o con monstruos dentro. **Quien mide tiene que contar lo mismo que el mod**: el censo
 del arnés medía **64 bloques y solo adultos**, y con esos dos recortes decía `SIN CAMA=0` mientras el jugador veía lo
-contrario (ahora: 106 y con crías). Medido (noche fija, un aldeano-zombi plantado dentro → `UN BICHO DENTRO: SI … latido
+contrario (ahora: 106 y con crías). Medido (noche fija, un aldeano-zombi plantado dentro → `UN MONSTRUO DENTRO: SI … latido
 cortado`): **antes** `aldeanos=15 (adultos=11 crias=4) conCama=13 … SIN CAMA=2 2a04aa3e(none,cria) 2b322f2d(none,cria)
 DURMIENDO=6`; **después** los dos reclaman cama (`1372,124,1433` y `1370,124,1433`) y `conCama=15 … SIN CAMA=0
 DURMIENDO=12`. Y el mod avisa con **nombres** cuando alguien se queda sin cama (una vez por cambio, no cada latido).
@@ -1191,7 +1191,7 @@ de cada aldea y la marca `DevilRpgUltimaComida` de cada aldeano):
 contado** (cuántas bocas sin ración y cuántos puntos quedan): *"la despensa está vacía"* solo si de verdad no hay ni
 un punto; y (c) la comida **no cuelga de un tick del mundo**: `repartirRaciones` salía de vacío si
 `gameTime % EAT_INTERVAL_TICKS != 0` ("las raciones se reparten en el latido del minuto"), así que **un solo tick
-perdido** —el jugador lejos, o el latido cortado con bichos dentro (I12/I46)— se llevaba por delante la comida de
+perdido** —el jugador lejos, o el latido cortado con monstruos dentro (I12/I46)— se llevaba por delante la comida de
 **todo** el pueblo (y la siguiente no llegaba hasta el minuto siguiente). Ahora **la pide el aldeano que hace más
 tiempo que no come** (`laMasVieja`): cuando ese cumple su intervalo, come el pueblo que esté esperando —el grupo
 sigue sincronizado porque una comida los marca a todos a la vez, así que se sigue pagando **de una sola vez** y sin
@@ -1407,7 +1407,7 @@ teletransportados a fuera. Esto se ve antinatural"*.
 
 **Medido en su log** (aldea 2, protegida): el sello expulsaba **en cada latido** —`el sello ha expulsado a 1
 hostil(es) que estaban dentro` a las 12:08:06, 12:08:16, 12:08:26, 12:08:36… toda la sesión, y también `7` y `2` de
-una vez—, o sea que un bicho que **entraba andando** desaparecía **antes del latido siguiente** (10 s), sin que
+una vez—, o sea que un monstruo que **entraba andando** desaparecía **antes del latido siguiente** (10 s), sin que
 **nadie** de la aldea lo tocara.
 
 **Por qué existía (y hay que conservarlo).** El aura del sello corta los **spawns**, pero no a los que **ya están
@@ -1424,17 +1424,17 @@ La expulsión era la **red de seguridad** de eso.
 2. **Solo si sigue dentro** pasado ese tiempo, el sello lo **rechaza**: fuera del muro, en su misma dirección y **sin
    matarlo** (no hay botín gratis y la horda puede volver andando), con sus partículas, un **chillido** de sculk y un
    aviso al jugador (*"El sello de la aldea ha rechazado a los intrusos."*). El rechazo tiene que **leerse** como lo
-   que es: un bicho que se esfuma sin explicación es lo que parecía un bug.
+   que es: un monstruo que se esfuma sin explicación es lo que parecía un bug.
 3. **Nada más se toca.** Los **asedios** (el del jugador y las **hordas del mundo**) siguen igual: mientras
    `isUnderAttack` es cierto **no se expulsa a nadie** (ésos están ahí a propósito, y la aldea tiene que pelear); y
    los zombis agresivos, sus reglas de spawn, su escalado y su botín **no cambian**.
-4. El reloj del sello es **por aldea y por bicho** (`Intruso(aldea, uuid)`) y se olvida en cuanto el bicho **sale o
+4. El reloj del sello es **por aldea y por monstruo** (`Intruso(aldea, uuid)`) y se olvida en cuanto el monstruo **sale o
    muere**: si vuelve a entrar, cuenta de cero. Ojo con limpiarlo **solo** de la aldea que está mirando: el latido de
    una aldea no puede borrar el reloj de un intruso de la vecina (si no, ésa nunca lo rechazaría).
 
 **No tiene regla en el lint** (es un temporizador y dos búsquedas, no un patrón de texto): se comprueba en el log
 (`el sello ha expulsado a N hostil(es) que llevaban 120 s dentro (la milicia no pudo con ellos)`, que ya **no**
-aparece en cada latido) y en juego (el bicho se queda y lo mata la guardia).
+aparece en cada latido) y en juego (el monstruo se queda y lo mata la guardia).
 
 ### I60 · El obrero repone lo que el PLANO recuerda (y el constructor es el aldeano SIN FAENA)
 
@@ -1543,13 +1543,13 @@ así que también valen los **arqueros** con la flecha).
 > mata, sube de nivel y su etiqueta lo dice**, y la vida cuadra con la tabla de arriba (20,0 al acabar = los 7,0 de
 > la herida + lo que le subió la máxima en 6 matanzas: **se fortalece sin curarse del todo**, que es la regla).
 
-### I63 · El sello, para CADA bicho (no solo para el primero del grupo)
+### I63 · El sello, para CADA monstruo (no solo para el primero del grupo)
 
 Medido en la partida del jugador (aldea 2): en el log, el sello **rechazó 9 de 9 anclas** de spawn
 (`posicion … dentro de aldea protegida: no se spawnea`)… y en el guardado del jugador **no hay ni un monstruo dentro
 del recinto**: los de alrededor están **todos fuera**, a 62-74 bloques del centro. O sea que la barrera **sí** corta
 los spawns de dentro. Pero había un agujero real: `CustomSpawner` miraba el sello **solo para el ancla** y las demás
-posiciones del grupo **se sorteaban otra vez** (`findSpawnPosition`) sin comprobación, así que un bicho del grupo
+posiciones del grupo **se sorteaban otra vez** (`findSpawnPosition`) sin comprobación, así que un monstruo del grupo
 podía aparecer dentro aunque el ancla estuviera fuera.
 
 **Regla:** el sello se comprueba para **cada** posición de spawn. Y la altura se mide con la **nivel del pueblo de la aldea**
@@ -1557,7 +1557,7 @@ podía aparecer dentro aunque el ancla estuviera fuera.
 de la plaza y una loma treinta por encima contaban como "dentro de la aldea" (el sello cortaba spawns que no eran de
 la aldea y no distinguía bien el suelo del pueblo).
 
-> **OJO, y esto es lo que de verdad pasó esa noche**: el sello **no levanta un muro**. Los bichos que se acumulan
+> **OJO, y esto es lo que de verdad pasó esa noche**: el sello **no levanta un muro**. Los monstruos que se acumulan
 > fuera (el guardado del jugador tiene una docena de esqueletos y zombis a 63-73 bloques, pegados a la muralla)
 > **entran andando** por donde pueden y, si dentro no hay quien los pare, matan. La barrera impide que **aparezcan**
 > dentro; de **defender** se encarga la **milicia** (I62) y el muro con sus portones.
@@ -1567,7 +1567,7 @@ la aldea y no distinguía bien el suelo del pueblo).
 Lo pidió el jugador: *"el clérigo podría tener como task el curar a los soldados; que sea una especie de sanador"*.
 
 **Regla:** el clérigo (además de hacer pociones en su soporte) **busca heridos y los cura**. En orden:
-1. **un soldado herido** (la guardia es la que se pelea con los bichos) y, si no hay ninguno, **un vecino**;
+1. **un soldado herido** (la guardia es la que se pelea con los monstruos) y, si no hay ninguno, **un vecino**;
 2. se considera herido el que está **por debajo del 75 %** de su vida máxima (un arañazo no lo levanta de la silla),
    y siempre dentro de **32 bloques** (el término del pueblo);
 3. va a por él **por el cerebro** (I5: `caminarHacia`), se planta a **2,5 bloques**, hace su faena (medio segundo) y
@@ -1873,7 +1873,7 @@ animales).
 `(!esCriaturaPacificaONeutral(entity) || ITamableEntity.elDuenoLeEstaAtacando(this.getOwner(), entity)) && …` — es
 decir, un neutral **sí** cuenta si el dueño ya le ha pegado. El ayudante es **compartido** (`ITamableEntity`) y mira
 `owner.getLastHurtMob()` y `entity.getLastHurtByMob()`, así que valen **las manos y los poderes**: el daño del hongo y
-del liquen va con el jugador como atacante (`playerAttack(owner)` / `explosion(…, owner)`, ver I79), así que el bicho
+del liquen va con el jugador como atacante (`playerAttack(owner)` / `explosion(…, owner)`, ver I79), así que el monstruo
 queda marcado igual y los minions van a por él.
 
 **Barrido — esto falló DOS veces, y las dos por listas a mano.** La primera versión se aplicó a una lista escrita a
@@ -2217,7 +2217,7 @@ entrando ya no pueden romper nada"*.
   la **muralla** (el anillo de la valla) y todo lo de **fuera** siguen rompibles, para que los asaltos posteriores
   puedan entrar y hacerse escaleras — pero una vez dentro no tocan nada.
 
-La otra mitad del campo (`expulsarHostilesDeLaAldea`, que vacía la aldea de bichos) **ya** estaba atada a
+La otra mitad del campo (`expulsarHostilesDeLaAldea`, que vacía la aldea de monstruos) **ya** estaba atada a
 `isSiegeResolved` desde la etapa H; **la de romper no lo estaba**: la protección de dentro estaba activa **siempre**, y
 por eso el asedio inicial se quedaba fuera sin poder picar. Un asaltante sin aldea asignada (`worldSiegeIndex < 0`)
 tampoco tiene campo ✓.
@@ -2705,7 +2705,7 @@ herramientas para que el minero haga su trabajo, similar a los otros 2 herreros.
 | **Pieza del caracol** | **Losa** en los pasos pares y **adoquín entero** en los impares | **No escaleras**: una escalera tiene la cara alta en **una** dirección (I26) y el anillo tiene **esquinas**; en una esquina el que sube sale por el lado del escalón y el siguiente está un bloque entero más abajo (**1,0, no se sube**). La losa es uniforme en las cuatro direcciones. Comprobado celda a celda (`build/mina_geometria.py`): **todos** los saltos son 0,5 |
 | **Soportes** | Marco de **dos postes (2 de alto) y su viga** cada **16 escalones** (8 bloques) en el caracol, y cada **8 celdas** en las galerías | Con uno cada 4 escalones el pueblo no da abasto de tablones (8 marcos por vuelta): medido, lo asierra el herrero de herramientas |
 | **Galerías** | Cada **8 bloques** de descenso, **24** celdas en cruz (norte, este, sur, oeste), con su marco y su antorcha | Es lo que "saca minerales" de verdad, y en cruz para no agujerear siempre el mismo lado |
-| **Luz** | Antorcha en la pared cada **4 bloques** | Los bichos nacen a **luz 0** y la mina está **dentro de la muralla**: un zombi ahí dentro **corta el latido del pueblo entero** (I11) |
+| **Luz** | Antorcha en la pared cada **4 bloques** | Los monstruos nacen a **luz 0** y la mina está **dentro de la muralla**: un zombi ahí dentro **corta el latido del pueblo entero** (I11) |
 | **Agua y lava** | Una **bolsa** se sella con adoquín y el túnel sigue; **más de 12 celdas seguidas** (un mar, un acuífero) **paran la mina**, con **piedra labrada** de tope | Lo pidió el jugador: *"que selle las bolsas; si es un mar, que pare"* |
 
 **Lo que hace el minero** (`VillagerMinerGoal`, prioridad 4 como los demás oficios): cava la siguiente celda (hueco
@@ -2824,13 +2824,13 @@ comer pero las parcelas no están siendo cosechadas. ¿qué pasa?"*.
 parcelas **llenas y sanas** (0 vacías, 0 pisoteadas) con **34 / 25 / 35 plantas maduras** sin cosechar, y la
 **despensa con comida de sobra** (21 de ternera, 22 patatas, 16 zanahorias, 24 huevos, 15 huevos estrellados…): el
 atraso era de la **huerta**, no de la comida. Y **medido con el arnés** (`MEDIR_HUERTA`, ampliado para volcar la tierra
-cultivo a cultivo, los composteros con su dueño y los bichos dentro del recinto):
+cultivo a cultivo, los composteros con su dueño y los monstruos dentro del recinto):
 
 ```
 [Arnes] GRANJERO c38cb784 nombre=Ursula ... job=SIN PUESTO   <- la tercera granjera, sin estación
 [Arnes] COMPOSTERO parcela 0 en 437,63,660 bloque=composter poi=SI dueno(s): NADIE   <- libre y sin dueño
 [Arnes] TIERRA parcela 0: MADURAS 37 | creciendo 37 | VACIAS 0     <- y ahí se quedó CUATRO minutos
-[Arnes] BICHOS DENTRO DEL RECINTO: 0                              <- el latido del pueblo sí corría
+[Arnes] MONSTRUOS DENTRO DEL RECINTO: 0                              <- el latido del pueblo sí corría
 ```
 
 **Dos causas, las dos en el reparto del trabajo:**
@@ -4085,7 +4085,7 @@ veces** y el herrero **forja picos** (`El herrero de herramientas: Forjo un pico
 lleva (por eso el almacén marca `0 pico(s)`: el que los necesita es él).
 
 **Y lo que FALTA medir**: las **pepitas** salen solo de los **zombis de raid**, y en `MEDIR_MINERO` (que **barre los
-bichos**) **no muere ninguno**: hubo `0` pepitas. Hace falta un modo del arnés que **plante un
+monstruos**) **no muere ninguno**: hubo `0` pepitas. Hace falta un modo del arnés que **plante un
 `AggressiveZombieEntity`** y lo mate atribuido a la guardia (como `MEDIR_MILICIA`) para medir la cadena entera:
 pepitas → alguien las levanta → almacén → el herrero las gasta en un pico.
 ### I132 · LA MINA **ATRAVIESA** EL AGUA (aísla, seca y sigue bajando) — cambia I127
@@ -6295,7 +6295,7 @@ primera aldea. *(La otra cuenta que parecía posible, `0,23 × 2,4`, da el mismo
 no existe en el código: el `scaleFactor` estaba topado.)*
 
 **ARREGLO** (`AggressiveZombieEntity.adjustAttributesBasedOnSpawnDistance`, **L1125-1140**): el tope se aplica ahora al
-**VALOR FINAL**, no a la base. La base se **deriva** dividiendo por los modificadores que ya tenga el bicho:
+**VALOR FINAL**, no a la base. La base se **deriva** dividiendo por los modificadores que ya tenga el monstruo:
 `base = objetivo × (objetivo / valorConModificadores)`. Así el tope vale para el crío, para el adulto y para cualquier
 modificador que ponga el juego ✓ — y **la progresión no se toca**: la curva sigue siendo la misma ✓.
 
@@ -6908,13 +6908,13 @@ corrida el puente se tendía 13 veces, así que **se destruía más de lo que co
 1. **Un bloque con AIRE DEBAJO no se pica** (`BreakBlockGoal.blockingBlockAhead`, **L1534**): un bloque a la altura de
    los pies con el vacío debajo **es un tablón del puente** (`puentearHacia` los tiende así, sobre el agujero), no
    terreno que estorbe. Medido: **26** tablones rotos (corrida 160).
-2. **La lista de tablones, POR BICHO** (`esTablonDelAsalto`, y el puente los anota al tenderlos,
+2. **La lista de tablones, POR MONSTRUO** (`esTablonDelAsalto`, y el puente los anota al tenderlos,
    `puentearHacia` **L640**): hacía falta porque el puente **sube un bloque por tablón**, así que del segundo en
    adelante **sí tienen suelo debajo** (el tablón anterior) y la regla del aire no los cubría. Medido: **21** (161).
 3. **La lista pasa a ser COMPARTIDA por todo el asedio** (`TABLONES_DEL_ASALTO`, **L678**, con tope de 512) y el veto se
    pone **en la única puerta que rompe**, `breakBlockAt` (**L326**), para que valga para los **tres** caminos que pican:
    el romper, el abridor de huecos (`breakStepAheadHacia`, **L783**) y el **taladro del túnel**. Los dos primeros no
-   bastaban porque **los otros siete bichos** pisaban y picaban los tablones ajenos. Medido: **15** (162) y **4** (163).
+   bastaban porque **los otros siete monstruos** pisaban y picaban los tablones ajenos. Medido: **15** (162) y **4** (163).
 
 **MEDIDO ANTES Y DESPUÉS** (misma escena, mundo conservado, tablones rotos contados en las vueltas 1 y 2, donde el foso
 es un agujero y **cualquier adoquín del anillo es un tablón**):
@@ -7024,11 +7024,11 @@ foso y el objetivo se **sube 4 bloques**. Vuelta 3 (t=2000): **foso relleno, mur
 **DOS FALLOS DEL INSTRUMENTO, MEDIDOS, ANTES DE QUE LA ESCENA MIDIERA NADA** (corridas 151 y 152: **0 tablones, 0
 escalones y 0 brecha** en 90 s, con `TraverseGoal` corriendo en todos los volcados):
 
-1. **El disco de la aldea se mide desde el `villageCenter` DEL PROPIO BICHO**, y la escena se lo puso **en su propio
+1. **El disco de la aldea se mide desde el `villageCenter` DEL PROPIO MONSTRUO**, y la escena se lo puso **en su propio
    centro** (`AggressiveZombieEntity.dentroDelDiscoDeLaAldea`, **L461**, y `dentroDeLaAldea`, **L444**, los dos contra
    `villageCenter`): con eso el foso y el muro caían «dentro de la aldea» y las dos herramientas **se negaban a colocar
    un solo bloque** (`puentearHacia` **L617**, `apilarBloqueParaSubir` **L729**). **ARREGLO** (`GuardHarness`,
-   `colocarLaOlaDelFoso`): el centro del bicho va al **pueblo de verdad** (`CENTRO`), no a la escena ✓.
+   `colocarLaOlaDelFoso`): el centro del monstruo va al **pueblo de verdad** (`CENTRO`), no a la escena ✓.
 2. **Faltaba la ALTURA en la traza**: la corrida 151 no decía la Y de cada asaltante y no se sabía si estaban en el
    fondo del foso o en el borde. La línea por asaltante (`EN EL FOSO` / `en la plancha`) es la que contestó eso ✓.
 
@@ -7072,22 +7072,22 @@ y=70):
 («no avanzo → pico lo de delante», **L1444**) destruye el puente del `TraverseGoal`. Queda escrito como hallazgo; **no se
 ha tocado nada** (no es lo que pedía el pendiente y hay que decidir con el jugador si se arregla).
 
-### I235 · EL NADO, MEDIDO: EL INSTRUMENTO ERA EL QUE ENCERRABA AL BICHO, Y EL GOAL DE I215 NO ARRANCABA NUNCA
+### I235 · EL NADO, MEDIDO: EL INSTRUMENTO ERA EL QUE ENCERRABA AL MONSTRUO, Y EL GOAL DE I215 NO ARRANCABA NUNCA
 
 Era el **pendiente 1** de `docs/CONTINUAR.md` (§2.0): *«la escena del nado no mide»*. Se ha medido, y al medirla
 salieron **tres cosas**, de las cuales la tercera es un fallo de raíz del mod que **I215 no podía arreglar** porque su
 goal **no llegaba a arrancar**.
 
-#### 1) LO PRIMERO QUE ESTABA MAL ERA EL ARNÉS: EL BARRIDO DE BICHOS SE COMÍA AL ASALTANTE (hipótesis mía, falsa)
+#### 1) LO PRIMERO QUE ESTABA MAL ERA EL ARNÉS: EL BARRIDO DE MONSTRUOS SE COMÍA AL ASALTANTE (hipótesis mía, falsa)
 
 La conclusión que quedó escrita el 6-oct-2026 («el pozo lo encierra») **era falsa** ✗. En `build/rapida-49.log` los **73
 volcados** son **la misma celda** (510, 83, 646), la misma velocidad (**0,012**) y `enAgua=SI` **de principio a fin**, y
-el **primer** volcado (t=320) es **exactamente la celda de aparición**: un bicho que se está moviendo no hace eso. La
-causa: el barrido de bichos de `GuardHarness.onServerTick` (**L369**) corre `ticks % 20 == 0` y **no tenía `MEDIR_AGUA`
+el **primer** volcado (t=320) es **exactamente la celda de aparición**: un monstruo que se está moviendo no hace eso. La
+causa: el barrido de monstruos de `GuardHarness.onServerTick` (**L369**) corre `ticks % 20 == 0` y **no tenía `MEDIR_AGUA`
 en su lista de excepciones**, así que borraba al asaltante en el **primer** barrido (t=320, un segundo después de
-aparecer) y lo que se estaba midiendo era **un bicho congelado** ✓. **ARREGLO**: `MEDIR_AGUA` entra en la lista (**L369**)
+aparecer) y lo que se estaba midiendo era **un monstruo congelado** ✓. **ARREGLO**: `MEDIR_AGUA` entra en la lista (**L369**)
 y —esto es lo que evita que vuelva a pasar— la traza lleva **testigo**: cada volcado dice `borrado=SI/NO` y `vivo=SI/NO`
-y, si el instrumento borra al bicho, escribe **`EL INSTRUMENTO HA BORRADO AL ASALTANTE … LA MEDIDA NO VALE`**.
+y, si el instrumento borra al monstruo, escribe **`EL INSTRUMENTO HA BORRADO AL ASALTANTE … LA MEDIDA NO VALE`**.
 Medido después: **`borrado=NO vivo=SI` en los 39 volcados** de la corrida 147 y en las 149 y 150 ✓.
 
 #### 2) Y LO SEGUNDO, TAMBIÉN DEL INSTRUMENTO: LA CHARCA SE JUNTABA CON EL MAR
@@ -7099,7 +7099,7 @@ ronda), que en el centro del pueblo escribe **`470,36..43 = diorite`, `470,44 = 
 dice: `[Village] Aldea en
 470,63,646: el muro NO esta a la cota 46 … muro reconstruido al nivel del pueblo 46`, con **`aldeanos=0`** y **0** de
 trabajo en la tanda. Con la charca a esa cota, **el agua de la escena y el océano son la misma agua**: la corrida 146
-(escena vieja) son **73 volcados** del bicho **subiendo de y=44 a y=62** y siguiendo hacia el **este** por el mar a
+(escena vieja) son **73 volcados** del monstruo **subiendo de y=44 a y=62** y siguiendo hacia el **este** por el mar a
 **0,45 bloques/s**, **sin salir del agua ni una vez** ✓ (lo que se medía era el mar, no la charca).
 **ARREGLO** (`medirElNado`, **L2999**): la escena se levanta **por encima** del agua/terreno de la zona
 (`level.getHeight(MOTION_BLOCKING)`, **L3013**), sobre una **plancha de piedra de 21×21** con la **charca 5×5 de 4 de
@@ -7112,7 +7112,7 @@ mundo**: se mide igual en el mar que en tierra ✓.
 Con la escena arreglada, la **vuelta 1** (orilla a ras) sale limpia: **sale del agua a los 120 ticks (6,0 s)**, con
 **3,4 bloques** andados dentro del agua a **0,57 bloques/s** de media, y en tierra **2,12–2,28 bloques/s**, llegando al
 objetivo (8 bloques) a los **240 ticks (12 s)** ✓. Pero para verificar **I215** había que ponerle un **escalón** (una
-orilla **levantada un bloque**), y ahí el bicho se quedaba atascado **20 segundos** dentro del agua… y el **testigo**
+orilla **levantada un bloque**), y ahí el monstruo se quedaba atascado **20 segundos** dentro del agua… y el **testigo**
 dijo lo que faltaba: **`ticks con el goal del nado corriendo = 0`** en las dos vueltas, y **ni un solo `ARRANCA`** ✗.
 
 **LA CAUSA ESTÁ EN EL MOTOR, y se leyó en el código de Mojang** (`GoalSelector.tick` y `WrappedGoal.canBeReplacedBy`,
@@ -7141,7 +7141,7 @@ estorba ✓. Los dos comentarios que decían lo contrario quedan corregidos (**L
 | | goal del nado corriendo | qué pasó en la vuelta del escalón |
 |---|---|---|
 | **antes** (`rapida-149.log`, prioridad 2) | **0 ticks** en las dos vueltas; el testigo **no vio ni un arranque** | atascado 20 s en el agua; salió **picando la piedra** de la plancha (`[Siege] … pica Block{minecraft:stone}`), no nadando |
-| **después** (`rapida-150.log`, prioridad 1) | **arranca 3 veces** (t=892, t=950, t=1896) y **saca al bicho del agua en 2–4 ticks** cada vez | en la orilla con escalón, cada atasco en el agua lo resuelve el goal; el bicho acaba llegando al objetivo |
+| **después** (`rapida-150.log`, prioridad 1) | **arranca 3 veces** (t=892, t=950, t=1896) y **saca al monstruo del agua en 2–4 ticks** cada vez | en la orilla con escalón, cada atasco en el agua lo resuelve el goal; el monstruo acaba llegando al objetivo |
 
 Y la **vuelta 1 no cambia** (0 ticks corriendo también después): con la orilla a ras **no hace falta** el goal, el
 asaltante cruza nadando solo ✓ — o sea, el arreglo **no introduce** un goal que pise el camino cuando no toca (I205).
@@ -7150,7 +7150,7 @@ asaltante cruza nadando solo ✓ — o sea, el arreglo **no introduce** un goal 
 
 - **La vuelta del escalón mezcla dos cosas** y hay que leerla con cuidado: el asaltante del arnés pica la plancha (su
   `protegidoPorLaAldea` no veta nada: en el registro sale como **`aldea -1`**, el asedio inicial), así que los 74 s de
-  esa vuelta incluyen cavar. Lo que mide el asunto es **el goal**: arranca y saca al bicho del agua **en 2–4 ticks**.
+  esa vuelta incluyen cavar. Lo que mide el asunto es **el goal**: arranca y saca al monstruo del agua **en 2–4 ticks**.
 - **La aldea de la copia del guardado no tiene aldeanos** (`aldeanos=0`, 0 avisos de rendición, todos los contadores de
   trabajo a 0). No afecta a esta medida —la escena es autosuficiente—, pero **sí afecta a los pendientes 2 y 3**
   (la ola con muro entero y foso, y la milicia con sobrantes): hace falta una aldea **con gente**. Queda apuntado en
@@ -7189,11 +7189,11 @@ estaba midiendo era **mi pozo**, no el nado. El instrumento queda anotado para a
 cerrado: hay que **quitar las paredes** del pozo (o darle una orilla a la que la navegación llegue de verdad) ✓.
 
 **CERRADO Y MEDIDO EN I235 (9-oct-2026)**, y con un hallazgo que este apartado no podía ver: el instrumento estaba mal
-por **dos** motivos (el barrido de bichos del arnés se comía al asaltante, y la charca se juntaba con el mar de la copia
+por **dos** motivos (el barrido de monstruos del arnés se comía al asaltante, y la charca se juntaba con el mar de la copia
 del guardado) y, con la escena ya buena, resultó que **este goal no arrancaba nunca**: `ZombieAttackGoal` (vanilla,
 prioridad **2**, flags MOVE+LOOK) le bloqueaba el flag al estar los dos en la **misma** prioridad, así que el arreglo de
 aquí era **código muerto** mientras el asaltante tuviera objetivo. Arreglado a la **prioridad 1** y verificado **antes y
-después** (0 ticks corriendo → arranca y saca al bicho del agua en 2–4 ticks): ver **I235** ✓.
+después** (0 ticks corriendo → arranca y saca al monstruo del agua en 2–4 ticks): ver **I235** ✓.
 
 ### I212 · LOS TRES ATRAVESADORES: ESCALERA DE BLOQUES, TÚNEL Y PUENTE
 
@@ -7243,7 +7243,7 @@ lado). Estado tras 36 y 37:
 asaltante saltando en el borde de la zanja, unas veces lo tiene delante y otras debajo, y la condición del puente pide
 un hueco **de frente**—; y (2) las tres escenas del arnés son **de mecanismo** (lo ponen todo a mano) y **no** miden el
 asedio de verdad: falta ver las tres herramientas **en una ola real** contra la aldea. **Seis fallos del instrumento**
-por el camino, escritos para no repetirlos: el barrido de bichos del arnés **borraba** a los tres asaltantes ✓; el
+por el camino, escritos para no repetirlos: el barrido de monstruos del arnés **borraba** a los tres asaltantes ✓; el
 jugador de pega lo **recoloca el latido** (los tres apuntaban al centro en vez de a su escena) ✓; colocarlos «a la
 cota» los dejaba **enterrados** y morían asfixiados ✓; buscar el suelo en la banda de la cota devolvía **-1** (a r=64
 el terreno está en **y=88**, cinco por encima de la cota de la plaza) ✓; la zanja de **1 bloque** metía al asaltante en
@@ -7364,7 +7364,7 @@ cerrada, el veto no se puede colar por ningún camino, ni por uno que se añada 
 «dentro» del proyecto es `VillageManager.dentroDelRecinto` (recinto en XZ **y** banda de altura sobre la cota, que es lo
 que usa `hayEnemigosDentro`). Con el disco, un asaltante **en una cueva** bajo la plaza contaba como «dentro» y se le
 vetaba el túnel que estaba haciendo **fuera** de la aldea (I11 es justo ese fallo, en el latido). Ahora se pregunta a la
-misma función, con la celda que se va a picar medida **como si un bicho estuviera de pie en ella**; para eso hay dos
+misma función, con la celda que se va a picar medida **como si un monstruo estuviera de pie en ella**; para eso hay dos
 variantes nuevas en `VillageManager`: `dentroDelRecinto(Level, BlockPos, BlockPos, double)` (**L1305**) y
 `dentroDelRecinto(BlockPos, BlockPos, int, double)` (**L1319**), y `puentearHacia` se queda con el disco de siempre en su
 propio ayudante `dentroDelDiscoDeLaAldea` (**L444**), porque lo que veta el puente es **construir** encima, no romper ✓.
@@ -7380,14 +7380,14 @@ que la mide **una vez por tick** y la comparte), y `MURALLA_ANCHO` baja de **5 a
 **una celda** de grueso, no diez. Con las dos cosas, lo que se puede picar es **el muro**, no una franja de diez bloques
 a la altura del pueblo.
 
-**LO QUE SE MIDIÓ, Y NO SE SUPUSO: la pregunta se hace por CELDA, no por la posición del bicho** ✓, y hay una hipótesis
+**LO QUE SE MIDIÓ, Y NO SE SUPUSO: la pregunta se hace por CELDA, no por la posición del monstruo** ✓, y hay una hipótesis
 falsa que se descartó **antes** de escribirla como buena (queda escrita como falsa, que es la regla 2 de la casa):
 
 > **FALSA**: «basta con preguntar si el **zombie** está dentro (`dentroDelRecinto` sobre su propia posición)».
 > **Por qué es falsa, con la cuenta**: un asaltante que llega **de fuera** se pega al muro hasta que su caja de colisión
 > (0,3 de radio) lo frena; su **centro** queda a unos 61,2 del centro de la aldea y sus **pies** en la celda 598 mientras
 > el bloque del muro está en la 599. O sea que el asaltante que está **fuera, picando el muro**, ya cuenta como
-> **dentro** → con la pregunta por el bicho **el muro perimetral dejaría de ser rompible** y el asedio no podría entrar
+> **dentro** → con la pregunta por el monstruo **el muro perimetral dejaría de ser rompible** y el asedio no podría entrar
 > **nunca** ✗, que es exactamente el fallo que I89 arregló. Preguntando por la **celda**, la cara de **fuera** del anillo
 > (radio 62,5) queda **fuera** del recinto → **se pica** ✓ (es la brecha), y la de **dentro** (radio 61,5) queda dentro →
 > **no se toca** ✓, así que un asaltante que ya entró no se hace un túnel de salida.
@@ -7404,7 +7404,7 @@ dentro y los aldeanos y golems **fuera** para que el único objetivo sea él:
 
 **La medida buena es el ANILLO DE PRUEBA, bloque a bloque** (`[Arnes] MURO … CERCO DE LA PLAZA (r=25): N bloque(s) de
 piedra EN PIE`): a ese anillo **no lo puede tocar nadie más** —no lo construye el pueblo, no lo repara nadie, y este
-modo **no barre bichos** a propósito—, así que lo que **baje** de esa cuenta lo ha picado un asaltante **de dentro**, y
+modo **no barre monstruos** a propósito—, así que lo que **baje** de esa cuenta lo ha picado un asaltante **de dentro**, y
 nadie más. Los bloques que pica cada asaltante salen además en `[Siege] un asaltante de la aldea N pica <bloque> en
 <celda>` (**L314** del mod) ✓.
 
@@ -7463,7 +7463,7 @@ devolvía **`false` para todo lo de dentro**: el veto no vetaba **nada**. Eso ex
 bloques (corrida 19), el kiosco picado (corridas 5-7) y que la traza dijera `dentroDeLaAldea=true` y aun así se picara
 (no se contradecía el código: **se contradecía mi lectura de la última línea**). La regla del jugador es de
 **geometría** —muro perimetral sí, dentro no— y **no** depende del campo de fuerza; el campo de fuerza sigue donde le
-toca (expulsar bichos y negar spawneo, I89), pero no decide si se rompe.
+toca (expulsar monstruos y negar spawneo, I89), pero no decide si se rompe.
 
 **ARREGLO** (una línea, y las dos que ya estaban): `protegidoPorLaAldea` (`AggressiveZombieEntity` **L539**) devuelve
 **`true`** para todo lo que está dentro y no es el anillo. Y `MURALLA_ANCHO` de **1 a 0** (**L142**): la verificación
@@ -7481,7 +7481,7 @@ así que esa escena no mide la mitad «una vez dentro». Se intentó medirlo con
 no le hace falta** — **anda** hacia su objetivo (medido: de r=49 a r=1 sin un solo bloque, con la calle y con un anillo
 de obstáculo a r=35 que cruzó **por una puerta**, 0 bloques en las dos configuraciones). Y encerrado en una caseta de
 prueba (1×2, de la que solo se sale rompiendo) **tampoco pica**: su detector de atasco pide **10 ticks sin moverse** y
-ahí no los acumula (la traza del `BreakBlockGoal` no llegó a salir ni una vez, con el bicho **vivo** y el goal
+ahí no los acumula (la traza del `BreakBlockGoal` no llegó a salir ni una vez, con el monstruo **vivo** y el goal
 **corriendo**). O sea: **no hay ninguna configuración en la que un asaltante de dentro rompa el pueblo**, que es
 exactamente lo que el jugador pedía.
 

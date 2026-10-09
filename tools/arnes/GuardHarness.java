@@ -56,15 +56,15 @@ public class GuardHarness {
      */
     private static final boolean MEDIR_PUERTAS = false;
     /**
-     * <b>¿Se mete un bicho DENTRO de la aldea y se deja ahí?</b> Es la reproducción de la queja del jugador
+     * <b>¿Se mete un monstruo DENTRO de la aldea y se deja ahí?</b> Es la reproducción de la queja del jugador
      * (*"Mauricio sigue sin ir a buscar cama y hay varias en la taberna"*): con un monstruo dentro del recinto,
      * `manageNearby` corta el latido entero (`hayEnemigosDentro`), y con él se quedaba sin hacer TODO lo que va
      * detrás, camas incluidas. Se usa un <b>aldeano-zombi</b> a propósito: es un {@code Monster} (cuenta para
      * `hayEnemigosDentro`) pero el sello lo deja en paz —`expulsarHostilesDeLaAldea` no lo toca, para no cortar una
-     * curación en marcha—, así que el "bicho dentro" se mantiene toda la corrida sin que lo expulsen en el primer
+     * curación en marcha—, así que el "monstruo dentro" se mantiene toda la corrida sin que lo expulsen en el primer
      * latido. Va con `NoAI` (no pelea ni anda) e invulnerable.
      */
-    private static final boolean BICHO_DENTRO = false;
+    private static final boolean MONSTRUO_DENTRO = false;
     /**
      * ¿Se mide la <b>COCINA</b> (lo reportó el jugador: *"el cocinero está cocinando FUERA de la taberna, esto no
      * debe ser así, debe estar adentro"*)? Pone el mundo de <b>día</b> (de noche el cocinero se acuesta), viste el
@@ -227,7 +227,7 @@ public class GuardHarness {
     /**
      * <b>`MEDIR_MINERO = true` — LA MINA DEL MINERO</b> (etapa I, invariante I102).
      * <p>
-     * Deja el mundo de <b>día</b> (de noche el minero descansa como todos, {@code estaDescansando}), barre los bichos
+     * Deja el mundo de <b>día</b> (de noche el minero descansa como todos, {@code estaDescansando}), barre los monstruos
      * (uno dentro del recinto corta el latido del pueblo entero) y a los 10 s se asegura de que hay un <b>MINERO</b>:
      * si no hay ninguno con el oficio {@code MASON}, lo planta el arnés con la puerta del propio mod
      * ({@code VillageGenerator.spawnOneVillager(level, CENTRO, 11, false)}: el sitio 11 es el albañil), para no
@@ -254,8 +254,8 @@ public class GuardHarness {
      * las LEVANTE, (3) que lleguen al ALMACEN y (4) que el HERRERO las gaste en un pico de hierro (27 pepitas).
      */
     private static final boolean MEDIR_PEPITAS = false;
-    /** Dónde se planta el bicho (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
-    private static final BlockPos BICHO_EN = new BlockPos(6, 0, 6);
+    /** Dónde se planta el monstruo (relativo a la plaza): dentro del recinto (radio 62) y a la altura del pueblo. */
+    private static final BlockPos MONSTRUO_EN = new BlockPos(6, 0, 6);
     private static boolean listo = false;
     private static int ticks = 0;
     /** Cuantas veces se ha visto a un granjero SUBIDO a la valla de su bancal (el bug que se mide). */
@@ -360,19 +360,19 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     + " siguiente pasada del latido tiene que entrar la remesa inicial",
                     sacados, com.chipoodle.devilrpg.world.VillageStorage.cuentaLena(level, CENTRO));
         }
-        // Los bichos que YA venian en el guardado dentro del recinto BLOQUEAN el latido del pueblo
+        // Los monstruos que YA venian en el guardado dentro del recinto BLOQUEAN el latido del pueblo
         // (`hayEnemigosDentro`): sin esto el reparto de oficios y la guardia ni se tocan. Se barren cada segundo.
-        // OJO: en la medida de LA MILICIA **no se barre**, porque los bichos que hay dentro son los que se acaban de
+        // OJO: en la medida de LA MILICIA **no se barre**, porque los monstruos que hay dentro son los que se acaban de
         // sembrar para que la guardia pelee (medido: con el barrido, el zombi desaparecia en el mismo segundo, la
         // guardia se quedaba con la etiqueta "Atacando" un instante y volvia a su ronda, y no habia ni una muerte).
         // Y EN LA MEDIDA DEL NADO TAMPOCO (9-oct-2026, Y ESTO ERA EL FALLO DE LA ESCENA): este modo no estaba en la
         // lista y el asaltante de la charca se borraba en el PRIMER barrido (t=320, un segundo despues de aparecer).
-        // Lo que se midio entonces ("el bicho flota en el borde y no sale, velocidad 0,012") era ESTO: un bicho
+        // Lo que se midio entonces ("el monstruo flota en el borde y no sale, velocidad 0,012") era ESTO: un monstruo
         // congelado por el barrido, no un pozo que lo encerrara (ver `medirElNado`).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS && !MEDIR_AGUA && !MEDIR_OLA_CON_FOSO) {
-            if (BICHO_DENTRO) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS && !MEDIR_AGUA && !MEDIR_OLA_CON_FOSO && !MEDIR_MONTANA) {
+            if (MONSTRUO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
-                mantenerBichoDentro(level);
+                mantenerMonstruoDentro(level);
             } else {
                 for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
                         new AABB(CENTRO).inflate(140))) {
@@ -406,8 +406,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // que sin el latido la prueba medía un aldeano CAPACITADO de menos y salía que no cruza por el goal, no por el
         // portón.
         // Y EN LA MEDIDA DEL NADO TAMPOCO (9-oct-2026): la escena pone al jugador de pega EN LA ORILLA de la charca, a
-        // 8 bloques del bicho, y este bloque lo devolvia a la plaza en cada tick (con lo que el objetivo se iba a 40
-        // bloques y el bicho salia del agua para nada). Aqui el objetivo lo fija la escena y no se toca.
+        // 8 bloques del monstruo, y este bloque lo devolvia a la plaza en cada tick (con lo que el objetivo se iba a 40
+        // bloques y el monstruo salia del agua para nada). Aqui el objetivo lo fija la escena y no se toca.
         if (pega != null && ((!MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_AGUA && !MEDIR_OLA_CON_FOSO) || ticks < 300 || MEDIR_ALDEANO_CRUZA)) {
             pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
             VillageManager.manageNearby(level, pega, ancla(), INDICE);
@@ -434,6 +434,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirLaOlaConFoso(level, pega);
         } else if (MEDIR_MILICIA_SOBRANTES) {
             medirLaMiliciaConSobrantes(level, pega);
+        } else if (MEDIR_MONTANA) {
+            medirLaMontana(level, pega);
         } else if (MEDIR_ANILLO) {
             medirElAnilloDelMuro(level);
         } else if (MEDIR_CRUCE_DEL_PORTON) {
@@ -1287,37 +1289,37 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 || bloque.equals("oak_sapling") || bloque.equals("dirt_path");
     }
 
-    /** El bicho de la medida (el aldeano-zombi que se deja dentro de la aldea): se reutiliza, no se duplica. */
-    private static net.minecraft.world.entity.monster.ZombieVillager bicho = null;
+    /** El monstruo de la medida (el aldeano-zombi que se deja dentro de la aldea): se reutiliza, no se duplica. */
+    private static net.minecraft.world.entity.monster.ZombieVillager monstruo = null;
 
     /**
-     * <b>Mantiene UN bicho dentro de la aldea</b> para medir el latido cortado: si no está (lo barrió otra cosa, se
+     * <b>Mantiene UN monstruo dentro de la aldea</b> para medir el latido cortado: si no está (lo barrió otra cosa, se
      * descargó el chunk...), se vuelve a plantar; y si está, se le deja clavado en su celda (sin IA no se mueve, pero
-     * un empujón lo saca del recinto y entonces la medida dejaría de ser "con un bicho dentro").
+     * un empujón lo saca del recinto y entonces la medida dejaría de ser "con un monstruo dentro").
      */
-    private static void mantenerBichoDentro(ServerLevel level) {
+    private static void mantenerMonstruoDentro(ServerLevel level) {
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
-        BlockPos donde = CENTRO.offset(BICHO_EN.getX(), cota - CENTRO.getY(), BICHO_EN.getZ());
-        if (bicho == null || bicho.isRemoved() || !bicho.isAlive()) {
-            bicho = net.minecraft.world.entity.EntityType.ZOMBIE_VILLAGER.create(level);
-            if (bicho == null) {
+        BlockPos donde = CENTRO.offset(MONSTRUO_EN.getX(), cota - CENTRO.getY(), MONSTRUO_EN.getZ());
+        if (monstruo == null || monstruo.isRemoved() || !monstruo.isAlive()) {
+            monstruo = net.minecraft.world.entity.EntityType.ZOMBIE_VILLAGER.create(level);
+            if (monstruo == null) {
                 return;
             }
-            bicho.moveTo(donde.getX() + 0.5D, donde.getY(), donde.getZ() + 0.5D, 0.0F, 0.0F);
-            bicho.setNoAi(true);
-            bicho.setInvulnerable(true);
-            bicho.setPersistenceRequired();
-            level.addFreshEntity(bicho);
-            DevilRpg.LOGGER.info("[Arnes] BICHO DENTRO: plantado un aldeano-zombi en {} (cota {})", donde, cota);
+            monstruo.moveTo(donde.getX() + 0.5D, donde.getY(), donde.getZ() + 0.5D, 0.0F, 0.0F);
+            monstruo.setNoAi(true);
+            monstruo.setInvulnerable(true);
+            monstruo.setPersistenceRequired();
+            level.addFreshEntity(monstruo);
+            DevilRpg.LOGGER.info("[Arnes] MONSTRUO DENTRO: plantado un aldeano-zombi en {} (cota {})", donde, cota);
             return;
         }
-        bicho.moveTo(donde.getX() + 0.5D, donde.getY(), donde.getZ() + 0.5D, bicho.getYRot(), bicho.getXRot());
+        monstruo.moveTo(donde.getX() + 0.5D, donde.getY(), donde.getZ() + 0.5D, monstruo.getYRot(), monstruo.getXRot());
     }
 
     /**
      * <b>¿Está el latido del pueblo cortado?</b> Se cuenta lo mismo que mira el mod
      * (`hayEnemigosDentro`: monstruos dentro del recinto en XZ y a la altura del pueblo) y se imprime junto al
-     * censo de camas, para poder decir en la misma línea "hay bicho dentro" y "a este no le han dado cama".
+     * censo de camas, para poder decir en la misma línea "hay monstruo dentro" y "a este no le han dado cama".
      */
     private static String estadoDelRecinto(ServerLevel level) {
         int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
@@ -1663,12 +1665,12 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
         }
         DevilRpg.LOGGER.info("[Arnes] COMIDA EN EL ALMACEN (carne y semillas): {}", comidaAlmacen);
-        // ¿HAY BICHOS DENTRO? Es lo que decide si el LATIDO DEL PUEBLO corre o no (`hayEnemigosDentro`): con uno
+        // ¿HAY MONSTRUOS DENTRO? Es lo que decide si el LATIDO DEL PUEBLO corre o no (`hayEnemigosDentro`): con uno
         // dentro, `tickVillageLife` se salta ENTERO (no reparte oficios, no da estaciones, no engancha goals) y los
         // goals que ya estuvieran puestos siguen — es la diferencia entre "el granjero no cosecha porque no tiene
         // goal" y "cosecha poco".
-        StringBuilder bichos = new StringBuilder();
-        int bichosDentro = 0;
+        StringBuilder monstruos = new StringBuilder();
+        int monstruosDentro = 0;
         for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
                 new AABB(CENTRO).inflate(80))) {
             if (!(m instanceof net.minecraft.world.entity.monster.Monster)) {
@@ -1676,12 +1678,12 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             }
             if (Math.sqrt(m.distanceToSqr(CENTRO.getX() + 0.5D, CENTRO.getY() + 0.5D, CENTRO.getZ() + 0.5D))
                     <= com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS) {
-                bichosDentro++;
-                bichos.append(' ').append(m.getType().toString().replace("entity.minecraft.", ""))
+                monstruosDentro++;
+                monstruos.append(' ').append(m.getType().toString().replace("entity.minecraft.", ""))
                         .append('@').append(m.blockPosition().toShortString());
             }
         }
-        DevilRpg.LOGGER.info("[Arnes] BICHOS DENTRO DEL RECINTO: {}{}", bichosDentro, bichos);
+        DevilRpg.LOGGER.info("[Arnes] MONSTRUOS DENTRO DEL RECINTO: {}{}", monstruosDentro, monstruos);
         // Y LOS GOLEMS: el jugador vio *"un golem dentro de una de las parcelas"* y pidio que no pueda spawnear
         // ninguno ahi. Aqui se cuentan los que estan SOBRE LA HUELLA de un bancal (la misma prueba X/Z que usa el
         // mod en `CommonForgeGolemEventSubscriber` y en el latido): lo que se busca es que el contador sea 0 en
@@ -1940,7 +1942,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // LA HORA SE FIJA SEGUN LO QUE SE MIDA: NOCHE (18000 = medianoche) para el sueño y las camas, DIA (6000 =
         // mediodia) para el trabajo, el combustible y el CIERRE DE PUERTAS (los aldeanos tienen que salir y cruzar).
         level.setDayTime(MEDIR_NOCHE && !MEDIR_PUERTAS ? 18000L : 6000L);
-        // Sin bichos: la ronda se mide sola (el combate va antes que la ronda y los guardias se morian peleando).
+        // Sin monstruos: la ronda se mide sola (el combate va antes que la ronda y los guardias se morian peleando).
         level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, server);
         for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
                 new AABB(CENTRO).inflate(160))) {
@@ -2233,11 +2235,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * <p>
      * <b>CÓMO SE MONTA LA ESCENA, Y POR QUÉ ASÍ</b> (9-oct-2026; el porqué está medido en {@link #medirElNado}): el agua
      * va <b>a ras de la orilla</b> (misma altura, sin paredes que sobresalgan) sobre una esplanada de piedra de 15x15, y
-     * el bicho se pone <b>en el fondo</b> (4 de calado) para que la medida incluya subir a la superficie y salir andando.
+     * el monstruo se pone <b>en el fondo</b> (4 de calado) para que la medida incluya subir a la superficie y salir andando.
      * <p>
      * Lo que se busca en el registro: `[Arnes] AGUA t=… pos=… enAgua=SI/NO aLaOrilla=… recorrido=… velMedia=… borrado=…`
      * con `aLaOrilla` BAJANDO, `[Arnes] AGUA: SALE DEL AGUA a los N ticks`, `[Arnes] AGUA RESUMEN` (o
-     * `AGUA: NO SALE DEL AGUA` si se queda). Y `borrado=SI` avisa de que <b>el instrumento se ha comido al bicho</b>:
+     * `AGUA: NO SALE DEL AGUA` si se queda). Y `borrado=SI` avisa de que <b>el instrumento se ha comido al monstruo</b>:
      * con eso, la medida NO vale.
      */
     private static final boolean MEDIR_AGUA = false;
@@ -3006,13 +3008,13 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * La primera version de esta escena ({@code build\rapida-49.log}, 6-oct-2026) dio <b>73 volcados seguidos con el
      * asaltante en la MISMA celda</b> (510, 83, 646), la misma velocidad (0,012) y {@code enAgua=SI}, y de ahí salió
      * la conclusión de que «el pozo lo encierra» ✗. Se ha vuelto a mirar el registro y <b>esa conclusión era falsa</b>:
-     * el bicho no se movía porque <b>lo borraba el propio arnés</b> — el barrido de bichos de {@code onServerTick} no
+     * el monstruo no se movía porque <b>lo borraba el propio arnés</b> — el barrido de monstruos de {@code onServerTick} no
      * tenía este modo en su lista de excepciones, así que el asaltante recién puesto se borraba en el <b>primer</b>
-     * barrido (t=320, un segundo después de aparecer) y lo que se estaba midiendo era <b>un bicho congelado</b>. El
+     * barrido (t=320, un segundo después de aparecer) y lo que se estaba midiendo era <b>un monstruo congelado</b>. El
      * pozo, además, estaba mal montado: paredes de piedra hasta el rasante del agua y, como destino de la navegación,
      * una celda <b>de dentro del muro</b> (el barrido en espiral devolvía el bloque de piedra de al lado, no la celda de
      * pie). Las dos cosas se arreglan aquí, y la traza incorpora un <b>testigo</b> ({@code borrado=SI/NO}) para que un
-     * barrido se vea en la medida en vez de parecer un atasco del bicho.
+     * barrido se vea en la medida en vez de parecer un atasco del monstruo.
      * <p>
      * <b>La escena, ahora</b>: una charca <b>a ras de la orilla</b> (el agua y la orilla comparten el bloque de arriba,
      * así que <b>no hay escalón</b> que trepar) dentro de una <b>plancha de piedra de 21x21</b> con el aire despejado; el
@@ -3031,7 +3033,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             // 1) DONDE VA LA ESCENA (medido el 9-oct-2026, corrida 146): en la copia del guardado de hoy la aldea esta a
             //    la COTA 46 y todo el entorno es MAR — la columna del centro del pueblo es agua de 45 a 62, comprobado
             //    celda a celda en el guardado (`run\world`: 470,46,646 = water) —, asi que una charca a la cota de la
-            //    aldea se junta con el oceano: los 73 volcados de esa corrida son el bicho SUBIENDO de 44 a 62 y
+            //    aldea se junta con el oceano: los 73 volcados de esa corrida son el monstruo SUBIENDO de 44 a 62 y
             //    siguiendo hacia el ESTE por el mar a 0,45 bloques/s, sin salir del agua ni una vez. Para que la medida
             //    no dependa del terreno, la escena se levanta SOBRE el agua: la plancha de piedra va a la altura del
             //    primer bloque de aire de la zona, o a la cota de la aldea si es mas alta.
@@ -3079,7 +3081,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             aguaUltimaX = aguaArranqueX;
             aguaUltimaZ = aguaArranqueZ;
             aguaUltimoTick = ticks;
-            // 5) EL OBJETIVO, EN LA ORILLA (a AGUA_OBJETIVO bloques al oeste del centro de la charca): asi el bicho
+            // 5) EL OBJETIVO, EN LA ORILLA (a AGUA_OBJETIVO bloques al oeste del centro de la charca): asi el monstruo
             //    tiene que cruzar el agua, salir a la piedra y ANDAR hasta el. El jugador de pega va invulnerable (esta
             //    medida no es el combate) y, al no llamarse el latido del pueblo, nadie lo devuelve a la plaza.
             pega.setInvulnerable(true);
@@ -3135,7 +3137,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             return;
         }
         // TRAS LLEGAR AL OBJETIVO EN LA SEGUNDA VUELTA SE DEJAN 3 s MAS DE VOLCADOS Y SE CORTA: la escena ya esta
-        // medida y no hace falta llenar el registro de un bicho parado al lado del objetivo.
+        // medida y no hace falta llenar el registro de un monstruo parado al lado del objetivo.
         if (aguaVuelta == 2 && aguaLlego && ticks > aguaLlegadaTick + 60) {
             return;
         }
@@ -3179,11 +3181,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 String.format("%.3f", asaltante.getDeltaMovement().horizontalDistance()),
                 velMedia < 0.0D ? "-" : String.format("%.2f", velMedia), asaltante.isRemoved() ? "SI" : "NO",
                 asaltante.isAlive() ? "SI" : "NO", asaltante.getNavigation().getTargetPos(), goalsCorriendo(asaltante));
-        // EL TESTIGO DEL BARRIDO: si el instrumento borra al bicho, se dice EN VOZ ALTA (es el fallo que dejo la
+        // EL TESTIGO DEL BARRIDO: si el instrumento borra al monstruo, se dice EN VOZ ALTA (es el fallo que dejo la
         // escena sin valor el 6-oct-2026, y no puede volver a parecer un atasco del asaltante).
         if (asaltante.isRemoved() && !aguaBarridoAvisado) {
             aguaBarridoAvisado = true;
-            DevilRpg.LOGGER.warn("[Arnes] AGUA: EL INSTRUMENTO HA BORRADO AL ASALTANTE en t={} (el barrido de bichos"
+            DevilRpg.LOGGER.warn("[Arnes] AGUA: EL INSTRUMENTO HA BORRADO AL ASALTANTE en t={} (el barrido de monstruos"
                     + " del arnes): LA MEDIDA NO VALE", ticks);
         }
         // Y CUANDO LLEGA AL OBJETIVO, SE DICE (es el final de la vuelta: sin esto, el volcado se queda en "enAgua=NO"
@@ -3197,7 +3199,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     String.format("%.1f", (ticks - aguaInicioTick - aguaTicksFuera) / 20.0D),
                     String.format("%.2f", Math.max(0.0D, velMedia)));
             // SEGUNDA VUELTA: EL ESCALON, que es cuando el goal del nado tiene que trabajar. La orilla se levanta UN
-            // BLOQUE (una piedra a ySuelo+1 alrededor del agua) y el bicho vuelve al fondo. Ahora la navegacion no
+            // BLOQUE (una piedra a ySuelo+1 alrededor del agua) y el monstruo vuelve al fondo. Ahora la navegacion no
             // puede salir —un escalon de 1 bloque es mas alto que su paso de 0,6— y dentro de la aldea el romper y el
             // apilar estan VETADOS (`protegidoPorLaAldea`: esta escena esta a 40 bloques del centro), asi que la unica
             // salida es `EscapeWaterGoal` (I215). O sale empujando, o se queda: eso es lo que se mide.
@@ -3239,7 +3241,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         if (aguaTicksFuera >= 0 && !aguaResumenHecho && ticks >= aguaInicioTick + aguaTicksFuera + 100) {
             aguaResumenHecho = true;
             DevilRpg.LOGGER.info("[Arnes] AGUA RESUMEN (vuelta {}): salida del agua={} ticks ({} s) | volcados con el"
-                            + " bicho dentro del agua={} de {} | velocidad en tierra 5 s despues de salir={} bloques/s"
+                            + " monstruo dentro del agua={} de {} | velocidad en tierra 5 s despues de salir={} bloques/s"
                             + " | ticks con el goal del nado corriendo={} | borrado={}", aguaVuelta, aguaTicksFuera,
                     String.format("%.1f", aguaTicksFuera / 20.0D), aguaMuestrasEnAgua, aguaMuestras,
                     String.format("%.2f", Math.max(0.0D, velMedia)), aguaTicksConElNado,
@@ -3249,7 +3251,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         if (aguaTicksFuera < 0 && ticks >= aguaInicioTick + 1200 && !aguaNoSaleAvisado) {
             aguaNoSaleAvisado = true;
             DevilRpg.LOGGER.warn("[Arnes] AGUA: NO SALE DEL AGUA en 60 s (vuelta {}, pos={}, aLaOrilla={}, volcados con"
-                            + " el bicho dentro del agua={} de {}, borrado={})", aguaVuelta,
+                            + " el monstruo dentro del agua={} de {}, borrado={})", aguaVuelta,
                     asaltante.blockPosition(), String.format("%.1f", aLaOrilla), aguaMuestrasEnAgua, aguaMuestras,
                     asaltante.isRemoved() ? "SI" : "NO");
         }
@@ -3269,7 +3271,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static double aguaUltimaX = 0.0D;
     private static double aguaUltimaZ = 0.0D;
     private static int aguaUltimoTick = -1;
-    /** Volcados hechos y volcados en los que el bicho estaba DENTRO del agua (para el resumen). */
+    /** Volcados hechos y volcados en los que el monstruo estaba DENTRO del agua (para el resumen). */
     private static int aguaMuestras = 0;
     private static int aguaMuestrasEnAgua = 0;
     /** Bloques de agua que han quedado de verdad en la charca (si sale 0, la escena no vale). */
@@ -3384,11 +3386,11 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * <p>
      * <b>LO QUE COSTÓ DOS CORRIDAS, Y ERA LO MISMO LAS DOS VECES (9-oct-2026, medido):</b>
      * <ol>
-     *   <li><b>El disco de la aldea se mide desde el `villageCenter` DEL PROPIO BICHO.</b> `puentearHacia` veta las
+     *   <li><b>El disco de la aldea se mide desde el `villageCenter` DEL PROPIO MONSTRUO.</b> `puentearHacia` veta las
      *       celdas que caen en ese disco (radio de la valla + 2) y `apilarBloqueParaSubir` veta las que caen en el
-     *       recinto: con el centro del bicho puesto <b>en la escena</b>, el foso y el muro quedaban «dentro de la
+     *       recinto: con el centro del monstruo puesto <b>en la escena</b>, el foso y el muro quedaban «dentro de la
      *       aldea» y los ocho asaltantes <b>no podían colocar un solo bloque</b> — dos corridas seguidas con
-     *       `TraverseGoal` corriendo y <b>0 tablones, 0 escalones y 0 brecha</b> —. El centro del bicho va al pueblo de
+     *       `TraverseGoal` corriendo y <b>0 tablones, 0 escalones y 0 brecha</b> —. El centro del monstruo va al pueblo de
      *       verdad y la escena, fuera (a 84 bloques del centro: su borde de dentro, a 70).</li>
      *   <li><b>Hacía falta la ALTURA en la traza.</b> La primera corrida no decía la Y de cada asaltante y no se sabía
      *       si estaban en el fondo del foso o en el borde; la línea por asaltante que dice `EN EL FOSO` / `en la plancha`
@@ -3401,7 +3403,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * altura, que es lo que dice si está en el fondo del foso) y las del mod `[Siege] … PONER UN PUENTE`,
      * `… pone un ESCALON`, `… CAVA hacia abajo` y `… pica Block{…}`.
      */
-    private static final boolean MEDIR_OLA_CON_FOSO = true;
+    private static final boolean MEDIR_OLA_CON_FOSO = false;
 
     /** Los ocho asaltantes de la ola del foso y su objetivo (dentro del muro). */
     private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> olaDelFoso =
@@ -3490,9 +3492,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 continue;
             }
             z.moveTo(donde[0] + 0.5D, ySuelo + 1, donde[1] + 0.5D, 0.0F, 0.0F);
-            // EL CENTRO DE LA ALDEA DEL BICHO VA AL PUEBLO DE VERDAD, NO A LA ESCENA (9-oct-2026, y esto costo DOS
+            // EL CENTRO DE LA ALDEA DEL MONSTRUO VA AL PUEBLO DE VERDAD, NO A LA ESCENA (9-oct-2026, y esto costo DOS
             // corridas): `puentearHacia` y `apilarBloqueParaSubir` vetan lo que cae en el disco de la aldea, y ese disco
-            // se mide desde el `villageCenter` DEL PROPIO BICHO. Con el centro puesto en la escena, el foso y el muro
+            // se mide desde el `villageCenter` DEL PROPIO MONSTRUO. Con el centro puesto en la escena, el foso y el muro
             // caian "dentro de la aldea": los ocho asaltantes se quedaban en el borde sin poder colocar un solo bloque
             // (0 tablones, 0 escalones, 0 brecha en 90 s, con `TraverseGoal` corriendo). Con el centro en el pueblo, la
             // escena queda fuera del disco y las herramientas trabajan.
@@ -3632,7 +3634,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
         // LOS TESTIGOS DE LA ESCENA: cuántas COLUMNAS del foso tienen ya obra encima (y a qué altura máxima) y cuántos
         // troncos del muro siguen en pie. OJO CON EL RÓTULO (9-oct-2026): el puente y el escalón colocan los dos el
-        // bloque A LA ALTURA DE LOS PIES del bicho, así que aquí NO se pueden distinguir por el bloque ni por la celda
+        // bloque A LA ALTURA DE LOS PIES del monstruo, así que aquí NO se pueden distinguir por el bloque ni por la celda
         // —los distingue el registro del mod, con `PONER UN PUENTE` y `pone un ESCALON`—; lo que mide esta parte es
         // CUÁNTO se ha construido sobre el foso y CUÁNTO ha subido (el puente sube un bloque por tablón).
         int conObra = 0;
@@ -3752,6 +3754,101 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     redondo(v.getHealth()), v.getMaxHealth(), v.getMainHandItem().getItem(),
                     v.blockPosition().toShortString(), etiquetaDe(v));
         }
+    }
+
+    /**
+     * <b>LA MONTAÑA: ¿TALADRA DE FRENTE CUANDO NO SE PUEDE RODEAR? (lo pregunto el jugador, 9-oct-2026).</b>
+     * <p>
+     * El jugador lo describió así: *«lo del túnel se pensó para cuando hay una montaña entre el asediador y la villa, el
+     * asediador en vez de rodear (por si es demasiado grande la circunferencia) pueda mejor cavar de frente hasta llegar
+     * a la aldea; si la aldea está por encima, puede hacer una escalera y atravesar abismos o brechas grandes»*. El
+     * diseño del código es ese —`MoveToVillageCenterGoal` intenta primero el <b>rodeo</b> (buscador de caminos con 6×
+     * presupuesto), y si el monstruo <b>no se mueve</b> tiende <b>puente</b> o <b>taladra de frente</b>— pero eso hay que
+     * <b>medirlo</b>, no citarlo.
+     * <p>
+     * La escena monta el caso exacto: un <b>ANILLO DE PIEDRA MACIZA CERRADO</b> (no se puede rodear, que es cuando la
+     * circunferencia es demasiado grande), de radio {@value #MONTANA_RADIO}, tres de grueso y nueve de alto, y pone al
+     * asaltante <b>fuera</b> con <b>SIN objetivo</b>: así corre la <b>MARCHA</b> al centro, que es la que taladra.
+     * <p>
+     * Lo que se busca en el registro: `[Arnes] MONTANA t=… pos=… r=… DENTRO=SI/NO | celdas del anillo abiertas=X/Y |
+     * goals=[…]` (con `3:TraverseGoal` y/o `7:MoveToVillageCenterGoal` corriendo) y las líneas del mod
+     * `[Siege] … pica Block{…} en …` (el taladro) y `CAVA hacia abajo` / `pone un ESCALON` (las otras dos, que aquí
+     * serían interferencia: la aldea NO está arriba, está al mismo nivel).
+     */
+    private static final boolean MEDIR_MONTANA = true;
+
+    /** El asaltante de la montaña (uno solo: se le sigue paso a paso). */
+    private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity montanero = null;
+    /** Una celda testigo por columna del anillo: si deja de ser piedra, el asaltante ha abierto por ahí. */
+    private static final java.util.List<BlockPos> anilloDeLaMontana = new java.util.ArrayList<>();
+    private static final int MONTANA_RADIO = 70;
+    private static final int MONTANA_GROSOR = 3;
+    private static final int MONTANA_ALTO = 9;
+    private static final int MONTANA_ASALTANTE = 80;
+    /** Testigo del barrido (ver {@link #medirLaMontana}): si el arnés borra al monstruo, la medida NO vale. */
+    private static boolean montanaBarridoAvisado = false;
+
+    private static void medirLaMontana(ServerLevel level, FakePlayer pega) {
+        final int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (ticks == 300 && montanero == null) {
+            // EL ANILLO: cerrado (no se puede rodear), macizo y alto, a MONTANA_RADIO del centro y por FUERA del disco
+            // de la aldea (el disco llega a 64), que es donde el asaltante SI puede picar.
+            for (int paso = 0; paso < 1440; paso++) {
+                double a = Math.toRadians(paso * 0.25D);
+                for (int g = 0; g < MONTANA_GROSOR; g++) {
+                    int r = MONTANA_RADIO + g;
+                    int x = CENTRO.getX() + (int) Math.round(Math.cos(a) * r);
+                    int z = CENTRO.getZ() + (int) Math.round(Math.sin(a) * r);
+                    for (int dy = -3; dy <= MONTANA_ALTO; dy++) {
+                        level.setBlock(new BlockPos(x, cota + dy, z),
+                                net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 2);
+                    }
+                    anilloDeLaMontana.add(new BlockPos(x, cota + 1, z));
+                }
+            }
+            // EL ASALTANTE, FUERA Y SIN OBJETIVO: así corre la MARCHA al centro (la que taladra). Si se le pusiera un
+            // objetivo, la marcha se apaga y lo que se mediría sería otra cosa.
+            montanero = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+            if (montanero != null) {
+                int ax = CENTRO.getX() + MONTANA_ASALTANTE;
+                int az = CENTRO.getZ();
+                colocarAsaltanteAlSuelo(level, montanero, ax, az, cota);
+                montanero.setVillageCenter(new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()));
+                montanero.setGoToCenterActive(true);
+                montanero.recargarTunel();
+                montanero.setPersistenceRequired();
+                level.addFreshEntity(montanero);
+                DevilRpg.LOGGER.info("[Arnes] MONTANA: escena montada — anillo de piedra CERRADO a r={} ({} de grueso y"
+                                + " {} de alto, {} celdas testigo) con el asaltante FUERA en {} (r={}) y SIN objetivo,"
+                                + " marchando al centro (cota {}). Aquí no se puede rodear: o taladra de frente, o se"
+                                + " queda",
+                        MONTANA_RADIO, MONTANA_GROSOR, MONTANA_ALTO, anilloDeLaMontana.size(),
+                        montanero.blockPosition(), MONTANA_ASALTANTE, cota);
+            }
+        }
+        if (montanero == null || ticks % 240 != 0) {
+            return;
+        }
+        int abiertas = 0;
+        for (BlockPos p : anilloDeLaMontana) {
+            if (!level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.STONE)) {
+                abiertas++;
+            }
+        }
+        int r = (int) Math.hypot(montanero.getX() - CENTRO.getX(), montanero.getZ() - CENTRO.getZ());
+        boolean dentro = com.chipoodle.devilrpg.world.VillageManager.dentroDelRecinto(level, montanero.blockPosition(),
+                CENTRO, com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS);
+        // Y EL TESTIGO DEL BARRIDO, que es lo que delató la primera versión de esta escena (I240): sin él, el arnés
+        // borraba al asaltante cada segundo (MEDIR_MONTANA no estaba en la lista de excepciones) y lo que se medía era
+        // un monstruo CONGELADO — las tres corridas 164/165/166 no valen, y quedan escritas como tales.
+        if (montanero.isRemoved() && !montanaBarridoAvisado) {
+            montanaBarridoAvisado = true;
+            DevilRpg.LOGGER.warn("[Arnes] MONTANA: EL INSTRUMENTO HA BORRADO AL ASALTANTE en t={} (el barrido de monstruos"
+                    + " del arnes): LA MEDIDA NO VALE", ticks);
+        }
+        DevilRpg.LOGGER.info("[Arnes] MONTANA t={} pos={} r={} DENTRO={} borrado={} | celdas del anillo abiertas={}/{} |"
+                        + " goals=[{}]", ticks, montanero.blockPosition(), r, dentro ? "SI" : "no",
+                montanero.isRemoved() ? "SI" : "NO", abiertas, anilloDeLaMontana.size(), goalsCorriendo(montanero));
     }
 
     private static void medirElAsaltoAlMuro(ServerLevel level, FakePlayer pega) {
@@ -3905,7 +4002,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             DevilRpg.LOGGER.info("[Arnes] MURO: calles de 3 de ancho despejadas en los rumbos {} y {} ({} bloque(s) de"
                             + " nieve/hielo/planta fuera, de la cota a la cota+5)", (int) Math.toDegrees(rumboDelAsalto),
                     (int) Math.toDegrees(ANGULO_DEL_SEGUNDO), quitados);
-            // CENSO: los asaltantes que ya venian EN EL GUARDADO (este modo NO barre bichos, a proposito). Sus lineas
+            // CENSO: los asaltantes que ya venian EN EL GUARDADO (este modo NO barre monstruos, a proposito). Sus lineas
             // `[Siege] ... aldea -1 ...` son indistinguibles de las del asaltante del asedio inicial, asi que hay que
             // contarlos para no atribuirles lo que pica el anillo de prueba (por eso la medida buena es el anillo).
             int censo = 0;
@@ -5017,9 +5114,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // resolveria nunca. Y se gestiona hasta el objetivo 3, que es el que se esta asediando.
         pega.moveTo(centroDelAsedio.getX() + 0.5D, centroDelAsedio.getY() + 1.0D, centroDelAsedio.getZ() + 0.5D);
         VillageManager.manageNearby(level, pega, ancla(), 3);
-        int bichos = level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
+        int monstruos = level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
                 new AABB(centroDelAsedio).inflate(150.0D)).size();
-        if (bichos > 0) {
+        if (monstruos > 0) {
             ticksDeOlaVista++;
         }
         if (ticks % 100 == 0) {
@@ -5027,14 +5124,14 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     com.chipoodle.devilrpg.capability.IGenericCapability.getUnwrappedPlayerCapability(
                             pega, com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability.INSTANCE);
             DevilRpg.LOGGER.info("[Arnes] ASEDIO t={} agresivos={} hayAsedio(3)={} revelada(4)={} aldeanos3={}",
-                    ticks, bichos, VillageManager.hayAsedio(level, 3),
+                    ticks, monstruos, VillageManager.hayAsedio(level, 3),
                     aux != null && aux.isAldeaRevelada(4),
                     level.getEntitiesOfClass(Villager.class, new AABB(centroDelAsedio).inflate(96.0D)).size());
         }
         // A LOS 10 s DE VER LA OLA, SE LIMPIA DESDE EL ARNES (ver el javadoc de MEDIR_ASEDIO_VIVO).
-        if (bichos > 0 && ticksDeOlaVista == 200) {
+        if (monstruos > 0 && ticksDeOlaVista == 200) {
             DevilRpg.LOGGER.info("[Arnes] ASEDIO: limpiando la ola ({} agresivo(s)) desde el arnes: el asedio tiene"
-                    + " que resolverse SALVADO y el clerigo revelar la aldea 4", bichos);
+                    + " que resolverse SALVADO y el clerigo revelar la aldea 4", monstruos);
             for (com.chipoodle.devilrpg.entity.AggressiveZombieEntity z
                     : level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
                     new AABB(centroDelAsedio).inflate(150.0D))) {
@@ -5275,7 +5372,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static final double RADIO_CENSO = com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 44.0;
 
     private static void volcarCamas(ServerLevel level) {
-        DevilRpg.LOGGER.info("[Arnes] CAMAS: dayTime={} (franja {}) · UN BICHO DENTRO: {}",
+        DevilRpg.LOGGER.info("[Arnes] CAMAS: dayTime={} (franja {}) · UN MONSTRUO DENTRO: {}",
                 level.getDayTime() % 24000, level.getDayTime() % 24000 >= 12000 ? "DESCANSO" : "dia",
                 estadoDelRecinto(level));
         // EL RESUMEN (el criterio de "arreglado"): cuantos aldeanos tienen cama, cuantos COMPARTEN cama (dos aldeanos
@@ -5348,7 +5445,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 }
             }
             DevilRpg.LOGGER.info("[Arnes] CAMAS RESUMEN: aldeanos={} (adultos={} crias={}) conCama={} (camas distintas"
-                            + " ocupadas={}) COMPARTIDAS={}{} SIN CAMA={}{} DURMIENDO={} · UN BICHO DENTRO: {}",
+                            + " ocupadas={}) COMPARTIDAS={}{} SIN CAMA={}{} DURMIENDO={} · UN MONSTRUO DENTRO: {}",
                     adultos + crias, adultos, crias, conCama, ok, porCama.size() - ok, compartidas, sinCama.size(),
                     sinCama.isEmpty() ? "" : " " + String.join(" ", sinCama), durmiendo, estadoDelRecinto(level));
             // Y POR QUE NO LE DAN CAMA: para el primer aldeano sin cama, las 8 camas libres mas cercanas con el

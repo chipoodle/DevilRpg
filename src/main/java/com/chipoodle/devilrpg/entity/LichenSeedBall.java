@@ -94,7 +94,7 @@ public class LichenSeedBall extends ThrowableItemProjectile implements ISoulEnti
                 MobEffectInstance instance = MobEffectEntangling.createInstance(durationInTicks,amplifierLevel , (Player) getOwner());
                 livingEntity.addEffect(instance);
                 // Y SE MARCA COMO ATACADO POR EL DUEÑO: el liquen hace el daño por EFECTO (la maldición), no con un
-                // golpe, así que el bicho **no** quedaba apuntado como "atacado por el jugador" y los minions —los
+                // golpe, así que el monstruo **no** quedaba apuntado como "atacado por el jugador" y los minions —los
                 // lobos, sobre todo— lo ignoraban. Lo reportó el jugador: *"disparo un soul lichen a una oveja fuera
                 // de la aldea y empieza a recibir daño por la maldición, pero mis lobos no la atacan"*. Marcándolo
                 // aquí, el predicado de los minions (I81) lo ve y van a por él.
