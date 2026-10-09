@@ -26,7 +26,9 @@ vale**.
 | **cota** (lo que decía antes) | **jerga de topografía**, no del juego: es la **altura** a la que está el pueblo | **nivel del pueblo** — y se explica con un dibujo, abajo |
 | **POI / estación** | el bloque donde un aldeano trabaja (compostero, ahumador, mesa…) | **puesto de trabajo** |
 | **rendición** | el aviso de que un aldeano **no consiguió llegar** a su destino y lo deja por un rato | **«no consigue llegar»** / **se rinde** |
-| **testigo** | la marca del pueblo que sirve para saber si una estructura sigue en pie | **señal de la estructura** |
+| **testigo** | la marca del pueblo que sirve para saber si una estructura sigue en pie. **OJO**: *«testigo» es solo
+para las ESTRUCTURAS*; el dato que deja el arnés para poder creerse una medida se llama **prueba** (o «dato de
+control»), nunca testigo | **señal de la estructura** |
 | **aparcar** (un sitio) | dejar de intentar ir a ese sitio durante unos minutos | **dejar de lado por un rato** |
 
 ## Cómo se aplica (y qué NO se toca)

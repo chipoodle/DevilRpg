@@ -6974,7 +6974,7 @@ verdad **40**): el asaltante llega a **r=92** y **avanza poco a poco hacia dentr
 lo que pidió el jugador ✓. (Y confirma la conclusión de I240, que se midió con la escena que ahora sabemos que podía
 fallar.)
 
-**LO QUE NO VALE DE ESTA ESCENA, dicho claro** ✗: el testigo **`celdas del anillo abiertas`** marca **0** aunque el
+**LO QUE NO VALE DE ESTA ESCENA, dicho claro** ✗: la prueba **`celdas del anillo abiertas`** marca **0** aunque el
 monstruo esté taladrando, porque mira **una celda fija por columna** (la base+1) y el taladro va a la altura del suelo
 del monstruo; lo que sí dice la verdad es **su radio** (r=92→88) y **el contador de la traza** (40→29). Queda apuntado
 para arreglarlo (mirar la columna entera, no una celda).
@@ -7056,7 +7056,7 @@ después **taladro de frente** (`breakBlockTowards`, **L353**, un bloque cada **
 (`apilarBloqueParaSubir`, **L726**) y el **puente** cuando hay un **agujero delante** (`puentearHacia`, **L604**).
 
 **LO MEDIDO, con la escena de la montaña** (`MEDIR_MONTANA`, en el arnés): un **anillo de piedra CERRADO** a r=70 (3 de
-grueso, 9 de alto, **4320 celdas testigo**) —o sea, imposible de rodear— y el asaltante **fuera, a r=80 y SIN objetivo**,
+grueso, 9 de alto, **4320 celdas de prueba**) —o sea, imposible de rodear— y el asaltante **fuera, a r=80 y SIN objetivo**,
 marchando al centro.
 
 | | corrida **169** (el código de verdad) ✓ |
@@ -7080,12 +7080,12 @@ vuelva a «arreglar».
 medida) porque el **barrido de monstruos del arnés borraba al asaltante cada segundo** — `MEDIR_MONTANA` no estaba en su
 lista de excepciones, exactamente el mismo fallo que dejó sin valor la escena del nado (I235)—. Lo que se veía era un
 monstruo **congelado** (misma celda 12 volcados seguidos, `pica Block = 1`, que era de otro). Arreglado: `!MEDIR_MONTANA`
-en el candado (**L372**) y **testigo en cada volcado** (`borrado=SI/NO`, `vivo=SI/NO`), con el aviso en voz alta. Y el
-testigo quedó **afinado**: `isRemoved()` también es verdad cuando lo **matan**, así que el aviso del instrumento solo
+en el candado (**L372**) y **prueba en cada volcado** (`borrado=SI/NO`, `vivo=SI/NO`), con el aviso en voz alta. Y el
+esa prueba quedó **afinada**: `isRemoved()` también es verdad cuando lo **matan**, así que el aviso del instrumento solo
 sale si además **le queda vida** (si no, murió peleando).
 
 **Y LA MONTAÑA GRUESA SÍ AGUANTA** ✓ (corrida 170, la segunda variante de la misma escena: anillo **cerrado** de
-**26 de fondo** —r=66..91, **37 440 celdas testigo**— y el asaltante fuera, a r=95). Medido: **NO la atraviesa** — en
+**26 de fondo** —r=66..91, **37 440 celdas de prueba**— y el asaltante fuera, a r=95). Medido: **NO la atraviesa** — en
 **156 s** avanza de **r=92 a r=86** y abre **29 de 37 440 celdas** (una celda cada 20-30 s), con el taladro y 18 cavadas
 debajo—, que es exactamente lo que el jugador quería (*«una montaña grande aguanta y la aldea se salva»*) ✓. Comparado con
 la fina: **3 de fondo → atravesada en 72 s**; **26 de fondo → sin atravesar en 156 s**.
@@ -7291,7 +7291,7 @@ el **primer** volcado (t=320) es **exactamente la celda de aparición**: un mons
 causa: el barrido de monstruos de `GuardHarness.onServerTick` (**L369**) corre `ticks % 20 == 0` y **no tenía `MEDIR_AGUA`
 en su lista de excepciones**, así que borraba al asaltante en el **primer** barrido (t=320, un segundo después de
 aparecer) y lo que se estaba midiendo era **un monstruo congelado** ✓. **ARREGLO**: `MEDIR_AGUA` entra en la lista (**L369**)
-y —esto es lo que evita que vuelva a pasar— la traza lleva **testigo**: cada volcado dice `borrado=SI/NO` y `vivo=SI/NO`
+y —esto es lo que evita que vuelva a pasar— la traza lleva **prueba**: cada volcado dice `borrado=SI/NO` y `vivo=SI/NO`
 y, si el instrumento borra al monstruo, escribe **`EL INSTRUMENTO HA BORRADO AL ASALTANTE … LA MEDIDA NO VALE`**.
 Medido después: **`borrado=NO vivo=SI` en los 39 volcados** de la corrida 147 y en las 149 y 150 ✓.
 
@@ -7345,7 +7345,7 @@ estorba ✓. Los dos comentarios que decían lo contrario quedan corregidos (**L
 
 | | goal del nado corriendo | qué pasó en la vuelta del escalón |
 |---|---|---|
-| **antes** (`rapida-149.log`, prioridad 2) | **0 ticks** en las dos vueltas; el testigo **no vio ni un arranque** | atascado 20 s en el agua; salió **picando la piedra** de la plancha (`[Siege] … pica Block{minecraft:stone}`), no nadando |
+| **antes** (`rapida-149.log`, prioridad 2) | **0 ticks** en las dos vueltas; la prueba **no vio ni un arranque** | atascado 20 s en el agua; salió **picando la piedra** de la plancha (`[Siege] … pica Block{minecraft:stone}`), no nadando |
 | **después** (`rapida-150.log`, prioridad 1) | **arranca 3 veces** (t=892, t=950, t=1896) y **saca al monstruo del agua en 2–4 ticks** cada vez | en la orilla con escalón, cada atasco en el agua lo resuelve el goal; el monstruo acaba llegando al objetivo |
 
 Y la **vuelta 1 no cambia** (0 ticks corriendo también después): con la orilla a ras **no hace falta** el goal, el
@@ -7389,7 +7389,7 @@ que el jugador describe ✓. Y el empujón hacia la orilla iba **cada 15 ticks**
 
 **LO QUE NO QUEDÓ MEDIDO, dicho claro** ✗: monté un pozo en el arnés (`MEDIR_AGUA`) para cronometrar la salida y **la
 
-> ⚠️ **YA SE MIDIÓ (comprobado el 9-oct-2026)**: es lo que cerró **I235** — con el testigo del arnés arreglado, el goal
+> ⚠️ **YA SE MIDIÓ (comprobado el 9-oct-2026)**: es lo que cerró **I235** — con la prueba del arnés arreglada, el goal
 > del nado **arranca 3 veces** y **saca al monstruo del agua en 2-4 ticks** (el pozo estaba bien; el que encerraba al
 > monstruo era el **barrido de monstruos del arnés** ✗). Lo de abajo se deja por el camino que cuenta.
 escena no vale**: el asaltante queda **flotando en el borde del agua** (navegación apuntando a un punto **fuera** del

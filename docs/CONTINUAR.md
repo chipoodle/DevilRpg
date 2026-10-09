@@ -108,7 +108,7 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
 4. **Los 14 faroles de la aldea 0** (**I13**, acta L238): quedaron pendientes «hasta que el jugador pase por ella».
 
 **(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA**:
-5. **El testigo del arnes que no marca** ✗ (**I243**, acta L6975): en la escena de la montaña, `celdas del anillo
+5. **El dato de control del arnes que no marca** ✗ (**I243**, acta L6975): en la escena de la montaña, `celdas del anillo
    abiertas` marca **0** aunque taladre (mira una celda fija por columna). Se arregla mirando la **columna entera**; hoy
    lo que dice la verdad es **el radio** y **el contador** (`le quedan N de tunel`).
 6. **Las losas del tejado a +11** ✗ (**I60**, acta L1470): 27 losas del tejado de la taberna por encima de la banda del
@@ -214,7 +214,7 @@ antiguo. Y las tres cosas de **instrumento** con las que empezo la ronda: **la p
    esa celda esta ocupada, **un bloque mas arriba** (desde el fondo del pozo: un bloque al que saltar). **Medido
    despues** (corridas 173/174/175, 24 casos): fondo maximo **6 bloques** (dentro del foso, que cava 7) y **ninguno bajo
    tierra** ✓, con la escalera subiendo (**103** lineas `ESCALON`). Y queda una **herramienta versionada** para mirarlo
-   (`tools/arnes/vuelven_a_la_superficie.py`), porque el testigo del arnes mezclaba «estar en el foso» con «estar bajo
+   (`tools/arnes/vuelven_a_la_superficie.py`), porque el dato de control del arnes mezclaba «estar en el foso» con «estar bajo
    tierra».
 
 **Y EL MUNDO DE LA TANDA: LA RECETA YA ESTA MEDIDA (9-oct-2026)** ✓. Lo que salia antes eran **contadores de trabajo a

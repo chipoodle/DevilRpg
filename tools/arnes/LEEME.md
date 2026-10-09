@@ -418,7 +418,7 @@ jugador de pega, **invulnerable, y ya no se le devuelve a la plaza**) **en la or
   devuelve al fondo): aquí la navegación **no puede salir** —un escalón de 1 bloque es más alto que su paso— y la única
   salida es **`EscapeWaterGoal`**, que es lo que hay que medir.
 
-**El testigo que hace falta para creer la medida** (y que costó una corrida descubrir): la traza lleva
+**La prueba que hace falta para creer la medida** (y que costó una corrida descubrir): la traza lleva
 `borrado=SI/NO`/`vivo=SI/NO` **en cada volcado** (si el barrido de monstruos del arnés se come al asaltante, lo dice a
 gritos y la medida se tira: eso fue exactamente lo que pasó en `rapida-49.log`, donde los 73 volcados eran el mismo
 monstruo congelado), y escribe **`AGUA: el goal del nado (EscapeWaterGoal) ARRANCA/PARA en t=…`** mirando los goals
@@ -512,11 +512,11 @@ asignar centro, que es lo que hace una ola nueva: sirve para ver que el **tope d
    > (`getHeight(MOTION_BLOCKING)`) desde el arreglo de **I243** (`docs/aldea-invariantes.md` L6934-L6939), y la montaña
    > gruesa se volvió a medir con la escena buena (corrida 178: **r=92→88 en 150 s, 11 taladros, sin atravesarla**).
 
-2. **El testigo `celdas del anillo abiertas` puede marcar 0 aunque esté taladrando** (mira una celda fija por columna y
+2. **La prueba `celdas del anillo abiertas` puede marcar 0 aunque esté taladrando** (mira una celda fija por columna y
    el taladro va a la altura del suelo del monstruo): lo que dice la verdad es **su radio** y **el contador de la traza**
    (`le quedan N de tunel`).
 
-   > ⚠️ **SIGUE PENDIENTE (comprobado el 9-oct-2026)**: el testigo `celdas del anillo abiertas` marca **0** aunque esté
+   > ⚠️ **SIGUE PENDIENTE (comprobado el 9-oct-2026)**: la prueba `celdas del anillo abiertas` marca **0** aunque esté
    > taladrando, porque mira **una celda fija por columna** y el taladro va a la altura del suelo del monstruo; es el
    > cabo suelto de **I243** (`docs/aldea-invariantes.md` L6947-L6950), se arregla mirando la **columna entera** — está
    > en `docs/CONTINUAR.md` §2.0 (punto 2).

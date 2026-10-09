@@ -58,6 +58,8 @@ proponen.** Cuatro piezas, todas nuestras:
 - Efecto: la clase **A** muere (no se persiguen celdas que no se pisan) y la **C** también (no se reintenta lo imposible:
   el aparcado se respeta **en el único sitio donde se eligen recados**).
 
+> ⚠️ **CORREGIDO el 9-oct-2026**: este efecto **no lo dio M2** (su cableado se probó y se **retiró**, ver §3): la clase **A** la cerró **I154** en el punto único `VillageManager.caminarHacia` (L5605-5627) y la **C**, **I97**; y hoy `VillageErrands.elRecadoEsPosible` (`VillageErrands` L76) **no lo llama nadie** (solo se usa `VillageErrands.casillaPosible`, `VillagerAnimalFarmGoal` L200).
+
 ### M3 · La AUTORIDAD DE PUERTAS — `VillageDoors`
 - Antes de pedir una ruta que **cruza una puerta nuestra** (los portones de la aldea, los del corral y el gallinero, las
   compuertas de la huerta), **la aldea abre la suya**: se abre el portón, se espera, se pide la ruta y se cierra cuando
@@ -212,4 +214,6 @@ personalizado de los aldeanos para evitar fallos y bloqueos.»* Queda escrito el
      comerciar), pero es la única forma de que un fallo sea **imposible por construcción** en vez de improbable.
    - **Condición para entrar**: solo si el nivel 2 no baja las etiquetas, y con el juez de siempre: **etiqueta concreta
      + corrida entera + varias corridas**.
+
+> ⚠️ **CORREGIDO el 9-oct-2026**: esta «entidad propia con cerebro y navegador propios» (`VillageVillager`) **no se escribió** —no hay tal clase en `src/main/java/com/chipoodle/devilrpg`— y la casa **retiró la idea de reescribir la lógica del aldeano** porque, medida, da **el mismo baile**: ver `docs/CONTINUAR.md` §1.6 y **I206** (nota 1), que dice que el conflicto era **entre goals del mod**, no con vanilla. Lo que sí está hecho y medido es el **patrón** de candidatas + contrato + validación de **I152–I155** (ver §3.bis de este documento).
 

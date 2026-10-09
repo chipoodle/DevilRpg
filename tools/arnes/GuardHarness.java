@@ -3013,7 +3013,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * barrido (t=320, un segundo después de aparecer) y lo que se estaba midiendo era <b>un monstruo congelado</b>. El
      * pozo, además, estaba mal montado: paredes de piedra hasta el rasante del agua y, como destino de la navegación,
      * una celda <b>de dentro del muro</b> (el barrido en espiral devolvía el bloque de piedra de al lado, no la celda de
-     * pie). Las dos cosas se arreglan aquí, y la traza incorpora un <b>testigo</b> ({@code borrado=SI/NO}) para que un
+     * pie). Las dos cosas se arreglan aquí, y la traza incorpora una <b>prueba</b> ({@code borrado=SI/NO}) para que un
      * barrido se vea en la medida en vez de parecer un atasco del monstruo.
      * <p>
      * <b>La escena, ahora</b>: una charca <b>a ras de la orilla</b> (el agua y la orilla comparten el bloque de arriba,
@@ -3111,7 +3111,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
         // El objetivo es el jugador de pega (en la orilla, 8 bloques al oeste): tiene que salir del agua e ir a por el.
         asaltante.setTarget(pega);
-        // EL TESTIGO DEL GOAL DEL NADO (I215), TICK A TICK Y NO CADA SEGUNDO: un atasco de 9 ticks (lo que tarda el
+        // LA PRUEBA DEL GOAL DEL NADO (I215), TICK A TICK Y NO CADA SEGUNDO: un atasco de 9 ticks (lo que tarda el
         // goal en decidirse) puede caer entero entre dos volcados, asi que aqui se mira CADA tick y solo se escribe
         // cuando el goal ARRANCA o PARA. Por que puede no arrancar nunca: `GoalSelector.tick` solo deja entrar a un
         // goal si el que tiene el flag MOVE puede ser reemplazado por el
@@ -3181,7 +3181,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 String.format("%.3f", asaltante.getDeltaMovement().horizontalDistance()),
                 velMedia < 0.0D ? "-" : String.format("%.2f", velMedia), asaltante.isRemoved() ? "SI" : "NO",
                 asaltante.isAlive() ? "SI" : "NO", asaltante.getNavigation().getTargetPos(), goalsCorriendo(asaltante));
-        // EL TESTIGO DEL BARRIDO: si el instrumento borra al monstruo, se dice EN VOZ ALTA (es el fallo que dejo la
+        // LA PRUEBA DEL BARRIDO: si el instrumento borra al monstruo, se dice EN VOZ ALTA (es el fallo que dejo la
         // escena sin valor el 6-oct-2026, y no puede volver a parecer un atasco del asaltante).
         if (asaltante.isRemoved() && !aguaBarridoAvisado) {
             aguaBarridoAvisado = true;
@@ -3595,7 +3595,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 z.moveTo(donde[0] + 0.5D, fosoSueloY + 1, donde[1] + 0.5D, 0.0F, 0.0F);
             }
             fosoVuelta = 3;
-            troncosDelMuro.clear(); // en la vuelta 3 no hay muro (el testigo de la brecha no aplica)
+            troncosDelMuro.clear(); // en la vuelta 3 no hay muro (la prueba de la brecha no aplica)
             DevilRpg.LOGGER.info("[Arnes] OLA CON FOSO: vuelta 3 montada (LA ESCALERA, con su caso) — foso RELLENO (suelo"
                             + " llano), muro QUITADO y el objetivo EN EL AIRE en {} (5 bloques por encima del suelo,"
                             + " y={}); los {} asaltantes vuelven a la orilla", objetivoDelFoso.blockPosition(),
@@ -3632,7 +3632,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             DevilRpg.LOGGER.info("[Arnes] OLA CON FOSO vuelta={} ASALTANTE {} pos={} r={} {} goals=[{}]", fosoVuelta, i,
                     z.blockPosition(), r, z.getY() < fosoSueloY ? "EN EL FOSO" : "en la plancha", goalsCorriendo(z));
         }
-        // LOS TESTIGOS DE LA ESCENA: cuántas COLUMNAS del foso tienen ya obra encima (y a qué altura máxima) y cuántos
+        // LAS PRUEBAS DE LA ESCENA: cuántas COLUMNAS del foso tienen ya obra encima (y a qué altura máxima) y cuántos
         // troncos del muro siguen en pie. OJO CON EL RÓTULO (9-oct-2026): el puente y el escalón colocan los dos el
         // bloque A LA ALTURA DE LOS PIES del monstruo, así que aquí NO se pueden distinguir por el bloque ni por la celda
         // —los distingue el registro del mod, con `PONER UN PUENTE` y `pone un ESCALON`—; lo que mide esta parte es
@@ -3779,7 +3779,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
 
     /** El asaltante de la montaña (uno solo: se le sigue paso a paso). */
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity montanero = null;
-    /** Una celda testigo por columna del anillo: si deja de ser piedra, el asaltante ha abierto por ahí. */
+    /** Una celda de prueba por columna del anillo: si deja de ser piedra, el asaltante ha abierto por ahí. */
     private static final java.util.List<BlockPos> anilloDeLaMontana = new java.util.ArrayList<>();
     /**
      * Las DOS variantes de la montaña, con lo que se midió en cada una (I240):
@@ -3795,7 +3795,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static final int MONTANA_GROSOR = 26;
     private static final int MONTANA_ALTO = 9;
     private static final int MONTANA_ASALTANTE = 95;
-    /** Testigo del barrido (ver {@link #medirLaMontana}): si el arnés borra al monstruo, la medida NO vale. */
+    /** Prueba del barrido (ver {@link #medirLaMontana}): si el arnés borra al monstruo, la medida NO vale. */
     private static boolean montanaBarridoAvisado = false;
     /** ¿Se le ha vuelto a asignar centro (la "segunda ola") en esta corrida? Ver {@link #medirLaMontana}. */
     private static boolean montanaSegundaMarcha = false;
@@ -3838,7 +3838,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 montanero.setPersistenceRequired();
                 level.addFreshEntity(montanero);
                 DevilRpg.LOGGER.info("[Arnes] MONTANA: escena montada — anillo de piedra CERRADO a r={} ({} de grueso y"
-                                + " {} de alto, {} celdas testigo) con el asaltante FUERA en {} (r={}) y SIN objetivo,"
+                                + " {} de alto, {} celdas de prueba) con el asaltante FUERA en {} (r={}) y SIN objetivo,"
                                 + " marchando al centro (cota {}). Aquí no se puede rodear: o taladra de frente, o se"
                                 + " queda",
                         MONTANA_RADIO, MONTANA_GROSOR, MONTANA_ALTO, anilloDeLaMontana.size(),
@@ -3869,7 +3869,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         int r = (int) Math.hypot(montanero.getX() - CENTRO.getX(), montanero.getZ() - CENTRO.getZ());
         boolean dentro = com.chipoodle.devilrpg.world.VillageManager.dentroDelRecinto(level, montanero.blockPosition(),
                 CENTRO, com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS);
-        // Y EL TESTIGO DEL BARRIDO, que es lo que delató la primera versión de esta escena (I240): sin él, el arnés
+        // Y LA PRUEBA DEL BARRIDO, que es lo que delató la primera versión de esta escena (I240): sin él, el arnés
         // borraba al asaltante cada segundo (MEDIR_MONTANA no estaba en la lista de excepciones) y lo que se medía era
         // un monstruo CONGELADO — las corridas 164 a 167 NO VALEN, y quedan escritas como tales. OJO: `isRemoved()`
         // también es verdad cuando lo MATAN (la milicia lo mató en la corrida 169), así que el aviso solo sale si
@@ -3947,7 +3947,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 //     del pueblo (21 bloques), y con la regla del jugador (I210) tiene que picar CERO;
                 //   - el 2º, de la aldea 0 (GANADA, con campo de fuerza): tampoco puede picar NADA de dentro (I89).
                 cercoDeLaPlaza(level, cota, RADIO_DEL_CERCO);
-                // SIN TESTIGOS: se quitan los aldeanos y los golems del pueblo (es una COPIA) para que el único objetivo
+                // SIN NADIE MIRANDO: se quitan los aldeanos y los golems del pueblo (es una COPIA) para que el único objetivo
                 // posible sea el jugador de pega. Medido: con los aldeanos dentro, el asaltante se iba detrás de uno de
                 // ellos (llegó a r=67 del centro, FUERA del pueblo) y no llegaba ni a acercarse al cerco de la plaza.
                 for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(120))) {

@@ -25,7 +25,7 @@
 > ⚠️ **SIGUE ABIERTO (comprobado el 9-oct-2026)**: el **cruce del aldeano por el portón del muro** (nota de **I222**)
 > sigue sin medirse con el arnés — está en `docs/CONTINUAR.md` §2.0.
 
-> ⚠️ **SIGUE ABIERTO (comprobado el 9-oct-2026)**: el testigo del arnés `celdas del anillo abiertas` marca **0**
+> ⚠️ **SIGUE ABIERTO (comprobado el 9-oct-2026)**: el dato de control del arnés `celdas del anillo abiertas` marca **0**
 > aunque el taladro esté trabajando (cabo suelto de **I243**) — está en `docs/CONTINUAR.md` §2.0.
 
 Visión: convertir **DevilRpg** en un **action-RPG de fantasía oscura** (estilo *Heretic* de Raven
