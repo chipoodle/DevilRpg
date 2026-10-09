@@ -332,9 +332,12 @@ public class GuardHarness {
 // fuera. MEDIR_EQUIPO no estaba y su medida salio inconclusa por esto: sembro el almacen a los 10 s y a los 30 s
 // (t=600) este bloque lo vacio, asi que el equipo desaparecio antes de que ningun guardia llegara a verlo.
 if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_EQUIPO && !MEDIR_LENADOR
-                && !MEDIR_HORDAS && !MEDIR_ALMACEN_Y_HUEVOS && !MEDIR_MINERO && ticks % 40 == 0) {
+                && !MEDIR_HORDAS && !MEDIR_ALMACEN_Y_HUEVOS && !MEDIR_MINERO && !MEDIR_MILICIA_SOBRANTES
+                && ticks % 40 == 0) {
             // EL ENTRENAMIENTO DE LA GUARDIA, cada 2 s (ver `vigilarElEntrenamientoDeLaGuardia`): es lo que mide que el
             // arreglo del tiron (I145) no solo quite el aviso `Yendo a entrenar`, sino que el guardia LLEGUE y entrene.
+            // (En la medida de la milicia con sobrantes NO se llama: esa escena saca el mismo numero, y mas, en su
+            // propia linea de cada 10 s, y con siete guardias la de cada 2 s son cientos de lineas de ruido.)
             vigilarElEntrenamientoDeLaGuardia(level);
         }
         if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_EQUIPO && !MEDIR_LENADOR
@@ -429,6 +432,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirLaOlaReal(level, pega);
         } else if (MEDIR_OLA_CON_FOSO) {
             medirLaOlaConFoso(level, pega);
+        } else if (MEDIR_MILICIA_SOBRANTES) {
+            medirLaMiliciaConSobrantes(level, pega);
         } else if (MEDIR_ANILLO) {
             medirElAnilloDelMuro(level);
         } else if (MEDIR_CRUCE_DEL_PORTON) {
@@ -1945,6 +1950,26 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
         FakePlayer pega = FakePlayerFactory.getMinecraft(level);
         pega.moveTo(CENTRO.getX() + 0.5D, CENTRO.getY(), CENTRO.getZ() + 0.5D);
+        // LA ALDEA EN PAZ, QUE ES LO QUE HACE FALTA PARA MEDIR LA MILICIA (9-oct-2026, medido en la corrida 155):
+        // el reparto de la guardia vive en `tickVillageLife`, y esa funcion **no corre con la aldea en asedio**
+        // (`VillageManager.manageNearby` L1040: `!isUnderAttack`). Y una aldea NUEVA nace con su asedio inicial: en
+        // cuanto el jugador de pega la descubre, `VillageManager.start` (L1375) le registra un `VillageDefense`, y ese
+        // asedio **no se resuelve nunca** con un jugador de pega (el reloj se queda EN PAUSA porque no esta en la lista
+        // de jugadores). Resultado de la corrida 155: `guardias=0` los tres minutos y ni una linea `[Milicia]`.
+        // Por eso, si la aldea YA esta construida (segunda visita al mundo conservado), el asedio se da por RESUELTO
+        // ANTES de que la descubra: `start` se sale por su propia guarda (`isSiegeResolved`, L1398) y la aldea queda en
+        // paz, que es cuando el pueblo reparte milicia. En la PRIMERA visita (aldea sin generar) no se toca nada: si no,
+        // la aldea no se construiria.
+        if (MEDIR_MILICIA_SOBRANTES) {
+            com.chipoodle.devilrpg.world.VillageSavedData datos =
+                    com.chipoodle.devilrpg.world.VillageSavedData.get(level);
+            if (datos.isGenerated(INDICE) && !datos.isSiegeResolved(INDICE)) {
+                datos.markSiegeResolved(INDICE);
+                DevilRpg.LOGGER.info("[Arnes] MILICIA SOBRANTES: la aldea {} YA estaba generada, asi que su asedio se"
+                        + " da por RESUELTO antes de que la descubra el jugador de pega (con asedio, el reparto de la"
+                        + " milicia no corre nunca: vive en `tickVillageLife`)", INDICE);
+            }
+        }
         DevilRpg.LOGGER.info("[Arnes] ALDEA 2 centro={} aldeanos={} gameTime={} ancla={}", CENTRO,
                 level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96)).size(), level.getGameTime(),
                 ancla());
@@ -3376,7 +3401,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * altura, que es lo que dice si está en el fondo del foso) y las del mod `[Siege] … PONER UN PUENTE`,
      * `… pone un ESCALON`, `… CAVA hacia abajo` y `… pica Block{…}`.
      */
-    private static final boolean MEDIR_OLA_CON_FOSO = true;
+    private static final boolean MEDIR_OLA_CON_FOSO = false;
 
     /** Los ocho asaltantes de la ola del foso y su objetivo (dentro del muro). */
     private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> olaDelFoso =
@@ -3590,6 +3615,98 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                         + " (brecha={})", fosoVuelta, ticks, vivos, olaDelFoso.size(), dentro, radios.toString().trim(),
                 conObra, superficieDelFoso.size(), alturaMax, enPie, troncosDelMuro.size(),
                 troncosDelMuro.size() - enPie);
+    }
+
+    /**
+     * <b>LA MILICIA CON GENTE DENTRO (el pendiente 3 de CONTINUAR, medido el 9-oct-2026).</b>
+     * <p>
+     * Lo que faltaba no era el instrumento de la milicia (la traza `[Milicia]` es de I217 y escribe bien), sino
+     * <b>gente</b>: en las aldeas de prueba salía siempre `0 espadachin(es) y 0 arquero(s) de 0 sobrante(s)`, y ese cero
+     * <b>no era un fallo</b> — es la regla del reparto (`VillageManager.repartirGuardia`, **L3243**: se cubren primero
+     * los puestos fijos del pueblo y solo lo que <b>sobra</b> se alista). Y en un mundo nuevo (que es como se mide desde
+     * el 9-oct-2026) **no hay aldeanos**: salen `aldeanos=0`.
+     * <p>
+     * Así que esta escena <b>pone ella misma la gente</b>: <b>12 adultos SIN OFICIO</b> (el caso «más adultos que
+     * puestos») y <b>3 crías</b> (para ver que las crías <b>no</b> se alistan: `puedeSerGuardia` es `!isBaby()`), todos
+     * en un corro alrededor de la plaza y buscando la celda de pie en su columna (para que no nazcan encajados en el
+     * terreno o en el kiosco). El latido del pueblo corre de verdad (`manageNearby`), que es quien reparte la milicia.
+     * <p>
+     * Lo que se busca en el registro: la traza del mod `[Village] … ha descubierto la aldea …` y sobre todo
+     * <b>`[Milicia] aldea 0: X espadachin(es) y Y arquero(s) de S sobrante(s) de A aldeano(s), milicia hasta 7 | alistados
+     * DE VERDAD: G (…)`</b>, con los números <b>llenos</b>; y la línea de esta escena cada 10 s
+     * (`[Arnes] MILICIA SOBRANTES t=… aldeanos=… (adultos=…, crias=…) | guardias=… (… espadachin(es), … arquero(s))`) con
+     * <b>una línea por guardia</b> que dice su <b>nivel</b>, sus <b>matanzas</b>, los <b>ticks de entrenamiento</b>
+     * (`entrenado=`) y el <b>arma</b> que lleva en la mano — que es lo que dice si el reparto llega a algo más que
+     * contar gente.
+     */
+    private static final boolean MEDIR_MILICIA_SOBRANTES = true;
+
+    /** Los aldeanos que pone la escena (los primeros son los adultos de sobra y los últimos, las crías). */
+    private static final java.util.List<Villager> aldeanosDeLaMilicia = new java.util.ArrayList<>();
+    private static final int MILICIA_ADULTOS = 12;
+    private static final int MILICIA_CRIAS = 3;
+
+    private static void medirLaMiliciaConSobrantes(ServerLevel level, FakePlayer pega) {
+        final int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        if (ticks == 300 && aldeanosDeLaMilicia.isEmpty()) {
+            int total = MILICIA_ADULTOS + MILICIA_CRIAS;
+            for (int i = 0; i < total; i++) {
+                double ang = (i / (double) total) * Math.PI * 2.0D;
+                int px = CENTRO.getX() + (int) Math.round(Math.cos(ang) * 9.0D);
+                int pz = CENTRO.getZ() + (int) Math.round(Math.sin(ang) * 9.0D);
+                var v = net.minecraft.world.entity.EntityType.VILLAGER.create(level);
+                if (v == null) {
+                    continue;
+                }
+                int y = sueloDeLaColumna(level, px, pz, cota);
+                v.moveTo(px + 0.5D, y, pz + 0.5D, 0.0F, 0.0F);
+                v.setPersistenceRequired();
+                if (i >= MILICIA_ADULTOS) {
+                    v.setBaby(true);
+                }
+                level.addFreshEntity(v);
+                aldeanosDeLaMilicia.add(v);
+            }
+            DevilRpg.LOGGER.info("[Arnes] MILICIA SOBRANTES: escena montada — {} adultos SIN OFICIO y {} crias en un"
+                            + " corro de radio 9 alrededor de la plaza {} (cota {}); el latido del pueblo corre de verdad"
+                            + " y es quien tiene que llenar la milicia con los que SOBRAN",
+                    MILICIA_ADULTOS, MILICIA_CRIAS, new BlockPos(CENTRO.getX(), cota, CENTRO.getZ()), cota);
+        }
+        if (aldeanosDeLaMilicia.isEmpty() || ticks % 200 != 0) {
+            return;
+        }
+        int adultos = 0;
+        int crias = 0;
+        int guardias = 0;
+        int espadachines = 0;
+        java.util.List<Villager> losGuardias = new java.util.ArrayList<>();
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(96))) {
+            if (v.isBaby()) {
+                crias++;
+            } else {
+                adultos++;
+            }
+            if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                guardias++;
+                if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.tipoDe(v)
+                        == com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.ESPADACHIN) {
+                    espadachines++;
+                }
+                losGuardias.add(v);
+            }
+        }
+        DevilRpg.LOGGER.info("[Arnes] MILICIA SOBRANTES t={} : aldeanos={} (adultos={}, crias={}) | guardias={}"
+                        + " ({} espadachin(es), {} arquero(s))", ticks, adultos + crias, adultos, crias, guardias,
+                espadachines, guardias - espadachines);
+        for (Villager v : losGuardias) {
+            DevilRpg.LOGGER.info("[Arnes] MILICIA SOBRANTES GUARDIA {} nv={} matanzas={} entrenado={} vida={}/{}"
+                            + " arma={} pos={} | etiqueta: {}", nombreCorto(v),
+                    com.chipoodle.devilrpg.world.VillageManager.nivelDeGuardia(v),
+                    com.chipoodle.devilrpg.world.VillageManager.matanzasDeGuardia(v),
+                    v.getPersistentData().getInt(com.chipoodle.devilrpg.world.VillageManager.GUARD_TRAINING_TAG),
+                    redondo(v.getHealth()), v.getMaxHealth(), v.getMainHandItem().getItem(),
+                    v.blockPosition().toShortString(), etiquetaDe(v));
+        }
     }
 
     private static void medirElAsaltoAlMuro(ServerLevel level, FakePlayer pega) {

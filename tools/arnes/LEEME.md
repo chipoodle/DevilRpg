@@ -409,6 +409,27 @@ del agua de la zona), los volcados `[Arnes] AGUA t=… vuelta=… enAgua=… aLa
 `AGUA: SALE DEL AGUA (vuelta N) a los N ticks`, `AGUA: LLEGA AL OBJETIVO`, los `ARRANCA`/`PARA` del goal del nado y
 `AGUA RESUMEN (vuelta N)` (o `AGUA: NO SALE DEL AGUA en 60 s` si se queda).
 
+### `MEDIR_MILICIA_SOBRANTES = true` — LA MILICIA CON GENTE DENTRO (I237)
+
+La traza del reparto (`[Milicia]`, de I217) escribía bien, pero en las aldeas de prueba salía **siempre cero** porque no
+había **gente de sobra** — y en un mundo nuevo, directamente no hay aldeanos. Esta escena **pone ella misma la gente**:
+**12 adultos SIN OFICIO** (el caso «más adultos que puestos») y **3 crías** en un corro de radio 9 alrededor de la plaza,
+buscando la celda de pie en su columna (`sueloDeLaColumna`), y deja correr **el latido del pueblo** (`manageNearby`), que
+es quien reparte. Cada 10 s vuelca el censo
+(`[Arnes] MILICIA SOBRANTES t=… aldeanos=… (adultos=…, crias=…) | guardias=… (… espadachin(es), … arquero(s))`) y **una
+línea por guardia** con **nivel, matanzas, ticks de entrenamiento y el arma de la mano**.
+
+**DOS COSAS QUE HAY QUE SABER ANTES DE LANZARLO** (las dos medidas el 9-oct-2026):
+1. **El reparto de la milicia solo corre con la aldea EN PAZ** (`VillageManager.tickVillageLife`; el latido lo pide con
+   `!isUnderAttack`) y **una aldea nueva nace con su asedio inicial**, que con un jugador de pega **no se resuelve
+   nunca** (el reloj se queda EN PAUSA). Corrida 155, mundo nuevo recién fundado: **`guardias=0` los tres minutos y ni
+   una línea `[Milicia]`**. Por eso el arnés, **cuando la aldea ya está construida**, da el asedio **por resuelto**
+   (`VillageSavedData.markSiegeResolved`) antes de descubrirla, y así la aldea queda en paz.
+2. **Por eso hacen falta DOS tandas** (la receta): `tanda-rapida.ps1 N -MundoNuevo` (se construye la aldea: el cimiento
+   son cientos de miles de bloques y se pasa la corrida) y después `tanda-rapida.ps1 N+1 N+2 -Conservar` (mundo
+   conservado, aldea en pie y en paz). Medido así: **`4 espadachin(es) y 3 arquero(s) … alistados DE VERDAD: 7`**, las
+   crías sin alistarse, `entrenado` subiendo de 0 a **713-777 ticks** y los guardias armándose del almacén.
+
 ### `MEDIR_OLA_CON_FOSO = true` — LA OLA CONTRA UN MURO ENTERO CON UN FOSO DELANTE (I236)
 
 La escena que pedía el pendiente 2: **muro entero y sin huecos** (anillo de radio 7, dos de grueso y 3 de alto, como el

@@ -99,23 +99,29 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    picadas justo en r=6..7 y los 68 troncos de base **en pie**), y el **romper y el puente se pelean** (45-62 de los
    bloques picados son `cobblestone` en r=10..11: **los tablones que ellos mismos acaban de tender**) ✗ — hay que
    decidir con el jugador si eso se arregla.
-3. **Ver la milicia con gente dentro** (`MEDIR_MILICIA`). La traza esta hecha (I217) y escribe bien, pero en las aldeas de
-   prueba **no hay sobrantes** (todos los adultos tienen su oficio), asi que sale `0 espadachines y 0 arqueros` — y el
-   cero **no es un fallo**, es la regla del reparto. **Lo que hay que hacer**: una aldea con **mas adultos que puestos**
-   (o con crias) para ver el reparto llenarse y a los guardias entrenar.
+3. **Ver la milicia con gente dentro** — **CERRADA Y MEDIDA** ✓ (9-oct-2026, **I237** en `docs/aldea-invariantes.md`).
+   Escena nueva (`MEDIR_MILICIA_SOBRANTES`): pone ella misma **12 adultos SIN OFICIO** (el caso «mas adultos que
+   puestos») y **3 crias** alrededor de la plaza y deja correr el latido. Medido en un mundo conservado
+   (`tanda-rapida.ps1 156 157 -Conservar`): `[Milicia] aldea 0: 4 espadachin(es) y 3 arquero(s) de 12 sobrante(s) de 27
+   aldeano(s), milicia hasta 7 | alistados DE VERDAD: 7 (4 espadachin(es), 3 arquero(s))` ✓, las **6 crias nunca se
+   alistan** ✓, y los guardias **entrenan** (la marca `entrenado` sube de 0 a **713-777 ticks** y las etiquetas pasan de
+   `Yendo a entrenar` a `Patrullando…`) y **se arman** (`arma=minecraft:air` -> `minecraft:bow`, `Cogio 16 flechas del
+   almacen`) ✓. **Y LO GORDO, que es una regla del mod y hay que saberla**: el reparto de la milicia vive en
+   `tickVillageLife`, que **solo corre con la aldea EN PAZ** (`manageNearby` L1040: `!isUnderAttack`), y una aldea nueva
+   **nace con su asedio inicial** — que con un jugador de pega no se resuelve nunca: la corrida 155 dio `guardias=0` los
+   tres minutos y ni una linea `[Milicia]`. El instrumento lo arregla dando el asedio **por resuelto** cuando la aldea ya
+   esta construida (ver la receta, abajo).
 
-**Y OJO CON EL MUNDO DE LA TANDA (9-oct-2026, hay que decidirlo con el jugador)** ✗. La copia del guardado que usa el
-banco (`run\saves\New World` → `run\world`) **no tiene aldea donde el arnes la busca**: en el centro que usa el arnes
-(470,63,646) hay **mar** (`tools\arnes\una_columna.py`: `470,44 = sand`, `470,45..62 = water`, `470,63.. = air`), asi que
-el mod **funda una aldea nueva a la cota 46, bajo el agua** (su propio aviso: `muro reconstruido al nivel del pueblo 46`;
-y `anillo_del_muro.py` encuentra ese muro recien hecho a **y=46, 896 de 921 celdas**, con los cuatro portones) y salen
-**`aldeanos=0`**, **0 avisos de rendicion** y **todos los contadores de trabajo a 0** en las corridas 146-150. La deriva
-de la cota en las corridas lo dice: **83** (7-oct 01:34) → **70** (7-oct 12:37) → **68** (8-oct 09:37) → **46** (9-oct
-00:51), y los ficheros de region del guardado son del **8-oct 11:48** (todo un mundo escrito de golpe). La medida del
-nado **no se resiente** (esa escena es autosuficiente), pero **los pendientes 2 y 3 sí necesitan una aldea con gente**.
-Opciones: (a) medir en un **mundo nuevo** (`tanda-rapida.ps1 -MundoNuevo`, que no toca `run\saves`), (b) que el jugador
-diga **que guardado** es el bueno (o si su aldea esta en otro sitio de ese mundo), o (c) que confirme si quiere que el
-mod **no funde aldea en el mar** cuando el objetivo cae en el oceano. **Regla de oro intacta: `run\saves` no se toca.**
+**Y EL MUNDO DE LA TANDA: LA RECETA YA ESTA MEDIDA (9-oct-2026)** ✓. Lo que salia antes eran **contadores de trabajo a
+cero** porque la copia del guardado no tiene aldea donde el arnes la busca (en `470,63,646` habia **mar**: lo dice
+`tools\arnes\una_columna.py`, agua de la 45 a la 62), asi que el mod **funda una aldea nueva a la cota 46, bajo el agua**.
+**Lo que hay que hacer, y funciona** (medido en I236/I237): **(1)** una corrida con `tanda-rapida.ps1 N -MundoNuevo` (se
+genera el mundo y el mod construye la aldea: el cimiento son cientos de miles de bloques y se pasa la corrida
+construyendo), y **(2)** las corridas siguientes con **`tanda-rapida.ps1 N+1 N+2 -Conservar`**, que **conservan** ese
+mundo ya construido: el pueblo sale **vivo** (medido: **granja 2, ganado 3, pescador 4, herreria 60, cocina 11,
+minero 87, guardia 105**) y con **asedio inicial que hay que dar por resuelto** para que corra el latido de la paz
+(`tickVillageLife`; lo hace el arnes solo cuando la aldea ya esta generada: ver I237). **Regla de oro intacta:
+`run\saves` no se toca** (todo esto va sobre `run\world`).
 
 **Y EL PORTON DOBLE ABATIBLE: CERRADO** ✓ (8-oct-2026, I224–I234 en `docs/aldea-invariantes.md`). Abre y cierra
 animado con **entidad de bloque + renderizador propio**, la hoja abate sobre el **canto del marco** sin atravesar el

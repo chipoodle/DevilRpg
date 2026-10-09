@@ -6896,6 +6896,58 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I237 · LA MILICIA CON GENTE DENTRO: EL REPARTO SE LLENA (4 ESPADACHINES Y 3 ARQUEROS) Y LOS GUARDIAS ENTRENAN
+
+Es el **pendiente 3** de `docs/CONTINUAR.md` (§2.0): *«una aldea con más adultos que puestos (o con crías) para ver el
+reparto llenarse y a los guardias entrenar»*. La traza `[Milicia]` es de I217 y escribía bien; lo que faltaba era
+**gente**, y en un mundo nuevo no la hay.
+
+**LA ESCENA** (`MEDIR_MILICIA_SOBRANTES`, en `GuardHarness`): pone ella misma **12 adultos SIN OFICIO** (el caso «más
+adultos que puestos») y **3 crías** en un corro de radio 9 alrededor de la plaza, **buscando la celda de pie en su
+columna** (`sueloDeLaColumna`: el fallo de la primera versión de otras escenas fue que nacían encajados en el terreno), y
+deja correr **el latido del pueblo de verdad** (`manageNearby`), que es quien reparte. Cada 10 s vuelca el censo y una
+línea por guardia con **nivel, matanzas, ticks de entrenamiento y el arma de la mano**.
+
+**LO PRIMERO QUE SALIÓ MAL, Y ERA GORDO** ✗ (corrida 155, mundo nuevo): **27 aldeanos y `guardias=0` los tres minutos**,
+y **ni una sola línea `[Milicia]`**. La causa está en el mod y es una regla, no un fallo: el reparto vive en
+`VillageManager.tickVillageLife` (**L2283**), y esa función **solo corre con la aldea EN PAZ** —
+`manageNearby` **L1040**: `!isUnderAttack`—; y **una aldea nueva nace con su asedio inicial**, que con un jugador de pega
+**no se resuelve nunca**: `VillageManager.start` (**L1375**) le registra un `VillageDefense` (L1409) y el reloj se queda
+**EN PAUSA** («el jugador que la defiende NO esta conectado», medido en el registro). O sea: **con el pueblo en asedio,
+la milicia no existe** ✓ (y eso vale también para la partida del jugador: mientras no gane el asedio inicial, no hay
+guardia).
+
+**EL ARREGLO ES DEL INSTRUMENTO** (`GuardHarness.preparar`): **si la aldea YA está construida** (segunda visita al mundo
+conservado), el asedio se da **por resuelto antes** de que el jugador de pega la descubra
+(`VillageSavedData.markSiegeResolved`, **L341**): `start` se sale por su propia guarda (**L1398**) y la aldea queda en
+paz, que es cuando reparte. En la **primera** visita (aldea sin generar) no se toca nada — si no, la aldea no se
+construiría. **LA RECETA, para las dos corridas**: primero `tanda-rapida.ps1 N -MundoNuevo` (se construye la aldea) y
+después `tanda-rapida.ps1 N+1 N+2 -Conservar` (mundo conservado: la aldea ya está en pie y en paz).
+
+**Y LO MEDIDO** (corridas 156 y 157, mundo conservado):
+
+```
+[Milicia] aldea 0: 4 espadachin(es) y 3 arquero(s) de 12 sobrante(s) de 27 aldeano(s),
+           milicia hasta 7 | alistados DE VERDAD: 7 (4 espadachin(es), 3 arquero(s))
+[Milicia] aldea 0: 4 espadachin(es) y 3 arquero(s) de 24 sobrante(s) de 42 aldeano(s), … 7 (4, 3)
+```
+
+- **El reparto se llena** ✓: **4 espadachines y 3 arqueros** (el tope `MILICIA_MAX` = 7), y **los dos números cuadran**
+  (lo que el bucle cree alistar y la marca de verdad: `alistados DE VERDAD: 7`).
+- **Las crías no se alistan** ✓: el censo da `aldeanos=42 (adultos=36, crias=6)` y **7 guardias** en **todas** las
+  muestras: los 6 bebés nunca entran en la milicia (`puedeSerGuardia` = `!isBaby()`).
+- **Y ENTRENAN** ✓: la marca `entrenado` sube de **0 a 713/724/777 ticks** (unos 36 s de entrenamiento) y en
+  **91 de 105** líneas de guardia va por encima de 0; las etiquetas pasan de `Yendo a entrenar` a `Patrullando la
+  aldea/arboleda` ✓.
+- **Y SE ARMAN** ✓: al principio los siete van **con las manos vacías** (`arma=minecraft:air`) y al final hay
+  `arma=minecraft:bow` y la etiqueta `Cogio 16 flechas del almacen` (la cadena del almacén funciona).
+- (El nivel sigue en `nv=1`: subir de nivel pide **matanzas**, y esta escena no siembra pelea — eso es `MEDIR_MILICIA`,
+  I62, y ya está medido.)
+
+**Y DE PROPINA, EL MUNDO CONSERVADO SIRVE** ✓: los contadores de trabajo de la tanda pasan de **todo a cero** (lo que
+salian dando las corridas sobre un mundo sin aldea) a **granja 2, ganado 3, pescador 4, herrería 60, cocina 11,
+minero 87 y guardia 105**: la receta de arriba deja un pueblo **vivo** para medir, sin tocar `run\saves`.
+
 ### I236 · LA OLA CON EL MURO ENTERO Y UN FOSO DELANTE: EL PUENTE SÍ, LA ESCALERA NO (Y ENTRAN POR DEBAJO)
 
 Es la mitad que quedaba del **pendiente 2** de `docs/CONTINUAR.md` (§2.0): *«una escena donde el muro esté entero y sin
