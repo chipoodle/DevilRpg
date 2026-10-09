@@ -1751,12 +1751,6 @@ public class AggressiveZombieEntity extends Zombie {
          */
         private static final float RODEO_MULTIPLIER = 6.0F;
         private static final int REPATH_TICKS = 20;
-        /**
-         * Bloques por PASO cuando el objetivo lejano no da ruta (ver {@code MoveToVillageCenterGoal.tick}, I240): se
-         * apunta a una celda cercana en la direccion del centro, que esa ruta si se traza, y repitiendo el monstruo llega
-         * hasta el obstaculo y alli taladra. Tres bloques es lo que se midio que basta para no quedarse corto.
-         */
-        private static final int MARCHA_A_PASOS_CORTOS = 3;
         private final AggressiveZombieEntity zombie;
         private double anchorDist = Double.MAX_VALUE;
         private int evalTicks = 0;
@@ -1814,23 +1808,6 @@ public class AggressiveZombieEntity extends Zombie {
                 zombie.getNavigation().moveTo(center.getX(), center.getY(), center.getZ(), 1.0D);
                 repathTicks = REPATH_TICKS;
             }
-            // SI NO HAY RUTA, SE CAMINA A PASOS CORTOS CONTRA LA MONTAÑA (I240, medido el 9-oct-2026). El jugador lo
-            // pidió así: *«el asediador, en vez de rodear (por si es demasiado grande la circunferencia), pueda mejor
-            // cavar de frente hasta llegar a la aldea»*. El rodeo ya lo intenta el buscador de caminos (6× presupuesto),
-            // pero con la montaña CERRANDO el paso —medido con un anillo de piedra cerrado a r=70— **no hay ruta al
-            // centro** y el asaltante se quedaba **plantado a ocho bloques del anillo, sin picar un solo bloque** ✗: el
-            // taladro (`breakBlockTowards`) solo mira las celdas de AL LADO (3×3×2). Y el control de movimiento directo
-            // tampoco basta (medido: dos bloques y se para). Lo que sí funciona es apuntar el buscador a una celda
-            // CERCANA en la dirección del centro: esa ruta corta sí se traza, y repitiéndola el monstruo llega hasta el
-            // obstáculo, donde el taladro ya tiene piedra que picar.
-            if (!zombie.getNavigation().isInProgress()) {
-                BlockPos zPos = zombie.blockPosition();
-                int paso = MARCHA_A_PASOS_CORTOS;
-                int px = zPos.getX() + Integer.signum(center.getX() - zPos.getX()) * paso;
-                int pz = zPos.getZ() + Integer.signum(center.getZ() - zPos.getZ()) * paso;
-                zombie.getNavigation().moveTo(px, zPos.getY(), pz, 1.0D);
-            }
-
             // ABRIRSE PASO, en este orden: (1) el RODEO ya lo intenta el buscador de caminos (con más presupuesto);
             // si AÚN tiene ruta, se le deja caminar (puede estar dando la vuelta a la montaña, y taladrar ahí sería
             // un destrozo tonto). (2) Si NO hay ruta y lleva un rato sin avanzar, primero PUENTE (si lo que hay

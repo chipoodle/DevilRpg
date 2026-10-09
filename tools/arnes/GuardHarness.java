@@ -3840,15 +3840,18 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 CENTRO, com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS);
         // Y EL TESTIGO DEL BARRIDO, que es lo que delató la primera versión de esta escena (I240): sin él, el arnés
         // borraba al asaltante cada segundo (MEDIR_MONTANA no estaba en la lista de excepciones) y lo que se medía era
-        // un monstruo CONGELADO — las tres corridas 164/165/166 no valen, y quedan escritas como tales.
-        if (montanero.isRemoved() && !montanaBarridoAvisado) {
+        // un monstruo CONGELADO — las corridas 164 a 167 NO VALEN, y quedan escritas como tales. OJO: `isRemoved()`
+        // también es verdad cuando lo MATAN (la milicia lo mató en la corrida 169), así que el aviso solo sale si
+        // además le queda vida: eso separa «lo ha borrado el instrumento» de «ha muerto peleando».
+        if (montanero.isRemoved() && montanero.getHealth() > 0.0F && !montanaBarridoAvisado) {
             montanaBarridoAvisado = true;
             DevilRpg.LOGGER.warn("[Arnes] MONTANA: EL INSTRUMENTO HA BORRADO AL ASALTANTE en t={} (el barrido de monstruos"
                     + " del arnes): LA MEDIDA NO VALE", ticks);
         }
-        DevilRpg.LOGGER.info("[Arnes] MONTANA t={} pos={} r={} DENTRO={} borrado={} | celdas del anillo abiertas={}/{} |"
-                        + " goals=[{}]", ticks, montanero.blockPosition(), r, dentro ? "SI" : "no",
-                montanero.isRemoved() ? "SI" : "NO", abiertas, anilloDeLaMontana.size(), goalsCorriendo(montanero));
+        DevilRpg.LOGGER.info("[Arnes] MONTANA t={} pos={} r={} DENTRO={} borrado={} vivo={} | celdas del anillo"
+                        + " abiertas={}/{} | goals=[{}]", ticks, montanero.blockPosition(), r, dentro ? "SI" : "no",
+                montanero.isRemoved() ? "SI" : "NO", montanero.isAlive() ? "SI" : "NO", abiertas,
+                anilloDeLaMontana.size(), goalsCorriendo(montanero));
     }
 
     private static void medirElAsaltoAlMuro(ServerLevel level, FakePlayer pega) {

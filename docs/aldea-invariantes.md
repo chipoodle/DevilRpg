@@ -6896,6 +6896,53 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I240 · LA MONTAÑA: EL TÚNEL DE FRENTE **SÍ** CUMPLE LO QUE PIDIÓ EL JUGADOR (y un cambio mío que sobraba)
+
+**La pregunta del jugador** (9-oct-2026): *«lo del túnel se pensó para cuando hay una montaña entre el asediador y la
+villa: el asediador, en vez de rodear (por si es demasiado grande la circunferencia), pueda mejor cavar de frente hasta
+llegar a la aldea. Si la aldea está por encima, puede hacer una escalera y atravesar abismos o brechas grandes. ¿Esto se
+cumple así como está ahorita?»*.
+
+**EL DISEÑO, leído en el código, es exactamente ese** ✓: la **marcha** al centro (`MoveToVillageCenterGoal`, **L1841**)
+intenta primero el **rodeo** —le sube al buscador de caminos **6× el presupuesto de nodos** (`RODEO_MULTIPLIER`, **L1752**,
+*«es lo que le permite RODEAR una montaña en vez de rendirse»*)— y, si el monstruo **no se mueve**, primero **puente** y
+después **taladro de frente** (`breakBlockTowards`, **L353**, un bloque cada **2 s** y **40 bloques** por marcha,
+`TUNEL_PRESUPUESTO` **L103**). La **escalera** la elige `TraverseGoal` cuando el objetivo está **arriba**
+(`apilarBloqueParaSubir`, **L726**) y el **puente** cuando hay un **agujero delante** (`puentearHacia`, **L604**).
+
+**LO MEDIDO, con la escena de la montaña** (`MEDIR_MONTANA`, en el arnés): un **anillo de piedra CERRADO** a r=70 (3 de
+grueso, 9 de alto, **4320 celdas testigo**) —o sea, imposible de rodear— y el asaltante **fuera, a r=80 y SIN objetivo**,
+marchando al centro.
+
+| | corrida **169** (el código de verdad) ✓ |
+|---|---|
+| ¿anda hasta la montaña? | **sí**: de r=80 a r=73 en **9 s** (el buscador traza una ruta *hasta donde llega*) |
+| ¿taladra? | **sí**: `TALADRAR` (la línea del primer bloque), y el anillo pasa de **0 a 6 celdas abiertas** a los 48 s y a **15** a los 72 s |
+| ¿llega? | **sí**: a los **72 s** está en **r=63**, o sea **ha atravesado el anillo** y está en el muro del pueblo; después **muere peleando con la milicia** (el testigo lo delata: `borrado=SI` con la vida a 0) ✓ |
+
+Y las otras dos, ya medidas antes, también se cumplen ✓: el **puente** cruza el foso de 4 de ancho y 7 de hondo (**8 de
+8**, I236) y la **escalera** coloca escalones y sube a un objetivo en el aire (**65-76** líneas `escalon`, I238).
+
+**UN CAMBIO MÍO QUE SOBRABA, MEDIDO Y RETIRADO** ✗. Con el primer resultado (que era del instrumento, ver abajo) me
+pareció que el asaltante se quedaba plantado a distancia porque la marcha no caminaba hacia el obstáculo, y le puse un
+**«paseo a pasos cortos»** (apuntar el buscador a una celda cercana cuando no hay ruta). **Corrida de control (169, con
+ese cambio APAGADO)**: el asaltante **también** llega y taladra, y **antes** (r=63 a los 72 s, 15 celdas). Corrida 168 (con
+el cambio puesto): r=63 a los **96 s** y **12** celdas. O sea: **el cambio no mejoraba nada y además retrasaba** → **se
+retira** ✓ (regla de la casa: *lo que no mejora la media se retira y se dice*). Queda aquí escrito para que nadie lo
+vuelva a «arreglar».
+
+**Y LA LECCIÓN DEL INSTRUMENTO, que costó CUATRO corridas** ✗: las corridas **164-167 no valen** (y no se usan como
+medida) porque el **barrido de monstruos del arnés borraba al asaltante cada segundo** — `MEDIR_MONTANA` no estaba en su
+lista de excepciones, exactamente el mismo fallo que dejó sin valor la escena del nado (I235)—. Lo que se veía era un
+monstruo **congelado** (misma celda 12 volcados seguidos, `pica Block = 1`, que era de otro). Arreglado: `!MEDIR_MONTANA`
+en el candado (**L372**) y **testigo en cada volcado** (`borrado=SI/NO`, `vivo=SI/NO`), con el aviso en voz alta. Y el
+testigo quedó **afinado**: `isRemoved()` también es verdad cuando lo **matan**, así que el aviso del instrumento solo
+sale si además **le queda vida** (si no, murió peleando).
+
+**LO QUE NO ESTÁ MEDIDO, dicho claro** ✗: el **tope de 40 bloques por marcha** (una montaña más gruesa aguanta y la
+aldea se salva, que es lo que pidió el jugador para no perderla a lo tonto) está **leído en el código** pero no medido con
+una montaña de más de 40 bloques.
+
 ### I239 · EL ROMPER Y EL PUENTE DEJAN DE PELEARSE: **LA OBRA DEL ASEDIO NO SE PICA**
 
 El otro defecto que salió en la foto de I236: **el `BreakBlockGoal` destruía los tablones que tendía el puente del

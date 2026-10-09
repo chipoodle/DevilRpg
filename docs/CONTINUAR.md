@@ -129,6 +129,17 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    **nace con su asedio inicial** — que con un jugador de pega no se resuelve nunca: la corrida 155 dio `guardias=0` los
    tres minutos y ni una linea `[Milicia]`. El instrumento lo arregla dando el asedio **por resuelto** cuando la aldea ya
    esta construida (ver la receta, abajo).
+4. **LA MONTAÑA Y EL TUNEL DE FRENTE** — **MEDIDO Y SE CUMPLE** ✓ (9-oct-2026, **I240** en `docs/aldea-invariantes.md`).
+   Lo pregunto el jugador: *«lo del tunel se penso para cuando hay una montaña entre el asediador y la villa… en vez de
+   rodear (por si es demasiado grande la circunferencia) pueda mejor cavar de frente… si la aldea esta por encima, puede
+   hacer una escalera y atravesar abismos o brechas grandes»*. Escena nueva (`MEDIR_MONTANA`): un **anillo de piedra
+   CERRADO** a r=70 (imposible de rodear) y el asaltante fuera, a r=80, **sin objetivo** (marchando al centro). Medido:
+   **anda hasta la montaña** (r=80 -> r=73 en 9 s), **taladra** (el anillo pasa de 0 a 6 celdas abiertas a los 48 s y a
+   **15** a los 72 s) y **la atraviesa** (r=63 a los 72 s, ya en el muro del pueblo; despues muere peleando con la
+   milicia). El **puente** (8 de 8, I236) y la **escalera** (65-76 escalones, I238) ya estaban medidos ✓. **Un cambio mio
+   que sobraba** (un «paseo a pasos cortos» para acercarse) se midio con su **corrida de control** y **se retiro**: sin el
+   el asaltante llega **antes** (72 s y 15 celdas contra 96 s y 12) ✓. **Falta medir** el tope de **40 bloques por
+   marcha** (una montaña mas gruesa aguanta: esta leido en el codigo, no medido).
 
 **Y EL MUNDO DE LA TANDA: LA RECETA YA ESTA MEDIDA (9-oct-2026)** ✓. Lo que salia antes eran **contadores de trabajo a
 cero** porque la copia del guardado no tiene aldea donde el arnes la busca (en `470,63,646` habia **mar**: lo dice
