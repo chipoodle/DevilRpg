@@ -95,7 +95,10 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    (`AggressiveZombieEntity` **L854**) y medido **antes y despues**: **0 ticks** corriendo en 60 s de atasco → **arranca
    3 veces y saca al monstruo del agua en 2-4 ticks**. La vuelta de orilla a ras ya salia sola: **sale del agua a los 6,0 s**
    (3,4 bloques a 0,57 bloques/s dentro del agua) y anda en tierra a **2,2 bloques/s** ✓.
-2. **El puente y la escalera en una ola** — **EL PUENTE: MEDIDO** ✓; **LA ESCALERA: SIGUE SIN VERSE** ✗
+2. **El puente y la escalera en una ola** — **CERRADA Y MEDIDA** ✓: el **puente** se tiende 8 de 8 y cruzan, y la
+   **escalera** primero se midio que **no colocaba nada** (0 escalones en cinco corridas) y **se arreglo** (I238), y
+   despues se ha vuelto a medir: **103** lineas `ESCALON` en la corrida 173 (I242) — o sea que las dos herramientas se
+   ven en una ola ✓
    (9-oct-2026, **I236** en `docs/aldea-invariantes.md`). Escena nueva (`MEDIR_OLA_CON_FOSO`, en el arnes): **muro entero
    y sin huecos** (anillo r=7, 3 de alto, 68 troncos) con un **foso de 4 de ancho y 7 de hondo delante** y **ocho
    asaltantes fuera**, en **dos vueltas** (objetivo al mismo nivel y 4 bloques arriba). Medido en dos corridas de mundo
