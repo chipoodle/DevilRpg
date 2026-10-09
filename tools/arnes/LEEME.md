@@ -1,6 +1,32 @@
 # Arnés de la aldea (servidor headless)
 
-## EL LÍMITE DEL MOTOR QUE PARECÍA UN FICHERO PERDIDO: LA GEOMETRÍA VA DE −16 A 32 (8-oct-2026)
+## REGLA · SI EL CLIENTE ESTÁ ABIERTO, SE MATA Y SE SIGUE (8-oct-2026)
+
+**No se le pregunta al jugador ni se espera: se mata el proceso y se continúa.** Lo pidió él expresamente, y se escribe
+aquí porque **no estaba en ningún sitio** y por eso se incumplió.
+
+**Por qué hace falta** ✓: el cliente de desarrollo **tiene abiertos** los ficheros de `build/` (`-Dfml.modFolders=…build\classes\java\main;…build\resources\main`), y
+NeoForm necesita **reemplazar** `build\moddev\artifacts\neoforge-*.jar`. Con el cliente vivo el build muere con:
+
+```
+java.nio.file.AccessDeniedException: ...neoforge-21.1.249.jar.tmp -> ...neoforge-21.1.249.jar
+```
+
+**Y OJO, LA COMPROBACIÓN NORMAL NO LO VE** ✗: el `forgeclientdev` va **dentro de `build\moddev\clientRunVmArgs.txt`**, no
+en la línea de comandos, así que un filtro por `forgeclientdev` da cero y parece que no hay nadie. Hay que mirar
+`fml.modFolders` y `clientRunVmArgs` ✓:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name like 'java%'" |
+  Where-Object { $_.CommandLine -match 'fml.modFolders|clientRunVmArgs|forgeserverdev' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+Remove-Item 'build\moddev\artifacts\neoforge-*.jar.tmp' -Force -ErrorAction SilentlyContinue
+```
+
+Después, compilar. **El mundo NO se pierde**: el guardado está en disco (`run\saves`), y matar el proceso sólo descarta
+lo jugado desde el último autoguardado. Y sigue en pie, por encima de todo, que **`run\saves` no se toca** ✓.
+
+## SI UN MODELO O UNA TEXTURA NO APARECEN: LA GEOMETRÍA VA DE −16 A 32 (8-oct-2026)
 
 **Síntoma**: el portón salía con el **damero negro y magenta** (la textura de «modelo que falta») en una parte, esa
 parte **no se movía**, y el log del cliente decía:

@@ -221,8 +221,11 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
         int cambiadas = 0;
         int encontradas = 0;
         StringBuilder donde = new StringBuilder();
-        // Las TRES celdas del ancho (la pulsada y una a cada lado) por los TRES pisos.
-        for (int ancho = -1; ancho <= 1; ancho++) {
+        // Las TRES celdas del ancho (la pulsada y sus vecinas) por los TRES pisos. El barrido va de -2 a 2 y no de -1 a
+        // 1 (8-oct-2026): como se cuenta DESDE LA CELDA PULSADA, y esa puede ser una de los EXTREMOS, con -1..1 se
+        // dejaba fuera la del otro extremo y el portón **abría a medias** según dónde le dieras ✗. De más no hace daño:
+        // sólo toca bloques de portón con el MISMO `FACING` ✓.
+        for (int ancho = -2; ancho <= 2; ancho++) {
             for (int alto = 0; alto <= 2; alto++) {
                 BlockPos p = muroEnZ ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
                 BlockState s = level.getBlockState(p);
@@ -270,7 +273,15 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
         boolean muroEnZ = ejeX(facing);
         BlockPos base = pos.offset(0, -estado.getValue(LAYER).indice(), 0);
         int apagadas = 0;
-        for (int ancho = -1; ancho <= 1; ancho++) {
+        // OJO CON EL ALCANCE, que aquí costó una columna de la puerta (8-oct-2026): esto se llama desde la celda de la
+        // BISAGRA, que es la del EXTREMO (la de coordenada MENOR — así la pone `VillageGenerator.sellarLasCeldasDelPorton`),
+        // no la del medio. Barriendo `-1..1` se cubrían la bisagra y la del medio, pero **la del extremo opuesto se
+        // quedaba con la hoja fuera para siempre**: su modelo no dibujaba nada y el renderizador tampoco (mira el estado
+        // de la bisagra, que ya estaba apagada) → **faltaba una columna entera del portón cerrado** ✗, y la puerta
+        // parecía desplazada (lo reportó el jugador con una captura). Por eso se barre de **-2 a 2**: cubre las tres
+        // celdas esté la bisagra en el extremo que esté ✓, y de más no hace daño porque sólo toca bloques de portón con
+        // el MISMO `FACING` y con `HOJA_FUERA` encendida.
+        for (int ancho = -2; ancho <= 2; ancho++) {
             for (int alto = 0; alto <= 2; alto++) {
                 BlockPos p = muroEnZ ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
                 BlockState s = level.getBlockState(p);
@@ -323,10 +334,11 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
         if (!level.isClientSide) {
             Direction facing = state.getValue(FACING);
             // El eje del MURO (perpendicular al que mira el portón): por ahí van las TRES celdas del ancho. Antes
-            // barría dos, así que romper una celda dejaba media hoja en pie.
+            // barría dos, así que romper una celda dejaba media hoja en pie. Y el barrido va de -2 a 2 porque se cuenta
+            // DESDE LA CELDA ROTA, que puede ser una de los EXTREMOS: con -1..1 se dejaba en pie la del otro extremo ✗.
             boolean muroEnZ = ejeX(facing);
             BlockPos base = pos.offset(0, -state.getValue(LAYER).indice(), 0);
-            for (int ancho = -1; ancho <= 1; ancho++) {
+            for (int ancho = -2; ancho <= 2; ancho++) {
                 for (int alto = 0; alto <= 2; alto++) {
                     BlockPos p = muroEnZ ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
                     if (!p.equals(pos) && level.getBlockState(p).getBlock() instanceof DoubleGateBlock) {
