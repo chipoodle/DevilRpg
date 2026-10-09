@@ -148,6 +148,17 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    resto de la corrida) ✓. Y **se recarga con cada centro que se le asigna** (`setGoToCenterActive(true)` **L199** llama a
    `recargarTunel()`): **cada ola vuelve con 40 bloques** — leido en el codigo; **no medido** una segunda ola contra la
    misma montaña ✗.
+5. **CAVAR POR DEBAJO OBLIGA A SALIR** — **ARREGLADO Y MEDIDO** ✓ (9-oct-2026, **I242** en `docs/aldea-invariantes.md`).
+   La regla del jugador: *«si cavan por debajo pero despues hacen algo para salir a la superficie, obligatorio, esta
+   bien; pero si no, mejor que se queden solo cavando cuando sea montaña o algo que los bloquee»*. **No se cumplia
+   siempre**: en la corrida 154 el asaltante #0 acabo **8 bloques bajo el suelo y clavado 8 volcados** en un pozo que se
+   habia cavado (la escalera no podia colocar porque la celda de delante, a la altura de los pies, era la pared del pozo,
+   y el pico le gastaba el presupuesto de escalones). **ARREGLADO**: el escalon se intenta a la altura de los pies y, si
+   esa celda esta ocupada, **un bloque mas arriba** (desde el fondo del pozo: un bloque al que saltar). **Medido
+   despues** (corridas 173/174/175, 24 casos): fondo maximo **6 bloques** (dentro del foso, que cava 7) y **ninguno bajo
+   tierra** ✓, con la escalera subiendo (**103** lineas `ESCALON`). Y queda una **herramienta versionada** para mirarlo
+   (`tools/arnes/vuelven_a_la_superficie.py`), porque el testigo del arnes mezclaba «estar en el foso» con «estar bajo
+   tierra».
 
 **Y EL MUNDO DE LA TANDA: LA RECETA YA ESTA MEDIDA (9-oct-2026)** ✓. Lo que salia antes eran **contadores de trabajo a
 cero** porque la copia del guardado no tiene aldea donde el arnes la busca (en `470,63,646` habia **mar**: lo dice
