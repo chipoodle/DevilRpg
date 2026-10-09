@@ -3834,6 +3834,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                                 + " queda",
                         MONTANA_RADIO, MONTANA_GROSOR, MONTANA_ALTO, anilloDeLaMontana.size(),
                         montanero.blockPosition(), MONTANA_ASALTANTE, cota);
+                DevilRpg.LOGGER.info("[Arnes] MONTANA: el asaltante de esta escena es el #{} (con ese numero se cuentan"
+                        + " en el registro los bloques que pica EL: `[Siege] asaltante #{} ...`)", montanero.getId(),
+                        montanero.getId());
             }
         }
         if (montanero == null || ticks % 240 != 0) {

@@ -140,8 +140,12 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    que sobraba** (un «paseo a pasos cortos» para acercarse) se midio con su **corrida de control** y **se retiro**: sin el
    el asaltante llega **antes** (72 s y 15 celdas contra 96 s y 12) ✓. Y **la montaña GRUESA aguanta** ✓ (corrida 170:
    anillo de **26 de fondo**: en 156 s avanza de r=92 a r=86 y abre 29 de 37 440 celdas, **sin atravesarla**), que es lo
-   que el jugador queria. **Falta** instrumento para aislar el tope de **40 bloques por marcha**: las lineas
-   `[Siege] … pica` **no dicen que asaltante** pica, asi que no se pueden contar los de ESE monstruo.
+   que el jugador queria. **Y EL TOPE YA ESTA MEDIDO** ✓ (9-oct-2026, **I241**): las cinco lineas del asedio llevan ahora
+   **`asaltante #<id>`** (y el arnes dice cual es el suyo), asi que se pueden contar los bloques de UNO; con el tope de
+   verdad el ritmo es **~1 bloque cada 4 s** (38 en 150 s, corrida 171) y **agotar 40 pide 8-10 minutos**, mas de lo que
+   dura el banco ✗; con una **corrida de control con el tope en 5** se vio lo que pasa al agotarse: el contador baja
+   **5 -> 0** en **20 bloques** y **el asaltante se queda** (anillo clavado en 5 celdas y el monstruo parado en r=91 el
+   resto de la corrida) ✓. Falta medir si el tope **se recarga** al empezar una marcha nueva.
 
 **Y EL MUNDO DE LA TANDA: LA RECETA YA ESTA MEDIDA (9-oct-2026)** ✓. Lo que salia antes eran **contadores de trabajo a
 cero** porque la copia del guardado no tiene aldea donde el arnes la busca (en `470,63,646` habia **mar**: lo dice

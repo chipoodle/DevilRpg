@@ -6896,6 +6896,32 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I241 · EL TOPE DEL TALADRO, MEDIDO: 40 BLOQUES POR MARCHA Y, CUANDO SE AGOTA, EL ASALTANTE SE QUEDA
+
+Venía del cabo suelto de I240: *«no se puede aislar el tope de 40 bloques porque las líneas `[Siege]` no dicen qué
+asaltante pica»*. Se arregló **el instrumento** y se midió.
+
+**1) EL IDENTIFICADOR DEL ASALTANTE EN LAS CINCO TRAZAS DEL ASEDIO** ✓ (`AggressiveZombieEntity`: `pica` **L345**,
+`TALADRAR` **L396**, `PONER UN PUENTE` **L649**, `pone un ESCALON` **L767** y `CAVA hacia abajo` **L872**), con
+`getId()`: `[Siege] asaltante #266 de la aldea -1 pica Block{minecraft:stone} en …`. Y el arnés, en la escena de la
+montaña, **dice qué identificador lleva su asaltante** (`[Arnes] MONTANA: el asaltante de esta escena es el #…`).
+**Medido que hacía falta**: en la corrida 171, el asaltante de la escena (**#266**, **49** líneas) se separa del que
+traía el asedio del mundo (**#106**, **3** líneas) — antes **se contaban juntos** y no había forma de saber de quién era
+cada bloque ✗.
+
+**2) EL TOPE, AHORA SÍ MEDIDO** ✓. Primero se midió **el ritmo**: con el tope de verdad (**40**, `TUNEL_PRESUPUESTO`
+**L103**), el asaltante de la montaña gruesa picó **38 bloques en ~150 s** (corrida 171) — o sea **~1 bloque cada 4 s**—,
+así que **agotar 40 bloques pide 8-10 minutos** y **el banco de 3 minutos no llega** ✗. Por eso se midió con una
+**corrida de control con el tope bajado a 5** (y después se devolvió a **40** ✓, que es lo que va al jugador):
+- el contador de la traza baja **5 → 0** en **20 bloques** (≈4 bloques por envite, porque cada taladro rompe el de
+  delante y a veces uno más y el de encima),
+- y **a partir de ahí el asaltante SE QUEDA**: el anillo se queda clavado en **5 celdas abiertas** desde t=1200 hasta el
+  final de la corrida (t=3120) y el monstruo **parado en r=91**, sin picar un bloque más ✓.
+
+O sea: **el tope corta el taladro de verdad** y, cuando se agota, **el que se queda es el asaltante**: una montaña de más
+de 40 bloques **aguanta y la aldea se salva**, que es exactamente lo que pidió el jugador ✓. (Lo que **no** está medido es
+si el tope se **recarga** en una marcha nueva: `recargarTunel()` se llama al empezar la marcha, y eso no se ha medido.)
+
 ### I240 · LA MONTAÑA: EL TÚNEL DE FRENTE **SÍ** CUMPLE LO QUE PIDIÓ EL JUGADOR (y un cambio mío que sobraba)
 
 **La pregunta del jugador** (9-oct-2026): *«lo del túnel se pensó para cuando hay una montaña entre el asediador y la

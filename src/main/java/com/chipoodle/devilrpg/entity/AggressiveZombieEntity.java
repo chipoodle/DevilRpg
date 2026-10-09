@@ -338,8 +338,12 @@ public class AggressiveZombieEntity extends Zombie {
         }
         // Queda en el log (INFO, una línea por bloque): es lo que permite comprobar que la horda se abre paso DE
         // VERDAD. Medido con el arnés, sin esta línea no se podía distinguir "no pica" de "pica y el pueblo lo repone".
-        DevilRpg.LOGGER.info("[Siege] un asaltante de la aldea {} pica {} en {} (le quedan {} de tunel)", worldSiegeIndex,
-                b, pos.toShortString(), tunelRestante);
+        // EL IDENTIFICADOR DEL ASALTANTE VA EN LA TRAZA (I241, 9-oct-2026): sin el, todas las lineas del asedio salen con
+        // la misma aldea y NO se puede contar los bloques que lleva UN monstruo concreto (medido en la montana gruesa:
+        // con mas atacantes del mundo no se podia aislar el tope de 40 bloques por marcha). `getId()` es corto y estable
+        // mientras la entidad vive.
+        DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} pica {} en {} (le quedan {} de tunel)", getId(),
+                worldSiegeIndex, b, pos.toShortString(), tunelRestante);
         level().destroyBlock(pos, true);
     }
 
@@ -389,8 +393,8 @@ public class AggressiveZombieEntity extends Zombie {
         breakBlockAt(best);
         if (tunelRestante == TUNEL_PRESUPUESTO) {
             // Primer bloque de esta marcha: queda en el log (INFO) para poder comprobar que la horda se abre paso.
-            DevilRpg.LOGGER.info("[Siege] un zombie empieza a TALADRAR hacia la aldea en {} (presupuesto {} bloques)",
-                    best, TUNEL_PRESUPUESTO);
+            DevilRpg.LOGGER.info("[Siege] asaltante #{} empieza a TALADRAR hacia la aldea en {} (presupuesto {} bloques)",
+                    getId(), best, TUNEL_PRESUPUESTO);
         }
         tunelRestante--;
         tunelEspera = TUNEL_ENTRE_BLOQUES;
@@ -642,7 +646,7 @@ public class AggressiveZombieEntity extends Zombie {
             level().playSound(null, delante, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
             particulasDeTrabajo(delante);
             if (puenteEspera == 0 && tunelRestante == TUNEL_PRESUPUESTO) {
-                DevilRpg.LOGGER.info("[Siege] un zombie empieza a PONER UN PUENTE hacia la aldea en {}", delante);
+                DevilRpg.LOGGER.info("[Siege] asaltante #{} empieza a PONER UN PUENTE hacia la aldea en {}", getId(), delante);
             }
             tunelRestante--;
             puenteEspera = PUENTE_ENTRE_BLOQUES;
@@ -760,8 +764,8 @@ public class AggressiveZombieEntity extends Zombie {
                     level().setBlock(escalon, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
                     level().playSound(null, escalon, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
                     particulasDeTrabajo(escalon);
-                    DevilRpg.LOGGER.info("[Siege] un asaltante pone un ESCALON en {} para subir al objetivo ({})",
-                            escalon.toShortString(), hacia.toShortString());
+                    DevilRpg.LOGGER.info("[Siege] asaltante #{} pone un ESCALON en {} para subir al objetivo ({})",
+                            getId(), escalon.toShortString(), hacia.toShortString());
                     apilarEspera = APILAR_ENTRE_BLOQUES;
                     apilarRestante--;
                     return true;
@@ -865,7 +869,7 @@ public class AggressiveZombieEntity extends Zombie {
         breakBlockAt(abajo);
         particulasDeTrabajo(abajo);
         cavarEspera = CAVAR_ENTRE_BLOQUES;
-        DevilRpg.LOGGER.info("[Siege] un asaltante CAVA hacia abajo en {} para bajar al objetivo ({})",
+        DevilRpg.LOGGER.info("[Siege] asaltante #{} CAVA hacia abajo en {} para bajar al objetivo ({})", getId(),
                 abajo.toShortString(), hacia.toShortString());
         return true;
     }
