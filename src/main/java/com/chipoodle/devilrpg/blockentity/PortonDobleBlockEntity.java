@@ -83,6 +83,17 @@ public class PortonDobleBlockEntity extends BlockEntity {
         } else if (this.progresoDelGiro > objetivo) {
             this.progresoDelGiro = Math.max(objetivo, this.progresoDelGiro - PASO_DEL_GIRO);
         }
+        // Y CUANDO EL CIERRE TERMINA, SE LE DEVUELVE LA VISTA AL MODELO (8-oct-2026; esto es lo que hacía que el cierre
+        // NO se animara). Mientras la hoja está fuera —abierta o girando— el modelo no dibuja nada y la pinta el
+        // renderizador ({@code DoubleGateBlock.HOJA_FUERA}); al llegar al final del CIERRE hay que apagarla para que el
+        // modelo vuelva a dibujar la puerta cerrada ✓. Y en ese tick el renderizador ya está dibujando la hoja justo en
+        // la posición de cerrado, así que el cambio NO se ve: no hay salto ✓.
+        // Va sólo en el SERVIDOR: el estado del bloque lo manda él y al cliente le llega solo; cambiarlo en los dos
+        // sería que el cliente mandara cambios de bloque por su cuenta ✗.
+        if (objetivo == 0.0F && this.progresoDelGiro == 0.0F && estado.getValue(DoubleGateBlock.HOJA_FUERA)
+                && this.level != null && !this.level.isClientSide) {
+            DoubleGateBlock.apagarLaHoja(this.level, this.worldPosition, estado);
+        }
     }
 
     /** El progreso del giro tal cual (0 cerrado, 1 abierto). */

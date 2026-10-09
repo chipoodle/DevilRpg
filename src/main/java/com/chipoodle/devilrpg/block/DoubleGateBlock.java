@@ -121,6 +121,23 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
     public static final BooleanProperty JUNTURA = BooleanProperty.create("juntura");
 
     /**
+     * <b>¿La hoja está FUERA de su celda?</b> — abierta, o girando hacia cualquiera de las dos posiciones.
+     * <p>
+     * <b>Existe por la animación del CIERRE</b> (8-oct-2026). Hasta ahora el modelo del estado cerrado se dibujaba en
+     * cuanto {@link #OPEN} pasaba a falso, o sea <b>de golpe al empezar a cerrar</b>, y tapaba la hoja que el
+     * renderizador todavía tenía que girar de vuelta: la puerta parecía cerrarse de un salto ✗ (lo reportó el jugador:
+     * *«no hace la animación inversa cuando cierra, sino que todavía se glitchea»*, después de que la apertura ya fuera
+     * bien). Y el modelo no puede depender de {@code OPEN}, porque {@code OPEN} es la <b>lógica</b> (el paso, la aldea,
+     * el pathfinding) y cambia de golpe a propósito ✓.
+     * <p>
+     * Así que la <b>vista</b> tiene su propio dato: mientras esta propiedad esté en verdadero, los modelos del portón
+     * <b>no dibujan nada</b> (van con {@code "elements": []}, igual que el estado abierto) y la hoja la pinta el
+     * renderizador. El ticker la apaga **sólo cuando el giro ha llegado al final y está cerrado**, y ese tick el
+     * renderizador ya está dibujando la hoja justo en la posición de cerrado, así que el modelo entra **sin salto** ✓.
+     */
+    public static final BooleanProperty HOJA_FUERA = BooleanProperty.create("hoja_fuera");
+
+    /**
      * El <b>grosor</b> de una hoja: <b>2 píxeles</b> (1/8 de bloque). Cerrada mide lo que su celda; abierta es el canto
      * del panel que ha girado 90° ✓.
      */
@@ -133,7 +150,8 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
                 .setValue(OPEN, false)
                 .setValue(SIDE, PanelSide.LEFT)
                 .setValue(LAYER, PanelLayer.LOW)
-                .setValue(JUNTURA, false));
+                .setValue(JUNTURA, false)
+                .setValue(HOJA_FUERA, false));
     }
 
     @Override
@@ -143,7 +161,7 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, OPEN, SIDE, LAYER, JUNTURA);
+        builder.add(FACING, OPEN, SIDE, LAYER, JUNTURA, HOJA_FUERA);
     }
 
     /** ¿La hoja abate por el eje X? (la pared corre en Z cuando el portón mira al este o al oeste). */
@@ -172,7 +190,11 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
         // Con la colisión a cero el paso queda LIBRE de verdad, que es lo que se le pide a una puerta abierta: se ve el
         // listón (la `getShape`, que no se toca) y no estorba. Es la única diferencia deliberada entre lo que se VE y lo
         // que BLOQUEA en este bloque, y está solo en el estado abierto por eso mismo.
-        return state.getValue(OPEN) ? Shapes.empty() : Shapes.block();
+        // PASA LO MISMO CON LA VISTA: mientras la hoja esté fuera de su celda —abierta o girando— la dibuja el
+        // renderizador y el modelo no dibuja nada, así que el paso queda libre en cuanto la hoja empieza a moverse ✓
+        // (y durante el cierre sigue libre hasta que la hoja llega a su sitio, que es lo natural: no te atrapa a
+        // medio cerrar). Ver {@link #HOJA_FUERA}.
+        return state.getValue(HOJA_FUERA) ? Shapes.empty() : Shapes.block();
     }
 
     /**
@@ -208,8 +230,13 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
                     continue;
                 }
                 encontradas++;
-                if (s.getValue(FACING) == facing && s.getValue(OPEN) != abierto) {
-                    level.setBlock(p, s.setValue(OPEN, abierto), 3);
+                // La LÓGICA (OPEN) y la VISTA (HOJA_FUERA) se ponen juntas: al moverse la hoja, su modelo deja de
+                // dibujar y pasa a dibujarla el renderizador ✓. Y da igual si es abrir o cerrar: al CERRAR también se
+                // enciende, y es el ticker de la entidad el que la apaga cuando el giro termina — así la animación
+                // inversa se ve entera y el modelo sólo entra cuando la hoja ya está en su sitio ✓.
+                if (s.getValue(FACING) == facing
+                        && (s.getValue(OPEN) != abierto || !s.getValue(HOJA_FUERA))) {
+                    level.setBlock(p, s.setValue(OPEN, abierto).setValue(HOJA_FUERA, true), 3);
                     cambiadas++;
                 } else if (s.getValue(FACING) != facing) {
                     donde.append(p.toShortString()).append("(facing ").append(s.getValue(FACING)).append(") ");
@@ -226,6 +253,35 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
         if (cambiadas == 0) {
             return; // ya estaba como se pide: no hay nada que hacer
         }
+    }
+
+    /**
+     * <b>Devuelve la vista al modelo</b>: apaga {@link #HOJA_FUERA} en las nueve celdas del portón.
+     * <p>
+     * La llama el ticker de la entidad <b>sólo</b> cuando el giro ha llegado al final y el portón está cerrado. En ese
+     * momento el renderizador está dibujando la hoja justo en la posición de cerrado, así que el modelo entra <b>sin
+     * salto visible</b> ✓ — que es justo lo que faltaba para que el cierre se viera animado (antes el modelo entraba al
+     * empezar a cerrar y tapaba el giro ✗).
+     *
+     * @return cuántas celdas ha devuelto al modelo
+     */
+    public static int apagarLaHoja(Level level, BlockPos pos, BlockState estado) {
+        Direction facing = estado.getValue(FACING);
+        boolean muroEnZ = ejeX(facing);
+        BlockPos base = pos.offset(0, -estado.getValue(LAYER).indice(), 0);
+        int apagadas = 0;
+        for (int ancho = -1; ancho <= 1; ancho++) {
+            for (int alto = 0; alto <= 2; alto++) {
+                BlockPos p = muroEnZ ? base.offset(0, alto, ancho) : base.offset(ancho, alto, 0);
+                BlockState s = level.getBlockState(p);
+                if (s.getBlock() instanceof DoubleGateBlock && s.getValue(FACING) == facing
+                        && s.getValue(HOJA_FUERA)) {
+                    level.setBlock(p, s.setValue(HOJA_FUERA, false), 3);
+                    apagadas++;
+                }
+            }
+        }
+        return apagadas;
     }
 
     /** ¿Ese punto del mundo es una celda de un portón doble? (lo usa el latido y el asedio). */

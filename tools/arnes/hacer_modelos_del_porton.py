@@ -122,21 +122,27 @@ def main():
         escritos += 2
     print('%d modelos escritos' % escritos)
 
-    # 2) EL BLOCKSTATE (96 variantes, con la juntura tambien en el estado ABIERTO)
+    # 2) EL BLOCKSTATE. Ahora hay DOS cosas que deciden la vista (192 variantes):
+    #    - `open` es la LÓGICA (el paso, la aldea, el pathfinding) y cambia de golpe a propósito.
+    #    - `hoja_fuera` es la VISTA: mientras esté en verdadero el modelo NO dibuja nada y la hoja la pinta el
+    #      renderizador. Se enciende al empezar a mover la hoja y se apaga cuando el giro termina de CERRAR (lo lleva
+    #      `PortonDobleBlockEntity.tick`), que es lo que hace que el CIERRE se vea animado ✓.
+    #    Con `hoja_fuera=true` da igual `open`: en los dos casos manda el modelo VACÍO.
     variantes = {}
     for facing, lados in ROT.items():
         for lado, y in lados.items():
-            for abierto in ('true', 'false'):
-                for juntura in ('true', 'false'):
-                    for piso in ('low', 'mid', 'high'):
-                        clave = ('facing=%s,open=%s,side=%s,layer=%s,juntura=%s'
-                                 % (facing, abierto, lado, piso, juntura))
-                        sufijo = '_juntura' if juntura == 'true' else ''
-                        estado = 'abierto' if abierto == 'true' else 'cerrado'
-                        variantes[clave] = {
-                            'model': 'devilrpg:block/porton_%s_%s_%s%s' % (lado, estado, piso, sufijo),
-                            'y': y,
-                        }
+            for hoja_fuera in ('true', 'false'):
+                for abierto in ('true', 'false'):
+                    for juntura in ('true', 'false'):
+                        for piso in ('low', 'mid', 'high'):
+                            clave = ('facing=%s,open=%s,side=%s,layer=%s,juntura=%s,hoja_fuera=%s'
+                                     % (facing, abierto, lado, piso, juntura, hoja_fuera))
+                            sufijo = '_juntura' if juntura == 'true' else ''
+                            estado = 'abierto' if (hoja_fuera == 'true' or abierto == 'true') else 'cerrado'
+                            variantes[clave] = {
+                                'model': 'devilrpg:block/porton_%s_%s_%s%s' % (lado, estado, piso, sufijo),
+                                'y': y,
+                            }
     with open(os.path.join(BASE, 'blockstates', 'porton_doble.json'), 'w', encoding='utf-8') as f:
         json.dump({'variants': variantes}, f, indent=2)
     print('%d variantes' % len(variantes))

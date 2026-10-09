@@ -111,16 +111,18 @@ public class PortonDobleRenderer implements BlockEntityRenderer<PortonDobleBlock
             return;
         }
         boolean abierto = estadoDeLaBisagra.getValue(DoubleGateBlock.OPEN);
-        // EL REPOSO LO DIBUJA EL MODELO, y la condición es **el progreso**, no una bandera interna: cerrado y con el
-        // giro en cero, la hoja la pinta su modelo (el estado cerrado se ve bien y no se toca) y dibujarla aquí otra vez
-        // sería pintar la misma cara dos veces en el mismo píxel (parpadeo) ✗. En cuanto el giro se mueve manda este
-        // renderizador, también al final del cierre, porque es el único que sabe dónde está la hoja ENTRE dos ticks ✓.
-        // Antes esto miraba una bandera (`PortonDobleBlockEntity.estaEnReposo`, que sólo se pone en el primer tick): con
-        // ella, entre que la entidad existe y su primer tick hay un momento en que no dibuja NI el modelo NI esto, y el
-        // portón **parpadea** (lo reportó el jugador: *«la primera vez que abro como que parpadea»*) ✗. El progreso, en
-        // cambio, es el mismo dato del que sale el dibujo: cuando vale cero no hay nada que enseñar y punto ✓.
+        // ¿ESTÁ LA HOJA FUERA DE SU CELDA? Abierta, o girando hacia cualquiera de las dos posiciones (lo lleva
+        // `DoubleGateBlock.HOJA_FUERA`). Mientras lo esté, el modelo no dibuja y la hoja la pinta este renderizador ✓.
+        boolean hojaFuera = estadoDeLaBisagra.getValue(DoubleGateBlock.HOJA_FUERA);
+        // Y EL REPOSO LO DIBUJA EL MODELO: cerrado, con la hoja en su sitio y el giro en cero, no hay nada que enseñar
+        // aquí (dibujarlo sería pintar la misma cara dos veces en el mismo píxel: parpadeo ✗). En cuanto el giro se
+        // mueve —o la hoja está fuera, que incluye el cierre a medias— manda este renderizador, porque es el único que
+        // sabe dónde está la hoja ENTRE dos ticks ✓. La condición se mira en el PROGRESO, que es el mismo dato del que
+        // sale el dibujo, y no en una bandera interna: con una bandera había un momento sin modelo y sin renderizador, y
+        // el portón parpadeaba (lo reportó el jugador: *«la primera vez que abro como que parpadea»*) ✗.
         float progreso;
-        if (!abierto && porton.getProgresoDelGiro() <= 0.0F && porton.getProgresoAnteriorDelGiro() <= 0.0F) {
+        if (!abierto && !hojaFuera && porton.getProgresoDelGiro() <= 0.0F
+                && porton.getProgresoAnteriorDelGiro() <= 0.0F) {
             return;
         }
         // PROGRESO INTERPOLADO: el mundo se dibuja muchas más veces que los 20 ticks por segundo, así que sin rellenar
