@@ -438,9 +438,10 @@ repartidos cada 45° fuera del foso**, con el **objetivo dentro del muro**. Se l
 pueblo** (fuera del disco de la aldea) y **sobre el agua/terreno de la zona**, así que no depende del mundo: se mide
 igual en un mundo nuevo que en el mar.
 
-Se mide en **DOS VUELTAS** en la misma corrida, porque cada herramienta pide una geometría distinta: en la **vuelta 1**
-el objetivo está **al mismo nivel** (le toca al **puente**) y a los **1200 ticks** la escena se rehace y el objetivo se
-**sube 4 bloques** (vuelta 2: le toca a la **escalera**).
+Se mide en **TRES VUELTAS** en la misma corrida, porque cada herramienta pide una geometría distinta: en la **vuelta 1**
+el objetivo está **al mismo nivel** (le toca al **puente**); a los **1200 ticks** la escena se rehace y el objetivo se
+**sube 4 bloques** (vuelta 2); y a los **2000 ticks** se **rellena el foso**, se **quita el muro** y el objetivo se pone
+**en el aire**, 5 por encima del suelo (vuelta 3: el caso que le toca a la **escalera de bloques**).
 
 **Ojo con dos trampas del instrumento, las dos medidas** (costaron dos corridas con 0 tablones, 0 escalones y 0 brecha):
 1. **El disco de la aldea se mide desde el centro que lleva el BICHO**: si se le pone el centro en la escena, el foso y

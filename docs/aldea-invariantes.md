@@ -6952,12 +6952,13 @@ minero 87 y guardia 105**: la receta de arriba deja un pueblo **vivo** para medi
 
 Es la mitad que quedaba del **pendiente 2** de `docs/CONTINUAR.md` (§2.0): *«una escena donde el muro esté entero y sin
 huecos y con un foso delante, para que la única salida sea el puente o el escalón»*. Escena nueva en el arnés
-(`MEDIR_OLA_CON_FOSO`, **`GuardHarness.java` L3260** y siguientes, con **dos vueltas** en la misma corrida): **plancha de
+(`MEDIR_OLA_CON_FOSO`, **`GuardHarness.java` L3514** y siguientes, con **tres vueltas** en la misma corrida): **plancha de
 piedra** de 29×29 a **84 bloques del centro del pueblo** (fuera del disco de la aldea), **muro entero y sin huecos**
 (anillo de radio **7**, dos de grueso y **3 de alto**: dos troncos y adoquín, **68 troncos** de base), **foso de 4 de
 ancho** (r=8..11) y **7 de hondo** justo delante, **objetivo dentro del muro** y **ocho asaltantes** repartidos cada 45°
 **fuera del foso** (r=12). Vuelta 1: objetivo **a la misma altura** (le toca al puente). Vuelta 2 (t=1200): se rehace el
-foso, el objetivo se **sube 4 bloques** y los ocho vuelven a la orilla (le toca a la escalera).
+foso y el objetivo se **sube 4 bloques**. Vuelta 3 (t=2000): **foso relleno, muro quitado y el objetivo en el aire**
+(5 por encima), que es el caso que le toca a la escalera.
 
 **DOS FALLOS DEL INSTRUMENTO, MEDIDOS, ANTES DE QUE LA ESCENA MIDIERA NADA** (corridas 151 y 152: **0 tablones, 0
 escalones y 0 brecha** en 90 s, con `TraverseGoal` corriendo en todos los volcados):
@@ -6988,14 +6989,19 @@ y=70):
    PUENTE` cada uno) y **cruzan**: en la corrida 154, **7 de 8 dentro del muro a los 21 s**. Y el puente **sube un bloque
    por tablón** (medido: altura máxima 5 en la vuelta 2), así que un foso de 4 de ancho deja al asaltante **más alto que
    el muro de 3**: el muro se puede **pasar por encima** sin picarlo ni apilar nada.
-2. **LA ESCALERA NO: 0 escalones en las cuatro corridas** ✗, y el porqué está leído en el código y confirmado por el
-   registro: la rama que **coloca** el escalón (`apilarBloqueParaSubir`, **L724-738**) exige que la celda de delante, a
-   la altura de los pies, esté **vacía y con suelo firme debajo** — **sobre un agujero no puede** (ahí gana el puente,
-   que es lo correcto) y **contra el muro** el goal empieza por **abrir el hueco a picos**
-   (`breakStepAheadHacia`, **L753**), que devuelve `true` y **se sale sin colocar el escalón**: contra un muro
-   rompible, la escalera es un pico. **Queda ABIERTO**: ver la escalera en una ola pide el caso que le toca —objetivo
-   arriba, **suelo llano de por medio** y un obstáculo que **no se pueda picar**—, que es otra escena (la dedicada
-   `MEDIR_ATRAVESADORES` ya la mide, pero **en una ola no se ha visto**) ✗.
+2. **LA ESCALERA NO: 0 escalones en las cinco corridas** ✗, y **el porqué ya no es una sospecha: es una línea del
+   código, medida**. Se le dio su caso en una **vuelta 3** de la misma escena (corrida 158): **foso RELLENO** (suelo
+   llano), **muro QUITADO** y el objetivo **EN EL AIRE**, 5 bloques por encima (`fosoSueloY + 6`) — o sea: sin agujero
+   que puentear, sin nada que picar delante y el objetivo **arriba**, que es exactamente cuando toca la escalera.
+   **Resultado: 0 escalones otra vez** ✗, con los ocho asaltantes **debajo del objetivo** (radios 0..2, y=73 contra un
+   objetivo en y=78) y varios **cavando hacia abajo** (`EN EL FOSO`, y=67..69; `CAVA` 6 y **266 `pica`**, casi todos
+   `stone` de la propia plancha). **LA CAUSA, en `apilarBloqueParaSubir` (L692)**: antes de **colocar** el escalón, el
+   goal llama a `breakStepAheadHacia(hacia, true)` (**L716**) y **se sale con `true` en cuanto pica algo**
+   (L717-720); y con `conEscalon = true` esa llamada **pica también el suelo de delante, a la altura de los pies y uno
+   por debajo** (**L778-786**). En cualquier suelo rompible —o sea, **siempre**— lo que hace es **cavar el suelo de
+   delante y salir sin apilar nada**: la rama que **coloca** el bloque (**L724-738**) queda, en la práctica,
+   **inalcanzable**. **NO SE HA TOCADO NADA** ✗: el arreglo (colocar antes de picar, o no picar el suelo de delante
+   cuando lo que se quiere es apilar) es un cambio de comportamiento del asaltante y **lo decide el jugador**.
 3. **Y LOS QUE ENTRAN, ENTRAN POR DEBAJO** ✓: con el foso delante y el muro entero, el camino que encuentran es el
    **túnel** (`CAVA hacia abajo`, 34-56 veces) **bajo el muro** (125 piedras picadas justo en r=6..7, que es el suelo
    bajo sus cimientos) y salen al patio desde abajo. El muro **no lo pican**: los 68 troncos de base quedan en pie.

@@ -91,10 +91,15 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    nuevo (153 y 154, `-MundoNuevo`): **el puente lo tienden 8 de 8** ✓ y en la 154 **7 de 8 estan DENTRO del muro a los
    21 s** ✓; el puente **sube un bloque por tablon** (altura maxima 5), o sea que un foso de 4 de ancho deja al bicho
    **mas alto que el muro: lo pasa por encima sin picarlo** ✓. **La escalera no dispara NUNCA** (0 `escalon` en las
-   cuatro corridas) y el porque esta leido en el codigo: la rama que coloca el escalon pide **suelo firme debajo** de la
-   celda de delante (sobre un agujero no puede, y ahi gana el puente, que es lo correcto) y contra un muro **rompible**
-   el goal abre el hueco **a picos** y se sale sin colocar nada. **Lo que falta**: la escalera en una ola con el caso
-   que le toca (objetivo arriba, **suelo llano de por medio** y un obstaculo que **no se pueda picar**). Y DOS HALLAZGOS
+   **cinco** corridas), **ni dandole su caso** (vuelta 3 de la escena, corrida 158: foso **relleno**, muro **quitado** y
+   el objetivo **en el aire**: **0 escalones otra vez**, los ocho asaltantes **debajo del objetivo** y varios **cavando
+   hacia abajo**, `266 pica` casi todo `stone` de la plancha). **La causa esta medida en la linea exacta**:
+   `apilarBloqueParaSubir` (**L692**) llama **antes** a `breakStepAheadHacia(hacia, true)` (**L716**) y **se sale con
+   `true` en cuanto pica algo**; con `conEscalon = true` esa llamada **pica tambien el suelo de delante** (**L778-786**),
+   asi que en cualquier suelo rompible (siempre) **cava el suelo y no apila** — la rama que **coloca** el bloque
+   (**L724-738**) es, en la practica, **inalcanzable**. **DECISION PARA EL JUGADOR** ✗: el arreglo (colocar antes de
+   picar, o no picar el suelo de delante cuando lo que toca es apilar) **cambia el comportamiento del asaltante**, asi
+   que **no se ha tocado**. Y DOS HALLAZGOS
    que salieron de la foto, **sin tocar nada**: los que entran lo hacen **por debajo** (tunel bajo el muro: 125 piedras
    picadas justo en r=6..7 y los 68 troncos de base **en pie**), y el **romper y el puente se pelean** (45-62 de los
    bloques picados son `cobblestone` en r=10..11: **los tablones que ellos mismos acaban de tender**) ✗ — hay que

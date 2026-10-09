@@ -3401,7 +3401,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * altura, que es lo que dice si está en el fondo del foso) y las del mod `[Siege] … PONER UN PUENTE`,
      * `… pone un ESCALON`, `… CAVA hacia abajo` y `… pica Block{…}`.
      */
-    private static final boolean MEDIR_OLA_CON_FOSO = false;
+    private static final boolean MEDIR_OLA_CON_FOSO = true;
 
     /** Los ocho asaltantes de la ola del foso y su objetivo (dentro del muro). */
     private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> olaDelFoso =
@@ -3419,6 +3419,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static final int FOSO_ASALTANTES = 12;
     /** Tick en el que se cambia de vuelta: la 1 mide el PUENTE y la 2 la ESCALERA (el objetivo, 4 bloques arriba). */
     private static final int FOSO_CAMBIO = 1200;
+    /** Tick de la VUELTA 3: foso RELLENO, muro quitado y el objetivo en el aire (el caso que le toca a la escalera). */
+    private static final int FOSO_CAMBIO_ESCALERA = 2000;
     private static int fosoVuelta = 1;
     private static int fosoSueloY = 0;
     private static int fosoCentroX = 0;
@@ -3554,6 +3556,49 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                             + " vuelven a la orilla", objetivoDelFoso.blockPosition(), fosoSueloY + 1,
                     olaDelFoso.size());
         }
+        if (ticks == FOSO_CAMBIO_ESCALERA && fosoVuelta == 2) {
+            // VUELTA 3: LA ESCALERA, CON EL CASO QUE LE TOCA (9-oct-2026). La vuelta 2 tiene el foso y el muro delante y
+            // ahí la escalera NO PUEDE: sobre un agujero el escalón necesita suelo firme debajo (`apilarBloqueParaSubir`
+            // L727) y contra un muro rompible el goal abre el hueco a picos y se sale sin colocar nada (L716). Aquí se
+            // le quita todo lo que estorba: el foso se RELLENA (suelo llano), el muro se QUITA y el objetivo se pone EN
+            // EL AIRE, 5 bloques por encima. Sin agujero no hay puente que tender, sin muro no hay nada que picar y el
+            // objetivo está ARRIBA: la única herramienta que queda es APILAR ESCALONES, que es su caso.
+            int rPatio2 = (FOSO_MURO_RADIO - 2) * (FOSO_MURO_RADIO - 2);
+            int rMuro2 = FOSO_MURO_RADIO * FOSO_MURO_RADIO;
+            int rBorde2 = FOSO_BORDE * FOSO_BORDE;
+            for (int dx = -FOSO_PLANCHA; dx <= FOSO_PLANCHA; dx++) {
+                for (int dz = -FOSO_PLANCHA; dz <= FOSO_PLANCHA; dz++) {
+                    int r2 = dx * dx + dz * dz;
+                    if (r2 > rMuro2 && r2 <= rBorde2) { // el foso, RELLENO de piedra: suelo llano
+                        for (int dy = 0; dy > -FOSO_CALADO; dy--) {
+                            level.setBlock(new BlockPos(fosoCentroX + dx, fosoSueloY + dy, fosoCentroZ + dz),
+                                    net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 2);
+                        }
+                    }
+                    if (r2 > rPatio2 && r2 <= rMuro2) { // el muro, QUITADO
+                        for (int dy = 1; dy <= 3; dy++) {
+                            level.setBlock(new BlockPos(fosoCentroX + dx, fosoSueloY + dy, fosoCentroZ + dz),
+                                    net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                        }
+                    }
+                }
+            }
+            objetivoDelFoso.moveTo(fosoCentroX + 0.5D, fosoSueloY + 6, fosoCentroZ + 0.5D);
+            for (int i = 0; i < olaDelFoso.size(); i++) {
+                int[] donde = orillaDelFoso(fosoCentroX, fosoCentroZ, i);
+                var z = olaDelFoso.get(i);
+                z.getNavigation().stop();
+                z.setDeltaMovement(Vec3.ZERO);
+                z.recargarTunel();
+                z.moveTo(donde[0] + 0.5D, fosoSueloY + 1, donde[1] + 0.5D, 0.0F, 0.0F);
+            }
+            fosoVuelta = 3;
+            troncosDelMuro.clear(); // en la vuelta 3 no hay muro (el testigo de la brecha no aplica)
+            DevilRpg.LOGGER.info("[Arnes] OLA CON FOSO: vuelta 3 montada (LA ESCALERA, con su caso) — foso RELLENO (suelo"
+                            + " llano), muro QUITADO y el objetivo EN EL AIRE en {} (5 bloques por encima del suelo,"
+                            + " y={}); los {} asaltantes vuelven a la orilla", objetivoDelFoso.blockPosition(),
+                    fosoSueloY + 1, olaDelFoso.size());
+        }
         if (olaDelFoso.isEmpty()) {
             return;
         }
@@ -3639,7 +3684,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * (`entrenado=`) y el <b>arma</b> que lleva en la mano — que es lo que dice si el reparto llega a algo más que
      * contar gente.
      */
-    private static final boolean MEDIR_MILICIA_SOBRANTES = true;
+    private static final boolean MEDIR_MILICIA_SOBRANTES = false;
 
     /** Los aldeanos que pone la escena (los primeros son los adultos de sobra y los últimos, las crías). */
     private static final java.util.List<Villager> aldeanosDeLaMilicia = new java.util.ArrayList<>();
