@@ -5848,7 +5848,7 @@ public final class VillageManager {
                 new net.minecraft.world.entity.ai.behavior.BlockPosTracker(objetivo));
     }
 
-    // --- M1 · EL DESPACHADOR: el recado, su rumbo y su supervisión (I151) ---------------------------
+    // --- M1 · EL DESPACHADOR: el recado, su rumbo y su supervisión ---------------------------
     /** A dónde se le mandó (el «recado»), en datos del propio aldeano. */
     private static final String RECADO_POS = "DevilRpgRecadoPos";
     /** Con qué velocidad. */

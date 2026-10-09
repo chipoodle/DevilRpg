@@ -5374,6 +5374,12 @@ en las 4 corridas de referencia), así que su trabajo allí es perseguir celdas 
 reparando cuando de verdad hay un cráter queda **verificado por construcción** (solo se salta huecos sin casilla de pie
 a menos del alcance, que son irreparables andando: medido, ruta de un nodo).
 
+> ⚠️ **NO HAY I151** (comprobado el 9-oct-2026): el número se salta de I150 a I152. Cuatro comentarios del código
+> citaban `(I151)` como «el plan del cerebro propio de la aldea» y esa invariante **no existe** ✗; la cita se ha
+> quitado y el plan está donde tiene que estar: **`docs/aldea-cerebro.md`** (fases 1-5, con lo medido y lo
+> retirado). Si alguien vuelve a necesitar un número para el plan, **se escribe la invariante**, no se cita una que
+> no existe.
+
 ### I152 · LA CASILLA DEL ENTRENAMIENTO, **A LA NIVEL DEL PUEBLO Y CON RUTA VALIDADA** (29-sep-2026)
 
 **El fallo, medido** (`build/medida-tanda41.log`): **todas** las rendiciones de los guardias eran la misma —

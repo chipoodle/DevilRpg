@@ -8,7 +8,7 @@ import net.minecraft.world.entity.npc.Villager;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * <b>M1 · EL DESPACHADOR</b> (I151 — fase 2 del cerebro propio de la aldea; el plan está en
+ * <b>M1 · EL DESPACHADOR</b> (fase 2 del cerebro propio de la aldea; el plan está en
  * {@code docs/aldea-cerebro.md}).
  * <p>
  * <b>OJO: ESTE GOAL NO ESTÁ CABLEADO, Y POR TANTO NO SE EJECUTA</b> (dicho claro el 3-oct-2026, ronda 39, porque sus

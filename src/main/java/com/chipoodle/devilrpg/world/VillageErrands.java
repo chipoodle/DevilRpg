@@ -13,7 +13,7 @@ import com.chipoodle.devilrpg.entity.goal.VillagerGateGoal;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * <b>M2 · LA AUTORIDAD DE RECADOS</b> (I151 — fase 1 del cerebro propio de la aldea; el plan entero está en
+ * <b>M2 · LA AUTORIDAD DE RECADOS</b> (fase 1 del cerebro propio de la aldea; el plan entero está en
  * {@code docs/aldea-cerebro.md}).
  * <p>
  * Es <b>el único sitio donde se decide si un recado se puede atender</b>, antes de andar. Existe porque el fallo de
@@ -79,7 +79,7 @@ public final class VillageErrands {
     }
 
     /**
-     * <b>M3 · LA ALDEA ABRE SUS PROPIAS PUERTAS</b> (I151). Si el aldeano está <b>dentro</b> del recinto del corral
+     * <b>M3 · LA ALDEA ABRE SUS PROPIAS PUERTAS</b>. Si el aldeano está <b>dentro</b> del recinto del corral
      * anexo y su recado está <b>fuera</b> (o al revés), el portón se abre <b>antes</b> de pedir la ruta.
      * <p>
      * <b>Por qué hace falta (medido)</b>: el ganadero se rendía con la etiqueta «Bajando lo del corral» desde

@@ -123,6 +123,11 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
     sirve para el baile fino (por eso se usan `[Rumbo]` y `no consigue llegar`).
 12. **Una cama sin acceso no se le da a nadie** (**I43**, acta L994): la celda de espera exige estar a **≤2,0 bloques**,
     asi que una cama encerrada se queda sin dueño (limite conocido).
+13. **LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS** ✗ (**`docs/aldea-cerebro.md`** L132): pide «pollos fuera del
+    recinto: 0» y **no hay ninguna medida** de eso; ademas el gallinero tiene un **hueco de un bloque** por el que
+    los pollos **si** pasan a proposito (acta L1275), asi que el «se quedan dentro por construccion» esta **sin
+    comprobar**. Se mide con la traza del gallinero (`MEDIR_ALMACEN_Y_HUEVOS`: las gallinas del hueco) o se corrige
+    la frase.
 
 **(c) ACEPTADO A PROPOSITO (no se toca, y se dice)**:
 13. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
