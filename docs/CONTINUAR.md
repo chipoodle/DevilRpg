@@ -130,9 +130,9 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
     la frase.
 
 **(c) ACEPTADO A PROPOSITO (no se toca, y se dice)**:
-13. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
+14. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
     migracion de casas; **no se toco**, y lo que hay es la **red de seguridad** (`bajarDeLasCamas` + el rescate de I103).
-14. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
+15. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
     («no hay medida que lo pida») y nada posterior lo ha cambiado.
 
 Lo de abajo es el historial de los cinco pendientes que se cerraron en esta ronda; debajo del todo esta el historial
