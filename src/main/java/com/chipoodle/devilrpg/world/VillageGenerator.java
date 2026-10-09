@@ -1270,7 +1270,7 @@ public final class VillageGenerator {
      * {@code build/barraca_dump.py}: {@code 1371,120,1434} y {@code 1371,121,1434}, y de la tercera ni rastro—.
      * <p>
      * La celda nueva es <b>libre</b> en las tres aldeas del guardado (lo comprueba {@code build/barraca_diana.py},
-     * que además transcribe el constructor y canta <b>cualquier</b> celda que se escriba dos veces) y tiene sentido
+     * que además transcribe el constructor y escribe <b>cualquier</b> celda que se escriba dos veces) y tiene sentido
      * para una diana: <b>se ve al entrar</b> por la puerta norte (está en la diagonal delante-derecha), tiene las
      * <b>dos paredes</b> de tope detrás, <b>no tapa el paso</b> ni a la <b>escalera</b> (que sube por la columna
      * <b>este</b>) ni al <b>hogar</b> (que está en el centro del muro sur) y <b>no es puesto de trabajo</b> de nadie

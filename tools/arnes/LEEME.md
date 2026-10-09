@@ -261,7 +261,7 @@ en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún 
 - `BICHO_DENTRO = true` → **lo contrario, a propósito**: en vez de barrer los bichos se planta **UNO** dentro de la  aldea y se mantiene ahí. Es un **aldeano-zombi** (`NoAI`, invulnerable, persistente) porque es un `Monster` —cuenta
   para `hayEnemigosDentro`— y el sello **no lo expulsa** (`expulsarHostilesDeLaAldea` deja en paz a los aldeanos-zombi:
   puede ser una curación en marcha), así que el latido se queda **cortado** toda la corrida. Es lo que reproduce la
-  partida del jugador (de noche y con bichos dentro) y lo que se midió en 3b.61. El arnés lo canta cada segundo:
+  partida del jugador (de noche y con bichos dentro) y lo que se midió en 3b.61. El arnés lo escribe cada segundo:
   `CAMAS: … UN BICHO DENTRO: SI (1 monstruo(s): latido cortado)`.
 
 - `SEMBRAR_AGUA_EMBOTELLADA = false` → para medir el **VIAJE AL AGUA** del clérigo (deja en el almacén
@@ -305,7 +305,7 @@ en el log **no** sale ninguna línea `[Village] Aldea N: comida ...` ni ningún 
   "cocina a través de la pared" (el bug de 3b.63: el cocinero cocinaba desde la plaza con `VEelAhumador=NO`).
 
 **La puerta cerrada con alguien dentro** (I47, ver `medidas-puertas.txt`): además del contador de puertas abiertas, cada
-barrido cuenta `PUERTAS DE MADERA ABIERTAS … (cerradas CON alguien dentro: M)` y canta cada caso con la **posición de la
+barrido cuenta `PUERTAS DE MADERA ABIERTAS … (cerradas CON alguien dentro: M)` y escribe cada caso con la **posición de la
 entidad** (`PUERTA CERRADA CON ALGUIEN DENTRO en <celda>: villager pos=(…) velocidad=…`). El criterio es el **centro de
 la entidad dentro de la celda** de la puerta (con la caja de colisión rozando la celda salen falsos positivos: un aldeano
 en la celda de al lado toca la puerta con el hombro). Y cada `PUERTA CERRADA` dice **quién** la cerró, con su etiqueta:

@@ -189,7 +189,7 @@ dijo *"La aldea cayó…"*, sin decir **por qué** ni cuántos atacantes quedaba
 mezclada entre los bichos de la noche y sin ninguna marca, no había forma de saber a quién tenía que matar.
 **Regla:** mientras hay asedio, el jugador recibe (barra de acción, cada `SIEGE_STATUS_INTERVAL` = 15 s y en la cuenta
 atrás de `SIEGE_WARN_SECONDS` = 30 y 10 s) **cuántos atacantes quedan, cuántos están DENTRO del muro y cuánto tiempo
-queda**; cada baja se canta al momento; los asediadores van **marcados con brillo** (`setGlowingTag`, se les quita al
+queda**; cada baja se escribe al momento; los asediadores van **marcados con brillo** (`setGlowingTag`, se les quita al
 resolverse el asedio y al cargarse sin asedio) y el mensaje de la caída dice el **motivo** ("los monstruos aguantaron
 dentro de los muros").
 
@@ -229,7 +229,7 @@ flotando en una aldea ya construida; el plano se recaptura después, así que el
 > bloque debajo) en vez de los dos lados a la vez, que era lo que dejaba pasar estos dos casos: un `hanging=true`
 > sobre un poste y un `hanging=false` bajo el tejado tenían "algo" al otro lado. **Ojo**: la auditoría de Python
 > (`tools/audita_aldea.py`) sigue aceptando la **valla de debajo** (la regla del farol *posado*) sin leer el
-> `hanging`, así que esos dos casos solo los canta el juego (o `build/faroles_hanging.py`).
+> `hanging`, así que esos dos casos solo los escribe el juego (o `build/faroles_hanging.py`).
 
 > La misma auditoría (`tools/audita_aldea.py`, **versionada**; antes estaba en `build/`, fuera de git) comprueba
 > además: faroles y **vallas** flotando, **cofres tapados** (un bloque encima: no se pueden abrir), **puertas
@@ -610,7 +610,7 @@ el paso del reparador **celda a celda**.
 > suelta va **pegada a las dos paredes del rincón suroeste** (`BARRACA_DIANA`) y el reparador la devuelve ahí **solo si
 > la celda está vacía**; la celda vieja **no se toca** (es la del arca). Es el mismo patrón de I14 (tercera vez) e I28
 > —**una celda es de UNA pieza**—, con la particularidad de que aquí la pieza comida era **mobiliario**, no estructura.
-> Se comprueba con `build/barraca_diana.py`, que **transcribe el constructor** celda a celda y en orden y **canta
+> Se comprueba con `build/barraca_diana.py`, que **transcribe el constructor** celda a celda y en orden y **escribe
 > cualquier celda escrita dos veces** con bloques distintos (con la celda vieja salía **1** —diana→arca— y con la nueva
 > **0**, dejando fuera las cuatro que sí son a propósito: la puerta sobre el muro, el hogar en el suelo, el último
 > escalón en la capa del forjado y los postes de las esquinas).
@@ -1126,7 +1126,7 @@ que la plantilla pide y el mundo tiene en AIRE**:
 2. **Si la plantilla no encaja con el mundo** (menos de la mitad de sus celdas coinciden), esa construcción no es la
    de esa plantilla y **no se toca nada**: un error de cálculo no puede llenar de bloques una casa ajena.
 3. **Lo repuesto entra en el plano** (`Blueprint.conCelda`): si no, el obrero no lo mantendría (I8).
-4. **Es idempotente** y lo llama el latido (aldea en paz): cada casa canta sus huecos **una sola vez**.
+4. **Es idempotente** y lo llama el latido (aldea en paz): cada casa escribe sus huecos **una sola vez**.
 
 Medido: `2 hueco(s) … 1427,120,1392(cobblestone) 1427,121,1392(cobblestone)` en la casa del jugador y, de propina, **2
 huecos en la fragua de la herrería** (`1423,120,1368/1369`, la **lava** de la plantilla de herrero, que el guardado
@@ -1183,7 +1183,7 @@ de cada aldea y la marca `DevilRpgUltimaComida` de cada aldeano):
    **24000 ticks (20 min)**— dejó de ser cría y en el **primer latido** llevaba 20 min "sin comer": pasó el umbral de
    muerte (`STARVATION_DEATH_TICKS` = 10 min) y **murió en el acto**, con la despensa llena. Los **19 min** del log
    son exactamente la infancia de la cría (la marca se estrena hasta 10 s después de nacer).
-2. **El aviso no miraba la despensa.** Se cantaba con `algunaBocaSinComer` y decía *"la despensa esta vacia"* sin
+2. **El aviso no miraba la despensa.** Se escribia con `algunaBocaSinComer` y decía *"la despensa esta vacia"* sin
    leerla.
 
 **Regla:** (a) a la cría **se le refresca la marca** mientras es cría (no basta con saltársela): su reloj de comida
@@ -1256,7 +1256,7 @@ está dentro **se queda encerrado**: no puede ir a la despensa, ni al almacén, 
 lado** de la valla (y otro en el centro), y el medio del lado **oeste es el portón**: quedó en el mundo y en el
 plano. El código de hoy reparte los faroles por las **cuatro esquinas y los cuatro medios lados**
 (`k = ±(ANEXO_RADIO − 2)`), que **no** pasa por el portón… pero tampoco lo quitaba. Y la autocomprobación
-(`auditarFarolesFlotantes`) **no lo canta**: ese farol *sí* tiene apoyo; el problema es que el apoyo es la puerta.
+(`auditarFarolesFlotantes`) **no lo escribe**: ese farol *sí* tiene apoyo; el problema es que el apoyo es la puerta.
 
 **Regla:**
 - **Nada sólido en el carril de un portón**: la hoja y las dos celdas de al lado, en la capa que se pisa **y en la de
@@ -1276,7 +1276,7 @@ los pollos pasan, los aldeanos no—) y con `build/portones_farol.py` y `build/a
 y sus portones celda a celda.
 
 > **De propina, I6: lo que ya está bien no se reconstruye.** `posarFarolesFlotantes` quitaba y volvía a poner **los
-> doce faroles del corral en cada latido** —el log lo cantaba cada 10 s (*"14 faroles puestos en la cerca del corral
+> doce faroles del corral en cada latido** —el log lo escribia cada 10 s (*"14 faroles puestos en la cerca del corral
 > anexo"*, para siempre)— porque daba por *flotante* cualquier farol que estuviera a 1-3 bloques del apoyo. Ahora un
 > farol **a un bloque del apoyo y posado** es *su* farol y no se toca: solo se muda el que **cuelga** de un poste
 > (I14) o el que quedó a 2-3 bloques.
@@ -1330,7 +1330,7 @@ El jugador: *"Zacarías según va a dormir pero está afuera y no toma cama"*.
 **Medido en su guardado** (aldea 2, nivel del pueblo 120): Zacarías (`Sin oficio`) tenía por cama la de la **posada**
 (`1446,125,1429`, segunda planta de la taberna) y estaba en la calle, en `(1446,120,1427)` — **la misma X/Z, una
 planta más abajo**— con la etiqueta *"Yendo a dormir"* y sin acostarse. La celda de espera que le calculó el reparto
-era `(1446,125,1427)`, también **arriba**. Y el log lo cantaba en bucle para varios aldeanos
+era `(1446,125,1427)`, también **arriba**. Y el log lo escribia en bucle para varios aldeanos
 (`no llega a su cama por el camino del juego: se le da 1446,125,1429 y se le mandará a 1446,125,1427`).
 
 **Causa (dos capas).**
@@ -1463,7 +1463,7 @@ contrario en `VillageStorage`: *"el constructor —que también es recolector—
    haya, repara. (Al marcarlo como obrero se le quita la recogida, como a cualquier constructor sin faena.)
 3. **Lo que el pueblo RETIRA sale del plano.** El farol de encima del primer escalón de la taberna (que el latido
    quita para poder subir) era **la única celda pendiente** de la aldea 2: el plano lo pedía, el obrero lo reponía y
-   el reparador lo volvía a quitar, **cada 10 s** —el log lo cantaba toda la sesión con
+   el reparador lo volvía a quitar, **cada 10 s** —el log lo escribia toda la sesión con
    `quitado el farol de encima del primer escalon (1442, 123, 1439)`—. Ahora esa celda sale del plano (la misma regla
    que el farol del portón, I54): `quitarElFarolDeLaEscalera` **devuelve la celda** y el latido la borra del plano.
 
@@ -1616,7 +1616,7 @@ de nada).
 
 **Regla**: el puesto al que un guardia **no llega** se apunta con `marcarPuntoFallido` (I33) y, de noche, el relevo
 **pasa a la siguiente puerta** (`puestoDeLaPuerta`, recorriendo las cuatro y saltándose las fallidas). Y el aviso
-`nuevo puesto` **solo se canta cuando el puesto CAMBIA** (con el aviso en cada `start()` salían diez líneas por
+`nuevo puesto` **solo se escribe cuando el puesto CAMBIA** (con el aviso en cada `start()` salían diez líneas por
 segundo repitiendo el mismo sitio: medido con el arnés en modo noche).
 
 ### I67 · A la guardia no se le quita la cama por no ir a dormir
@@ -2845,7 +2845,7 @@ cultivo a cultivo, los composteros con su dueño y los bichos dentro del recinto
 2. **El compostero iba ANTES que la cosecha, y con UNA semilla por viaje.** El paso del polvo de huesos (que existe
    desde I93, porque el leñador también lo gasta en la arboleda) estaba **por delante** de cosechar, y como el
    granjero va con las semillas justo por encima del tope (`SEMILLAS_MAX`), cada paseo echaba **una** semilla: su log
-   lo cantaba (`Lleno el compostero con 1 semilla(s)`, una y otra vez). **Regla:** la faena que **produce** (cosechar,
+   lo escribia (`Lleno el compostero con 1 semilla(s)`, una y otra vez). **Regla:** la faena que **produce** (cosechar,
    labrar, sembrar) va **antes** que la que **transforma** (compostar, abonar) — cuando se llega al compostero ya no
    queda nada maduro, así que el viaje no le quita el turno a nadie— y al compostero se va con un **puñado**
    (`SEMILLAS_MINIMAS_PARA_COMPOSTAR = 4`), salvo que falte harina de verdad.
@@ -2888,7 +2888,7 @@ verduras de **58 a 193**. Líneas literales en `tools/arnes/medidas-huerta.txt` 
 
 **CUARTA VUELTA: LA COMPUERTA SE ABRE Y SE CRUZA (y la huerta no es de los golems).** En su partida el jugador vio
 *"cosechan y ponen guardando lo suyo… van y vienen unos cuantos bloques sin ir a la despensa pero perdiendo tiempo sin
-terminar de cosechar todo"*, y su log lo canta:
+terminar de cosechar todo"*, y su log lo escribe:
 
 ```
 [13:29:52] El granjero: Guardo 8 en la despensa
@@ -4421,10 +4421,10 @@ etiqueta se repite en **tres** (2 · 5 · 7) — y la media de hoy (**0,83**: 0,
   **de un solo nodo: ella misma** (`cerebro=-`). Encerrada arriba. **Acaba saliendo** (después sigue con su oficio:
   `Guardando lo suyo`), así que es un tropiezo, no un bucle. **Sin arreglar.**
 * **Uno falso**: ya a el nivel del pueblo, `ruta=11 nodos hasta 517,63,666 alcanza=SI` —la ruta al almacén **era buena**— pero su
-  **`cerebro=507,68,662`** apuntaba al **piso** (su POI), así que no la seguía y el aviso lo cantaba como rendición.
+  **`cerebro=507,68,662`** apuntaba al **piso** (su POI), así que no la seguía y el aviso lo escribia como rendición.
 
 **El arreglo** (el mismo que ya se hizo en el guardia, I125/I119): en el `canContinueToUse` del leñador, si el cerebro
-**no** va al destino, **no** se apunta el punto como fallido ni se canta la rendición: se le da otra oportunidad
+**no** va al destino, **no** se apunta el punto como fallido ni se escribe la rendición: se le da otra oportunidad
 (`stuckTicks = 0`). Así la tasa no se ensucia con atascos que no existen.
 
 ### I145 · IR A ENTRENAR TAMBIÉN ES UN **VIAJE LARGO**: el tirón, no el camino directo (28-sep-2026)
@@ -5500,7 +5500,7 @@ en cambio, un granjero hundido en la farmland en **bucle de 7 avisos**, el mismo
 buena tenían `cerebro=` apuntando a un sitio **distinto** del `destino=` (I125: el paseo o el goal de los portones le
 pisan el rumbo): el guardia **salta el puesto y sigue la ronda** —que es lo correcto— pero se contaba como
 «rendición», y eso **ensuciaba el instrumento** de la tasa (I135 cuenta rendiciones). Arreglo: solo se apunta el punto
-como fallido y se canta el aviso **si el cerebro va de verdad al destino** (`elCerebroVaA`). **MEDIDO**:
+como fallido y se escribe el aviso **si el cerebro va de verdad al destino** (`elCerebroVaA`). **MEDIDO**:
 `Patrullando` **9 → 0** (`medida-s8.log`).
 
 **Y DOS LECCIONES DE MÉTODO de esta cadena**: (1) una corrida intermedia **pareció una regresión** (11 avisos) y era el
@@ -5549,7 +5549,7 @@ oscila** (0,30 · 0,40 · 0,60 en corridas comparables), que es exactamente lo q
 | `build/barraca_dump.py` | **La barraca entera, capa a capa**: cuenta escalones (con su Y y su `facing`), camas, mobiliario, el forjado (huecos) y la vertical de cada escalón. |
 | `build/barraca_mesa.py` | **Puestos de trabajo de aldeano** (I31): los barre **bloque a bloque** en las tres aldeas del guardado, con sus coordenadas, y dice qué hay en la celda de la mesa de cartografía de la barraca y qué dice el **plano** de ella. |
 | `build/barraca_mesa_repara.py` | **El reparador de la migración 60** (la mesa de cartografía → la paca del maniquí), **celda a celda** y con la idempotencia: antes/después de la celda, el maniquí completo y que no quede ningún puesto de trabajo en la barraca. |
-| `build/barraca_diana.py` | **Las tres dianas de la barraca y el ORDEN de colocación** (migración 61): **transcribe el constructor** celda a celda y **canta cualquier celda escrita dos veces con bloques distintos** ("lo que va después gana"), además de simular el reparador de la diana (celda nueva libre en las tres aldeas, idempotencia, la celda vieja del arca sin tocar) y contar las dianas del **mundo** y del **plano**. |
+| `build/barraca_diana.py` | **Las tres dianas de la barraca y el ORDEN de colocación** (migración 61): **transcribe el constructor** celda a celda y **escribe cualquier celda escrita dos veces con bloques distintos** ("lo que va después gana"), además de simular el reparador de la diana (celda nueva libre en las tres aldeas, idempotencia, la celda vieja del arca sin tocar) y contar las dianas del **mundo** y del **plano**. |
 | `build/huertadiag.py`, `build/huerta_simula.py` | **Parcelas**: qué dice el plano y qué hay en el mundo celda por celda (qué calvas faltan en el plano) y qué celdas repondría el obrero / labraría el granjero (I25). |
 | `build/granjaestado.py`, `build/farmdiag.py`, `build/columnas.py`, `build/perfilcol.py` | Estado de la granja (cultivos, edades, cotas) y columnas crudas. |
 | `build/items.py`, `build/contenedores.py` | Objetos en el suelo por tipo y contenido de cofres/despensa/almacén. |
@@ -6574,7 +6574,7 @@ arreglo en el generador **no llega a las aldeas ya construidas** si la comprobac
   quitados**) y el portón viejo **`SE HA LIMPIADO`** ✓.
 
 **Y una traza para medir el abatido en la partida** ✓ (`DoubleGateBlock.abatir`): la línea del click dice «paso a
-ABIERTO» **siempre**, así que no distinguía «abre entero» de «abre sólo la hoja que pulsas». Ahora `abatir` canta
+ABIERTO» **siempre**, así que no distinguía «abre entero» de «abre sólo la hoja que pulsas». Ahora `abatir` escribe
 **`encontradas=N cambiadas=M`** y qué celdas tienen **otro `FACING`** — que es lo que dejaría hojas quietas ✓.
 
 ### I228 · LA CAUSA DE VERDAD DEL «MARCO DE 5 BLOQUES»: EL PORTÓN SE CONSTRUÍA VARIAS VECES, CORRIDO
@@ -6784,10 +6784,10 @@ jugador, y **no se toca sin que la tome** ✓.
 
 **Lo pedía el pendiente 5** ✓: *«que el reparto escriba `[Milicia] aldea N: X espadachines y Y arqueros equipados`, para
 poder contarlos en el registro en vez de deducirlo»*. Vive en `VillageManager.repartirGuardia` (**L3216**, el reparto
-alterna los tipos en el bucle de alistamiento: `i % 2 == 0 ? ESPADACHIN : ARQUERO`) y **solo canta cuando el reparto
+alterna los tipos en el bucle de alistamiento: `i % 2 == 0 ? ESPADACHIN : ARQUERO`) y **solo escribe cuando el reparto
 cambia** —el latido reparte cada 10 s y repetir la misma línea sería ruido que tapa lo demás ✓.
 
-**Y canta los guardias DE VERDAD, no los que el bucle cree haber alistado** ✓: al final se cuentan los que llevan la
+**Y escribe los guardias DE VERDAD, no los que el bucle cree haber alistado** ✓: al final se cuentan los que llevan la
 marca de la milicia (`VillagerGuardGoal.esGuardia` y `tipoDe`) y se escriben los dos números juntos, para que la traza
 **enseñe** una discrepancia en vez de esconderla ✓.
 
@@ -6801,7 +6801,7 @@ marca de la milicia (`VillagerGuardGoal.esGuardia` y `tipoDe`) y se escriben los
 **Y el cero NO es un fallo: es la regla del reparto** ✓. El pueblo tiene **12 adultos** y los **puestos fijos** (los
 sitios por oficio, de `VillageGenerator.puestosPorOficio()`) se llevan a todos, así que **no hay sobrantes** y sin
 sobrantes **no hay milicia** ✓ — es lo que el propio método documenta: *«con 5 aldeanos —los que tiene una aldea sana— no
-hay guardia: hacen falta crías, o sea una aldea que crece»* ✓. La traza deja ese caso **cantado** en vez de silencioso,
+hay guardia: hacen falta crías, o sea una aldea que crece»* ✓. La traza deja ese caso **escrito** en vez de silencioso,
 que es justo lo que hacía falta para poder contarlo ✓.
 
 **Lo que NO se ha visto todavía** ✗: una milicia **con gente dentro** en el registro. Para eso hace falta una aldea **con
@@ -7154,7 +7154,7 @@ y no los acumula): encerrarlo **no** sirve para medir esta regla.
    midió fue **hielo y nieve del subsuelo**. Ahora el jugador de pega y los tres asaltantes van **a la cota**.
 2. **El anillo tenía que apoyarse en el suelo** ✗. El suelo del pueblo está en `cota - 1` (la cota es el nivel **a los
    pies**), así que un anillo a `cota + 1` **flota** con una capa de terreno debajo y lo que se pica es esa capa. Ahora
-   arranca de la primera celda sólida de cada columna (y se **canta** si alguna queda en el aire: **0** en la corrida).
+   arranca de la primera celda sólida de cada columna (y se **escribe** si alguna queda en el aire: **0** en la corrida).
 3. **«Aire dentro del recinto» no mide lo picado** ✗: el contador de aire en la banda `r=55..62` dio **7570 celdas**
    porque esa banda es **casi toda aire de verdad** (la calle). Se **retiró** ✓ y en su lugar se cuenta el **anillo**.
 4. **Contar «piedra en el radio» tampoco vale** ✗: dentro de r=25 ya hay piedra **del pueblo** (el suelo de la plaza y
@@ -7181,7 +7181,7 @@ demostraba** que el veto funcionara: demostraba que esa prueba **no lo mide**.
 ### I211 · EL FALLO DE RAÍZ QUE FALTABA: `protegidoPorLaAldea` TERMINABA EN «¿ASEDIO GANADO?»
 
 **Y era esto.** El paso que cerró el caso no fue otra corrida: fue la **verificación independiente de la cuenta**
-(`tools/arnes/verificar_recinto.py`, **13 casos**, sin servidor) que pidió el jugador. Al escribirla, la función cantó:
+(`tools/arnes/verificar_recinto.py`, **13 casos**, sin servidor) que pidió el jugador. Al escribirla, la función escribio:
 
 ```java
 private boolean protegidoPorLaAldea(BlockPos pos) {

@@ -1121,7 +1121,7 @@ public final class VillageManager {
      * <p>
      * <b>PERO EL SELLO NO ES LO PRIMERO: PRIMERO DEFIENDE EL PUEBLO.</b> Antes esto expulsaba <b>en el acto</b> (el
      * latido es cada 10 s), así que un agresivo que <b>entraba andando</b> de día desaparecía de la aldea antes de que
-     * nadie lo tocara: el jugador lo vio y lo cantó como lo que es —*"llegaron unos zombies agresivos durante el día
+     * nadie lo tocara: el jugador lo vio y lo escribio como lo que es —*"llegaron unos zombies agresivos durante el día
      * a la aldea, pero no pasó mucho tiempo y fueron teletransportados a fuera; esto se ve antinatural"*—. Ahora el
      * sello <b>espera</b> {@link #SELLO_ANTES_DE_EXPULSAR_TICKS} (2 min) con el intruso dentro: en ese rato la
      * <b>milicia</b> lo ve y va a por él (los guardias persiguen a cualquier monstruo que esté <b>dentro del
@@ -1464,7 +1464,7 @@ public final class VillageManager {
             if (!d.waveSpawned && d.tickTicks >= GRACE_TICKS) {
                 spawnWave(level, d);
                 if (d.wave.isEmpty()) {
-                    // LA OLEADA NO PUDO NACER Y ANTES ESO SE CANTABA COMO VICTORIA (3-oct-2026, medido en la partida
+                    // LA OLEADA NO PUDO NACER Y ANTES ESO SE DABA POR VICTORIA (3-oct-2026, medido en la partida
                     // del jugador). `EntityType.create(..., alignPosition=true, ...)` devuelve **null** cuando la
                     // casilla no admite el spawn (agua, dentro de un bloque, chunk sin cargar), y
                     // `isWaveCleared` de una ola **VACÍA** es cierto: su registro enseña «¡Defiende la aldea de los
@@ -1586,7 +1586,7 @@ public final class VillageManager {
     /**
      * Informa del asedio en curso (barra de acción cada {@link #SIEGE_STATUS_INTERVAL} y cuenta atrás en
      * {@link #SIEGE_WARN_SECONDS}): cuántos atacantes quedan, cuántos están <b>dentro del muro</b> (los únicos que
-     * pueden hacer caer la aldea) y cuánto tiempo queda. Además canta cada baja al momento: es el progreso real.
+     * pueden hacer caer la aldea) y cuánto tiempo queda. Además escribe cada baja al momento: es el progreso real.
      */
     private static void informarDelAsedio(ServerLevel level, VillageDefense d) {
         ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
@@ -3235,7 +3235,7 @@ public final class VillageManager {
      * jugador quiere para la marcha a la guarida (4 espadachines y 3 arqueros).
      */
     /**
-     * El último reparto de milicia que se ha cantado en el registro (ver {@link #repartirGuardia}): sirve para escribir
+     * El último reparto de milicia que se ha escrito en el registro (ver {@link #repartirGuardia}): sirve para escribir
      * la línea <b>solo cuando cambia</b>, porque el latido reparte cada 10 s y repetirla sería ruido.
      */
     private static String ultimoRepartoDeLaMilicia = "";
@@ -3296,7 +3296,7 @@ public final class VillageManager {
                     tipo);
         }
         // LA TRAZA DEL REPARTO (25-oct-2026, lo pidió el jugador): que el registro lo DIGA, para poder CONTAR la milicia
-        // en vez de deducirla del equipo que se les ve. Se canta solo cuando CAMBIA el reparto (el latido reparte cada
+        // en vez de deducirla del equipo que se les ve. Se escribe solo cuando CAMBIA el reparto (el latido reparte cada
         // 10 s, y repetir la misma linea cada latido es ruido que tapa lo demas).
         // Y se cuentan los guardias DE VERDAD (la marca del mod), no los que este bucle cree haber alistado: si los dos
         // numeros no cuadran, la traza lo enseña en vez de esconderlo.
@@ -5919,7 +5919,7 @@ public final class VillageManager {
     }
 
     /** La medida del despachador, para el registro (una vez cada {@link #VILLAGE_POLL_TICKS}). */
-    public static void cantarLaMedidaDelDespachador() {
+    public static void escribirLaMedidaDelDespachador() {
         DevilRpg.LOGGER.info("[Village] DESPACHADOR: {} recados apuntados, {} rumbos defendidos (el cerebro se los "
                 + "habia pisado) y {} recados abandonados por no avanzar",
                 RECADOS_APUNTADOS, RUMBOS_DEFENDIDOS, RECADOS_ABANDONADOS);
@@ -7399,7 +7399,7 @@ public final class VillageManager {
             if (saved.getStarvingSince(objectiveIndex) == 0L) {
                 saved.setStarvingSince(objectiveIndex, level.getGameTime());
                 BlockPos centro = centroDe(level, objectiveIndex); // el aviso es para el jugador que esté cerca
-                // LO QUE SE DICE ES LO QUE SE HA MEDIDO. El aviso cantaba *"la despensa esta vacia"* SIEMPRE que
+                // LO QUE SE DICE ES LO QUE SE HA MEDIDO. El aviso escribia *"la despensa esta vacia"* SIEMPRE que
                 // hubiera una boca sin su ración, sin mirar la despensa: el jugador lo vio con el cofre de comida
                 // delante (aldea 2: `comida 64 puntos`, y 986 en la despensa de verdad) y con razón dejó de
                 // creerse el cartel. Ahora el aviso lleva delante lo que se ha contado.
@@ -7742,7 +7742,7 @@ public final class VillageManager {
         final List<UUID> wave = new ArrayList<>();
         long tickTicks;
         boolean waveSpawned;
-        /** Último recuento de atacantes vivos, para cantar cada baja (y no repetir el mensaje). */
+        /** Último recuento de atacantes vivos, para escribir cada baja (y no repetir el mensaje). */
         int ultimosVivos = -1;
         /** El reloj está parado porque el jugador no está en la aldea (ver {@link #RADIO_ASEDIO_CON_JUGADOR}). */
         boolean enPausa;

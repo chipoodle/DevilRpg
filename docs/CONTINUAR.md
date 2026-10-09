@@ -22,6 +22,14 @@ casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
 
 ## 1 · ACUERDOS Y CONVENCIONES (la forma de trabajar de esta casa)
 
+**ESCRIBIR PARA QUE SE ENTIENDA, NO PARA PARECER DEL GREMIO** (8-oct-2026). Lo pidio el jugador, y con razon: yo
+escribia *«la traza **canta** los dos numeros»* queriendo decir *«la traza **los escribe en el registro**»*. Jerga mia,
+ni inglesa ni tecnica, y si hay que explicarla **esta mal escrita**. Se barrieron **55 apariciones** en 14 ficheros
+(docs, herramientas y comentarios del codigo, incluido un metodo que se llamaba `cantarLaMedidaDelDespachador` y ahora
+se llama `escribirLaMedidaDelDespachador`). **Regla**: si una palabra necesita traduccion para el jugador, no se usa —
+se escribe lo que hace: *escribe*, *dice*, *imprime*, *deja en el registro*, *avisa*. Vale para los documentos, para los
+comentarios del codigo y para los mensajes del registro.
+
 1. **Medir antes de tocar.** Ningun cambio entra sin su medida. Lo que no mejora la media, **se retira y se dice**.
 2. **No suponer nunca.** Cada hipotesis falsa se deja **escrita como falsa** en el acta (hay varias mias, a proposito).
 3. **Antes de retirar una idea, comprobar si falla la IDEA o la IMPLEMENTACION** (me paso con I200/I201: la idea era
@@ -73,7 +81,7 @@ Lo de abajo es el historial; **esto** es lo que falta de verdad, y son tres cosa
    huecos del anillo, asi que **no necesitan ni puente ni escalera**. **Lo que hay que hacer**: una escena donde el muro
    este **entero y sin huecos** y con un **foso** delante, para que la unica salida sea el puente o el escalon. Sin eso
    no se puede afirmar que funcionan.
-3. **Ver la milicia con gente dentro** (`MEDIR_MILICIA`). La traza esta hecha (I217) y canta bien, pero en las aldeas de
+3. **Ver la milicia con gente dentro** (`MEDIR_MILICIA`). La traza esta hecha (I217) y escribe bien, pero en las aldeas de
    prueba **no hay sobrantes** (todos los adultos tienen su oficio), asi que sale `0 espadachines y 0 arqueros` — y el
    cero **no es un fallo**, es la regla del reparto. **Lo que hay que hacer**: una aldea con **mas adultos que puestos**
    (o con crias) para ver el reparto llenarse y a los guardias entrenar.
@@ -171,7 +179,7 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
    **0,552 SIN el arreglo y a 0,230 CON el** (base 0,1533 x 1,5), y la progresion no se toca.
 5. **Traza de la milicia** — **HECHA** (I217). `VillageManager.repartirGuardia` (**L3216**) escribe
    `[Milicia] aldea N: X espadachin(es) y Y arquero(s) de S sobrante(s) de A aldeano(s), milicia hasta 7 | alistados DE
-   VERDAD: G (…)` **solo cuando el reparto cambia**, y canta **los dos numeros** (lo que el bucle cree alistar y lo que
+   VERDAD: G (…)` **solo cuando el reparto cambia**, y escribe **los dos numeros** (lo que el bucle cree alistar y lo que
    de verdad lleva la marca) para que una discrepancia se vea en vez de esconderse. Medido en la partida de 3 minutos:
    `0 espadachin(es) y 0 arquero(s) de 0 sobrante(s) de 12 aldeano(s) | alistados DE VERDAD: 0` — **y el cero no es un
    fallo**: con los puestos por oficio cubiertos no hay sobrantes y sin sobrantes no hay milicia (es la regla del
@@ -184,7 +192,7 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 - **La aldea no se desplaza ni se duplica**: el centro es el del objetivo (`VillageManager.centroDe`). Medido: 0 lineas
   de reconstruccion en las partidas.
 - **El asedio funciona de principio a fin**: `OLEADA de 8 asediadores intentados, 8 colocados` y luego `Aldea 0 salvada`
-  (arreglado: una oleada vacia no canta victoria, reintentos, segunda pasada de spawn).
+  (arreglado: una oleada vacia no escribe victoria, reintentos, segunda pasada de spawn).
 - **Los aldeanos no bailan**: I205 (traza + un goal sin MOVE no pisa camino ajeno + el empujon ya no para a quien anda),
   I206 (el embudo `ponerRumbo` no reescribe el destino cada tick: `[Rumbo]` = 94-96 % saltadas), I207 (puertas: se abren
   en vez de sacarlos a empujones), I208 (`parar` idempotente por tick), I209 (una celda de paso no es un encajamiento).

@@ -308,7 +308,7 @@ public class VillagerLumberjackGoal extends Goal {
             // NO ES UNA RENDICIÓN SI EL CEREBRO VA A OTRA PARTE (28-sep-2026, el mismo arreglo que se hizo en el
             // guardia). MEDIDO con el arnés en `build/medida-tasa-hoy.log`: la leñadora, ya a la cota, tenía
             // `ruta=11 nodos hasta 517,63,666 alcanza=SI` —la ruta al almacén ERA BUENA— pero su
-            // `cerebro=507,68,662` apuntaba al **piso de la taberna** (su POI), así que no seguía la ruta y se cantaba
+            // `cerebro=507,68,662` apuntaba al **piso de la taberna** (su POI), así que no seguía la ruta y se escribia
             // como rendición. Eso ensucia la tasa con un atasco que no existe.
             if (!VillageManager.elCerebroVaA(villager, target)) {
                 stuckTicks = 0; // no está atascado: se le da otra oportunidad en vez de aparcar el almacén

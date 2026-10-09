@@ -387,7 +387,7 @@ public class VillagerFarmGoal extends Goal {
         // compostero. OJO: AQUÍ YA NO HAY NADA MADURO (el paso 3 habría mandado a cosechar), así que este viaje no le
         // quita el turno a la cosecha — que es justo lo que pasaba cuando este paso iba ANTES.
         // Y SE VA CON UN PUÑADO, NO CON UNA SEMILLA: si solo le sobra una o dos, no vale la pena el paseo (su log
-        // cantaba "Lleno el compostero con 1 semilla(s)" una y otra vez). La excepción es que falte harina de verdad.
+        // escribia "Lleno el compostero con 1 semilla(s)" una y otra vez). La excepción es que falte harina de verdad.
         // OJO: se cuentan solo las COMPOSTABLES (trigo y betabel). Contando también la zanahoria y la patata, un
         // granjero cargado de vegetales se pasaría el día yendo al compostero a no echar nada (bucle).
         int sobrantes = semillasCompostablesSobrantes();

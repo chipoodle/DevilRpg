@@ -191,7 +191,7 @@ public class VillagerGuardGoal extends Goal {
     private int restTicks;
     /** Contador de puntos de ronda (para que no repita el mismo). */
     private int paso;
-    /** El último puesto que se cantó en el log, para no repetir el aviso con el mismo sitio (ver {@code start}). */
+    /** El último puesto que se escribio en el log, para no repetir el aviso con el mismo sitio (ver {@code start}). */
     @Nullable
     private BlockPos ultimoPuesto;
     /** Ticks que faltan para volver a buscar enemigo / para el siguiente golpe o flecha. */
@@ -316,7 +316,7 @@ public class VillagerGuardGoal extends Goal {
         hayEquipoEnAlmacen = false;
         mejorDistancia = Double.MAX_VALUE;
         irAlDestino();
-        // SOLO SE CANTA CUANDO EL PUESTO CAMBIA. Con el aviso en cada `start()` el log se llenaba de "nuevo puesto"
+        // SOLO SE ESCRIBE CUANDO EL PUESTO CAMBIA. Con el aviso en cada `start()` el log se llenaba de "nuevo puesto"
         // repitiendo el MISMO sitio: de noche el relevo no depende de `paso`, y si el goal se reinicia (el cerebro
         // empujando a dormir) salían diez líneas por segundo con el mismo BlockPos (medido con el arnés, modo noche).
         if (destino != null && !destino.equals(ultimoPuesto)) {
@@ -350,7 +350,7 @@ public class VillagerGuardGoal extends Goal {
         if (destino != null && stuckTicks >= STUCK_LIMIT) {
             // PERO NO SIEMPRE ES UNA RENDICIÓN (27-sep-2026). Si el CEREBRO VA A OTRA PARTE (I125: el paseo, el goal
             // de los portones), el guardia NO está atascado: le están mandando a otro sitio. Se salta el puesto igual
-            // —la ronda tiene que seguir— pero NO se apunta como fallido ni se canta "no llegué", porque eso es lo que
+            // —la ronda tiene que seguir— pero NO se apunta como fallido ni se escribe "no llegué", porque eso es lo que
             // ensuciaba el instrumento de la tasa de I135 (que cuenta rendiciones). MEDIDO en la corrida buena del §7:
             // los DOS avisos de guardia patrullando tenían `cerebro=` apuntando a un sitio DISTINTO del `destino=`
             // (`cerebro=419,63,621` con `destino=466,63,642`) y con la ruta alcanzando.

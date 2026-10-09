@@ -595,7 +595,7 @@ TODOS SUELTOS** (el mayor, **2**) y **NINGÚN BUCLE** — contra los **18** de l
 **Y el aviso de rendición del guardia, cuando el cerebro va a otra parte** — **arreglado y medido** en esta misma
 sesión: los 2 avisos de guardia patrullando tenían `cerebro=` apuntando a **otro sitio** que el `destino=` (I125: el
 paseo o los portones le pisan el rumbo); el guardia salta el puesto (correcto) pero **se contaba como rendición** y
-ensuciaba la tasa. Ahora solo se apunta y se canta **si el cerebro va de verdad al destino**: `Patrullando` **9 → 0**.
+ensuciaba la tasa. Ahora solo se apunta y se escribe **si el cerebro va de verdad al destino**: `Patrullando` **9 → 0**.
 
 ### 9. El SEGUNDO POZO de la mina: **HECHO Y MEDIDO** (I144, 28-sep-2026)
 
@@ -643,7 +643,7 @@ puntual, no un bucle.
 > **AUDITORÍA DEL 29-sep-2026 (lo pidió el jugador: «¿cómo que pendientes documentados?»).** Tres cosas, medidas:
 >
 > 1. **La premisa (una planta SIN salida) no se sostiene en la aldea actual**: la taberna se construye **abriendo su
->    hueco de subida** —el propio log lo canta al levantarla: *«desván vaciado (833 teja(s) de relleno) y hueco de
+>    hueco de subida** —el propio log lo escribe al levantarla: *«desván vaciado (833 teja(s) de relleno) y hueco de
 >    subida abierto (6 celda(s)); se pisa en y=…»*—, así que su planta de arriba **tiene escalera**. El diagnóstico
 >    original era de la **posada vieja** del mundo anterior (`511,68,667`) y se leyó mal el mapa de capas.
 > 2. **Lo que queda medido hoy NO es eso**: en la ventana de `build/medida-tanda18.log` hay **3 rendiciones con la

@@ -463,7 +463,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 vigilarCocinero(level);
             }
         } else if (MEDIR_NOCHE) {
-            // EL VIGILANTE DE CAMAS, cada segundo (la transicion se canta sola cuando el HOME desaparece o se reclama).
+            // EL VIGILANTE DE CAMAS, cada segundo (la transicion se escribe sola cuando el HOME desaparece o se reclama).
             if (ticks % 20 == 0) {
                 volcarCamas(level);
             }
@@ -2752,7 +2752,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     construido.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue()).limit(10)
                             .map(e -> e.getKey() + "=" + e.getValue()).reduce((a, b) -> a + " " + b).orElse("(NADA)"));
             // LO QUE HAY ALREDEDOR de una celda del anillo, EN UNA SOLA LINEA (el log no se lleva bien con saltos):
-            // se canta, por cada altura, el bloque del CENTRO y cuantos de los 25 NO son aire.
+            // se escribe, por cada altura, el bloque del CENTRO y cuantos de los 25 NO son aire.
             for (int[] c : new int[][] { { 532, 646 }, { 470, 708 }, { 408, 646 }, { 470, 584 },
                     { CENTRO.getX(), CENTRO.getZ() }, { CENTRO.getX() + 20, CENTRO.getZ() } }) {
                 StringBuilder rej = new StringBuilder();
@@ -2912,7 +2912,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     /**
      * <b>¿DE DÓNDE SALE EL ASALTANTE DE 0.552?</b> (pendiente 4). El tope del mod hace imposible ese número por la vía
      * del escalado ({@code 0,23 × 1,6 = 0,368}), así que tiene que haber una SEGUNDA vía. Aquí se prueban las
-     * sospechosas sobre un asaltante de verdad y se canta el atributo resultante: el <b>crío</b> (en el juego un zombi
+     * sospechosas sobre un asaltante de verdad y se escribe el atributo resultante: el <b>crío</b> (en el juego un zombi
      * crío lleva un modificador de velocidad) y las dos cuentas de la sospecha ({@code 0,23 × 2,4} y
      * {@code 0,368 × 1,5} = 0,552).
      */
@@ -3718,7 +3718,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 }
             }
             if (level.getBlockState(new BlockPos(mx, suelo - 1, mz)).isAir()) {
-                flotando++; // el anillo no se apoya en nada: se canta para no medir un cerco en el aire
+                flotando++; // el anillo no se apoya en nada: se escribe para no medir un cerco en el aire
             }
         }
         DevilRpg.LOGGER.info("[Arnes] MURO: cerco de la PLAZA cerrado (r={}, 3 de alto, {} bloque(s) nuevos, cota {})"
@@ -4582,7 +4582,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * LAS CAMAS: aldeano por aldeano, si tiene cama en la memoria del cerebro, si esta durmiendo y que actividad tiene
      * activa (REST/WORK/MEET), con la hora del mundo. Es lo que mide "por que dice Sin cama si sobran camas".
      * <p>
-     * Y EL VIGILANTE: se guarda la cama de cada aldeano de la pasada anterior, y cuando CAMBIA se canta la transicion
+     * Y EL VIGILANTE: se guarda la cama de cada aldeano de la pasada anterior, y cuando CAMBIA se escribe la transicion
      * con el estado de la cama vieja, que es lo que dice QUIEN la borra. La sospecha (codigo de vanilla,
      * {@code ValidateNearbyPoi}, que el aldeano lleva registrado para {@code HOME}):
      * <pre>
@@ -4803,7 +4803,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                 cuantas, abiertas, atrapados);
     }
 
-    /** Las puertas abiertas del barrido anterior (para cantar las que se cierran). */
+    /** Las puertas abiertas del barrido anterior (para escribir las que se cierran). */
     private static java.util.Set<Long> puertasAbiertasAnteriores = new java.util.HashSet<>();
 
     /**

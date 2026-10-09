@@ -420,7 +420,7 @@ al pueblo: vanilla pide una cama libre por cría).
 - **Alturas (invariante I1)**: `nivel` es **la capa que se pisa**, así que el suelo sólido va en **`nivel-1`** y las
   paredes, la puerta y las camas en **`nivel`**. Poner el suelo en `nivel` (como el kiosco, que va a propósito un
   bloque alto con sus escaleras) dejaba la barraca **un bloque alta**, con escalón en la puerta: el mismo bug que se
-  corrigió en las casas. Lo canta el lint si se pasa la Y del centro ([I1], de hecho saltó al escribirlo).
+  corrigió en las casas. Lo escribe el lint si se pasa la Y del centro ([I1], de hecho saltó al escribirlo).
 - **El solar se NIVELA antes de construir** (`nivelarHuella`, como las casas): recorta el terreno natural que sobra
   y **rellena los agujeros**, porque en el guardado el cuadrante oeste de una aldea tiene **charco** (23 columnas con
   agua en la capa de superficie, aldea 7) y en otra **faltaba el bloque de suelo en 12 columnas** (aldea 8): sin eso
@@ -1357,7 +1357,7 @@ la taberna**). Fue la rama del **tiempo agotado**: "los monstruos entraron y sob
   zanja y el segundo piso/tejado, deja fuera las cuevas). La usan el **latido** (`hayEnemigosDentro`), el **perímetro
   del asedio** (`allZombiesInsidePerimeter`) y las **partículas de intrusión**.
 - **Estado del asedio visible**: barra de acción cada 15 s y cuenta atrás a 30 y 10 s —
-  *"Asedio a la aldea: quedan 4 y 2 DENTRO del muro · 0:45 · si aguantan dentro, la aldea cae"*—, cada baja se canta
+  *"Asedio a la aldea: quedan 4 y 2 DENTRO del muro · 0:45 · si aguantan dentro, la aldea cae"*—, cada baja se escribe
   al momento (*"Asediador abatido: quedan 3."*), los asediadores van **marcados con brillo** al spawnear
   (`setGlowingTag`, se les quita al resolverse el asedio y al cargarse sin asedio) y el aviso de la ola lo dice.
 - **La caída dice el motivo**: *"La aldea cayó: los monstruos aguantaron dentro de los muros."*
@@ -1413,7 +1413,7 @@ taberna en `1438,1428`, y el jugador de pie en `1439,125,1439`).
 | Bug (lo que vio) | Causa medida | Arreglo | Guardia para que no vuelva |
 |---|---|---|---|
 | *"Hay 4 bloques que están estorbando: 2 de madera pelada y otros 2 de madera normal, justo enfrente de las escaleras"* | La **barra** del comedor empezaba en `dx=5` y el pie de la escalera está en `dx=4` (`TABERNA_ESCALERA_PIE_DX`): su extremo 2×2 (`stripped_oak_log` en `dz=12` y `oak_wood` en `dz=13`) caía **justo en el carril de entrada**. Medido en el guardado: barra en `dx=5..11`, escalones en `dx=4` | La barra pasa a **`dx=7..13`** (la misma longitud, corrida dos bloques al este): la entrada de la escalera queda con dos bloques libres | Se ve en el volcado de la taberna (arriba) y lo aplica la **migración 48** a las tabernas ya construidas |
-| *"Los 2 bloques de madera que están justo debajo de los pies míos están estorbando a todo el que quiere subir: su cabeza topa con ellos"* | El **hueco del forjado** tenía **tres filas** (`dz=8..10`) y la **meseta** está en `dz=11..12`: al subir de la meseta al primer escalón de arriba, el caminante (caja de 0,6) cruza el borde del forjado con la cabeza ya por encima de 124 y choca con el tablón de `dz=11` — **que es justo el bloque sobre el que estaba de pie**, de ahí el *"debajo de los pies míos"* | El hueco llega a **cuatro filas** (`dz=8..11`): la meseta queda abierta por el lado por el que se sube. El tramo de abajo sigue BAJO el forjado (dos bloques de altura libre, como cualquier escalera de casa) | El hueco y la barra se calculan de las constantes de la escalera (`esHuecoDeLaEscalera` y `TABERNA_ESCALERA_*`), así que el **volcado de la taberna** los canta |
+| *"Los 2 bloques de madera que están justo debajo de los pies míos están estorbando a todo el que quiere subir: su cabeza topa con ellos"* | El **hueco del forjado** tenía **tres filas** (`dz=8..10`) y la **meseta** está en `dz=11..12`: al subir de la meseta al primer escalón de arriba, el caminante (caja de 0,6) cruza el borde del forjado con la cabeza ya por encima de 124 y choca con el tablón de `dz=11` — **que es justo el bloque sobre el que estaba de pie**, de ahí el *"debajo de los pies míos"* | El hueco llega a **cuatro filas** (`dz=8..11`): la meseta queda abierta por el lado por el que se sube. El tramo de abajo sigue BAJO el forjado (dos bloques de altura libre, como cualquier escalera de casa) | El hueco y la barra se calculan de las constantes de la escalera (`esHuecoDeLaEscalera` y `TABERNA_ESCALERA_*`), así que el **volcado de la taberna** los escribe |
 | *"El herrero de herramientas ni el herrero de armas están recogiendo materiales del suelo (lingotes, pepitas de hierro, armaduras...)"* | `VillagerPickupGoal` **cacheaba la lista de materiales en el constructor**. El pueblo **reparte oficios** (repone el puesto que se queda vacío, una cría crece y hereda), así que a un aldeano al que le cambian el oficio le queda la lista **vieja**: seguiría recogiendo trigo y semillas e **ignoraría el hierro**. *(En sus registros hay un herrero guardando 8–12 cosas cada pocos minutos: el que tiene la lista buena funciona; el que no, ni las ve.)* Y lo que está a más de **20 bloques** del herrero no es suyo: eso lo barre el **recolector** | La lista, el destino y el nombre del oficio se leen **EN VIVO** de `getVillagerData().getProfession()` | **Invariante I17**: ninguna lista por oficio se cachea |
 
 | *"¡Mira cómo dejaste las ventanas! ¡Quedan incompletas las paredes!"* | La **cal de los muros Tudor era terracota blanca**, y `esTerrenoNatural` incluye `BlockTags.TERRACOTTA` (hace falta: las aldeas de meseta cortan terracota de verdad). El recorte de `nivelar` va de el nivel del pueblo hasta `groundY`, y en una columna con la taberna **`groundY` devuelve el tejado** → subía por dentro de la casa y se comía **todos** los paneles: en su guardado los cuatro muros tenían postes, solera, tablones y cristales, y **la cal entera era aire** | El recorte **para en el primer bloque construido** (`nivelar` y el talud) y la cal pasa a **`SMOOTH_QUARTZ`** (cuarzo liso: blanco de cal y sin etiqueta de terreno). La **migración 49** (`rehacerMurosDeLaTaberna`) vuelve a pasar `muroTudor` y `tejadoDeLaTaberna` —solo estructura: no toca despensa, camas ni cocina— | **I18**: la cal no puede ser de un material "de terreno", y ningún recorte sube por dentro de una construcción |
@@ -1571,7 +1571,7 @@ dormitorio y, si alguna sigue **posada** con el tejado encima, la **cuelga**; es
   casos de esta migración). En la aldea **0** salen **18**: los mismos 4 y **14 de la cerca del corral anexo**, que son
   el retrofit **viejo** ya documentado (`posarFarolesFlotantes`, pendiente hasta que el jugador pase por esa aldea).
   Los de la barraca son **2 celdas** por pueblo (`dz -2` y `dz +1` de su columna) y una segunda pasada no cambia nada.
-- Las dos auditorías del pueblo (`tools/audita_aldea.py` y `auditarFarolesFlotantes`) **no** habían cantado ninguno
+- Las dos auditorías del pueblo (`tools/audita_aldea.py` y `auditarFarolesFlotantes`) **no** habían escrito ninguno
   de estos cuatro: las dos daban por bueno un farol que tuviera una **valla debajo** (que es la regla del farol
   *posado*) o algo sólido **encima**, sin mirar la propiedad `hanging`. Por eso el fallo llegó hasta la captura del
   jugador. Desde la 55 la **autocomprobación del juego** (`auditarFarolesFlotantes`) mira **el lado que dice el
@@ -1971,7 +1971,7 @@ testigo es el **hogar** del patio, I15: rehacerla tiraría las camas y lo de den
 plano para que el plano nuevo se capture ya con las **tres** (I8).
 
 **Y el ORDEN, comprobado de verdad** (`build/barraca_diana.py`, sección 0): el script **transcribe el constructor**
-celda a celda y en orden y **canta cualquier celda escrita dos veces con bloques distintos** (el patrón "lo que va
+celda a celda y en orden y **escribe cualquier celda escrita dos veces con bloques distintos** (el patrón "lo que va
 después gana"), que es lo que pedía el encargo: *¿hay alguna otra pieza de la barraca que se pise?*
 
 | | Celdas pisadas **sin justificar** | Dianas en pie |
@@ -2819,7 +2819,7 @@ devuelve y `VillageManager` lo **apunta en el plano** (`Blueprint.conCelda`), pa
    hueco, al lado del cofre).
 3. **De propina**: la misma comprobación encontró **2 huecos en la fragua de la herrería** (`plains_weaponsmith_1`):
    la **lava** del juego (`1423,120,1368` y `1423,120,1369`) que el guardado también había perdido.
-4. **Idempotente**: cada casa canta sus huecos **una sola vez** en toda la corrida.
+4. **Idempotente**: cada casa escribe sus huecos **una sola vez** en toda la corrida.
 
 ### 3b.66 Los vegetales que los granjeros dejaban en el suelo al cosechar
 
@@ -2887,7 +2887,7 @@ min = 24000 ticks— dejó de ser cría, y en el **primer latido** ya llevaba 20
 muerte (`STARVATION_DEATH_TICKS`, 10 min) y **murió en el acto**, con la despensa llena. Los 19 min del log son
 exactamente eso (la marca se estrena hasta 10 s después de nacer).
 
-Y encima el aviso **no miraba la despensa**: se cantaba con `algunaBocaSinComer` y decía *"la despensa esta vacia"*
+Y encima el aviso **no miraba la despensa**: se escribia con `algunaBocaSinComer` y decía *"la despensa esta vacia"*
 siempre, también con 986 puntos dentro. Con razón el jugador dejó de creérselo.
 
 **ARREGLO** (`VillageManager`):
@@ -2955,7 +2955,7 @@ El aldeano mide **1,95** y un farol tiene **caja de colisión**, así que al cru
 de la hoja + la de encima: la **navegación no le encontraba camino** (y sin acercarse, el `VillageGateGoal` tampoco
 se lo abría) y se quedaba **encerrada en el corral**. El farol venía del layout **viejo** de las luces de la cerca,
 que ponía uno en el **medio de cada lado** de la valla —y el medio del lado oeste ES el portón—; el código de hoy no
-lo pone, pero tampoco lo quitaba, y la autocomprobación de faroles no lo canta (ese farol *sí* tiene apoyo: el
+lo pone, pero tampoco lo quitaba, y la autocomprobación de faroles no lo escribe (ese farol *sí* tiene apoyo: el
 problema es que el apoyo es la puerta).
 
 **ARREGLO** (I54):
@@ -2967,9 +2967,9 @@ problema es que el apoyo es la puerta).
 - Los portones salen de **una sola lista** (`VillageGenerator.todosLosPortones`): la usan el goal que los abre, el
   despeje y la auditoría.
 - Y de propina, **I6**: `posarFarolesFlotantes` quitaba y volvía a poner los **doce faroles del corral en cada
-  latido** (el log lo cantaba cada 10 s, para siempre); ahora un farol **a un bloque del apoyo y posado** no se toca.
+  latido** (el log lo escribia cada 10 s, para siempre); ahora un farol **a un bloque del apoyo y posado** no se toca.
 
-**Comprobado con la auditoría versionada**: `python tools\audita_aldea.py` canta el portón tapado (aldea 2: 1
+**Comprobado con la auditoría versionada**: `python tools\audita_aldea.py` escribe el portón tapado (aldea 2: 1
 portón). El del **gallinero** no se audita: es un hueco de **un bloque** a propósito (los pollos pasan, los aldeanos
 no).
 
@@ -3134,7 +3134,7 @@ la posada) en el muro sur, `1438..1449`— y el resto de la vuelta seguía en lo
   coloca en **todos** los lados, la banda sale **en los cuatro** y de una pieza.
 - **Y se repone en las tabernas ya construidas**: `ponerLaBandaDeLaTaberna` (idempotente, en el latido) cambia
   **solo** los tablones del diseño de esa vuelta —lo que el jugador tenga puesto se queda: en su partida, su banda
-  del muro sur— y canta en el log cuántos troncos ha puesto.
+  del muro sur— y escribe en el log cuántos troncos ha puesto.
 - La chimenea (pegada al muro norte) no se toca: su celda no es un tablón del diseño.
 
 *No se pudo medir con el arnés (el jugador tenía el juego abierto y tiene cogidos el jar de NeoForge y el guardado);
