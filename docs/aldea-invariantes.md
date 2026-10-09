@@ -6540,9 +6540,15 @@ vacía para poder pasar):
 | **abierta, hoja derecha** | `x 0.00+0.50`, `z 0.875+0.125` → perpendicular en el otro canto ✓ |
 | **colisión abierta** | **SIN COLISIÓN** → se pasa ✓ y el centro de la celda queda **LIBRE** ✓ |
 
-**Lo que NO se puede hacer con modelos de bloque** ✗, y hay que decirlo: el cambio es **instantáneo**. Un giro
-**interpolado** (que se vea la hoja recorriendo el arco) necesita una **entidad de bloque con su renderizador**, que es
-una obra bastante mayor. Lo que hay ahora es el giro completo de golpe, que es como se comporta una puerta del juego.
+**Lo que NO se puede hacer con modelos de bloque** ⚠️ **ESTA NOTA ES VIEJA Y YA NO ES VERDAD — SE DEJA POR ESCRITO
+PARA QUE NADIE REPITA EL CAMINO** (corregida el 9-oct-2026, y el que lo cazó fue el jugador: *«¿no el interpolado del
+portón ya estaba? es lo que hicimos desde ayer»* ✓). Aquí decía que el cambio era **instantáneo** y que un giro
+**interpolado** necesitaba una **entidad de bloque con su renderizador** («obra bastante mayor») ✗. **Eso se hizo** en
+las rondas siguientes: el portón doble tiene **`PortonDobleBlockEntity`** y **`PortonDobleRenderer`** ✓, el cierre **se
+anima** (`HOJA_FUERA` separa la **vista** de la **lógica** y el modelo solo vuelve cuando el giro termina, commit
+`b586a0d`) y el giro quedó **verificado con números** (hoja rígida de 3 bloques, eje del muro perpendicular al `FACING`,
+commit `35e15db`) ✓. O sea: **el giro suave SÍ está**; lo que se puede dar por bueno o retocar es cómo se ve, y eso lo
+mira el jugador en su partida (el arnés no tiene ventana).
 
 ### I231 · LA ALDEA YA CONSTRUIDA NO SE CURABA: `asegurarMuro` SOLO MIRABA EL MURO
 
@@ -6854,6 +6860,11 @@ la misma familia del «empujón del latido» de los aldeanos ✓, que ya funcion
 depender de la navegación de vanilla ✗) y el **`MAX_ESCAPE_TICKS = 200`** ✓ (que se rinda y se quede parado ✗) — los dos
 son el siguiente trozo ✓, y van con la misma medida: la traza dirá cuántos asaltantes salen del agua y en cuántos ticks ✓.
 
+> ⚠️ **ESTA NOTA YA ESTÁ CERRADA (comprobado el 9-oct-2026)**: el nado se midió en **I235** — el goal **arranca 3 veces**
+> y **saca al monstruo del agua en 2-4 ticks**, y el `MAX_ESCAPE_TICKS` dejó de ser el que decidía ✓. Se deja la nota
+> porque cuenta el camino, pero **no es trabajo pendiente** ✗. (Lo cazó el jugador con el portón: las notas viejas de
+> «queda abierto» hay que comprobarlas contra el acta antes de dártelas por pendientes.)
+
 ### ASALTANTE Y EL MURO · **la regla que falta, con su predicado ya hecho** (5-oct-2026)
 
 El jugador: *«solo el muro perimetral es rompible; una vez dentro ya no puede romper nada»* ✓.
@@ -6888,6 +6899,12 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 (el empujón del latido de los aldeanos ✓ y la espera del agua ✓): **quitar la espera**, no tocar la velocidad ✓.
 
 **QUEDA ABIERTO, en el mismo bloque** ✗:
+
+> ⚠️ **LOS TRES PUNTOS DE ESTA LISTA YA ESTÁN CERRADOS** (comprobado el 9-oct-2026): el 1, **I210/I211** ✓ (la regla del
+> muro perimetral, medida); el 2, los tres atravesadores de **I212/I213** ✓ (y sus arreglos posteriores, **I238** la
+> escalera, **I239** el pico contra su propio puente y **I242** la salida del pozo); y el 3, **I215/I235** ✓ (el nado).
+> Se deja por el camino que cuenta, **no como trabajo pendiente** ✗.
+
 1. ~~**La regla del muro perimetral** ✓ (el jugador: *«solo el muro perimetral es rompible; una vez dentro ya no puede
    romper nada»* ✓): el predicado **ya existe** ✓ (`VillageManager.dentroDelRecinto`, el que usa `hayEnemigosDentro` ✓)
    → falta ponerlo en la decisión de romper de L1072-1090 ✓.~~ **CERRADO el 5-oct-2026: ver el apartado siguiente.**
@@ -7043,9 +7060,14 @@ la fina: **3 de fondo → atravesada en 72 s**; **26 de fondo → sin atravesar 
 
 **LO QUE NO SE PUEDE AISLAR, y es del instrumento** ✗: las líneas del mod `[Siege] … pica Block{…}` **no dicen qué
 asaltante** pica (todas salen con la misma aldea), así que en una corrida con más atacantes del mundo **no se puede
-contar los bloques que lleva ESE bicho** y, por tanto, **no se ha medido el agotamiento exacto del tope de 40 bloques por
-marcha** (que sigue leído en el código: `TUNEL_PRESUPUESTO`, **L103**). Para medirlo haría falta que la traza llevara el
-identificador del asaltante (o un contador por bicho en el arnés).
+contar los bloques que lleva ESE monstruo** y, por tanto, **no se ha medido el agotamiento exacto del tope de 40 bloques
+por marcha** (que sigue leído en el código: `TUNEL_PRESUPUESTO`, **L103**). Para medirlo haría falta que la traza llevara
+el identificador del asaltante (o un contador por monstruo en el arnés).
+
+> ⚠️ **YA ESTÁ HECHO Y MEDIDO (9-oct-2026)**: es lo que cerró **I241** — las cinco trazas del asedio llevan ya
+> `asaltante #<id>` ✓ (y el arnés dice cuál es el suyo), el tope se midió con la corrida de control (contador `5 → 0` en
+> 20 bloques y el asaltante **se queda**) ✓ y la **recarga** con la segunda marcha (**I243**) ✓. Esta nota se deja por el
+> camino que cuenta, **no como trabajo pendiente** ✗.
 
 ### I239 · EL ROMPER Y EL PUENTE DEJAN DE PELEARSE: **LA OBRA DEL ASEDIO NO SE PICA**
 
@@ -7334,6 +7356,10 @@ que el jugador describe ✓. Y el empujón hacia la orilla iba **cada 15 ticks**
 - Y el `retryCooldown` **se retira entero** (era el que producía la segunda mitad de los 20 s) ✓.
 
 **LO QUE NO QUEDÓ MEDIDO, dicho claro** ✗: monté un pozo en el arnés (`MEDIR_AGUA`) para cronometrar la salida y **la
+
+> ⚠️ **YA SE MIDIÓ (comprobado el 9-oct-2026)**: es lo que cerró **I235** — con el testigo del arnés arreglado, el goal
+> del nado **arranca 3 veces** y **saca al monstruo del agua en 2-4 ticks** (el pozo estaba bien; el que encerraba al
+> monstruo era el **barrido de monstruos del arnés** ✗). Lo de abajo se deja por el camino que cuenta.
 escena no vale**: el asaltante queda **flotando en el borde del agua** (navegación apuntando a un punto **fuera** del
 pozo, velocidad **0,012**, `enAgua=SI` toda la corrida) y no sale **ni con el arreglo ni sin él** ✓ — o sea que lo que
 estaba midiendo era **mi pozo**, no el nado. El instrumento queda anotado para arreglarlo antes de dar el nado por
