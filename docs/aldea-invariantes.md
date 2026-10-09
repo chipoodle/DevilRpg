@@ -6896,6 +6896,39 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I239 · EL ROMPER Y EL PUENTE DEJAN DE PELEARSE: **LA OBRA DEL ASEDIO NO SE PICA**
+
+El otro defecto que salió en la foto de I236: **el `BreakBlockGoal` destruía los tablones que tendía el puente del
+`TraverseGoal`**. Medido entonces: de los bloques que picaban los ocho asaltantes, **26-36 eran `cobblestone` justo en el
+anillo del foso** (r=8..11), o sea **los tablones que acababan de tender** (corrida 158: 26; 159: 36 — y en esa misma
+corrida el puente se tendía 13 veces, así que **se destruía más de lo que construía**) ✗.
+
+**EL ARREGLO, EN TRES PASOS, Y LOS TRES MEDIDOS** (porque los dos primeros **no bastaron**, y eso también queda dicho):
+
+1. **Un bloque con AIRE DEBAJO no se pica** (`BreakBlockGoal.blockingBlockAhead`, **L1534**): un bloque a la altura de
+   los pies con el vacío debajo **es un tablón del puente** (`puentearHacia` los tiende así, sobre el agujero), no
+   terreno que estorbe. Medido: **26** tablones rotos (corrida 160).
+2. **La lista de tablones, POR BICHO** (`esTablonDelAsalto`, y el puente los anota al tenderlos,
+   `puentearHacia` **L640**): hacía falta porque el puente **sube un bloque por tablón**, así que del segundo en
+   adelante **sí tienen suelo debajo** (el tablón anterior) y la regla del aire no los cubría. Medido: **21** (161).
+3. **La lista pasa a ser COMPARTIDA por todo el asedio** (`TABLONES_DEL_ASALTO`, **L678**, con tope de 512) y el veto se
+   pone **en la única puerta que rompe**, `breakBlockAt` (**L326**), para que valga para los **tres** caminos que pican:
+   el romper, el abridor de huecos (`breakStepAheadHacia`, **L783**) y el **taladro del túnel**. Los dos primeros no
+   bastaban porque **los otros siete bichos** pisaban y picaban los tablones ajenos. Medido: **15** (162) y **4** (163).
+
+**MEDIDO ANTES Y DESPUÉS** (misma escena, mundo conservado, tablones rotos contados en las vueltas 1 y 2, donde el foso
+es un agujero y **cualquier adoquín del anillo es un tablón**):
+
+| | antes (158/159) | paso 1 (160) | paso 2 (161) | paso 3, compartida (162) | **paso 3 + puerta (163)** |
+|---|---|---|---|---|---|
+| **tablones rotos** | 26 / 36 | 26 | 21 | 15 | **4** ✓ |
+| **puentes tendidos** | 10 / 13 | 14 | 12 | 11 | **16** ✓ |
+| **escalones** | 0 / 65 | 69 | 62 | 50 | **76** ✓ |
+
+O sea: **el asedio construye más y se destruye menos** — el puente ya no se cae solo y la escalera sigue subiendo (I238).
+Lo que queda (4) son casos de la cascada de `breakBlock` (que abre también la celda de encima) y no se ha perseguido
+más: **de 26-36 a 4 es el defecto arreglado**, y apurarlo no cambiaba ninguna medida.
+
 ### I238 · LA ESCALERA DE BLOQUES: **COLOCAR ANTES DE PICAR** (el arreglo que la hace existir)
 
 Viene de I236, donde quedó medido que `apilarBloqueParaSubir` **no colocaba el escalón NUNCA** (0 en cinco corridas).

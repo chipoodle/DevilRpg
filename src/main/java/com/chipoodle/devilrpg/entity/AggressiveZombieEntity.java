@@ -321,6 +321,13 @@ public class AggressiveZombieEntity extends Zombie {
         if (REGLA_DEL_MURO_ACTIVA && protegidoPorLaAldea(pos)) {
             return; // dentro de la aldea no se pica; el muro perimetral sí (es la brecha)
         }
+        // Y LA OBRA DEL PROPIO ASEDIO NO SE PICA (I239, medido el 9-oct-2026): los tablones que tiende el puente son su
+        // camino, no un estorbo —el romper y el puente se peleaban y el bicho se destruía su propio puente—. Va AQUÍ, en
+        // la ÚNICA puerta que rompe, para que valga para los tres caminos que pican (el romper, el abridor de huecos y
+        // el taladro del túnel) y no solo para el que me acordé de mirar.
+        if (esTablonDelAsalto(pos)) {
+            return;
+        }
         BlockState bs = level().getBlockState(pos);
         Block b = bs.getBlock();
         if (b.defaultDestroyTime() < 0.0F) {
@@ -631,6 +638,7 @@ public class AggressiveZombieEntity extends Zombie {
             }
             BlockState puente = Blocks.COBBLESTONE.defaultBlockState();
             level().setBlock(delante, puente, Block.UPDATE_ALL);
+            anotarTablon(delante); // es obra del asedio: el pico no la toca (I239)
             level().playSound(null, delante, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
             particulasDeTrabajo(delante);
             if (puenteEspera == 0 && tunelRestante == TUNEL_PRESUPUESTO) {
@@ -670,6 +678,32 @@ public class AggressiveZombieEntity extends Zombie {
     /** Bloques que le quedan de escalera apilada en esta marcha (no se hace una torre al cielo). */
     private static final int APILAR_PRESUPUESTO = 8;
     private int apilarRestante = APILAR_PRESUPUESTO;
+    /**
+     * <b>LOS TABLONES QUE HA TENDIDO EL ASEDIO</b> (I239, 9-oct-2026): son la obra del puente, y el pico no los toca.
+     * Sin esto, el romper y el puente se peleaban: medido con el arnés, de los bloques que picaban los asaltantes,
+     * **28-39 eran `cobblestone` justo en el anillo del foso** (r=8..11), o sea **los tablones que acababan de tender**.
+     * <p>
+     * Va <b>compartida entre todos los asaltantes</b> a propósito, y eso también está medido: con la lista por bicho los
+     * tablones seguían rompiéndose (los otros siete los pisaban y los picaban) — 39 rotos con la lista individual frente
+     * a 23 al compartirla. Con tope: al pasar de {@link #TABLONES_MAX} se vacía (los tablones viejos ya son terreno).
+     */
+    private static final java.util.Set<BlockPos> TABLONES_DEL_ASALTO =
+            java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+    /** Tope de tablones anotados (ver {@link #TABLONES_DEL_ASALTO}). */
+    private static final int TABLONES_MAX = 512;
+
+    /** ¿Esa celda es un tablón que ha tendido el asedio? Entonces no se pica (ver {@link #TABLONES_DEL_ASALTO}). */
+    private static boolean esTablonDelAsalto(BlockPos pos) {
+        return TABLONES_DEL_ASALTO.contains(pos);
+    }
+
+    /** Anota un tablón tendido, con tope (ver {@link #TABLONES_DEL_ASALTO}). */
+    private static void anotarTablon(BlockPos pos) {
+        if (TABLONES_DEL_ASALTO.size() >= TABLONES_MAX) {
+            TABLONES_DEL_ASALTO.clear();
+        }
+        TABLONES_DEL_ASALTO.add(pos.immutable());
+    }
     /** Vuelve a darle presupuesto de escalera (al empezar una marcha nueva). */
     public void recargarAtravesadores() {
         this.apilarRestante = APILAR_PRESUPUESTO;
@@ -771,6 +805,9 @@ public class AggressiveZombieEntity extends Zombie {
                     if (protegidoPorLaAldea(p)) {
                         continue; // dentro de la aldea no se pica (el anillo del muro sí: es la brecha)
                     }
+                    if (esTablonDelAsalto(p)) {
+                        continue; // los tablones del puente son obra del asedio, no un estorbo (I239)
+                    }
                     if (canBreakBlock(level().getBlockState(p))) {
                         breakBlockAt(p);
                         roto = true;
@@ -784,6 +821,9 @@ public class AggressiveZombieEntity extends Zombie {
                                 zPos.getZ() + d[1] * dist);
                         if (protegidoPorLaAldea(p)) {
                             continue;
+                        }
+                        if (esTablonDelAsalto(p)) {
+                            continue; // ni el tablón que el puente pone justo ahí, a la altura de los pies (I239)
                         }
                         if (canBreakBlock(level().getBlockState(p))) {
                             breakBlockAt(p);
@@ -1495,6 +1535,11 @@ public class AggressiveZombieEntity extends Zombie {
                     if (zombie.protegidoPorLaAldea(p)) {
                         continue; // dentro de la aldea no se pica (la muralla sí: es la brecha)
                     }
+                    // NI LOS TABLONES QUE HA TENDIDO ÉL (I239): el puente sube un bloque por tablón, así que los de
+                    // arriba caen justo a la altura de la cabeza y este camino se los llevaba por delante.
+                    if (esTablonDelAsalto(p)) {
+                        continue;
+                    }
                     if (canBreak(zombie.level().getBlockState(p))) {
                         zombie.breakBlockAt(p);
                         broke = true;
@@ -1532,6 +1577,20 @@ public class AggressiveZombieEntity extends Zombie {
                         // Medido con el arnés: el asaltante se quedó de bruces contra una valla de roble, sin picarla,
                         // con el objetivo (el jugador de pega) al otro lado.
                         if (!bs.isAir() && !bs.getCollisionShape(zombie.level(), candidate).isEmpty() && canBreak(bs)) {
+                            // PERO NO SE PICA LO QUE ESTÁ EN EL AIRE (I239, medido el 9-oct-2026). Un bloque a la
+                            // altura de los pies (o uno más) con AIRE DEBAJO no es terreno que estorbe: es un TABLÓN
+                            // DEL PUENTE —los tiende `puentearHacia` justo así, sobre el agujero— y el romper y el
+                            // puente se estaban peleando: medido con el arnés, de los bloques que picaba, 45-62 eran
+                            // `cobblestone` EN EL ANILLO DEL FOSO (r=10..11), o sea los tablones que acababa de
+                            // tender él mismo. Sin esta regla el puente se destruye solo.
+                            if (zombie.level().getBlockState(candidate.below()).isAir()) {
+                                continue;
+                            }
+                            // Y TAMPOCO LOS SUYOS, aunque el tablón de abajo les haga de suelo (el puente sube un
+                            // bloque por tablón, así que a partir del segundo SÍ tienen suelo debajo).
+                            if (esTablonDelAsalto(candidate)) {
+                                continue;
+                            }
                             double score = Math.abs(dx - sx) + Math.abs(dz - sz) + dy * 0.5D;
                             if (score < bestScore) {
                                 bestScore = score;

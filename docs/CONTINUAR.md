@@ -102,9 +102,11 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    **65 `escalones`** donde antes habia **0**, el puente sigue tendiendose (**13**) y en la vuelta 3 **5 de 8 DENTRO**
    con la escalera en pie ✓. Y DOS HALLAZGOS
    que salieron de la foto: los que entran lo hacen **por debajo** (tunel bajo el muro: 125 piedras
-   picadas justo en r=6..7 y los 68 troncos de base **en pie**), y el **romper y el puente se pelean** (45-62 de los
-   bloques picados son `cobblestone` en r=10..11: **los tablones que ellos mismos acaban de tender**) ✗ — **eso es lo
-   que queda por arreglar** (siguiente ronda).
+   picadas justo en r=6..7 y los 68 troncos de base **en pie**), y el **romper y el puente se peleaban** (26-36 de los
+   bloques picados eran `cobblestone` en r=8..11: **los tablones que ellos mismos acababan de tender**) — **ARREGLADO EN
+   I239** (la obra del asedio no se pica: regla del aire debajo, lista **compartida** de tablones y el veto en la unica
+   puerta que rompe, `breakBlockAt`) y **medido**: los tablones rotos bajan de **26-36 a 4** y el asedio construye mas
+   (puente **16** lineas y escalera **76**, las dos mas que antes) ✓.
 3. **Ver la milicia con gente dentro** — **CERRADA Y MEDIDA** ✓ (9-oct-2026, **I237** en `docs/aldea-invariantes.md`).
    Escena nueva (`MEDIR_MILICIA_SOBRANTES`): pone ella misma **12 adultos SIN OFICIO** (el caso «mas adultos que
    puestos») y **3 crias** alrededor de la plaza y deja correr el latido. Medido en un mundo conservado
