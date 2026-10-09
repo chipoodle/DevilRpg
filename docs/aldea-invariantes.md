@@ -6896,6 +6896,42 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I243 · LA SEGUNDA MARCHA RECARGA EL TALADRO **Y** LA MONTAÑA SE APOYA EN EL TERRENO (un fallo de la escena)
+
+Cierra la última casilla de I241 («¿se recarga el tope de 40?») y arregla un fallo de la **escena** que salió al medirlo.
+
+**1) LA RECARGA, MEDIDA** ✓. En la escena de la montaña, a los **t=1680** se le **vuelve a asignar centro** al mismo
+asaltante (`setGoToCenterActive(true)`, que es lo que hace una ola nueva y llama a `recargarTunel()`) y se lee **el
+contador que va en la propia traza** (`le quedan N de tunel`), que es el número limpio — los `pica` incluyen también los
+del `BreakBlockGoal`, que **no gastan presupuesto**. Con la corrida de control (**tope bajado a 5**, que es la única
+forma de agotarlo dentro del banco de 3 minutos) el contador de la corrida **177** hace:
+
+```
+5 5 5 … 5 4 4 3 2 2 1        ← se agota la primera marcha
+5 4 3 2 1                    ← SEGUNDA MARCHA: el tope VUELVE a 5 y sigue taladrando
+```
+
+O sea: **el tope se recarga con cada centro que se le asigna** ✓, tal como estaba leído en el código (`L199`), y el
+monstruo **vuelve a taladrar** ✓. (Después se devolvió el tope a **40**, que es lo que va al jugador.)
+
+**2) LA ESCENA ESTABA MAL: el anillo se podía quedar ENTERRADO** ✗. El anillo se levantaba desde la **cota de la aldea**
+(66) hasta la cota+9 (75), pero en el mundo conservado **el terreno a esa distancia está a y=76..79**: en la corrida
+**176** el anillo quedó **bajo el suelo** y el asaltante lo pasó **andando por encima** — de **r=95 a r=66 en 40 s con
+solo 3 celdas abiertas** ✗, o sea que lo que se estaba midiendo no era una montaña. **ARREGLO** (`GuardHarness`,
+`medirLaMontana`): **cada columna del anillo se apoya en SU terreno**
+(`getHeight(MOTION_BLOCKING)`), que es lo que hace que la montaña esté donde se ve.
+
+**3) Y LA MONTAÑA GRUESA, VUELTA A MEDIR CON LA ESCENA BUENA** ✓ (corrida **178**, anillo de **26 de fondo**, tope de
+verdad **40**): el asaltante llega a **r=92** y **avanza poco a poco hacia dentro** —**r=92 → 91 → 89 → 88** en 150 s, con
+**11 taladros** (el contador va de **40 a 29**)— y **NO la atraviesa**: la montaña **aguanta y la aldea se salva**, que es
+lo que pidió el jugador ✓. (Y confirma la conclusión de I240, que se midió con la escena que ahora sabemos que podía
+fallar.)
+
+**LO QUE NO VALE DE ESTA ESCENA, dicho claro** ✗: el testigo **`celdas del anillo abiertas`** marca **0** aunque el
+monstruo esté taladrando, porque mira **una celda fija por columna** (la base+1) y el taladro va a la altura del suelo
+del monstruo; lo que sí dice la verdad es **su radio** (r=92→88) y **el contador de la traza** (40→29). Queda apuntado
+para arreglarlo (mirar la columna entera, no una celda).
+
 ### I242 · CAVAR POR DEBAJO **OBLIGA A SALIR**: EL ESCALÓN TAMBIÉN UN BLOQUE MÁS ARRIBA
 
 **La regla del jugador** (9-oct-2026): *«a ver, si cavan por debajo pero después hacen algo para salir a la superficie,

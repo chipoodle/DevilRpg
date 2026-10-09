@@ -149,8 +149,12 @@ esta escrito) y **la primera ya esta cerrada con numeros**:
    dura el banco ✗; con una **corrida de control con el tope en 5** se vio lo que pasa al agotarse: el contador baja
    **5 -> 0** en **20 bloques** y **el asaltante se queda** (anillo clavado en 5 celdas y el monstruo parado en r=91 el
    resto de la corrida) ✓. Y **se recarga con cada centro que se le asigna** (`setGoToCenterActive(true)` **L199** llama a
-   `recargarTunel()`): **cada ola vuelve con 40 bloques** — leido en el codigo; **no medido** una segunda ola contra la
-   misma montaña ✗.
+   `recargarTunel()`): **cada ola vuelve con 40 bloques** — **Y YA ESTA MEDIDO** ✓ (corrida 177, **I243**): el contador de
+   la traza (`le quedan N de tunel`) baja `5→1`, y al **volver a asignarle centro** (t=1680) **vuelve a 5** y sigue
+   taladrando ✓. Y al medirlo salió **un fallo de la escena**: el anillo se levantaba desde la cota y en un mundo con el
+   terreno 13 bloques más alto quedaba **enterrado** (el asaltante lo pasaba andando, r=95→66 en 40 s ✗); **arreglado**
+   (cada columna se apoya en su terreno) y **la montaña gruesa vuelta a medir** (corrida 178: r=92→88 en 150 s, 11
+   taladros, **sin atravesarla**) ✓.
 5. **CAVAR POR DEBAJO OBLIGA A SALIR** — **ARREGLADO Y MEDIDO** ✓ (9-oct-2026, **I242** en `docs/aldea-invariantes.md`).
    La regla del jugador: *«si cavan por debajo pero despues hacen algo para salir a la superficie, obligatorio, esta
    bien; pero si no, mejor que se queden solo cavando cuando sea montaña o algo que los bloquee»*. **No se cumplia

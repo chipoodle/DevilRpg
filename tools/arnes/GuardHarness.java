@@ -3403,7 +3403,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * altura, que es lo que dice si está en el fondo del foso) y las del mod `[Siege] … PONER UN PUENTE`,
      * `… pone un ESCALON`, `… CAVA hacia abajo` y `… pica Block{…}`.
      */
-    private static final boolean MEDIR_OLA_CON_FOSO = true;
+    private static final boolean MEDIR_OLA_CON_FOSO = false;
 
     /** Los ocho asaltantes de la ola del foso y su objetivo (dentro del muro). */
     private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> olaDelFoso =
@@ -3775,7 +3775,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * `[Siege] … pica Block{…} en …` (el taladro) y `CAVA hacia abajo` / `pone un ESCALON` (las otras dos, que aquí
      * serían interferencia: la aldea NO está arriba, está al mismo nivel).
      */
-    private static final boolean MEDIR_MONTANA = false;
+    private static final boolean MEDIR_MONTANA = true;
 
     /** El asaltante de la montaña (uno solo: se le sigue paso a paso). */
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity montanero = null;
@@ -3797,6 +3797,8 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
     private static final int MONTANA_ASALTANTE = 95;
     /** Testigo del barrido (ver {@link #medirLaMontana}): si el arnés borra al monstruo, la medida NO vale. */
     private static boolean montanaBarridoAvisado = false;
+    /** ¿Se le ha vuelto a asignar centro (la "segunda ola") en esta corrida? Ver {@link #medirLaMontana}. */
+    private static boolean montanaSegundaMarcha = false;
 
     private static void medirLaMontana(ServerLevel level, FakePlayer pega) {
         final int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
@@ -3809,11 +3811,18 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
                     int r = MONTANA_RADIO + g;
                     int x = CENTRO.getX() + (int) Math.round(Math.cos(a) * r);
                     int z = CENTRO.getZ() + (int) Math.round(Math.sin(a) * r);
+                    // EL ANILLO SE APOYA EN EL TERRENO DE SU PROPIA COLUMNA (I243, medido en la corrida 176): antes se
+                    // levantaba desde la COTA de la aldea y, donde el terreno es mas alto (medido: 13 bloques mas), el
+                    // anillo quedaba ENTERRADO y el asaltante lo pasaba ANDANDO por encima (de r=95 a r=66 en 40 s, con
+                    // solo 3 celdas abiertas). Ahora la base es la altura de la columna, que es lo que hace que la
+                    // montaña este DONDE SE VE.
+                    int base = Math.max(cota, level.getHeight(
+                            net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z));
                     for (int dy = -3; dy <= MONTANA_ALTO; dy++) {
-                        level.setBlock(new BlockPos(x, cota + dy, z),
+                        level.setBlock(new BlockPos(x, base + dy, z),
                                 net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 2);
                     }
-                    anilloDeLaMontana.add(new BlockPos(x, cota + 1, z));
+                    anilloDeLaMontana.add(new BlockPos(x, base + 1, z));
                 }
             }
             // EL ASALTANTE, FUERA Y SIN OBJETIVO: así corre la MARCHA al centro (la que taladra). Si se le pusiera un
@@ -3841,6 +3850,15 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
         if (montanero == null || ticks % 240 != 0) {
             return;
+        }
+        // SEGUNDA MARCHA (I243): se le asigna centro OTRA VEZ al mismo asaltante, que es lo que hace una ola nueva
+        // (`setGoToCenterActive(true)` -> `recargarTunel()`). Si el tope se recarga, tiene que VOLVER A TALADRAR.
+        if (ticks == 1680 && !montanaSegundaMarcha) {
+            montanaSegundaMarcha = true;
+            montanero.setGoToCenterActive(true);
+            DevilRpg.LOGGER.info("[Arnes] MONTANA: SEGUNDA MARCHA en t={} — se le asigna centro otra vez al asaltante #{}"
+                    + " (presupuesto de tunel nuevo: si el tope se recarga, vuelve a taladrar)", ticks,
+                    montanero.getId());
         }
         int abiertas = 0;
         for (BlockPos p : anilloDeLaMontana) {
