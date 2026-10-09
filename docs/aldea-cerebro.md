@@ -25,6 +25,9 @@ Y las **clases de fallo** que hemos ido encontrando, todas de esa mezcla:
 | **D · encerrado sin ruta** | ganadero en `613,62,574` (dentro del corral) con `ruta=1 nodos` al almacén | el portón solo se abre cuando ya está **pegado** (2,6 bloques); si no hay ruta **hasta el portón**, no llega a pedirlo: círculo cerrado |
 | **E · dos goals peleando** | `goals=[VillagerFarmGoal VillagerGateGoal]` con el aldeano parado | los dos tienen MOVE y se pisan |
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la clase **A** la cerró **I154** —`VillageManager.caminarHacia` (L5605-5627) manda al aldeano a la casilla de pie, en un solo sitio para todos los goals—, con **I152** (la casilla del entreno) e **I153** (la del obrero); la **B**, **I171** (si al aldeano se le pierde el rumbo, se le devuelve) e **I206** (el embudo `ponerRumbo` ya no reescribe el destino en cada tick); la **C**, **I97** (`VillagerAnimalFarmGoal` L258-261: un destino fijo aparcado no se vuelve a elegir) sobre el aparcado de **I33**; y la **D**, **I155** rehecha como **I169** (`VillageErrands.abrirLoQueCierreElPaso`, llamado desde `VillageManager.caminarHacia` L5620) más **I197** (el corral pasó a tener **dos** portones). Se deja la tabla porque cuenta el camino, pero no es trabajo pendiente.
+> ⚠️ **CORREGIDO el 9-oct-2026**: la clase **E** decía «los dos tienen MOVE y se pisan» → `VillagerGateGoal` corre **sin ningún flag** (`VillagerGateGoal` L175: `EnumSet.noneOf(Goal.Flag.class)`), así que podía correr a la vez que el oficio y **borrarle el camino**; y los `PARAR` eran en su mayoría **llegadas normales**, no peleas (I125 e I205), porque lo que se arregló fue el embudo (I206).
+
 **Y el fallo de método que lo ha alargado todo**: se ha juzgado cada intento con **una** corrida, cuando la ventana varía
 **7 · 15 · 21 · 27** entre corridas del mismo código. **Toda medida de aquí en adelante es la media de 4 corridas.**
 
@@ -40,6 +43,9 @@ proponen.** Cuatro piezas, todas nuestras:
   3. escribe **él** el `WALK_TARGET` (nadie más lo escribe mientras hay tarea) y **lo defiende**: si el cerebro lo
      pisa, lo vuelve a poner.
 - Efecto: las clases **B** y **E** mueren por construcción (no hay dos escritores ni dos goals con MOVE).
+
+> ⚠️ **CORREGIDO el 9-oct-2026**: este bloque decía «**con MOVE**» y daba por hecho ese efecto → el goal que se escribió corre **sin flags** (`VillageDispatcherGoal` L57: `// SIN setFlags`, porque con `MOVE` habría bloqueado a los oficios, `VillageDispatcherGoal` L31-34) y **hoy no está cableado**: nadie lo instancia (`VillageDispatcherGoal` L14-19) y `VillageManager.asegurarElDespachador` (L5932-5939) no lo llama desde ningún sitio.
+> ⚠️ **CORREGIDO el 9-oct-2026**: «las clases **B** y **E** mueren por construcción» **no llegó a pasar**: M1 se midió y se **retiró** (**172,5** contra **36** de referencia; `VillageManager` L2990-2998 y §5.2 de este documento), y la pelea del rumbo se atajó en el embudo `VillageManager.ponerRumbo` (I206) más el relleno del rumbo perdido (I171).
 - **Lo vanilla se queda**: el movimiento en sí (el `MoveToTargetSink` del juego sigue caminando), dormir, huir,
   aparearse y las animaciones. Solo se le quita la decisión de **a dónde va a trabajar**.
 
@@ -57,8 +63,15 @@ proponen.** Cuatro piezas, todas nuestras:
   compuertas de la huerta), **la aldea abre la suya**: se abre el portón, se espera, se pide la ruta y se cierra cuando
   pasa (ya existe el `VillagerGateGoal`, con su lado y su cierre; aquí pasa a ser **el que abre ANTES**, no el que abre
   cuando ya está pegado).
+
+> ⚠️ **CORREGIDO el 9-oct-2026**: decía que esta pieza es el módulo `VillageDoors` → **esa clase no existe** en `src`: quien hace el trabajo es `VillageErrands.abrirLoQueCierreElPaso` (`VillageErrands` L130), llamado en el punto único por el que caminan todos los goals (`VillageManager.caminarHacia` L5620, **I169**), y `VillageErrands.abrirLaPuertaSiHaceFalta` (L94) **no lo llama nadie** (así cierra el acta la nota de **I155**).
+
 - Efecto: la clase **D** muere: el que está dentro de un recinto **siempre** tiene ruta hacia fuera, porque la puerta se
   abre para él, no al revés.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la clase **D** del **corral y de las parcelas** sí murió: **I155** rehecha como **I169** (la aldea abre la puerta que de verdad separa al aldeano de su recado, `VillageManager.caminarHacia` L5620) e **I197** (el corral pasó a tener **dos** portones). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+> ⚠️ **SIGUE ABIERTO (comprobado el 9-oct-2026)**: el **cruce de los portones del muro** (los cuatro cardinales) sigue **sin medir**: el arreglo de **I222** está puesto, pero **cinco corridas no aislaron el cruce** — está en `docs/CONTINUAR.md` §2.0.
+
 - Y es también la pieza que resuelve **los pollos**: el portón se abre **solo** para el aldeano que pasa y se cierra
   detrás; los pollos no saben abrirlo, así que se quedan dentro **por construcción** (sin necesidad de tareas raras).
 
@@ -106,6 +119,8 @@ proponen.** Cuatro piezas, todas nuestras:
 > Próximo intento, por tanto: **etiqueta concreta + corrida entera + más de 4 corridas**, y **M1 (el despachador)**
 > antes de volver a tocar M2, porque el problema de la taberna no es «no hay casilla» sino «dos jefes».
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el «próximo intento» se hizo: **M1** se implementó, se midió (**172,5** contra **36** de referencia) y se **retiró** —está contado en §5.2 de este documento y en `VillageManager` L2990-2998—, y su cableado quedó fuera (`VillageManager.asegurarElDespachador` L5932-5939 no lo llama nadie). Se deja la nota porque cuenta el camino, pero no es trabajo pendiente.
+
 | fase | qué entra | criterio de la medida |
 |---|---|---|
 | **1** | **M2** (autoridad de recados) y su uso en el ganadero y la taberna | `Bajando lo del corral`, `Recogiendo lo suyo` y `Yendo a la taberna` a **0**, sin subir ninguna otra etiqueta |
@@ -113,6 +128,8 @@ proponen.** Cuatro piezas, todas nuestras:
 | **3** | **M3** (puertas): abrir antes de pedir la ruta | `Entrando a la huerta` y los recados del corral a **0** |
 | **4** | migrar las tareas restantes (granjero, recolector, leñador, herrero, minero, guardia) al despachador | **0 avisos de aldeano** en la ventana; el aviso solo puede venir del sistema |
 | **5** | los pollos y el ganadero con el portón (tu idea): apertura al paso, cierre detrás | **pollos fuera del recinto: 0** al final de la corrida |
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: fases **1** y **2** probadas, medidas y **retiradas** (fase 1: la nota de arriba; fase 2: **I150** y `VillageManager.caminarHacia` L5600-5602, con el módulo sin cablear); fase **3** cumplida (`Entrando a la huerta` **0 y 0** y los avisos del corral a **0-1**, **I155**/I157/**I197**); y fase **4** **no procede** (migrar las tareas al despachador dejó de tener sentido al retirarse M1). Se deja la tabla porque cuenta el camino, pero no es trabajo pendiente. **La fase 5 no tiene medida en el acta** (ver la nota del portón y los pollos, arriba).
 
 **Nada de esto entra sin su media.** Y todo lo que no mejore la media, se retira y se apunta (como se ha hecho hoy con
 la Opción A: **17,5** con el rumbo sostenido contra **10,25** sin él).
@@ -128,6 +145,8 @@ clase**, no de uno en uno. Tres reglas **centrales** (I152–I155):
 | **D · EL DESATASCO POR ENCAJAMIENTO, PARA TODOS** | el latido del pueblo (una comprobación, todos los aldeanos) | el aldeano **metido dentro** de un bloque: `pies=dark_oak_fence cabeza=oak_pressure_plate` (una mesa), `pies=chest`, `pies=oak_stairs`, `suelo=furnace`, con la ruta viva `alcanza=SI` |
 | **C · LA CASILLA DEL ENTRENAMIENTO, CON CONTRATO Y RUTA** | `VillagerGuardGoal` (I152) | la casilla estaba **2 bloques por encima** de el nivel del pueblo, aislada: ruta de un nodo. Ahora: **a el nivel del pueblo** + **ruta validada** + **si ninguna vale, no entrena** (y el «no» **caduca a los 5 s**: cacheado para siempre dejaba al guardia sin entrenar **jamás**, medido) |
 | **O · EL PORTÓN DEL CORRAL, ABIERTO POR LA ALDEA** | `VillagerErrands.abrirLaPuertaSiHaceFalta` (I155) | el ganadero **encerrado** con el portón cerrado: el planificador no cruza una valla cerrada y el portón solo se abría con el aldeano ya pegado a él → **círculo cerrado** |
+
+> ⚠️ **CORREGIDO el 9-oct-2026**: la regla O citaba `VillagerErrands.abrirLaPuertaSiHaceFalta` → esa función **ya no la llama nadie**; hoy lo hace `VillageErrands.abrirLoQueCierreElPaso` (`VillageErrands` L130), llamado desde `VillageManager.caminarHacia` L5620 (**I169**), que solo abre la puerta que **de verdad** separa al aldeano de su recado (el cierre de I155 en el acta lo dice así).
 
 **MEDIDO, 4 corridas contra 4 del mismo modo** (modo aldea del arnés, la corrida **entera**):
 

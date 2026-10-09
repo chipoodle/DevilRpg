@@ -128,7 +128,7 @@ public final class HordeManager {
                 continue;
             }
             double angle = random.nextDouble() * Math.PI * 2.0D;
-            // Hacia una aldea se spawnea justo FUERA de la valla (32–48 bloques del centro); si va a por el
+            // Hacia una aldea se spawnea justo FUERA de la valla (65–81 bloques del centro, ver L52-57); si va a por el
             // jugador, alrededor suyo como siempre.
             double dist = settlement != null
                     ? VILLAGE_SPAWN_MIN + random.nextDouble() * (VILLAGE_SPAWN_MAX - VILLAGE_SPAWN_MIN)

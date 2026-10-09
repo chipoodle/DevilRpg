@@ -8097,7 +8097,7 @@ public final class VillageGenerator {
     }
 
     /**
-     * Parcela de {@code PLOT_WIDTH}×{@code PLOT_DEPTH} (9×5): cuatro filas de cultivos, acequia de agua en medio
+     * Parcela de {@code PLOT_WIDTH}×{@code PLOT_DEPTH} (9×9): cuatro filas de cultivos, acequia de agua en medio
      * y compostador al lado.
      * <p>
      * La parcela se nivela a <b>un solo nivel</b> ({@code base} = la columna más alta del terreno): antes cada

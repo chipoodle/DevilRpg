@@ -1,5 +1,33 @@
 # DevilRpg — Diseño y Roadmap (Action-RPG)
 
+> **ESTADO DE ESTE DOCUMENTO (puesto al día el 9-oct-2026).** Este fichero es un documento de **DISEÑO + ROADMAP**:
+> mezcla **lo ya hecho y medido** con **diseño que a propósito todavía no se ha hecho**. Si algo de abajo está
+> marcado como diseño, **no es un fallo abierto: es algo que aún no se ha construido**. **El único traspaso vivo es
+> `docs/CONTINUAR.md` (§2.0 = lo abierto HOY)**; `docs/PENDIENTE.md` es el viejo.
+>
+> - **HECHO Y MEDIDO** (comprobado contra el código el 9-oct-2026): el **§3** (Iteración 1), el **§3b** (el hito de la
+>   aldea, con las invariantes **I1…I103** del acta `docs/aldea-invariantes.md`), el **§3c** (Iteración 2, las
+>   guaridas), el **§4 Iteración 2** y el **§4 Iteración 3**. El código está en
+>   `src/main/java/com/chipoodle/devilrpg/survival/`, `.../world/`, `.../spawner/` y `.../entity/goal/`.
+> - **DISEÑO TODAVÍA NO HECHO**: el **§4 Iteración 4** (el abismo vertical) y el **§4 Iteración 5** (los enemigos
+>   fortifican su base, que este mismo documento marca **PENDIENTE**). No hay una sola clase de ninguna de las dos.
+> - **Números que ya no son los del código** (se dejan escritos, no se reescriben, y se avisa para que nadie los
+>   copie): en el **§5.1** el `maxScaleMultiplier` del zombie figura como 3.5 y su vida base como 9, y hoy son
+>   **3.0** y **10** (`spawnprofile/AggressiveZombieSpawnProfile.java` L14-15); y en el **§3.2** la barra ya no dice
+>   «Objetivo N» (es la **barra de aldea**, `client/gui/hud/VillageHudOverlay.java` L17-33) ni el índice del objetivo
+>   lo avanza `survival/ObjectiveManager` (que solo avisa y arranca el asedio, L63-65), sino `world/VillageManager`
+>   al resolverse el asedio.
+>   Y en el **§5.1**, dos mas (comprobados el 9-oct-2026): el `baseSpeed` figura como 0.068 y hoy es **0.23** (con
+>   tope ×1.6, `AggressiveZombieEntity.java` L87/L1206), y `ThreatLevel.MAX_EXTRA_DIFFICULTY` **ya no existe**:
+>   hoy es el metodo `maxExtraDifficulty()` (`survival/ThreatLevel.java` L42-44). En el **§3.3**, el tamano de la
+>   horda figura como `1 + round(amenaza*6)` y hoy es **3 + round(amenaza*12)** (`survival/HordeManager.java` L121).
+
+> ⚠️ **SIGUE ABIERTO (comprobado el 9-oct-2026)**: el **cruce del aldeano por el portón del muro** (nota de **I222**)
+> sigue sin medirse con el arnés — está en `docs/CONTINUAR.md` §2.0.
+
+> ⚠️ **SIGUE ABIERTO (comprobado el 9-oct-2026)**: el testigo del arnés `celdas del anillo abiertas` marca **0**
+> aunque el taladro esté trabajando (cabo suelto de **I243**) — está en `docs/CONTINUAR.md` §2.0.
+
 Visión: convertir **DevilRpg** en un **action-RPG de fantasía oscura** (estilo *Heretic* de Raven
 Software) donde el mundo está vivo y es hostil. No es "un mod más": el jugador debe **sobrevivir,
 avanzar y nunca establecerse**, porque el mundo se endurece, los enemigos se organizan y las
@@ -55,6 +83,14 @@ SpawnScaleProfile (distancia)┘
 
 ## 3) Iteración 1 — IMPLEMENTADA ✅
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la Iteración 1 está entera en el código: `survival/ThreatLevel.java`
+> L52-66 (amenaza por tiempo y `multiplier()`), `survival/ObjectiveTargets.java` L25-38 y L57-62 (800..1200 del
+> spawn, paso 600, dirección fija al noreste), `survival/ObjectiveManager.java` L29-67 y
+> `survival/HordeManager.java` L70-121. **Ojo:** el fragmento de 3.1 (`scaleFactor(spawnDistance) * spawnThreat`)
+> quedó viejo; la fórmula viva es
+> `scaleFactor(spawnDistance, spawnThreat) * (1 + spawnThreat * ThreatLevel.maxExtraDifficulty())`
+> (`entity/AggressiveZombieEntity.java` L1191-1192), y está bien escrita en el §5.1.
+
 ### 3.1 Escalación (distancia **+** tiempo)
 
 - La entidad captura **`spawnDistance`** (distancia horizontal al spawn) **y** **`spawnThreat`** (amenaza
@@ -94,12 +130,23 @@ Con esto, un zombie generado lejos del spawn **y/o** tarde en la partida es más
   nada (el jugador está a salvo cerca de su base).
 - El **tamaño** crece con la amenaza (`1 + round(amenaza*6)`).
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la horda periódica está en `survival/HordeManager.java` L43-49
+> (20 min → 3 min al subir la amenaza) y L70-91 (el reloj es el del mundo, **I98**), y su tamaño máximo real es
+> **15** (`BASE_HORDE_SIZE` 3 + `MAX_EXTRA_MEMBERS` 12, L47-49 y L121). **Ojo:** el «`1 + round(amenaza*6)`» de
+> arriba quedó viejo, y desde la Iteración 3 (§4) la horda va **primero a por una aldea** y solo va a por el
+> jugador si no hay ninguna candidata (`HordeManager.java` L106-111).
+
 ---
 
 ## 3b) HITO ALCANZADO — Aldea viva + pulido de Fase 1 ✅
 
 Esta fase convierte el objetivo en una **aldea defendible** y afina la presión de los enemigos. Todo lo
 siguiente está implementado y probado.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el hito de la aldea está hecho y medido (acta
+> `docs/aldea-invariantes.md`, invariantes **I1…I103**): vive en `world/VillageGenerator.java` (radio de la valla
+> **62**, L89; portones del muro, L8543-8569), `world/VillageManager.java` (asedio y latido, L1025-1049 y L1426) y
+> los goals del pueblo en `entity/goal/`.
 
 ### 3b.1 La primera aldea (center del asedio)
 
@@ -139,6 +186,11 @@ siguiente está implementado y probado.
   experiencia**, con su punto de habilidad cada uno): el doble que salvar una aldea porque asaltar la guarida es
   más duro y más largo. Las dos recompensas pasan por `util/MissionRewards.giveExperienceLevels` (que devuelve
   los puntos ganados para poder decirlo en el chat) y `MissionRewards.describe` arma el texto del premio.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: los radios y plazos del asedio son los de este texto:
+> `world/VillageManager.java` L81 (pre-generación a 140), L85 (aviso a 100), L87 (margen de 90 s), L89 (tiempo
+> límite de 2 min) y L120 (perímetro = radio de la valla). La recompensa es **1 nivel de experiencia** (L1778), la
+> entrega `util/MissionRewards.giveExperienceLevels` (L34) y el texto del premio `MissionRewards.describe` (L76).
 
 ### 3b.2 Generación de la aldea (`VillageGenerator`)
 
@@ -1307,6 +1359,16 @@ intacta (72 cultivos antes y después).
   corteza, para que el barril siga siendo del pescador) y, de ahí, lo que pida el jugador.
 - **Lo siguiente**: la **verificación en partida** de la cadena entera de la comida (huerta → despensa → cocina →
   raciones) y, de ahí, lo que pida el jugador (la **cerveza** de las pipas y el **pescador con su edificio y su lago**).
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: todo lo que esta lista marca ✅ está en el código (milicia
+> `entity/goal/VillagerGuardGoal.java`, leñador `VillagerLumberjackGoal.java`, granja anexa
+> `VillagerAnimalFarmGoal.java`, cocinero `VillagerCookGoal.java`, y los portones de valla
+> `world/VillageGenerator.java` L8543-8569).
+
+> **Nota (comprobado el 9-oct-2026), sin marca de pendiente vivo**: «Lo siguiente» **sigue sin hacer** —las pipas de
+> la taberna son decorativas: `world/VillageGenerator.java` L7779 y L9524 describen el barril de madera, no una
+> bebida—, pero **no figura** en `docs/CONTINUAR.md` §2.0, así que se deja anotado aquí y **no** se marca como
+> abierto del traspaso.
 
 ### 3b.31 La aldea que cayó "sola" (asedio a ciegas + monstruos de las cuevas)
 
@@ -3354,6 +3416,12 @@ se pica, aplicada a los **dos** caminos que rompen bloques con un solo ayudante.
 
 **Pendiente de medir** (el arnés no llegó a arrancar: artefactos bloqueados por la partida abierta del jugador).
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: lo que aquí faltaba medir ya se midió. El asaltante del asedio inicial
+> **pica la muralla** (banda de **I89**, y el A/B definitivo está más abajo, en el **3b.87** de este mismo
+> documento: **21 bloques picados** con el asalto inicial y **0** con la aldea ya ganada) y con los portones del
+> muro (**I219**) la tabla medida dice **0 puertas de valla rotas** y «entran **solo rompiendo el muro**». Queda para
+> el jugador verlo en su partida, que no es una tarea abierta del traspaso.
+
 ### 3b.84 El Diario, un libro de verdad, y la dirección solo al hablar con el clérigo
 
 Las dos cosas que pidió el jugador en la misma ronda:
@@ -3692,6 +3760,12 @@ Focos de enemigos esparcidos por el mundo que **cambian el terreno** y que el ju
 ## 4) Roadmap (próximas iteraciones)
 
 ### Iteración 2 — Enemigos inteligentes (pilar 2) — COMPLETA ✅
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: las guaridas están en el código: `survival/LairManager.java` L53,
+> `survival/LairSavedData.java` L28, `world/LairGenerator.java` L32, `block/LairCoreBlock.java`,
+> `block/SculkSealBlock.java` y `entity/SculkCultivatorEntity.java`. El asedio del mundo que las acompaña, en
+> `world/VillageManager.java` L1426 y L1913.
+
 - ✅ **Comportamiento de manada**: rodean al objetivo desde ángulos distintos (ver 3b.3).
 - ✅ **Guaridas**: focos de enemigos que **cambian el terreno** a su alrededor y que el jugador puede
   **asaltar** (ver 3c).
@@ -3773,6 +3847,12 @@ con su premio y su estado guardado. Lo implementado:
      resiste igual (se reinicia su presión, como siempre) pero **no se paga nada** y queda en el log.
 
 **Iteración 3 — CERRADA ✅.** Los tres pasos que faltaban:
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la Iteración 3 está entera en el código: presión y caída de la aldea en
+> `world/VillageSavedData.java` (L364 `accruePressure`, L397 `isFallen`, L402 `markFallen`, L418/L422
+> `getHealth`/`setHealth`), la horda que elige aldea en `survival/HordeManager.java` L106-108, el reloj del mundo
+> en L70-91 (**I98**) y el latido del pueblo en `world/VillageManager.java` (`tickWorldSieges` L1913,
+> `tickVillageLife` L2283, con sus constantes L153, L158 y L203).
 
 8. ✅ **Salud de la aldea por aldeanos vivos** (antes solo "0 aldeanos = caída"). La salud es el número de
    aldeanos vivos y se guarda en `VillageSavedData` (`getHealth`/`setHealth`, con `HEALTH_UNKNOWN` = -1 si
@@ -3900,11 +3980,22 @@ con su premio y su estado guardado. Lo implementado:
     pagando como siempre: ahí los atacantes están vivos a propósito y la aldea se salvó de verdad.
 
 ### Iteración 4 — El abismo vertical (estilo *Made in Abyss*)
+
+> **DISEÑO TODAVÍA NO HECHO (comprobado el 9-oct-2026)**: no hay una sola clase de abismo vertical en
+> `src/main/java/com/chipoodle/devilrpg/**` (lo que aparece como «abismo» son los puentes del asedio,
+> `entity/AggressiveZombieEntity.java` L106 y L597). No es un pendiente del traspaso: es diseño por construir, y la
+> Iteración 1 se hizo pensando en reutilizarla aquí.
+
 - El mundo genera un **abismo descendente infinito** por capas en vez de extenderse en horizontal.
 - La escalación por "distancia al spawn" se convierte en **profundidad** (el mismo `SpawnScaleProfile`,
   solo cambia la variable). Por eso se construyó la Iteración 1 pensando en reutilizarla.
 
 ### Iteración 5 — Los enemigos fortifican su base (mini juego de estrategia) — PENDIENTE
+
+> **DISEÑO TODAVÍA NO HECHO (comprobado el 9-oct-2026)**: aquí pone PENDIENTE y lo está: **cero** apariciones de
+> «fortific» en `src/main/java/com/chipoodle/devilrpg/**`. No es un fallo abierto del traspaso, es diseño por hacer
+> (lo abierto hoy está en `docs/CONTINUAR.md` §2.0).
+
 Esto es lo que **originalmente** se quería decir con *"se fortalecen con el tiempo"*, y no un escalado de
 atributos por enemigo (eso ya se probó y se descartó, ver Iteración 2). La idea es que los enemigos jueguen
 **su propia partida** en tiempo real, en paralelo a la del jugador:
@@ -4207,6 +4298,15 @@ o sea que a **máxima distancia + amenaza máxima** (3 h de partida) el multipli
 
 (Los números del zombie son con `maxScaleMultiplier` 3.5; el usuario lo bajó desde 3.7 al arreglar la vida al
 spawnear, porque los escalados pasaron a durar mucho más.)
+
+> **Números que ya no son los del código (comprobado el 9-oct-2026).** El perfil real es
+> `spawnprofile/AggressiveZombieSpawnProfile.java` L10-21: `minDistance` **67** (no 200), `maxDistance` **3000**,
+> `maxScaleMultiplier` **3.0** (no 3.5), `baseHealth` **10** (no 9), `baseSpeed` **0.23** (no 0.068) y
+> `baseDamage` **0.7**. Además, la velocidad no sube con todo el factor: tiene tope propio de **×1.6**
+> (`entity/AggressiveZombieEntity.java` L87 y L1206). Y la fórmula de arriba escribe
+> `ThreatLevel.MAX_EXTRA_DIFFICULTY`, que **ya no existe**: hoy es `ThreatLevel.maxExtraDifficulty()`
+> (`survival/ThreatLevel.java` L42-44, leído de la config). La fila del vex sí está al día
+> (`spawnprofile/VexSpawnProfile.java` L5 y L14-15: `minDistance` 67, comentario corregido).
 
 **Instancias que existen hoy** (solo hay dos perfiles):
 

@@ -4969,7 +4969,9 @@ una rendición con `destino=farmland` en `y=77` y los aldeanos en `y=78`), y **n
 el de los pies y el suelo va uno por debajo**, el cultivo en 77 con el pueblo andando en 78 es **lo correcto** (el corte
 del mundo lo confirma en las dos parcelas). Aquella rendición era la clase A de siempre. Lo «hundido» que veía el jugador
 es **el hueco de debajo** (la choza del minero es una plataforma sobre 5 bloques de aire con agua al fondo), y eso lo
-tapa el **cimiento** de I166. Ver `docs/glosario.md`.
+tapa el **cimiento** de **I165** (⚠️ aquí decía «I166» por un desliz de numeración: el cimiento se cuenta
+**dentro de I165**, en su apartado «Y EL CIMIENTO»; `### I166` es «A LA PARCELA NO SE TIRA NADA»). Ver
+`docs/glosario.md`.
 
 ### I166 · **A LA PARCELA NO SE TIRA NADA**, Y SE COSECHA ENTERA (30-sep-2026)
 

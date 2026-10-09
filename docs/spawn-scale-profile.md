@@ -1,5 +1,17 @@
 # SpawnScaleProfile — Entidades con spawnRule y atributos dinámicos
 
+> **ESTADO DE ESTE DOCUMENTO (puesto al día el 9-oct-2026).** Esto es un **documento de PATRÓN**: explica cómo está
+> montado el escalado por distancia para poder copiarlo en una entidad nueva; **no es una lista de tareas**.
+> **Lo que describe está HECHO y en uso** (comprobado contra el código el 9-oct-2026): las clases de la tabla del §3
+> existen y los métodos del §3 son los del `record` (`spawnprofile/SpawnScaleProfile.java` L37-118).
+> **El único traspaso vivo es `docs/CONTINUAR.md` (§2.0 = lo abierto HOY)**, y no tiene nada de este fichero.
+>
+> - ⚠️ **OJO: la tabla del §8 no son los números del código de hoy.** Dice `minDistance` 200, `maxDistance` 1500,
+>   `maxScaleMultiplier` 1.3, `baseHealth` 20.0, `baseSpeed` 0.2 y `baseDamage` 3.25, y el perfil real
+>   (`spawnprofile/AggressiveZombieSpawnProfile.java` L10-21) tiene **67, 3000, 3.0, 10, 0.23 y 0.7**. El ejemplo
+>   del §3 (`new SpawnScaleProfile(200, 1500, …)`) sí vale **como ejemplo de llamada**, pero no son los valores de
+>   hoy. Se deja el texto viejo escrito, como manda la casa, y se avisa aquí.
+
 Patrón del mod **DevilRpg** para entidades que se generan con una `SpawnRule` propia y cuyos atributos
 crecen de **"débil a fuerte"** según la distancia del jugador a su punto de inicio (spawn point).
 
@@ -52,6 +64,13 @@ entidad. Ambas dependen solo del perfil (un `record` puro).
 | `AggressiveZombieSpawnRule.java` | `CustomSpawnRule` que registra la probabilidad/spawn. |
 | `CustomSpawner.java` | Spawneador por tick del servidor (evalúa las reglas). |
 | `CustomSpawnerTickHandler.java` | Hookea el spawner al tick y **registra las reglas** una vez por dimensión. |
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el perfil neutro y sus métodos son los del código
+> (`spawnprofile/SpawnScaleProfile.java` L37-118: `effectiveMinDistance`, `normalize`, `probability`,
+> `scaleFactor`, `experienceReward` y los overloads sin `threat`), la instancia concreta del zombie es
+> `spawnprofile/AggressiveZombieSpawnProfile.java` L10-21, y las clases de la tabla del §3 existen todas. El
+> problema del §1 ya no ocurre: en `entity/AggressiveZombieEntity.java` no queda ni `MIN_DISTANCE` ni
+> `MAX_DISTANCE` (el perfil es el único origen).
 
 ### Métodos de `SpawnScaleProfile`
 
@@ -155,6 +174,11 @@ CustomSpawner spawner = SPAWNERS.computeIfAbsent(level, l -> {
 spawner.tick();
 ```
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la interfaz `spawner/CustomSpawnRule.java` L19-67 tiene esos métodos
+> (más `getMaxAliveInLevel`, `getMinSpawnCount`, `getMaxSpawnCount` y `configureEntity`), y el registro está en
+> `eventsubscriber/common/CustomSpawnerTickHandler.java` L30-41, que **solo** pasa por el overworld (L31-33) y
+> registra el zombie agresivo y el vex (L37-38): el `BanditSpawnRule` del ejemplo no existe, es texto didáctico.
+
 ---
 
 ## 5) Atributos dinámicos en la **entidad**
@@ -220,6 +244,10 @@ private void adjustAttributesBasedOnSpawnDistance() {
 }
 ```
 
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: la captura al spawnear está en `entity/AggressiveZombieEntity.java`
+> L1133-1146 (`setPos`, que guarda `spawnDistance` y `spawnThreat`) y el escalado **una sola vez** en L1053-1060
+> (`aiStep` + `attributesAdjusted`) y L1184-1221 (`adjustAttributesBasedOnSpawnDistance`).
+
 ---
 
 ## 6) Cómo implementar para una **entidad nueva** (paso a paso)
@@ -246,6 +274,11 @@ private void adjustAttributesBasedOnSpawnDistance() {
 - El `CustomSpawner` registra las reglas **una vez por dimensión** (solo overworld en `CustomSpawnerTickHandler`).
 
 ## 8) Referencia rápida de `AggressiveZombieSpawnProfile`
+
+> ⚠️ **OJO, LA TABLA DE ABAJO NO SON LOS NÚMEROS DE HOY** (comprobado el 9-oct-2026). Los del código están en
+> `spawnprofile/AggressiveZombieSpawnProfile.java` L10-21: **minDistance 67, maxDistance 3000, minHardDistance 17,
+> maxScaleMultiplier 3.0, baseHealth 10, baseSpeed 0.23, baseDamage 0.7**. La tabla se deja como estaba porque
+> cuenta de dónde venía el patrón.
 
 | Parámetro | Valor | Significado |
 |---|---|---|
@@ -275,4 +308,8 @@ Las dos trazas del escalado (`"Zombie Spawned at: ..."` y `"Attributes Scaled =>
   **origen**, así que la mitad de las líneas decían `BlockPos{x=0, y=0, z=0}`; y (3) iban a nivel INFO.
 - **Con el flag apagado no queda ni una línea**, y encendido solo las escribe el **servidor** y solo con la entidad
   **ya colocada**.
+
+> ✅ **CERRADO (comprobado el 9-oct-2026)**: el flag es real: `config/ServerConfig.java` L106-111
+> (`logEscaladoDeSpawn`, por defecto `false`), y las dos trazas siguen detrás de él
+> (`entity/AggressiveZombieEntity.java` L1147-1154 y L1231; `entity/SculkCultivatorEntity.java` L505).
 

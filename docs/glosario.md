@@ -1,5 +1,15 @@
 # GLOSARIO — cómo se dice cada cosa (30-sep-2026)
 
+> **ESTADO DE ESTE DOCUMENTO (puesto al día el 9-oct-2026).** Esto es un **glosario de estilo** (cómo se dice cada
+> cosa), no una lista de tareas: sus definiciones se comprobaron contra el código el 9-oct-2026 y **siguen siendo
+> ciertas** (p. ej. «parcela» son las parcelas de 9×9 de `VillageGenerator.FARM_PLOTS` / `PLOT_WIDTH`-`PLOT_DEPTH`,
+> L138-153; los «8 huecos» del inventario del aldeano están en `entity/goal/VillagerFarmGoal.java` L714; y el
+> cimiento del final del documento es el de radio 86 = `VillageGenerator.FENCE_RADIUS + 24`, L398). **El único
+> traspaso vivo es `docs/CONTINUAR.md` (§2.0 = lo abierto HOY).** Dos notas de proceso quedaron viejas y **no** se
+> tocan aquí, porque no son definiciones (van al informe de la ronda): el script `build/glosario.py` ya no está en
+> el disco (la carpeta `build/` está ignorada por git y se limpia) y el recuento de «**983 apariciones**» de «cota»
+> no se ha podido reproducir (hoy salen **698** en `src/**/*.java` y **928** en todos los `.java` fuera de `build/`).
+
 Lo pidió el jugador al leer los avisos: *«¿qué es bancal? ¿zurrón? ¿cómo que el almacén tampoco traga? ¿qué palabras
 son esas? O buscas un sinónimo más entendible o lo pones en inglés»*.
 
