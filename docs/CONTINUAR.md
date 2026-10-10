@@ -58,7 +58,8 @@ del que sea: zombi, esqueleto…).
 10. **El juego se puede matar** si tiene el `.jar` bloqueado (permiso permanente del jugador) y se sigue compilando.
 11. **Metricas de verdad** (no cuentos de lineas): `PARAR`, `[Rumbo]`, `[Huerta]`, `[Planta]`, `no consigue llegar`,
     `estaba METIDO`, `OLEADA`, `Attributes Scaled`. Ojo: **`PARAR` va limitado a una linea cada 2 s por aldeano**, asi
-    que **no sirve** para medir el baile fino; para el caminar valen `[Rumbo]` y `no consigue llegar`.
+    que **para el baile fino se lee su numero** (`paradas=N (con faena=M)`, **I246**: en la corrida 182, 91 lineas y
+    1790 paradas) ✓;
 12. **Documentar SIEMPRE** en `docs/aldea-invariantes.md`: que se ha cambiado, **con clase y numero de linea**, **la
     medida** que lo justifica, y **las hipotesis falsas** que se descartaron. Cada cambio se **compila**, pasa
     `python tools/lint_aldea.py --strict`, se **commitea** con titulo en MAYUSCULAS y **se sube** a GitHub.
@@ -120,8 +121,10 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
 
 6. **La zanja de la mina en `x=603`** ✗ (auditoria, acta L6213-6226, punto 4): pulido de mundo.
 7. **Objetos flotando y `repuso farmland en y=61`** ✗ (misma auditoria, punto 2): queda vigilarlo.
-8. **La metrica `PARAR`** ✗ (misma auditoria, punto 5): va **limitada a una linea cada 2 s por aldeano**, asi que no
-    sirve para el baile fino (por eso se usan `[Rumbo]` y `no consigue llegar`).
+8. ~~**La metrica `PARAR`**~~ — **CERRADA Y MEDIDA** ✓ (9-oct-2026, **I246**): la linea sigue saliendo una cada 2 s (el
+    registro no se inunda) pero **ahora lleva el numero**: `paradas=N (con faena=M)`. En la corrida 182 salieron **91
+    lineas** y **1790 paradas** (la metrica anterior veia el **5 %** ✗), y el **99,5 %** con faena del mod en marcha. Se
+    sigue usando `[Rumbo]` (peticiones de ruta) y `no consigue llegar` (rendiciones) para lo otro.
 9. **Una cama sin acceso no se le da a nadie** (**I43**, acta L994): la celda de espera exige estar a **≤2,0 bloques**,
     asi que una cama encerrada se queda sin dueño (limite conocido).
 10. **LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS** ✗ (**`docs/aldea-cerebro.md`** L132): pide «pollos fuera del
