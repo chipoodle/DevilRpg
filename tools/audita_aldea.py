@@ -35,7 +35,22 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nbtdump import R, payload, load   # noqa: E402
 
 PROYECTO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SAVE_POR_DEFECTO = os.path.join('run', 'saves', 'New World (1)')
+def _guardado_por_defecto():
+    """El guardado MAS NUEVO de `run/saves` (I250, 9-oct-2026).
+
+    Antes esto era el nombre escrito a mano `New World (1)` y **caduco**: el jugador renombro su partida y la
+    herramienta dejo de funcionar (`no encuentro el guardado ...New World (1)` ✗). Buscarlo es lo robusto: si hay una
+    sola partida, esa; si hay varias, la que se toco por ultima vez. Se puede seguir eligiendo a mano con `--save`.
+    """
+    base = os.path.join('run', 'saves')
+    if os.path.isdir(base):
+        candidatos = [os.path.join(base, d) for d in os.listdir(base) if os.path.isdir(os.path.join(base, d))]
+        if candidatos:
+            return max(candidatos, key=os.path.getmtime)
+    return os.path.join(base, 'New World')
+
+
+SAVE_POR_DEFECTO = _guardado_por_defecto()
 RADIO_POR_DEFECTO = 76
 
 VACIO = {None, 'air', 'cave_air', 'void_air', 'water', 'short_grass', 'tall_grass', 'fern', 'poppy',

@@ -106,32 +106,20 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    pide es `OLEADA de N asediadores intentados, M colocados` y `Aldea 0 salvada` **en el registro**.
 3. **La barra dibujada en el cliente y el clic en la piedra** (**I87**, acta L2138): la tabla de nombres si esta (30
    nombres), pero lo medido es el **texto** de `VillageBarText`, no el **pixel** en pantalla ni el clic en vivo.
-4. **Los 14 faroles de la aldea 0** (**I13**, acta L238): quedaron pendientes «hasta que el jugador pase por ella».
+4. ~~**Los 14 faroles de la aldea 0**~~ — **CERRADO POR MEDIDA** ✓ (9-oct-2026, **I250**): la auditoria versionada
+   (`tools/audita_aldea.py`) da **0 faroles sin apoyo** en su aldea (y 0 en las otras cinco listas: vallas, cofres
+   tapados, puertas incompletas, camas sueltas y portones tapados) -> el retrofit ya corrio. *(Y la herramienta ya no
+   lleva el nombre del guardado escrito a mano: busca el mas nuevo de `run/saves`, asi no vuelve a caducar.)*
 
 **(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA** (lo abierto, numerado; lo cerrado hoy va al final del apartado):
 
-5. **El compostero que algo vuelve a poner en alto** ✗ (**I162**/**I163**, acta L5046): la limpieza actua **9-23 veces
-   por corrida**; falta el arreglo de raiz (que el repositor no lo ponga ahi). **Se intento el 9-oct-2026 y SE RETIRO**
-   ✗ (**I245**): hay una incoherencia real (el que lo coloca usa `max(nivel, suelo)` y el que lo asienta usa `nivel`, y
-   los dos corren en el latido), pero **no se pudo medir** — el «antes» no existe, porque **los nombres
-   `build/rapida-N.log` se reutilizan** y los ficheros que citaba I162 ya son **otras escenas**. Siguiente paso, exacto:
-   (1) identificar **la traza** que I162 conto 9-23 veces, (2) montar la escena que la cuente en el mundo del arnes (que
-   es copia del guardado), (3) medir el antes, (4) aplicar el arreglo y volver a contar: tiene que bajar a ~0. El juez
-   ya esta montado: `bancalN=…/compostero:NO` tiene que pasar a **`SI`**.
-
-6. ~~**La zanja de la mina en `x=603`**~~ — **CERRADO: NO PROCEDE** ✓ (9-oct-2026, **I248**). Medido dos veces con
-   `build/zanja_603.py` (guardado del jugador, solo lectura): en `x=603` **no hay** ninguna zanja de 1×1 y 2 de hondo (lo
-   que hay es una **cueva natural** en y=22..30 y un **hueco interior** de un edificio). Y la decisión robusta es **no
-   tocar el mundo del jugador por un detalle cosmético**, que es justo lo que la casa prohíbe.
-7. ~~**Objetos flotando y `repuso farmland en y=61`**~~ — **CERRADO CON MEDIDA** ✓ (9-oct-2026, **I247**): leido el
-   guardado del jugador (solo lectura), **no hay ni una tierra de cultivo en la capa 61**: 204 en la 62 (donde toca) y
-   los 3 composteros en la 63 ✓. Lo de la 61 era un resto del trazado viejo, ya limpiado por el asentado de la huerta
-   (I167).
-8. ~~**La metrica `PARAR`**~~ — **CERRADA Y MEDIDA** ✓ (9-oct-2026, **I246**): la linea sigue saliendo una cada 2 s (el
-    registro no se inunda) pero **ahora lleva el numero**: `paradas=N (con faena=M)`. En la corrida 182 salieron **91
-    lineas** y **1790 paradas** (la metrica anterior veia el **5 %** ✗), y el **99,5 %** con faena del mod en marcha. Se
-    sigue usando `[Rumbo]` (peticiones de ruta) y `no consigue llegar` (rendiciones) para lo otro.
-
+5. ~~**El compostero que algo vuelve a poner en alto**~~ — **CERRADO: NO OCURRE HOY** ✓ (9-oct-2026, **I250**). Medido
+   por dos lados: en el guardado del jugador los **3 composteros estan en su celda oficial** (capa 63; la pelea
+   necesitaba justo lo contrario, uno una capa por encima de su objetivo) y en una corrida de 3 minutos salieron **0
+   lineas** de la traza del asentado. **La incoherencia del codigo se deja escrita como latente** (el que coloca usa
+   `max(nivel, suelo)` y el que asienta usa `nivel`): **no se toca** porque no hay medida que lo pida (el intento se
+   midio y se retiro, **I245**), y queda dicho **cuando** importaria: una aldea con el suelo de esa columna por encima
+   del nivel del pueblo.
 6. ~~**LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS**~~ — **CERRADO: NO ERA UN PENDIENTE** ✓ (9-oct-2026, **I249**): el
     gallinero se resolvio **de otra manera** —tiene un **hueco de un bloque a proposito**, *«los pollos pasan, los
     aldeanos no»* (acta L1275, y la auditoria **salta** ese porton)—, asi que el «pollos fuera del recinto: 0» del plan

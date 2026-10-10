@@ -6949,6 +6949,42 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I250 · PUNTOS 5 (EL COMPOSTERO) Y 4 (LOS 14 FAROLES): LOS DOS, CERRADOS CON MEDIDA
+
+**Punto 5 · «el compostero que algo vuelve a poner en alto»** (**I162**/**I163**) → **NO OCURRE HOY, y la incoherencia
+del código se deja escrita como latente** ✓:
+
+- **MEDIDO, por dos lados**:
+  1. **En el guardado del jugador** (solo lectura, `build/farmland_debajo.py`): los **tres composteros están en su celda
+     oficial** (capa 63 = `composteroDeLaParcela(centro, i, nivel)`) y la tierra de cultivo en la 62 ✓. La pelea
+     necesitaba justo lo contrario: un compostero **una capa por encima de su objetivo** (`asentarLosComposterosALaCota`
+     solo actúa en ese caso, `VillageGenerator` **L8388**) → **la condición no se da** ✓.
+  2. **En una corrida de 3 minutos** (`rapida-183.log`): **0 líneas** con la traza del asentado (ni una) ✓.
+- **LA INCOHERENCIA SIGUE AHÍ, Y SE DICE** ✗: el que **coloca** usa `max(nivel, suelo local)` (**L8275**) y el que
+  **asienta** usa `nivel` a secas (**L8365-8390**), y los dos corren en el latido. **No se toca** ✗ porque **no hay
+  medida que lo pida** (el intento del 9-oct se midió y se retiró ese mismo día, I245) y la regla de la casa es que un
+  cambio sin medida **no entra**. Queda escrito **cuándo** importaría: una aldea cuyo suelo en la columna del compostero
+  esté **por encima** del nivel del pueblo (una ladera): ahí el que coloca lo subiría y el que asienta lo bajaría. Si
+  aparece ese caso medido, el arreglo ya está pensado (que los dos miren lo mismo).
+
+**Punto 4 · «los 14 faroles de la aldea 0»** (**I13**) → **CERRADO POR MEDIDA** ✓✓. La auditoría **versionada**
+(`tools/audita_aldea.py`, I13) lee el guardado y cuenta faroles sin apoyo, vallas flotando, cofres tapados, puertas
+incompletas y camas sueltas. **Medido el 9-oct-2026** sobre la partida del jugador (`--save "run/saves/New World"`):
+
+```
+## aldea 0   centro (566,566) cota 63
+A) FAROLES SIN APOYO: 0 ✓   B) VALLAS FLOTANDO: 0 ✓   C) COFRES TAPADOS: 0 ✓
+D) PUERTAS INCOMPLETAS: 0 (de 19) ✓   E) CAMAS SUELTAS: 0 (de 62 mitades) ✓
+RESUMEN: aldea 0 -> 0 0 0 0 0 0 ✓
+```
+
+O sea: **el retrofit corrió** (los faroles ya están puestos al pasar el jugador) y **su aldea está limpia en las seis
+listas** ✓. El «14 faroles pendientes» de I13 era el estado de septiembre ✗.
+
+**Y DE PASO SE ARREGLA LA HERRAMIENTA** ✓: `tools/audita_aldea.py` tenía el guardado **escrito a mano**
+(`New World (1)`) y **caducó** (el jugador renombró su partida: *«no encuentro el guardado … New World (1)»* ✗). Ahora
+**lo busca**: el más nuevo de `run/saves` (admite `--save` para elegirlo a mano) — así no vuelve a caducar ✓.
+
 ### I249 · PUNTO 6 (LOS POLLOS): LA FASE 5 DEL PLAN NO SE HIZO, Y NO ES UN PENDIENTE
 
 El plan del cerebro (`docs/aldea-cerebro.md`, tabla de fases) pedía en su **fase 5**: *«los pollos y el ganadero con el
