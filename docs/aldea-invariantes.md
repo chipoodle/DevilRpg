@@ -6949,6 +6949,49 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I281 · LOS **DOS** FILTROS QUE TIRAN EL PORTÓN DEL MURO (Y LA LISTA, QUE **SÍ** LO TRAE)
+
+Las dos lecturas que faltaban (I280), hechas — y el caso queda **cerrado en el diagnóstico** ✓✓:
+
+**1 · LA LISTA NO ES EL PROBLEMA** ✓ (buena noticia): `VillageGenerator.todosLosPortones` **ya incluye** los portones del
+muro:
+
+```java
+// Y LAS OCHO CELDAS DE LOS CUATRO PORTONES DOBLES DEL MURO (6-oct-2026): son los que cierran la aldea
+// que el latido abre cuando un aldeano se acerca. Ver `celdasDeLosPortonesDelMuro`.
+portones.addAll(celdasDeLosPortonesDelMuro(center, nivel));
+```
+
+O sea: **no hay que añadir nada a la lista** ✗✓ (y su propio comentario dice que *«el latido los abre cuando un aldeano se
+acerca»* ✓ — camino que existe, pero **no** es el del goal ✗).
+
+**2 · Y LOS QUE LOS TIRAN SON DOS** ✗✗ (los dos, con nombre y línea):
+
+- **`VillagerGateGoal` L313-315** (`puertaValidaMasCercana`): `if (!(level.getBlockState(p).getBlock()
+  instanceof FenceGateBlock)) continue;` ✗ → el bloque doble **ni se considera** ✓.
+- **`VillagerGateGoal` `abrirPorton`** (el ayudante, justo antes de `cerrar`):
+  ```java
+  private static boolean abrirPorton(ServerLevel level, BlockPos porton, BlockState estado) {
+      if (!(estado.getBlock() instanceof FenceGateBlock)) {
+          return false;                      // ← EL BLOQUE DOBLE SALE POR AQUÍ, SIN ABRIRSE  ✗✗
+      }
+      level.setBlock(porton, estado.setValue(FenceGateBlock.OPEN, true), Block.UPDATE_ALL);
+      level.playSound(null, porton, SoundEvents.FENCE_GATE_OPEN, ...);
+      ABIERTOS.computeIfAbsent(level, l -> new HashSet<>()).add(porton.asLong());
+      return true;
+  }
+  ```
+  ✗ → aunque la lista lo traiga y el filtro de arriba se arreglara, **aquí vuelve a salir sin abrirse** ✓✓ — es el
+  segundo candado ✓. (Y `cerrarPorton`, su hermano, tendrá el mismo ✗ → hay que mirarlo **antes** de escribir ✓.)
+
+**EL ARREGLO, ya cerrado y pequeño** ✓ (dos comprobaciones y dos llamadas):
+1. En **L313-315**: aceptar también `DoubleGateBlock` como portón válido ✓.
+2. En **`abrirPorton`**: rama para el bloque doble → **`DoubleGateBlock.abatir(level, porton, estado, true)`**
+   (**L215**, I279 ✓) **y apuntarlo en `ABIERTOS`** ✓ (que es lo que hace que el pueblo lo cierre luego y no el jugador ✓).
+3. En **`cerrarPorton`**: la rama simétrica con `abatir(..., false)` ✓ (leerlo primero ✗).
+**MEDIDA** ✓: `[Gate]` **0 → >0** en el arnés (con `aldeano DENTRO · destino FUERA` ✓, L373-377) y `[Porton] abatir …
+cambiadas>0` ✓.
+
 ### I280 · LA LÍNEA EXACTA QUE DEJA AL PUEBLO SIN ABRIR EL PORTÓN DEL MURO (`VillagerGateGoal` L313-314)
 
 La lectura que faltaba (I279) está hecha, y el caso queda **señalado con el dedo** ✓✓:
