@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.block.DoubleGateBlock;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -310,7 +311,12 @@ public class VillagerGateGoal extends Goal {
         BlockPos mejor = null;
         double mejorDistancia = RADIO;
         for (BlockPos p : portones) {
-            if (!(level.getBlockState(p).getBlock() instanceof FenceGateBlock)) {
+            // I282 · Y EL PORTON DOBLE DEL MURO TAMBIEN ES UN PORTON: la lista ya lo trae
+            // (`todosLosPortones` añade «las ocho celdas de los cuatro portones dobles del muro»), pero este filtro
+            // solo miraba compuertas de valla, así que el del muro NUNCA se consideraba (y [Gate] salía 0 con el goal
+            // corriendo por las otras). Medido: los cuatro del muro están CERRADOS en la aldea del jugador (I276).
+            Block b = level.getBlockState(p).getBlock();
+            if (!(b instanceof FenceGateBlock) && !(b instanceof DoubleGateBlock)) {
                 continue; // esa ya no es una puerta (o la lista está rancia): no cuenta
             }
             double d = distancia(p);
@@ -412,6 +418,14 @@ public class VillagerGateGoal extends Goal {
 
     /** Abre el portón y lo registra. Devuelve {@code false} si el bloque ya no es un portón de valla. */
     private static boolean abrirPorton(ServerLevel level, BlockPos porton, BlockState estado) {
+        // I282 · EL PORTON DOBLE DEL MURO: se abre con SU propia puerta (`DoubleGateBlock.abatir`, que mueve las tres
+        // celdas del ancho por los tres pisos y pone OPEN + HOJA_FUERA) y se apunta en ABIERTOS, que es lo que hace
+        // que luego lo cierre el pueblo y no el jugador. Antes esto devolvía false y el portón se quedaba cerrado.
+        if (estado.getBlock() instanceof DoubleGateBlock) {
+            DoubleGateBlock.abatir(level, porton, estado, true);
+            ABIERTOS.computeIfAbsent(level, l -> new HashSet<>()).add(porton.asLong());
+            return true;
+        }
         if (!(estado.getBlock() instanceof FenceGateBlock)) {
             return false;
         }
