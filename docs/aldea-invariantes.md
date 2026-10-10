@@ -6949,6 +6949,35 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I269 · LAS DOS MEDIDAS QUE FALTABAN: LA BARRACA **NO** ESTÁ DONDE YO MIRABA (Y EL LATIDO **SÍ** CORRE)
+
+Las dos cosas que I268 dejó pendientes, medidas. **Y las dos cambian el caso** ✓:
+
+**1 · DÓNDE ESTÁ LA BARRACA** ✗→✓: `baseDeBarraca(center)` es `trazado(center, 6)` (**L1195**) y la tabla
+(`TRAZADO`, **L120-129**) dice, fila por fila: casa 1 `(-36,-7)`, casa 2 `(28,-16)`, casa 3 `(-9,36)`, casa 4
+`(12,-32)`, iglesia `(-21,-45)`, herreros `(3,-47)`, **barraca `(-45,22)`**, pesquera `(20,44)`.
+O sea: **la barraca está en el centro + (-45, +22)** ✗ — mientras que **las camas sueltas están en el centro +
+(+28, +17)** ✓✗ (**el MISMO desplazamiento en la aldea del jugador y en la del arnés**, medido en I253/I267).
+**CONSECUENCIA**: mi barrido **sí corría, pero miraba a otro sitio** ✗✓ — y, más importante, **la corrección de
+fondo**: *«las camas son de la barraca»* (**I253**, **I267**) **estaba mal** ✗✗. El edificio de las camas está en
+**(+28..+41, +15..+27)** y **no sale en esa tabla** ✓ → es uno de los sitios que tienen **constante propia**
+(`VillageStorage.OFFSET` el almacén, `ANEXO_DX` el corral anexo, `PESQUERA` la pesquera, la arboleda…) ✓ — **y hay que
+identificarlo antes de tocar nada** ✗ (grep de esas constantes, que es un minuto).
+
+**2 · SI EL BLOQUE DEL LATIDO CORRE** ✓: se leyeron las 26 líneas alrededor de `VillageManager` **L2981** y la
+vigilancia del compostero está dentro de `if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L) {` ✓ → **corre cada
+`VILLAGE_POLL_TICKS`** ✓ (y mi llamada quedaba **dentro** de ese `if` ✓, así que **sí se ejecutaba** ✓). Queda
+**descartado** el segundo sospechoso de I268 ✗ → **la traza ausente era solo el sitio equivocado** ✓, no el latido ✓.
+
+**LO QUE TOCA AHORA, en este orden** ✓ (y sin escribir código hasta el final):
+1. **Identificar el edificio de (+33, +21)**: grep de `VillageStorage.OFFSET`, `ANEXO_DX`, `PESQUERA` y compañía, y el
+   que caiga ahí **es** el edificio (en las dos aldeas, mismo sitio ✓).
+2. Con eso, **el barrido se apunta a su huella** (no a la barraca ✗) y **se mide**: las 4 mitades de la capa 77 (arnés)
+   y las 4 de la 74 (jugador) → **0** ✓, sin tocar las de dentro ✓.
+3. Y **sigue en pie** lo aprendido en los tres intentos retirados: **solo camas** ✓, **banda relativa al edificio** ✓,
+   **retrofit idempotente en el latido** con la excepción `// lint:ok I9` ✓ y **sin subir `CURRENT_LAYOUT`** ✓ (que
+   movía el pueblo y no mejoraba la media, I266 ✓).
+
 ### I268 · TERCER INTENTO DEL BARRIDO (RETROFIT IDEMPOTENTE): **MEDIDO Y RETIRADO TAMBIÉN**
 
 Se encontró **el mecanismo que el propio proyecto tiene para esto** ✓: el guardián **I9** se puede exceptuar **a mano en
