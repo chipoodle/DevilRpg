@@ -6949,6 +6949,34 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I255 · EL HAZ DEL CENTRO: MEDIDO POR TRES LADOS, Y **NO SE REPRODUCE** EN SU ALDEA
+
+Reporte del jugador: *«los efectos de partículas del centro de la aldea están desplazados a un lado»*. Se ha medido en
+su partida (`run/saves/New World`, **solo lectura**) **por tres lados**, con `build/mapa_plaza_barraca.py`,
+`build/kiosco_y_centro.py` y `build/campana_del_kiosco.py`, y **las tres cosas coinciden en la misma celda**:
+
+| qué | dónde está (medido) |
+|---|---|
+| **el haz de luz** (`VillageManager` **L7683**: `centro.x + 0.5`, `centro.z + 0.5`) | sube por **(566.5, 566.5)** |
+| **la plataforma del kiosco** (capa 63) | un **9×9 de piedra** cuyo **centro exacto es la celda (566,566)** |
+| **la campana** | **(566, 64, 566)** → `dx=+0 dz=+0` respecto al centro oficial |
+| **el farol del kiosco** | **(566, 67, 566)** → `dx=+0 dz=+0` |
+
+O sea: **el haz sube justo por el medio de la plataforma, por la campana y por el farol** ✓✓ — no hay medio bloque ni
+una celda de desfase en esta aldea. **Y su guardado solo tiene esa aldea** (lo dice `tools/audita_aldea.py`: «aldeas a
+auditar: 1»), así que lo que vio **no puede ser** un desfase de esta aldea contra sí misma ✗.
+
+**LO QUE FALTA PARA CERRARLO, y es una pregunta, no una medida** ✗: saber **qué efecto** vio y **respecto a qué**.
+Candidatos (los tres existen en el código y son de la plaza):
+1. **El haz de luz del sello** (columna de `END_ROD`, L7681-7686) — el único que es «del centro de la aldea»; medido
+   centrado ✓.
+2. **Las chispas oscuras de la intrusión** (`SCULK_SOUL`, **L7695-7702**): salen **sobre cada monstruo que entra**, no
+   en el centro ✓ — si el jugador las vio «a un lado», lo que estaba a un lado era **el monstruo**, que es lo correcto ✓.
+3. El **círculo del ritual** / las partículas de una **guarida** (otra escena, no la plaza) ✗.
+Con un pantallazo (o diciendo cuál de los tres es) se cierra en un minuto: si es el 1, hay que buscar el desfase **en el
+cliente** (la columna se dibuja con la cámara, y a cierta distancia puede parecer corrida); si es el 2, no hay nada que
+arreglar ✓. **No se toca nada sin saber cuál es** ✗ (regla de la casa).
+
 ### I254 · LAS CAMAS: LO QUE CAMBIA AL LEER EL CONSTRUCTOR (y el edificio que falta identificar)
 
 Leído `barraca(...)` entero (`VillageGenerator` **L1744-1789**), el cuadro de I253 se afina **y cambia el arreglo** ✓:
