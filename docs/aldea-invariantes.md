@@ -6949,6 +6949,29 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I246 · LA METRICA `PARAR` YA CUENTA EL BAILE (punto 8 de la lista viva, cerrado)
+
+**El problema** (auditoría del 5-oct, punto 5) ✗: `parar` se llama **en cada tick** mientras un goal de la aldea está
+aparcado trabajando, así que la traza va **limitada a una línea cada 2 s** (`VillageManager` **L6485-6487**) — si no,
+inunda el registro. Pero así **no servía para medir el baile fino**: entre dos líneas puede haber decenas de paradas y
+solo se veía una.
+
+**LA DECISIÓN (la robusta, y se dice por qué)**: **no se quita el límite** —el ruido es real y el registro es la
+herramienta de todo el proyecto— y **se le pone contador a la línea**. Cada llamada suma en los datos del aldeano (una
+por tick, por el corte de I208) y la línea, que sigue saliendo una cada 2 s, dice **`paradas=N (con faena=M)`** y
+reinicia la cuenta (`VillageManager` **L6475-6481** para el contador y **L6501-6512** para la línea). Así se conservan
+las dos cosas: el registro limpio y el ritmo de verdad.
+
+**MEDIDO** ✓ (corrida **182**, `-Conservar`, 3 minutos, mundo del jugador):
+- líneas `PARAR`: **91** (una cada 2 s, el límite sigue en pie ✓);
+- **paradas contadas: 1790** ✓✓ — o sea que la métrica anterior estaba **ciega al ~95 %** del baile ✗ (se veían 91 de
+  1790);
+- y de esas 1790, **1781 fueron con faena del mod en marcha** (el **99,5 %**): el aparcado ocurre casi siempre mientras
+  el aldeano trabaja, que es justo lo que la auditoría quería poder medir ✓.
+
+Con esto, la pregunta «¿por qué uno con ruta de 23 nodos recorre medio bloque en 9 segundos?» ya tiene el número que le
+faltaba (paradas por ventana de 2 s), en vez de una línea de cada cuarenta.
+
 ### I245 · EL COMPOSTERO: UN ARREGLO DE COHERENCIA **RETIRADO** (no medido), Y LOS REGISTROS NO SON ARCHIVO
 
 Se fue a cerrar el cabo de **I162** (el compostero: «la limpieza tiene que actuar **9-23 veces por corrida**, o sea que

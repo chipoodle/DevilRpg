@@ -6472,6 +6472,15 @@ public final class VillageManager {
             return;
         }
         datosDelParar.putLong("DevilRpgPararTick", ahoraDelParar);
+        // I246 · EL CONTADOR DEL BAILE (9-oct-2026, punto 5 de la auditoria): la LINEA se limita a una cada 2 s para no
+        // inundar el registro, pero la llamada se cuenta TODAS las veces (una por tick, por el corte de arriba) y la
+        // linea dice cuantas ha habido desde la anterior. Sin esto, entre dos lineas puede haber 40 paradas y solo se
+        // veia una: era inutil para medir el baile fino ✗.
+        boolean conFaena = tieneUnGoalDelModActivo(villager);
+        datosDelParar.putInt("DevilRpgPararCuenta", datosDelParar.getInt("DevilRpgPararCuenta") + 1);
+        if (conFaena) {
+            datosDelParar.putInt("DevilRpgPararCuentaFaena", datosDelParar.getInt("DevilRpgPararCuentaFaena") + 1);
+        }
         villager.getBrain().eraseMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET);
         // Y TAMBIÉN el LOOK_TARGET: el cerebro del aldeano tiene "andar hacia donde mira"
         // (`SetWalkTargetFromLookTarget` en su paquete IDLE), así que con el destino borrado y la mirada puesta en el
@@ -6482,7 +6491,7 @@ public final class VillageManager {
         // pregunta que queda es por qué uno con ruta de 23 nodos recorre medio bloque en 9 segundos, y el único sitio
         // del mod que para la navegación es éste. Si un goal llama a `parar` con su faena en marcha, aquí se ve (y con
         // el goal que lo pidió, en el aviso). Se limita a una traza cada 2 s por aldeano.
-        if (tieneUnGoalDelModActivo(villager)
+        if (conFaena
                 && villager.level().getGameTime() - villager.getPersistentData().getLong("DevilRpgPararAviso") > 40L) {
             villager.getPersistentData().putLong("DevilRpgPararAviso", villager.level().getGameTime());
             // LA TRAZA TIENE QUE DECIR **QUIÉN** (5-oct-2026, y mea culpa): el aviso decía «hay faena en marcha» pero no
@@ -6498,10 +6507,15 @@ public final class VillageManager {
                 }
             }
             var camino = villager.getNavigation().getPath();
-            DevilRpg.LOGGER.info("[Village] PARAR: {} en {} · corriendo=[{}] · nav={} · el goal que para es uno de los "
-                            + "de arriba",
+            // Y EL NUMERO DEL BAILE (I246): cuantas paradas ha habido desde la linea anterior (y cuantas con faena).
+            int paradas = datosDelParar.getInt("DevilRpgPararCuenta");
+            int conFaenaEnLaVentana = datosDelParar.getInt("DevilRpgPararCuentaFaena");
+            datosDelParar.putInt("DevilRpgPararCuenta", 0);
+            datosDelParar.putInt("DevilRpgPararCuentaFaena", 0);
+            DevilRpg.LOGGER.info("[Village] PARAR: {} en {} · corriendo=[{}] · nav={} · paradas={} (con faena={}) · el goal"
+                            + " que para es uno de los de arriba",
                     villager.getUUID(), villager.blockPosition().toShortString(), quien.toString().trim(),
-                    camino == null ? "sin ruta" : camino.getNodeCount() + " nodos");
+                    camino == null ? "sin ruta" : camino.getNodeCount() + " nodos", paradas, conFaenaEnLaVentana);
         }
         // Y el apunte del rumbo (I171): parar es parar. Si no se borra, el latido le devolvería el destino en cuanto el
         // goal lo pida otra vez en el mismo tick, y el aldeano seguiría yendo a un sitio ya resuelto.
