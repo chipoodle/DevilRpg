@@ -117,7 +117,13 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    numerado para que se entienda la lista.
 
 7. **El compostero que algo vuelve a poner en alto** ✗ (**I162**/**I163**, acta L5046): la limpieza actua **9-23 veces
-   por corrida**; falta el arreglo de raiz (que el repositor no lo ponga ahi).
+   por corrida**; falta el arreglo de raiz (que el repositor no lo ponga ahi). **Se intento el 9-oct-2026 y SE RETIRO**
+   ✗ (**I245**): hay una incoherencia real (el que lo coloca usa `max(nivel, suelo)` y el que lo asienta usa `nivel`, y
+   los dos corren en el latido), pero **no se pudo medir** — el «antes» no existe, porque **los nombres
+   `build/rapida-N.log` se reutilizan** y los ficheros que citaba I162 ya son **otras escenas**. Siguiente paso, exacto:
+   (1) identificar **la traza** que I162 conto 9-23 veces, (2) montar la escena que la cuente en el mundo del arnes (que
+   es copia del guardado), (3) medir el antes, (4) aplicar el arreglo y volver a contar: tiene que bajar a ~0. El juez
+   ya esta montado: `bancalN=…/compostero:NO` tiene que pasar a **`SI`**.
 8. ~~**El aviso cosmetico del registro**~~ — **ARREGLADO** ✓ (9-oct-2026, **I244**): el aviso se compone segun el
    trazado de verdad (`VillageGenerator.java` L1397-1403) y con `BARRACA_PISO2 = 0` dice «un piso: sala de armas y 8
    camas». **Lo que falta es verlo**: ese aviso solo se escribe **al construir la barraca**, o sea en una **aldea

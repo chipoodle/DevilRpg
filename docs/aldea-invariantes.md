@@ -6949,6 +6949,40 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I245 · EL COMPOSTERO: UN ARREGLO DE COHERENCIA **RETIRADO** (no medido), Y LOS REGISTROS NO SON ARCHIVO
+
+Se fue a cerrar el cabo de **I162** (el compostero: «la limpieza tiene que actuar **9-23 veces por corrida**, o sea que
+algo vuelve a colocar un compostero un bloque alto»). Estado **honesto** de lo que pasó, porque el intento **se retiró** ✗:
+
+**1 · SÍ HAY UNA INCOHERENCIA DE VERDAD EN EL CÓDIGO** ✓ (leída, con sus líneas):
+- `VillageGenerator.composteroDelBancal` (**L8275**) **coloca** el compostero en `max(nivel, suelo local)`.
+- `VillageGenerator.asentarLosComposterosALaCota` (**L8365-8390**, el arreglo de I163) lo **baja** a `nivel` a secas.
+- Y **los dos corren en el latido** (10 s): el que coloca lo sube y el que asienta lo baja. Eso es una pelea real ✗.
+
+**2 · EL ARREGLO SE PROBÓ Y SE RETIRÓ** ✗ (regla de la casa: *lo que no mejora la media se retira y se dice*). Lo que
+se probó: que el que asienta usara **el mismo objetivo** que el que coloca (`max(nivel, suelo local)`), de modo que solo
+corrigiera lo que está por encima de los dos (el caso que arregló I163: un compostero flotando). **Compilaba y el lint
+pasaba, pero NO SE PUDO MEDIR** ✗: para eso hacía falta el «antes» (cuántas veces salía esa traza) y **no existe**.
+
+**3 · Y AQUÍ ESTÁ LA LECCIÓN, que vale para todo el proyecto** ✗: se fue a buscar el «antes» en los registros
+`build/rapida-101.log … rapida-104.log` (las corridas que cita I162)… y **esos ficheros ya no son aquellos**: la 101 es
+una escena del **PORTÓN** (`[Arnes] PORTON: prueba montada…`), no del compostero. **Los nombres `build/rapida-N.log` se
+REUTILIZAN** (cada tanda escribe el suyo encima), así que **no son archivo**: lo único que guarda el «antes» es **lo que
+el acta escribe con su número** (I162: `0 · 11 · 9 · 23`), y sin la traza exacta no se puede repetir la medida ✗.
+Lo que sí apareció en esos ficheros, por curiosidad y con la cautela de que eran otras escenas: la traza más repetida de
+todas era `muro reconstruido al nivel del pueblo` (**3203 veces** en una corrida ✗), y en una corrida de hoy (181) esa
+traza sale **0** veces ✓.
+
+**4 · LO QUE HACE FALTA PARA CERRAR I162, dicho con precisión** (es el siguiente paso, y no se toca a ciegas):
+1. **Identificar la traza** que I162 contó 9-23 veces en la corrida del 30-sep (revisar el texto de I162 y el código del
+   latido: el asentado del compostero, `composteroDelBancal` y la limpieza de bloques fuera de sitio).
+2. **Montar una escena que la cuente** en el mundo del arnés (que ES copia del guardado del jugador, así que tiene el
+   caso de verdad) y **medir el antes** con esa traza (p. ej. 9-23 por corrida).
+3. **Solo entonces** aplicar el arreglo de coherencia de arriba (o el que diga la medida) y **volver a contar**: el
+   número tiene que bajar a ~0. Si no baja, se retira y se dice.
+Y el dato que ya está montado y sirve de juez: el arnés imprime `bancalN=…/compostero:SI/NO`
+(`GuardHarness.vigilarLaHuerta`), y en las corridas del compostero salía **`NO`** ✗ → tiene que pasar a **`SI`**.
+
 ### I244 · EL AVISO DE LA BARRACA Y EL DATO DE LA MONTAÑA (dos cabos de la lista viva, cerrados)
 
 Los dos primeros puntos del orden que se propuso al jugador: el **8** (el aviso cosmético del registro) y el **5** (el
