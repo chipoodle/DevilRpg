@@ -6949,6 +6949,38 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I277 · EL PUNTO EXACTO DEL ARREGLO: EL GOAL ABRE **VALLAS** CERRADAS, Y EL PORTÓN DEL MURO ES UN **BLOQUE DOBLE**
+
+Leído el trozo donde el goal interviene de verdad (`entity/goal/VillagerGateGoal.java` **L359-397**), y explica **todo**
+el caso ✓:
+
+- **Por qué abre**: *«la ruta que traía el aldeano se calculó con ella CERRADA —el juego no le deja planificar a través
+  de **una puerta de valla** cerrada—, así que acaba en su propia casilla: el aldeano se queda pegado a la valla, la
+  compuerta se cierra a los 5 s sin que nadie la cruce y vuelta a empezar»* (**L385-388** ✓). Y trae su caso medido:
+  *«Isidoro (parcela 2) se quedaba toda la noche en `1394,119,1452`, la celda de dentro de su compuerta, con la cama
+  reclamada al otro lado y las cuatro compuertas cerradas»* (**L389-390** ✓).
+- **Qué hace después**: **le borra el destino** para que el cerebro lo vuelva a pedir y la ruta nueva **sí** cruce
+  (**L388-391** ✓) — pero **no se le pisa el camino a otro goal** (L392-397: si hay otro caminante corriendo, se le deja
+  en paz, porque ahí nació el «baile» que el jugador reportó ✓).
+- **Y TODO ESE BLOQUE HABLA DE VALLAS** ✗: «una puerta de valla cerrada», «la compuerta se cierra a los 5 s». El
+  **bloque doble** (`devilrpg:porton_doble`, que es el portón del muro ✓, **cerrado** los cuatro, I276 ✓) **no aparece
+  en ningún sitio del goal** ✗ (grep de I275 ✓).
+
+**EL ARREGLO, con su punto exacto y sus dos trampas ya vistas** ✓ (para escribirlo sin repetir los tres tropiezos de las
+camas):
+1. **Detección**: donde el goal decide que tiene delante una compuerta cerrada que le corta la ruta, **aceptar también
+   el bloque doble** ✓ (el portón del muro), que es lo que hoy no ve ✗.
+2. **Apertura**: abrir **sus bloques todos** —dos hojas × tres de alto, **sin la juntura** ✓— reutilizando su propiedad
+   `OPEN` ✓ (y **cerrarlos detrás** como hace con las compuertas ✓); el pueblo ya los abre por otro camino
+   (`VillageManager.asegurarPortonesAbiertos`, citado en `DoubleGateBlock` **L50** ✓) → **leer primero cómo lo hace él**
+   y reutilizar esa puerta, no inventar otra ✗.
+3. **Y lo de después, igual que con las vallas** ✓: borrarle el destino para que repita la ruta… **respetando la regla de
+   L392-397** (si hay otro caminante corriendo, no se le toca ✓) → que es justo lo que evita el «baile» ✓.
+
+**SU MEDIDA, que es la buena** ✓✓: **`[Gate]` sale 0 veces hoy** en las corridas del arnés (medido ✓) y después del
+arreglo **tiene que salir** cuando un aldeano cruce el portón del muro, con la etiqueta del **lado** que ya está puesta en
+la traza (L373-377: *«aldeano DENTRO y destino FUERA»* ✓ = la prueba de que el pueblo cruza el anillo ✓).
+
 ### I276 · LOS CUATRO PORTONES DEL MURO ESTÁN **CERRADOS** (`open=false`) — Y EL GOAL NO SABE ABRIRLOS
 
 La comprobación que faltaba antes de tocar el goal ✓, medida con `build/portones_abiertos.py` sobre el guardado del
