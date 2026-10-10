@@ -6949,6 +6949,35 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I274 · LOS PORTONES DEL MURO: UNA SOLA COMPUERTA DE VALLA (Y A LA COTA) → LA SOSPECHA PASA AL **PORTÓN DOBLE**
+
+Medida hecha (la que pedía I273), con `build/muro_portones_altura.py` sobre el guardado del jugador (**solo lectura**):
+barrido del anillo `r=50..72` buscando **compuertas de valla** (`*_fence_gate`) y **puertas**, de `cota-5` a `cota+5`:
+
+```
+aldea 0 del jugador: centro (566,566) cota 63
+  ( 625, 63, 566)  oak_fence_gate   r=59.0   dy = +0
+total: 1
+```
+
+**LO QUE DICE** ✓ (y **tumba** la sospecha de I273 ✗):
+1. **La compuerta está EXACTAMENTE a la cota** (`dy = +0` ✓) → **no es el desnivel** ✗: esa teoría no se sostiene para
+   el portón que hay.
+2. **Y SOLO HAY UNA COMPUERTA DE VALLA EN TODO EL ANILLO** ✗ — cuando el mod habla de **cuatro portones** en el muro
+   (**I219**: `PORTONES 9 | AGUJEROS 0`) ✗✓. **La explicación es I224**: el **portón doble es un bloque propio**
+   (`DoubleGateBlock` + `PortonDobleBlockEntity`/`Renderer` ✓), **no** una compuerta de valla ✓ → **los otros tres** (o
+   los que se convirtieran) **no los ve este barrido** ✗.
+
+**LA SOSPECHA NUEVA, con esto delante** ✓✓ (y es la que hay que medir en el código, que es un rato de lectura):
+si el portón del muro es **el bloque doble** y el goal que los abre (`VillageGateGoal`, y su `esPortonDelMuro`
+**L514/L523**) trabaja con **compuertas de valla** ✗, entonces **el aldeano nunca "abre" el del muro** ✓ → **`[Gate]`
+sale 0** ✓✓ y el goal, mientras tanto, **sí corre** (por las compuertas de las parcelas y del anexo ✓, que es lo que
+sale 40, 18, 14… veces en su registro ✓). **Encaja con los tres datos medidos** ✓ (el goal corre, `[Gate]` no sale, y el
+muro tiene pocas compuertas de valla).
+**Siguiente paso, sin tocar código**: leer `VillageGateGoal` (el `esPortonDelMuro` de L514/L523 y el sitio donde se abre
+un portón) y ver **si contempla el bloque doble** ✗ o solo las compuertas de valla ✓ → y con eso, o se le añade (con su
+medida ✓) o se concluye que el portón del muro **no lo usa nadie** y el punto se cierra por eso ✓.
+
 ### I273 · EL CRUCE POR EL PORTÓN DEL MURO: EL GOAL **SÍ** CORRE, PERO ESE CASO **NO DISPARA** (Y EL MURO NO ESTÁ A LA COTA)
 
 Medido en el registro de la **partida del jugador** (`run/logs/latest.log`, la sesión del asedio y Valleverde) ✓ — y
