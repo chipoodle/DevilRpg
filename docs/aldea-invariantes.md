@@ -6949,6 +6949,34 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I258 · EL HAZ DE LUZ: GEOMETRÍA DEL KIOSCO MEDIDA, Y EL HAZ ESTÁ BIEN PUESTO
+
+El jugador confirmó que el efecto del que hablaba es **el haz de luz** (el 1 de los tres candidatos de I255). Medido
+entonces con `build/tejado_del_kiosco.py` (su guardado, **solo lectura**), la columna del centro **(566,566)** capa por
+capa:
+
+```
+y=62  dirt            (la plaza)
+y=63  stone_bricks    la PLATAFORMA del kiosco (7x7)
+y=64  bell            LA CAMPANA, en el centro exacto
+y=65-66  4 postes
+y=67  lantern         EL FAROL, en el centro exacto
+y=68  stone_bricks    EL TEJADO (7x7)
+y=69  aire            <- aqui ARRANCA el haz (nivel+6 = 63+6)  ✓
+y=70+ aire
+```
+
+**CONCLUSIÓN DE LA MEDIDA** ✓✓: el haz sale **centrado en X/Z** (`centro.x + 0.5`, `centro.z + 0.5`, **L7683**) —que es
+el medio de la plataforma, de la campana y del farol— **y arranca justo por encima del tejado** (`nivel+6` = 69, con el
+tejado en 68) ✓. **No hay ningún desfase en los datos**: ni de medio bloque, ni de una celda, ni de altura. Se cierran
+así los tres candidatos que quedaban: el haz **no** nace dentro del tejado ✗ y **no** está corrido respecto al kiosco ✗.
+
+**LO QUE QUEDA, y ya no es una medida del mundo** ✗: si el jugador lo sigue viendo a un lado, lo que queda por mirar es
+**el dibujo en el cliente** (la partícula se genera con un margen aleatorio pequeño —`0,08` en **L7684-7685**— y a
+cierta distancia o con la cámara girada puede **parecer** corrida), o que lo viera **en otra aldea** distinta de la suya
+(Valleverde = aldea 0 = (566,566), la única de su guardado). Para cerrarlo del todo hace falta **un pantallazo del haz
+mismo** ✓ — el arnés no tiene ventana y esto es lo único que no se puede medir desde aquí. **No se toca nada** ✗.
+
 ### I257 · LA CASA DE LAS CAMAS EN LA CALLE: ES LA «CASA 1 (OESTE)», PLANTILLA VANILLA AMUEBLADA POR EL MOD
 
 Continuación de **I256**, y ya está **localizada** ✓ (por el desplazamiento que dio el F3 del jugador):

@@ -127,13 +127,13 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
   (`VillageGenerator` L121-133, índice 0) y la levanta **`placeVanillaHouse`** (L263-318), que **vacía** la plantilla
   vanilla y la **vuelve a amueblar** — y ahí las dos camas caen **una celda hacia fuera** ✗. Siguiente paso: meterlas
   **dentro** en ese amueblado (sin tocar la plantilla) y medir: **2 camas fuera → 0** ✓.
-- **B · Las partículas del centro de la aldea están DESPLAZADAS a un lado** ✗ → **MEDIDO Y NO SE REPRODUCE** ✓
-  (9-oct-2026, **I255**): en su aldea el haz sube por **(566.5, 566.5)** y ahí están **el centro de la plataforma del
-  kiosco** (un 9×9 de piedra), la **campana** (566,64,566, `dx=+0 dz=+0`) y el **farol** (566,67,566) ✓✓. Su guardado
-  solo tiene **esa** aldea (lo dice `tools/audita_aldea.py`: «aldeas a auditar: 1»). **Falta saber QUÉ efecto vio**:
-  1) el haz del sello (el único «del centro», medido centrado ✓), 2) las **chispas de la intrusión** (salen **sobre cada
-  monstruo**, y eso es lo correcto), o 3) un **ritual/guarida** (otra escena, no la plaza). **Con un pantallazo o
-  diciendo cuál, se cierra en un minuto** — y **no se toca nada sin saber cuál** ✗.
+- **B · El haz de luz del centro** — **MEDIDO: ESTÁ BIEN PUESTO** ✓✓ (9-oct-2026, **I255**/**I258**). El jugador
+  confirmó que era el haz. Comprobado en su aldea: **X/Z** = (566.5, 566.5), que es el medio de la **plataforma** del
+  kiosco (9×9), de la **campana** (566,64,566) y del **farol** (566,67,566) ✓; **Y**: el haz arranca en `nivel+6` = **69**
+  y el **tejado del kiosco está en 68** → nace **justo encima**, no dentro ✓. **No hay desfase en los datos.**
+  Lo único que queda ✗: si lo sigue viendo corrido, es **el dibujo en el cliente** (el margen aleatorio de 0,08 de
+  L7684-7685, visto de lejos o con la cámara girada) o que fuera **otra aldea** (la suya es la única del guardado) →
+  **un pantallazo del haz** lo cierra; el arnés no tiene ventana. **No se toca nada.**
 
 5. ~~**El compostero que algo vuelve a poner en alto**~~ — **CERRADO: NO OCURRE HOY** ✓ (9-oct-2026, **I250**). Medido
    por dos lados: en el guardado del jugador los **3 composteros estan en su celda oficial** (capa 63; la pelea
