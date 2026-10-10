@@ -6949,6 +6949,34 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I270 · EL EDIFICIO DE LAS CAMAS ES **LA TABERNA (LA POSADA)** — Y SU TABLA ES LA QUE DESCARTÉ MAL EN I259
+
+Cerrado el paso 1 de I269 ✓, y con una **segunda corrección mía** ✗:
+
+- `VillagePantry.OFFSET` (**`VillagePantry.java` L34-35**) **no es un sitio propio**: vale
+  `TABERNA_DESPENSA` —o sea, es un desplazamiento **relativo a la esquina de la taberna** ✓— y la despensa vive **en la
+  cocina de la taberna** (I15 ✓). Con eso, el único candidato que cae en la ventana **+(+28..+41, +15..+27)** es **la
+  taberna** ✓ (`baseDeLaTaberna(center)` + su huella).
+- **Y LA TABLA DE CAMAS DE ESA CASA ES LA DE `VillageGenerator` L9875-9882** — la que en **I259** descarté diciendo
+  *«es de la casa GRANDE, no de la casa 1»* ✗✗: **la casa grande Y la posada son la misma** (la taberna se levanta con
+  `casaGrandeAleatoria`, **L328** ✓). O sea: **descarté la tabla correcta** ✗ (por el nombre, no por la medida).
+
+**LO QUE ENCAJA AHORA, con las dos correcciones (I269 y I270)** ✓:
+- La tabla de L9875-9882 pone **diez camas** (dos por cuarto) en `y1`. Medido: **20 mitades** (diez camas ✓) en la capa
+  71 de la aldea del arnés — **las buenas, dentro** ✓ — y **4 mitades** (dos camas ✗) en la capa **77** = **+11** sobre
+  el nivel, **encima del tejado** ✓. Las de dentro están **exactamente** donde dice la tabla ✓; las de arriba son
+  **dos de más**, del mismo sitio y a la misma altura relativa que en la aldea del jugador (**capa 74 con el pueblo en
+  63** ✓✓).
+- Y la casa 1 (oeste) es **otro** caso: sus cuatro mitades rojas están **en el plano de la pared** (la misma `x=531`
+  que su puerta, **I256/I264**) con las buenas dentro (dos blancas ✓) ✗ → **dos reglas**: (a) **camas por encima del
+  tejado** de la taberna y (b) **camas en el plano de una pared** en las casas ✓. Las dos, **solo camas** ✓, **banda
+  relativa a cada edificio** ✓ y en **retrofit idempotente** (sin subir `CURRENT_LAYOUT` ✓, que movía el pueblo, I266).
+
+**LO QUE TOCA EN LA RONDA SIGUIENTE** ✓: escribir el barrido **apuntado a los dos edificios** —la **taberna**
+(`baseDeLaTaberna` + huella, banda de tejado) y las **cuatro casas** (`trazado(center, 0..3)`, camas en el plano de la
+pared)— con la excepción `// lint:ok I9` ✓, compilar, y **medir**: **4 → 0** en la taberna (capa 77) y **4 → 0** en la
+casa 1 (capa 63), **sin tocar** las de dentro (20 de la taberna y 2 blancas de la casa 1) ✓.
+
 ### I269 · LAS DOS MEDIDAS QUE FALTABAN: LA BARRACA **NO** ESTÁ DONDE YO MIRABA (Y EL LATIDO **SÍ** CORRE)
 
 Las dos cosas que I268 dejó pendientes, medidas. **Y las dos cambian el caso** ✓:
