@@ -6949,6 +6949,28 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I263 · LA PREGUNTA DE I262 YA ESTABA CONTESTADA POR LA MEDIDA: DENTRO **NO** HAY CAMAS
+
+En I262 se le preguntó al jugador si la casa tenía **también** camas dentro, por no seguir sondeando a ciegas ✗. Pues
+**no hacía falta preguntarlo**: la respuesta estaba en el volcado que ya se había hecho (I256,
+`build/casa_camas_calle.py`, su guardado, solo lectura). Repasando esa tabla, en la casa de la **casa 1 (oeste)**
+(x 522..540, z 554..572, **capas 58 a 74**) hay **exactamente cuatro mitades de cama**, y **todas** en la **capa 63**, en
+la calle: **(531,560)**, **(531,561)**, **(531,565)** y **(531,566)** ✗. **En ninguna otra capa de esa casa hay una sola
+mitad de cama** ✓ → **dentro no hay camas** ✗.
+
+**CONCLUSIÓN** ✓: es el **caso 2** de I262 — **no son camas «de más»**: son **las camas de esa casa, puestas fuera** (en el
+plano de la pared, la misma `x=531` que la puerta) ✗. Y como en I261 se demostró que **el mod no las coloca, las cuenta**
+(las trae la **plantilla** del juego), el arreglo robusto **no** es tocar la plantilla ✗ (I6) sino **recolocar esas dos
+camas dentro de la habitación**, en la migración que ya existe para las casas, y **medirlo**:
+
+- **antes** (ya medido, en su guardado): **4 mitades fuera, 0 dentro** ✗;
+- **después**: **0 fuera, 4 dentro** ✓ — y el aldeano (Ximena) durmiendo **dentro**, no en la calle ✓.
+
+Y **el dónde** ya está medido también: la casa tiene planta baja y **segunda planta** (capas 66-71, con escaleras ✓), así
+que hay sitio de sobra para meter las dos camas dentro sin agrandar nada ✓ (que era la duda del jugador: *«o la casa se
+hace más grande o le haces un segundo piso»* → **ni una cosa ni la otra**: el sitio está, lo que falla es **dónde** se
+ponen ✓).
+
 ### I262 · SONDEO INCONCLUSO EN LA ALDEA NUEVA, Y LA COMPROBACIÓN MÁS CORTA PARA CERRAR LAS CAMAS
 
 Se intentó el paso final de I261 por el camino barato: mirar **la misma casa en una aldea nueva** (la que funda el
