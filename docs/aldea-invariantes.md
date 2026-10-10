@@ -6949,6 +6949,29 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I260 · `placeVanillaHouse`: DESCARTADO EL PASO 1 (EL «SOLAR LIMPIO») Y DÓNDE SIGUE LA BÚSQUEDA
+
+Leído el constructor de las casas (`VillageGenerator` **L5751-5792**), que pega **plantillas del propio juego**:
+
+- **La puerta manda en la altura** ✓: `puertaY = alturaDeLaPuerta(template)` (**L5773**) y el origen va en
+  `nivel - puertaY` (**L5774**) → *«la casa se coloca de forma que SU PUERTA quede a la cota de la aldea»*, con el
+  porqué medido de cada plantilla (pequeña/templo 3 en `nivel-1`, **mediana** en `nivel-2` —su plataforma de tierra se
+  veía como «una zanja»— y **templo 4/iglesia** en `nivel`) ✓.
+- **El paso 1 («Solar limpio») NO puede ser la causa** ✗: airea **toda** la huella (`dx`/`dz` sobre `tam`, `y` de
+  `capaMinima` a `origen.y + tam.y + 4`, **L5781-5790**) **antes** de pegar la plantilla, y la plantilla se pega
+  **después** (`placeInWorld`, **L5791-5792**) → **no borra lo que la plantilla trae** ✓.
+- Y hay una regla fina que se respeta: **nunca se despeja por debajo de la superficie del pueblo**
+  (`capaMinima = max(origen.y, nivel - 1)`, **L5780**) — se puso así porque el despeje, empezando en `origen.y`, dejaba
+  **un hoyo de dos bloques** en la casa mediana (medido en el guardado: `62=aire, 61=aire, 60=tierra`) ✓.
+
+**DÓNDE SIGUE LA BÚSQUEDA** ✗ (el siguiente paso, con el caso delante: casa 1 oeste, puerta **(531,63,563)**, camas en
+**(531,63,560/561)** y **(531,63,565/566)**, la **misma `x` que la puerta**):
+1. El **resto de `placeVanillaHouse`** (desde **L5793**): el paso 3 —*«devuelve el SUELO DEL PUEBLO a los huecos del
+   solar que la plantilla no ocupa»*— y los que vengan después (portal, faroles, y el **amueblado propio** si lo hay).
+2. **Las camas de la plantilla original**, para comparar: si la plantilla elegida para la casa 1 **ya trae** las camas en
+   el plano de la pared, entonces el defecto **no es del mod** ✗ (sería de la plantilla) y lo que toca es **elegir otra**
+   o recolocar **solo esas dos** camas, con su medida (2 fuera → 0 ✓) y **sin tocar la plantilla** (I6).
+
 ### I259 · LAS CAMAS DE LAS CASAS: LA TABLA DE L9881 ES LA CASA GRANDE, NO LA CASA 1
 
 Siguiendo I257 (la casa de las camas en la calle es **la casa 1 (oeste)**), se fue a buscar **dónde se ponen esas dos
