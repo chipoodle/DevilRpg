@@ -6949,6 +6949,34 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I275 · LA CAUSA DEL `[Gate] = 0`: EL GOAL ABRE **COMPUERTAS DE VALLA**, Y EL PORTÓN DEL MURO ES EL **BLOQUE DOBLE**
+
+La lectura que pedía I274, hecha ✓ — y con **dos correcciones a mi propio acta** ✗:
+
+1. **`esPortonDelMuro` NO EXISTE** ✗: el grep de ese nombre en **todo** `src` **no devuelve nada** ✗ — la cita venía de
+   notas viejas y el método se llama de otra forma (o se fue). **Se corrige aquí** para que nadie lo busque en balde ✗.
+2. **El goal de los portones es `entity/goal/VillagerGateGoal.java`** (con «Villager»), no `world/VillageGateGoal` ✗ — ya
+   corregido también ✓.
+
+**Y LO QUE IMPORTA** ✓✓: el grep de **`DoubleGateBlock`** en todo `src` da sus usos **solo en su propia clase**
+(`DoubleGateBlock.java` L232, L288, L300, L344: sus comprobaciones, sus vecinos y su entidad) y en el comando de
+diagnóstico (`PortonDiagnosticoCommand` L68-81) ✗ — **en `VillagerGateGoal` no aparece ni una vez** ✗✗. O sea:
+
+- El **portón del muro es el bloque doble** (`devilrpg:porton_doble`, con su `PortonDobleBlockEntity`/`Renderer`, I224 ✓),
+  y así lo confirma la medida de I274: en el anillo de su aldea **no hay más que UNA compuerta de valla**, y está a
+  `r=59` (**por dentro** del anillo del muro, que va por 62 ✓) → o sea **no es un portón del muro** ✗.
+- Y **el goal que abre portones trabaja con compuertas de valla** ✗ (no conoce el bloque doble ✓): por eso **`[Gate]` sale
+  0 veces** en una sesión entera ✓✓ y, a la vez, el goal **corre muchísimo** (40, 18, 14, 10… veces en su registro ✓)
+  abriendo **las compuertas de las parcelas y del anexo** ✓.
+
+**LA CAUSA, entonces, queda así** ✓: **los aldeanos no cruzan el portón del muro porque el goal no sabe abrirlo** ✗ — no
+por el desnivel del muro (I273, tumbado en I274 ✗) ni por falta de faenas al otro lado. **Y EL ARREGLO ROBUSTO** es
+**enseñarle a abrir el bloque doble** (que ya tiene su API de apertura/cierre, la del portón doble de I224 ✓), **no**
+cambiar los portones del muro ✗ ni tocar la geometría ✓. Su **medida** será la de siempre en este caso: la traza `[Gate]`
+**tiene que salir** cuando un aldeano con faena al otro lado llegue al portón (y eso se ve en su partida, como el resto) ✓
+— y **antes de escribir nada**, se comprueba **cómo abre el portón doble** el propio mod cuando lo pulsa el jugador
+(`DoubleGateBlock`/`PortonDobleBlockEntity`, I231-I234 ✓) para **reutilizar esa puerta** y no inventar otra ✗.
+
 ### I274 · LOS PORTONES DEL MURO: UNA SOLA COMPUERTA DE VALLA (Y A LA COTA) → LA SOSPECHA PASA AL **PORTÓN DOBLE**
 
 Medida hecha (la que pedía I273), con `build/muro_portones_altura.py` sobre el guardado del jugador (**solo lectura**):
