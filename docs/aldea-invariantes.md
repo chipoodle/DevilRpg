@@ -6949,6 +6949,28 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I273 · EL CRUCE POR EL PORTÓN DEL MURO: EL GOAL **SÍ** CORRE, PERO ESE CASO **NO DISPARA** (Y EL MURO NO ESTÁ A LA COTA)
+
+Medido en el registro de la **partida del jugador** (`run/logs/latest.log`, la sesión del asedio y Valleverde) ✓ — y
+las dos piezas juntas apuntan a la causa:
+
+1. **El `VillageGateGoal` CORRE Y MUCHO** ✓✓: aparece en las líneas `PARAR` del pueblo **40, 18, 14, 10, 9…** veces
+   (*«corriendo=[VillagerGateGoal VillagerRepairGoal…]»*), o sea que el aldeano **sí** va a portones y **sí** se le para
+   el camino ahí (la pelea del baile de I205-I209 ✓). **No es que el goal no exista ni que no se use** ✗.
+2. **PERO `[Gate]` SALE 0 VECES** ✗: la traza que escribe el goal **cuando abre un portón del MURO** (con el lado,
+   `aldeano DENTRO · destino FUERA`, `VillagerGateGoal` L373-382) **no sale ni una vez** ✓ → lo que el goal abre (si
+   abre algo) son **las compuertas de las parcelas y del corral anexo** ✓, no el del muro.
+3. **Y EN LA MISMA SESIÓN SALE 20 VECES**: `[Village] Aldea en …: el muro NO esta a la cota N (solo N de N celdas del
+   anillo)` ✗ → **el muro de su aldea está desnivelado** (es lo que la reparación persigue, y en esa sesión todavía
+   salía 20 veces ✓).
+
+**LA SOSPECHA, ahora con fundamento** ✓ (y es lo que hay que medir **antes** de tocar): si el muro está **fuera de la
+cota**, el **portón del muro** puede estar en una celda distinta de la que la lista `todosLosPortones` (I4) tiene
+apuntada ✗ → y `VillageGateGoal.esPortonDelMuro` (**L514/L523**) **no lo reconocería** ✗ → el aldeano con una faena al
+otro lado **no abre el del muro** (abre los otros ✓) y **`[Gate]` no sale** ✓✓ — que es exactamente el dato medido ✓.
+**Medida a hacer**: comparar la celda del portón del muro **en la lista** con la que hay **en el mundo** de su aldea
+(celdas y cota), en el guardado ✓ — un volcado como los que ya se hacen ✓, y **sin tocar código** ✗.
+
 ### I272 · LA REGLA B (CAMAS CON EL CIELO ABIERTO): NEUTRA EN EL ARNÉS, Y ES LA QUE ARREGLA EL CASO DEL JUGADOR
 
 Segunda mitad del reporte A ✓: las camas de la **casa 1 (oeste)**, que están **en el plano de la pared** (cuatro mitades

@@ -97,7 +97,13 @@ del que sea: zombi, esqueleto…).
 cerrando y **como**). Va separado por **quien puede cerrarlo**:
 
 **(a) SOLO SE PUEDEN CERRAR JUGANDO** (el arnes no tiene ventana ni jugador de verdad):
-1. **El cruce del aldeano por el porton del muro** (**I222**, acta L6436): cinco corridas del arnes y ninguna aislo el
+1. **El cruce del aldeano por el porton del muro** (**I222**, acta L6436) — **ACOTADO CON SUS DATOS** ✓/✗ (9-oct-2026,
+   **I273**): en su partida el `VillageGateGoal` **corre y mucho** (sale en las lineas `PARAR` 40, 18, 14, 10… veces ✓)
+   pero **`[Gate]` sale 0 veces** ✗ → el caso del **porton del MURO** no dispara (los que usa son los del anexo/parcelas ✓);
+   y en la MISMA sesion sale **20 veces** `el muro NO esta a la cota` ✗ → **sospecha con fundamento**: con el muro
+   desnivelado, el porton del muro puede estar en otra celda que la que tiene apuntada la lista `todosLosPortones` (I4) y
+   `VillageGateGoal.esPortonDelMuro` (L514/L523) **no lo reconoce** ✗. **Siguiente medida (sin tocar codigo)**: comparar
+   la celda del porton del muro **en la lista** con la que hay **en el mundo** de su aldea. Lo de abajo es el historial:
    cruce; el pueblo abre **0** portones en una corrida normal (**I223**). En el registro tiene que salir
    `[Gate] … aldeano DENTRO · destino FUERA` y despues el aldeano fuera.
 2. **El asedio EN VIVO** — **MEDIDO A MEDIAS** ✓/✗ (9-oct-2026, **I251**): el jugador jugó y el registro trae
