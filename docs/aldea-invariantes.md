@@ -6949,6 +6949,33 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I247 · PUNTO 7 CERRADO (LA TIERRA DE CULTIVO YA NO ESTÁ DEBAJO) Y DÓNDE SE MIDE EL COMPOSTERO
+
+**Punto 7 de la lista viva** —«objetos flotando y `repuso farmland en y=61`, una capa por debajo de los bancales»
+(auditoría del 5-oct, punto 2)— **CERRADO CON MEDIDA** ✓: era **real entonces** y **hoy no existe**.
+
+**MEDIDO** con `build/farmland_debajo.py` (lee el guardado del jugador, **solo lectura**, con el lector de
+`tools/audita_aldea.py`): se cuentan **tierra de cultivo y composteros por capa** en la aldea 0 (566,566), radio 40, de
+la capa 55 a la 72. Resultado:
+
+```
+y=62  farmland    204 celdas
+y=63  composter     3 celdas
+```
+
+- **No hay ni una tierra de cultivo en la 61** ✗→✓: la capa de más que la auditoría vio («`repuso farmland en y=61`») era
+  un **resto del trazado viejo** y el asentado de la huerta (**I167**, `asentarLaHuertaALaCota`) la dejó limpia ✓. Es
+  una hipótesis anterior que **deja de estar abierta** y así se escribe.
+- Y los **tres composteros están a la capa 63** ✓ (uno por parcela, en su celda oficial), que es **una capa por encima
+  del bancal (62)** y es lo correcto: el compostero es un **bloque entero** sobre la capa que se pisa ✓.
+
+**Y DE AHÍ SALE UN HALLAZGO QUE CAMBIA CÓMO SE MIDE EL PUNTO 5** ✗→✓: el dato `bancalN=…/compostero:SI/NO` que imprime el
+arnés (`GuardHarness.vigilarLaHuerta`) se calcula en **el centro que usa el arnés** (470,63,646), y ahí el arnés **funda
+su propia aldea** (`-MundoNuevo`): **no es la aldea del jugador** (566,566). O sea que un `compostero:NO` de esa traza
+**no dice nada** de la aldea del jugador ✗. Para medir el punto 5 hay que hacerlo **en la aldea del jugador dentro de la
+copia del guardado** (`run\world`, que **sí** es copia de su partida, así que su aldea 0 está ahí): una escena que mire
+**las celdas oficiales de esa aldea** y cuente la traza del asentado (`compostero(s) ASENTADOS…`).
+
 ### I246 · LA METRICA `PARAR` YA CUENTA EL BAILE (punto 8 de la lista viva, cerrado)
 
 **El problema** (auditoría del 5-oct, punto 5) ✗: `parar` se llama **en cada tick** mientras un goal de la aldea está

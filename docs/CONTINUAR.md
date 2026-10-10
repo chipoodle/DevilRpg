@@ -120,7 +120,10 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    ya esta montado: `bancalN=…/compostero:NO` tiene que pasar a **`SI`**.
 
 6. **La zanja de la mina en `x=603`** ✗ (auditoria, acta L6213-6226, punto 4): pulido de mundo.
-7. **Objetos flotando y `repuso farmland en y=61`** ✗ (misma auditoria, punto 2): queda vigilarlo.
+7. ~~**Objetos flotando y `repuso farmland en y=61`**~~ — **CERRADO CON MEDIDA** ✓ (9-oct-2026, **I247**): leido el
+   guardado del jugador (solo lectura), **no hay ni una tierra de cultivo en la capa 61**: 204 en la 62 (donde toca) y
+   los 3 composteros en la 63 ✓. Lo de la 61 era un resto del trazado viejo, ya limpiado por el asentado de la huerta
+   (I167).
 8. ~~**La metrica `PARAR`**~~ — **CERRADA Y MEDIDA** ✓ (9-oct-2026, **I246**): la linea sigue saliendo una cada 2 s (el
     registro no se inunda) pero **ahora lleva el numero**: `paradas=N (con faena=M)`. En la corrida 182 salieron **91
     lineas** y **1790 paradas** (la metrica anterior veia el **5 %** ✗), y el **99,5 %** con faena del mod en marcha. Se
