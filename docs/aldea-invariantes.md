@@ -6949,6 +6949,40 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I264 · **CORRECCIÓN DE I263**: LA CASA **SÍ** TIENE CAMAS DENTRO (BLANCAS) — LAS ROJAS DE LA CALLE SON DE MÁS
+
+**Me equivoqué en I263, y se corrige aquí** ✗→✓ (regla de la casa: la hipótesis falsa se deja escrita). Dije que «dentro
+no hay camas» porque conté **cuatro mitades** y todas en la calle ✗ — **pero solo busqué camas ROJAS** (`red_bed`) ✗✗.
+Al dibujar la **capa 63** de esa casa (`build/mapa_casa1.py`, x 526..538, z 556..570, su guardado, solo lectura) se ve
+todo:
+
+```
+        x=531 (la PARED oeste)      x=532..536 (el INTERIOR)
+z=560   CAMA (roja)                 .
+z=561   CAMA (roja)                 adoquín, y en (535,561) y (536,561)  CAMAS BLANCAS
+z=562   adoquín                     .
+z=563   PUERTA                      .
+z=564   adoquín                     . (escalera al piso de arriba en (533,561): "ladder")
+z=565   CAMA (roja)                 adoquín
+z=566   CAMA (roja)                 .
+```
+
+- **Dentro SÍ hay camas**: dos **BLANCAS**, en **(535,561)** y **(536,561)** ✓ (y la escalera al piso de arriba en
+  (533,561) ✓). Mi conteo de I263 no las vio porque filtraba `red_bed` ✗.
+- **Las cuatro mitades rojas de la calle están en las celdas de la PARED** (la columna `x=531`), dos arriba del todo y
+  dos abajo, flanqueando la puerta ✗ → son **CAMAS DE MÁS** ✓✓, que es el **caso 1** de I262 (duplicados de una
+  migración vieja: se colocó la cama nueva dentro y **no se llevó la vieja**, que quedó en la pared) — **la misma
+  familia** que las **dos camas del tejado** de la barraca (I253) y que los composteros «de más» que ya se limpian en
+  otra migración (I164) ✓.
+
+**EL ARREGLO, ahora sí, sin dudas** ✓: **limpieza de camas sueltas** — quitar las camas que estén **fuera del interior**
+(las de la pared y las de encima del tejado ✓), **solo camas** (nunca lo que haya puesto el jugador ✓) y **sin tocar las
+de dentro** ✓. Con su medida, que ya está montada:
+- **antes** (su guardado, medido): **4 mitades rojas fuera** ✗ y **2 blancas dentro** ✓;
+- **después**: **0 fuera** ✓ y las de dentro **intactas** ✓ — y Ximena durmiendo **dentro** ✓.
+Un solo arreglo sirve para **los dos medios del reporte A** ✓ (las de la calle de la casa 1 y las del tejado de la
+barraca): la regla es la misma — *una cama, o está dentro de un edificio, o no está* ✓.
+
 ### I263 · LA PREGUNTA DE I262 YA ESTABA CONTESTADA POR LA MEDIDA: DENTRO **NO** HAY CAMAS
 
 En I262 se le preguntó al jugador si la casa tenía **también** camas dentro, por no seguir sondeando a ciegas ✗. Pues

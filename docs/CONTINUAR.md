@@ -125,11 +125,13 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
   segunda planta** (capas 66-71, con escaleras), así que **no es** que no quepan: **se colocan una celda hacia fuera** ✗.
   **Acotado** ✓ (9-oct-2026, **I257**/**I259**): la casa es **la «casa 1 (oeste)»** del trazado
   (`VillageGenerator` L121-133, índice 0) y la levanta **`placeVanillaHouse`** (L263-318), que **vacía** la plantilla
-  vanilla y la **vuelve a amueblar** — y ahí las dos camas caen **una celda hacia fuera** ✗.   **Pregunta al jugador (una y decisiva)**: ¿esa casa tiene **también camas DENTRO**? Si **sí** → las de la calle
-  son **de más** (duplicados de una migración vieja, la misma familia que las camas del tejado de la barraca) y el
-  arreglo es una **limpieza de camas sueltas**; si **no** → son **las suyas mal puestas** y el arreglo es **meterlas
-  dentro** (sin tocar la plantilla). Los dos arreglos son pequeños y se miden igual: **2 fuera → 0** ✓. *(El sondeo por
-  la aldea nueva del arnés salió **inconcluso**, I262.)* Siguiente paso natural: meterlas
+  vanilla y la **vuelve a amueblar** — y ahí las dos camas caen **una celda hacia fuera** ✗.   **RESUELTO SIN PREGUNTAR** ✓✓ (9-oct-2026, **I264**, *corrigiendo* mi I263): dibujada la capa 63 de la casa, **dentro
+  SÍ hay camas** — dos **BLANCAS** en (535,561) y (536,561) ✓ (mi conteo anterior solo miraba las **rojas** ✗) — y las
+  **cuatro mitades rojas de la calle están en las celdas de la PARED** (`x=531`) ✗ → son **CAMAS DE MÁS** (duplicados de
+  una migración vieja, **la misma familia** que las **2 camas del tejado** de la barraca y que los composteros «de más»
+  de I164). **El arreglo, uno solo para los dos medios del reporte A**: **limpieza de camas sueltas** — quitar las que
+  estén **fuera del interior** (en la pared o encima del tejado), **solo camas**, sin tocar las de dentro ✓. Medida:
+  **antes** 4 mitades fuera ✗ / 2 blancas dentro ✓ → **después** 0 fuera ✓ y las de dentro intactas ✓.
   **dentro** en ese pegado/amueblado (sin tocar la plantilla) y medir: **2 camas fuera → 0** ✓. *(Descartado el
   camino equivocado: la tabla de camas de `VillageGenerator` L9875-9882 es de la **casa grande**, no de la casa 1 —
   ver **I259**.)*
