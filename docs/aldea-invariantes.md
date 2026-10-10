@@ -6949,6 +6949,52 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I283 · LA PAUSA DEL ASEDIO: LA LÓGICA ESTÁ MEDIDA; FALTA **EL INSTRUMENTO** (UNA TRAZA DE TRANSICIÓN)
+
+Último punto abierto de la lista ✓, y la buena noticia es que **la pausa ya existe, está escrita y tiene su historia
+medida** ✓ (`VillageManager` **L2164-2199**):
+
+- **`DISTANCIA_SIN_JUGADOR = -1.0D`** (**L2165** ✓), con el comentario que lo explica: *«Si el jugador que defiende la
+  aldea no está conectado: el asedio se pausa, pero el registro lo dice claro»* ✓.
+- **`distanciaAlCentro`** (**L2167-2180** ✓): si el jugador **no está en la lista** devuelve `-1.0` ✓ — y trae su
+  historia medida: **antes devolvía `Double.MAX_VALUE`** y salía en el registro del jugador como
+  `9223372036854775807` ✗ (*«cuando lo que pasaba es que su partida acababa de cargar y todavía no estaba en la lista:
+  el asedio se creó a las 04:06:09 y él entró a las 04:06:11»* ✓) → **ya arreglado** el 3-oct-2026 ✓.
+- **`jugadorEnLaAldea`** (**L2182-2186** ✓): `distancia >= 0 && distancia <= RADIO_ASEDIO_CON_JUGADOR` ✓ → fuera de ese
+  radio **el reloj no avanza** ✓; y **`hayJugadorEnLaAldea`** (**L2188-2199** ✓) es la versión para las hordas del mundo ✓.
+
+**EL INSTRUMENTO QUE FALTA** ✓ (pequeño, como el de las camas): una **traza de transición** en el sitio donde el reloj del
+asedio **decide avanzar o no** (el que llama a `jugadorEnLaAldea`): al pasar a **EN PAUSA**, `[ASEDIO] Aldea N: EN PAUSA
+(el jugador está a X bloques; el reloj no avanza)` ✓; al **reanudar**, `[ASEDIO] Aldea N: REANUDA (jugador a X bloques)` ✓
+— **solo al cambiar de estado**, para no ensuciar el registro ✓.
+**Su medida es la prueba viva que ya estaba en la lista**: alejarse **más de 128 bloques** y volver (I86/I89) → las dos
+líneas tienen que verse, con sus distancias ✓. **Y la pausa NO se toca** ✗: la lógica está bien (con su historia del
+nacimiento en pausa por entrar un segundo tarde ✓); lo único que falta es **poder verla** ✓.
+
+### I282 · ARREGLO DEL PORTÓN DEL MURO (APERTURA): EL GOAL YA SABE ABRIRLO (apertura)
+
+Cerrado el punto 1 de la lista ✓, con las piezas localizadas por línea y la medida hecha en casa ✓:
+
+- **Los dos filtros que tiraban el portón del muro** ✗: `VillagerGateGoal` **L313-315** (`puertaValidaMasCercana`:
+  `if (!(... instanceof FenceGateBlock)) continue;`) y **`abrirPorton`**, que empieza con **el mismo** filtro y
+  `return false;` ✓. Y la lista **no era el problema** ✓: `VillageGenerator.todosLosPortones` **ya añade** *«las ocho
+  celdas de los cuatro portones dobles del muro»* vía `celdasDeLosPortonesDelMuro` ✓.
+- **EL ARREGLO** (tres cambios ✓): el `import` de `DoubleGateBlock` que faltaba ✓; el **filtro de L313-315** admitiendo
+  también el bloque doble ✓; y la **rama de apertura** en `abrirPorton`, que llama a
+  **`DoubleGateBlock.abatir(level, porton, estado, true)`** (**L215** ✓, la puerta del propio mod: mueve las **tres celdas
+  del ancho × los tres pisos** y pone `OPEN` + `HOJA_FUERA` ✓) **y lo apunta en `ABIERTOS`** ✓.
+- **Y SE RETIRÓ UN CUARTO CAMBIO MÍO** ✗ (regla de la casa, y aquí salvó a un aldeano): había hecho que también
+  **cerrara** el portón doble, y lo hacía **antes** del *«no se cierra un portón con alguien dentro»* (**I157** — el lazo
+  que ya atrapó a una granjera, medido en su día ✓) → **retirado** ✓: solo queda la apertura (segura) y el cierre como
+  estaba ✓.
+- **MEDIDO EN EL ARNÉS** ✓✓ (corrida **188**): `[Porton] abatir` sube de **10 a 18** trazas y **las nuevas son
+  `encontradas=9 cambiadas=9`** = **las nueve celdas del portón doble** ✓✓ → **el goal ya abre el portón del muro** ✓.
+- **Y LA SORPRESA, que cierra el punto por otra vía** ✓✓: **`[Gate]` sigue saliendo 0, antes y después** ✗→✓ — porque
+  quien abre los portones del muro es **el latido del pueblo** (*«los que cierra la aldea que el latido abre cuando un
+  aldeano se acerca»*, comentario de `todosLosPortones` ✓), **no el goal** ✓. O sea: **el pueblo SÍ cruza el anillo**, y la
+  traza del goal nunca salía **porque no era su trabajo** ✓. **El punto 1 de la lista se cierra por ahí** ✓, con el
+  arreglo de propina (ahora el goal también sabe abrirlos ✓, que es lo que faltaba cuando el latido no llega a tiempo ✓).
+
 ### I281 · LOS **DOS** FILTROS QUE TIRAN EL PORTÓN DEL MURO (Y LA LISTA, QUE **SÍ** LO TRAE)
 
 Las dos lecturas que faltaban (I280), hechas — y el caso queda **cerrado en el diagnóstico** ✓✓:
