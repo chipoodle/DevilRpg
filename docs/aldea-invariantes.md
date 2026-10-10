@@ -6949,6 +6949,37 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I284 · EL INSTRUMENTO DE LA PAUSA DEL ASEDIO **YA EXISTE**: EL PUNTO SE CIERRA SIN ESCRIBIR CÓDIGO
+
+La penúltima suposición falsa de esta lista ✗→✓ (van cuatro: `esPortonDelMuro`, el nombre del fichero del goal,
+`asegurarPortonesAbiertos` y ahora **«no hay traza en el mod»** ✗). Medido: **la traza está puesta** ✓, en
+`VillageManager` **L1438-1445**:
+
+```java
+if (!jugadorEnLaAldea(level, d)) {
+    // ... (el porqué: un asedio que se resuelve sin nadie delante es una derrota a ciegas, y es lo que le pasó al
+    // jugador: se fue con los zombis dentro y al volver la aldea ya estaba en ruinas)
+    if (!d.enPausa) {                                   // ← SOLO AL CAMBIAR DE ESTADO (transición, no spam)
+        d.enPausa = true;
+        double dist = distanciaAlCentro(level, d);
+        DevilRpg.LOGGER.info("[Village] Asedio de la aldea {} EN PAUSA: {}: el reloj se para y la aldea NO puede caer", ...);
+```
+
+**Lo que eso significa** ✓✓:
+- El **instrumento que I283 decía que faltaba, no falta** ✗: hay traza de **transición** (`d.enPausa` ✓ = no ensucia el
+  registro ✓) y **con la distancia** ✓ — exactamente lo que se iba a escribir ✓. **No se toca nada** ✓.
+- Y **que en la sesión del jugador no saliera esa línea** ✓ significa una cosa muy concreta: **la pausa no llegó a
+  ocurrir** ✓ — no se alejó del radio (`RADIO_ASEDIO_CON_JUGADOR`, L2182-2186 ✓) mientras el asedio estaba en curso ✓. No
+  es un fallo: es que **la prueba viva no se ha hecho todavía** ✓.
+- **La prueba viva, por tanto, es del jugador** ✓ (y estaba ya en la lista desde I86/I89): con un asedio en curso,
+  **alejarse más de 128 bloques y volver** → en el registro tienen que verse **EN PAUSA** y, al volver, el aviso de que
+  sigue ✓ (y la aldea **no puede caer** sin él delante ✓, que es la regla que protege su partida ✓).
+
+**Con esto la lista viva queda cerrada**: **(a)** 1 (portón: cerrado y medido, I282 ✓), 2 (asedio: medido en vivo ✓ y la
+pausa con su traza ya puesta ✓), 3 (la barra del cliente y el clic en la piedra: **sigue siendo del jugador** ✓, con su
+instrumento ya escrito ✓) y 4 (los faroles: cerrado por medida ✓); **(b)** A y B **cerrados** ✓; **(c)** lo aceptado a
+propósito, sin tocar ✓.
+
 ### I283 · LA PAUSA DEL ASEDIO: LA LÓGICA ESTÁ MEDIDA; FALTA **EL INSTRUMENTO** (UNA TRAZA DE TRANSICIÓN)
 
 Último punto abierto de la lista ✓, y la buena noticia es que **la pausa ya existe, está escrita y tiene su historia

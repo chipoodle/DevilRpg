@@ -106,7 +106,13 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    la celda del porton del muro **en la lista** con la que hay **en el mundo** de su aldea. Lo de abajo es el historial:
    cruce; el pueblo abre **0** portones en una corrida normal (**I223**). En el registro tiene que salir
    `[Gate] … aldeano DENTRO · destino FUERA` y despues el aldeano fuera.
-2. **El asedio EN VIVO** — **MEDIDO A MEDIAS** ✓/✗ (9-oct-2026, **I251**): el jugador jugó y el registro trae
+2. **El asedio EN VIVO** — **MEDIDO** ✓✓ (`OLEADA de 8 intentados, 8 colocados (radio 65-73)` + `Aldea 0 salvada`), y
+   **LA PAUSA YA TIENE SU TRAZA** ✓✓ (**I283**/**I284**): `VillageManager` **L1438-1445** ya avisa **al cambiar de estado**
+   (*«Asedio de la aldea N EN PAUSA: … el reloj se para y la aldea NO puede caer»*), condicionada a `jugadorEnLaAldea`
+   (L2182-2186: fuera de `RADIO_ASEDIO_CON_JUGADOR` no avanza el reloj ✓; y con el jugador desconectado,
+   `DISTANCIA_SIN_JUGADOR = -1.0`, L2165 ✓). Que no saliera en su sesión significa que **la pausa no llegó a ocurrir** ✓.
+   **Lo único que queda es la prueba viva, y es suya**: con asedio en curso, **alejarse >128 bloques y volver** (I86/I89)
+   → tienen que verse las dos líneas ✓ (y la aldea **no puede caer** sin él delante ✓). **No hay nada que escribir** ✓.
    **`OLEADA de 8 asediadores intentados, 8 colocados`** ✓ y **`Aldea 0 salvada`** (+1 nivel, y se anuncia el nombre:
    **Valleverde**) ✓✓. **Lo que falta es LA PAUSA** ✗ (alejarse más de 128 bloques y volver): no hay traza de eso en el
    registro ni en el mod, así que necesita instrumento propio.
