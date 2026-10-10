@@ -107,16 +107,9 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    nombres), pero lo medido es el **texto** de `VillageBarText`, no el **pixel** en pantalla ni el clic en vivo.
 4. **Los 14 faroles de la aldea 0** (**I13**, acta L238): quedaron pendientes «hasta que el jugador pase por ella».
 
-**(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA**:
-5. ~~**El dato de control del arnes que no marca**~~ — **CERRADO Y MEDIDO** ✓ (9-oct-2026, **I244**): ahora cuenta la
-   **columna entera** (`columnas del anillo abiertas`) y en la corrida 181 marca **8/4320** mientras taladra, donde
-   antes marcaba **0** ✗. Y de paso se arreglaron **dos fallos de la escena** (el asaltante se colaba por una **cueva**
-   por debajo del anillo, corridas 179 y 180): el anillo es ahora **macizo hasta `cota−30`**.
-8. ~~**Las losas del tejado a +11**~~ — **NO es un pendiente: es un LIMITE A PROPOSITO** y esta en el apartado
-   **(c), punto 14** (medido el 9-oct-2026: el guardado del jugador tiene **0 obras pendientes**). Se deja el hueco
-   numerado para que se entienda la lista.
+**(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA** (lo abierto, numerado; lo cerrado hoy va al final del apartado):
 
-7. **El compostero que algo vuelve a poner en alto** ✗ (**I162**/**I163**, acta L5046): la limpieza actua **9-23 veces
+5. **El compostero que algo vuelve a poner en alto** ✗ (**I162**/**I163**, acta L5046): la limpieza actua **9-23 veces
    por corrida**; falta el arreglo de raiz (que el repositor no lo ponga ahi). **Se intento el 9-oct-2026 y SE RETIRO**
    ✗ (**I245**): hay una incoherencia real (el que lo coloca usa `max(nivel, suelo)` y el que lo asienta usa `nivel`, y
    los dos corren en el latido), pero **no se pudo medir** — el «antes» no existe, porque **los nombres
@@ -124,24 +117,31 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    (1) identificar **la traza** que I162 conto 9-23 veces, (2) montar la escena que la cuente en el mundo del arnes (que
    es copia del guardado), (3) medir el antes, (4) aplicar el arreglo y volver a contar: tiene que bajar a ~0. El juez
    ya esta montado: `bancalN=…/compostero:NO` tiene que pasar a **`SI`**.
-8. ~~**El aviso cosmetico del registro**~~ — **ARREGLADO** ✓ (9-oct-2026, **I244**): el aviso se compone segun el
-   trazado de verdad (`VillageGenerator.java` L1397-1403) y con `BARRACA_PISO2 = 0` dice «un piso: sala de armas y 8
-   camas». **Lo que falta es verlo**: ese aviso solo se escribe **al construir la barraca**, o sea en una **aldea
-   nueva** (`-MundoNuevo`); en las corridas con el pueblo ya hecho no sale.
-9. **La zanja de la mina en `x=603`** ✗ (auditoria, acta L6213-6226, punto 4): pulido de mundo.
-10. **Objetos flotando y `repuso farmland en y=61`** ✗ (misma auditoria, punto 2): queda vigilarlo.
-11. **La metrica `PARAR`** ✗ (misma auditoria, punto 5): va **limitada a una linea cada 2 s por aldeano**, asi que no
+
+6. **La zanja de la mina en `x=603`** ✗ (auditoria, acta L6213-6226, punto 4): pulido de mundo.
+7. **Objetos flotando y `repuso farmland en y=61`** ✗ (misma auditoria, punto 2): queda vigilarlo.
+8. **La metrica `PARAR`** ✗ (misma auditoria, punto 5): va **limitada a una linea cada 2 s por aldeano**, asi que no
     sirve para el baile fino (por eso se usan `[Rumbo]` y `no consigue llegar`).
-12. **Una cama sin acceso no se le da a nadie** (**I43**, acta L994): la celda de espera exige estar a **≤2,0 bloques**,
+9. **Una cama sin acceso no se le da a nadie** (**I43**, acta L994): la celda de espera exige estar a **≤2,0 bloques**,
     asi que una cama encerrada se queda sin dueño (limite conocido).
-13. **LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS** ✗ (**`docs/aldea-cerebro.md`** L132): pide «pollos fuera del
+10. **LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS** ✗ (**`docs/aldea-cerebro.md`** L132): pide «pollos fuera del
     recinto: 0» y **no hay ninguna medida** de eso; ademas el gallinero tiene un **hueco de un bloque** por el que
     los pollos **si** pasan a proposito (acta L1275), asi que el «se quedan dentro por construccion» esta **sin
     comprobar**. Se mide con la traza del gallinero (`MEDIR_ALMACEN_Y_HUEVOS`: las gallinas del hueco) o se corrige
     la frase.
 
+**Cerrado hoy en este apartado** (se deja escrito, con su numero de invariante):
+- ✅ **El dato de control del arnes que no marca** — **CERRADO Y MEDIDO** (**I244**): ahora cuenta la **columna entera**
+  (`columnas del anillo abiertas`) y en la corrida 181 marca **8/4320** mientras taladra, donde antes marcaba **0** ✗.
+  Y de paso se arreglaron **dos fallos de la escena** (el asaltante se colaba por una **cueva** por debajo del anillo,
+  corridas 179 y 180): el anillo es ahora **macizo hasta 30 bloques por debajo del nivel del pueblo**.
+- ✅ **El aviso cosmetico del registro** — **ARREGLADO** (**I244**): se compone segun el trazado de verdad
+  (`VillageGenerator.java` L1397-1403) y con `BARRACA_PISO2 = 0` dice «un piso: sala de armas y 8 camas». **Lo que falta
+  es verlo**: ese aviso solo se escribe **al construir la barraca**, o sea en una **aldea nueva** (`-MundoNuevo`).
+- ➡️ **Las losas del tejado a +11 NO eran un pendiente**: es un limite a proposito y esta en **(c)**, abajo.
+
 **(c) ACEPTADO A PROPOSITO (no se toca, y se dice)**:
-14. **Los tejados quedan fuera del obrero** (**I60**, acta L1470): su banda es **+5/−6** sobre el nivel del pueblo
+11. **Los tejados quedan fuera del obrero** (**I60**, acta L1470): su banda es **+5/−6** sobre el nivel del pueblo
     (`REPAIR_MAX_UP`/`REPAIR_MAX_DOWN`, `VillageManager.java` L852-853, filtro en L6974), asi que **si un tejado se
     rompe, nadie lo sube a arreglar**. El acta lo llama *«limite conocido (dicho a proposito)»* y da la razon: *«subir a
     un tejado es otra obra, no una reparacion de planta»*. **MEDIDO el 9-oct-2026** con `build/obras_pendientes.py`
@@ -150,9 +150,9 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
     el limite. *(Estaba en el apartado (b) por error mio: lo puse como «codigo pendiente» sin leer que el acta ya lo
     habia decidido asi. Si el jugador QUIERE que los tejados se reparen, eso es una funcion nueva —que el obrero trabaje
     en alto—, no un arreglo.)*
-15. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
+12. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
     migracion de casas; **no se toco**, y lo que hay es la **red de seguridad** (`bajarDeLasCamas` + el rescate de I103).
-16. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
+13. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
     («no hay medida que lo pida») y nada posterior lo ha cambiado.
 
 Lo de abajo es el historial de los cinco pendientes que se cerraron en esta ronda; debajo del todo esta el historial
