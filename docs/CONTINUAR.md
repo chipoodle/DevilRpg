@@ -100,10 +100,10 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
 1. **El cruce del aldeano por el porton del muro** (**I222**, acta L6436): cinco corridas del arnes y ninguna aislo el
    cruce; el pueblo abre **0** portones en una corrida normal (**I223**). En el registro tiene que salir
    `[Gate] … aldeano DENTRO · destino FUERA` y despues el aldeano fuera.
-2. **El asedio EN VIVO, entero** (**I86**/**I89**, acta L2262 y L6220-6222): **una oleada de verdad** (el arnes coloca los
-   asaltantes a mano, y `HordeManager` usa `level.players()`, asi que headless **no se puede**) y **la pausa**: alejarse
-   **mas de 128 bloques** y volver (hoy solo esta medido con **jugador de pega**, I237: `EN PAUSA`). La prueba que se
-   pide es `OLEADA de N asediadores intentados, M colocados` y `Aldea 0 salvada` **en el registro**.
+2. **El asedio EN VIVO** — **MEDIDO A MEDIAS** ✓/✗ (9-oct-2026, **I251**): el jugador jugó y el registro trae
+   **`OLEADA de 8 asediadores intentados, 8 colocados`** ✓ y **`Aldea 0 salvada`** (+1 nivel, y se anuncia el nombre:
+   **Valleverde**) ✓✓. **Lo que falta es LA PAUSA** ✗ (alejarse más de 128 bloques y volver): no hay traza de eso en el
+   registro ni en el mod, así que necesita instrumento propio.
 3. **La barra dibujada en el cliente y el clic en la piedra** (**I87**, acta L2138): la tabla de nombres si esta (30
    nombres), pero lo medido es el **texto** de `VillageBarText`, no el **pixel** en pantalla ni el clic en vivo.
 4. ~~**Los 14 faroles de la aldea 0**~~ — **CERRADO POR MEDIDA** ✓ (9-oct-2026, **I250**): la auditoria versionada
@@ -112,6 +112,16 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    lleva el nombre del guardado escrito a mano: busca el mas nuevo de `run/saves`, asi no vuelve a caducar.)*
 
 **(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA** (lo abierto, numerado; lo cerrado hoy va al final del apartado):
+
+**REPORTES NUEVOS DEL JUGADOR (9-oct-2026, con pantallazo — se miden antes de tocar)**:
+- **A · Las camas de la barraca salen FUERA de la casa** ✗ (pantallazo: dos camas rojas a los lados de la puerta, a la
+  intemperie). Lo pidió así: *«o la casa se hace más grande para meter las camas, o le haces un segundo piso con
+  escaleras, pero las camas no pueden estar afuera»*. El edificio es **la barraca de la milicia** (sus camas son
+  `RED_BED`: `VillageGenerator` **L7546-7553**, y el reparto en dos filas, `BARRACA_CAMAS_NORTE`/`_SUR` **L1332/L1339**),
+  y con el trazado de **un piso** (`BARRACA_PISO2 = 0`, I121/I123) **las 8 camas no caben dentro** ✗. *(Es de la familia
+  de **I104**, «el apiñamiento de camas».)*
+- **B · Las partículas del centro de la aldea están DESPLAZADAS a un lado** ✗. Hay que encontrar dónde se lanzan y
+  centrarlas.
 
 5. ~~**El compostero que algo vuelve a poner en alto**~~ — **CERRADO: NO OCURRE HOY** ✓ (9-oct-2026, **I250**). Medido
    por dos lados: en el guardado del jugador los **3 composteros estan en su celda oficial** (capa 63; la pelea

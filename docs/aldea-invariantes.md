@@ -6949,6 +6949,37 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I251 · EL ASEDIO EN VIVO, MEDIDO CON JUGADOR DE VERDAD (punto 2 de la lista viva)
+
+Lo pidió el jugador (*«¿te sirve que vaya a la siguiente aldea para revisar?»*) y **sirvió**: jugó, y el registro de su
+partida (`run/logs/latest.log`, 67 KB) trae lo que llevaba meses sin poder medirse — el asedio **con un jugador de
+verdad**, que es lo único que faltaba porque `HordeManager` mira `level.players()` y el arnés no tiene ninguno ✗.
+
+**MEDIDO** ✓✓:
+
+```
+[Village] Aldea 0: OLEADA de 8 asediadores intentados, 8 colocados (radio 65-73)
+[Village] Aldea 0 salvada: +1 nivel de experiencia (+1 punto de habilidad) (quedan 179 puntos)
+[Village] Aldea 0 (Aldea de Valleverde) salvada: se anuncia su nombre y se pone al dia el Diario
+[Village] asedio de la aldea 0 NO arranca: su asedio ya consta como resuelto (salvada o caida)
+```
+
+- **La oleada existe y coloca a todos**: **8 intentados, 8 colocados** (radio 65-73) ✓ — era la prueba que pedía la
+  auditoría del 5-oct (*«`OLEADA de N asediadores intentados, M colocados`»*) y sale **completa** ✓.
+- **La aldea se salva**: `Aldea 0 salvada` (+1 nivel de experiencia) y **se anuncia su nombre** (Aldea de **Valleverde**)
+  con el Diario al día ✓.
+- Y **después ya no vuelve a arrancar** (*«su asedio ya consta como resuelto»*) ✓, que es lo correcto ✓.
+
+**LO QUE QUEDA DE ESTE PUNTO, dicho claro** ✗: **la pausa** (alejarse más de 128 bloques y volver) **no se ha medido**
+✗. En el registro **no hay ninguna traza de pausa** y en el código **no existe una traza con ese nombre** (el arnés
+escribía `EN PAUSA` leyendo sus propios datos, no el mod): para medirla hace falta un instrumento propio (leer el
+estado del asedio antes y después de alejarse) o una traza nueva en el mod. Queda anotado así.
+
+**Y UN DATO PARA EL PUNTO 1 (el cruce del aldeano por el portón)** ✗: en **toda** la sesión del jugador (con asedio, con
+el pueblo trabajando y con él dentro) **`[Gate]` salió 0 veces** — ni un cruce. Es el mismo dato que dio el arnés
+(I223: el pueblo abre **0** portones en una corrida normal), pero ahora **en una partida de verdad**: el aldeano que
+necesita cruzar el muro **no aparece** o no lo intenta. El punto 1 sigue abierto, y con esta pista.
+
 ### I250 · PUNTOS 5 (EL COMPOSTERO) Y 4 (LOS 14 FAROLES): LOS DOS, CERRADOS CON MEDIDA
 
 **Punto 5 · «el compostero que algo vuelve a poner en alto»** (**I162**/**I163**) → **NO OCURRE HOY, y la incoherencia
