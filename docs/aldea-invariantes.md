@@ -6949,6 +6949,33 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I261 · `placeVanillaHouse` (PASOS 3 Y 4): EL MOD **NO** COLOCA LAS CAMAS DE LAS CASAS, LAS CUENTA
+
+Cerrando la búsqueda que abrió I260, leídos los pasos que quedaban de `placeVanillaHouse` (**L5793-5832**):
+
+- **Paso 3 — «devolver el suelo a los huecos»** (**L5793-5822**): rellena la columna hasta la capa de superficie
+  (césped arriba, tierra debajo) **solo si está hueca**, y **se para en cuanto encuentra algo construido**
+  (`if (!…isAir()) break;`, **L5815-5817**) → **nunca tapa una construcción**, y por tanto **no puede tapar ni mover una
+  cama** ✓. Su porqué está medido: era la «zanja» que se veía alrededor de las casas ✓.
+- **Paso 4 — «limpieza de bloques técnicos, y de paso se busca la puerta y se CUENTAN las camas»** (**L5823-5825**):
+  sustituye `JIGSAW`/`STRUCTURE_VOID` (**L5831**) y **cuenta** las camas que trae la plantilla (`int camas = 0;` ✓) —
+  **no las coloca** ✗.
+
+**CONCLUSIÓN** ✓✓: las **dos camas de la casa 1 (oeste)** —las que se ven **en la calle**, en el plano de la pared
+`x=531`, con la puerta en (531,63,563)— **vienen de la plantilla del propio juego**, tal cual se pega (`placeInWorld`,
+L5791-5792). El mod las **cuenta**, no las pone ✗.
+
+**EL PASO FINAL, y ya es cosa de una comprobación** ✗: **mirar la plantilla original** (la que le tocó a esa casa,
+`casaAleatoria(casas)`, L325) y ver **dónde tiene sus camas**:
+- si la plantilla **ya las trae** en el plano de la pared → el defecto es **de la plantilla**, no del mod ✗, y lo que
+  toca es **elegir otra** para ese solar o **recolocar solo esas dos camas** (con su medida: **2 fuera → 0** ✓) y
+  **sin tocar la plantilla** (I6);
+- si la plantilla las trae **dentro** → entonces lo que las mueve es el **pegado** (el giro/espejo de `placeInWorld` o el
+  `origen` de L5774) y ahí sí hay arreglo de raíz ✓.
+Para verlo basta con **volcar los bloques de la plantilla** (`level.getStructureManager().getOrCreate(...)` tiene su
+tamaño y sus bloques) o con **comparar la misma casa en una aldea nueva** del arnés: si allí las camas están dentro ✓,
+el problema es **de este guardado** (una migración vieja) ✗; si están fuera **también** ✓, es del pegado ✓.
+
 ### I260 · `placeVanillaHouse`: DESCARTADO EL PASO 1 (EL «SOLAR LIMPIO») Y DÓNDE SIGUE LA BÚSQUEDA
 
 Leído el constructor de las casas (`VillageGenerator` **L5751-5792**), que pega **plantillas del propio juego**:
