@@ -6949,6 +6949,39 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I256 · LA CASA DE LAS CAMAS EN LA CALLE: IDENTIFICADA Y MEDIDA (el jugador dio las coordenadas)
+
+El jugador mandó una captura **con el F3**: estaba en **(526, 63, 563)** mirando al este, apuntando a **(531, 65, 563)**
+(piedra), y se veía lo peor del caso: **«Ximena (Leñador) Durmiendo»** en una de las dos camas rojas que flanquean la
+puerta, **en la calle** ✗.
+
+**MEDIDO** ✓ con `build/casa_camas_calle.py` (su guardado, **solo lectura**), volcando la casa capa por capa (x 522..540,
+z 554..572):
+
+```
+y=62  suelo: césped 313 + tablones 23 + adoquín 16      (la capa de abajo)
+y=63  CAMAS en (531,560) (531,561) (531,565) (531,566)  + PUERTA en (531,563)   <- la MISMA columna, x=531
+y=64  la puerta sigue (arriba) y el resto, muro
+y=66-67  segunda planta: puertas dobles en (533,562) y (533,564)
+y=68-71  segunda planta y tejado, con sus escaleras
+```
+
+**LO QUE DICE LA MEDIDA** ✓✓ (y es concluyente):
+- **Las dos camas están en el PLANO DE LA PARED**: la misma `x = 531` que la **puerta** (531,563), una a cada lado
+  (z 560-561 al norte, z 565-566 al sur) ✗ → quedan **en la calle**, flanqueando la entrada, que es justo lo que se ve
+  en la captura y lo que el jugador reporta ✗.
+- **La casa SÍ tiene segunda planta** (capas 66-71, con escaleras ✓), así que **no es** que las camas no quepan: es que
+  se colocan **una celda hacia fuera** (en la pared en vez de dentro de la habitación) ✗.
+- Esto **corrige** la hipótesis de I252/I253/I254 para **este** caso: no era el desnivel ni la altura del mobiliario,
+  era **la columna equivocada** ✓. (En la barraca, que era el caso de I253, el problema **sí** eran las camas del
+  tejado.) **Dos defectos distintos**, y ahora los dos están localizados por separado ✓.
+
+**EL ARREGLO (siguiente paso, ya con el caso)**: encontrar el constructor que pone **esas dos camas** (una a cada lado de
+la puerta, en su misma `x`) y **meterlas dentro de la habitación** (una celda hacia dentro, o la que pida la planta), y
+**medir** después que las dos quedan dentro y que el aldeano duerme dentro. La búsqueda es por las llamadas a `bed(...)`
+de `VillageGenerator` (L2711, L3658, L4153, L4998, L7531 y las de la barraca) y por el constructor de **casas** del
+pueblo (el acta menciona «plantilla/migración de casas», I104).
+
 ### I255 · EL HAZ DEL CENTRO: MEDIDO POR TRES LADOS, Y **NO SE REPRODUCE** EN SU ALDEA
 
 Reporte del jugador: *«los efectos de partículas del centro de la aldea están desplazados a un lado»*. Se ha medido en

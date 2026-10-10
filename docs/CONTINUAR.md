@@ -118,9 +118,13 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
   (i) **dos camas EN EL TEJADO de la barraca** (capa 74 = pueblo+11), restos de un trazado viejo que **la limpieza no
   barre** porque su banda es `pueblo+3 .. pueblo+8` (`VillageGenerator` L1759-1765) → el arreglo es una **limpieza de
   camas sueltas** por encima del tejado (solo camas), y ya tiene su medida (contar antes: 2 ✗ / después: 0 ✓);
-  (ii) **dos camas EN LA CALLE, a los lados de una puerta** (el pantallazo): **no son de la barraca** ✗ (en la barraca
-  las de dentro están bien, capa 68) → es **otro edificio** y hay que **identificarlo antes de tocarlo** ✗: falta que el
-  jugador dé **las coordenadas (F3)** de esa casa.
+  (ii) **dos camas EN LA CALLE, a los lados de una puerta** — **IDENTIFICADO Y MEDIDO** ✓✓ (9-oct-2026, **I256**, con
+  las coordenadas del F3 del jugador): la casa está junto a **(531, 65, 563)** y las camas están en **(531, 560)**,
+  **(531, 561)**, **(531, 565)** y **(531, 566)** de la **capa 63** — o sea **en el plano de la pared**, la MISMA `x=531`
+  que la **puerta (531,563)** ✗, y por eso quedan en la calle (y **Ximena, Leñador, duerme ahí** ✗). La casa **sí tiene
+  segunda planta** (capas 66-71, con escaleras), así que **no es** que no quepan: **se colocan una celda hacia fuera** ✗.
+  Siguiente paso: el constructor de esas dos camas (llamadas a `bed(...)` y el constructor de casas) → meterlas **dentro**
+  y medirlo.
 - **B · Las partículas del centro de la aldea están DESPLAZADAS a un lado** ✗ → **MEDIDO Y NO SE REPRODUCE** ✓
   (9-oct-2026, **I255**): en su aldea el haz sube por **(566.5, 566.5)** y ahí están **el centro de la plataforma del
   kiosco** (un 9×9 de piedra), la **campana** (566,64,566, `dx=+0 dz=+0`) y el **farol** (566,67,566) ✓✓. Su guardado
