@@ -6949,6 +6949,22 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I249 · PUNTO 6 (LOS POLLOS): LA FASE 5 DEL PLAN NO SE HIZO, Y NO ES UN PENDIENTE
+
+El plan del cerebro (`docs/aldea-cerebro.md`, tabla de fases) pedía en su **fase 5**: *«los pollos y el ganadero con el
+portón (tu idea): apertura al paso, cierre detrás»*, con el resultado esperado **«pollos fuera del recinto: 0»** ✓. Fue
+a comprobarse y **no hay nada que arreglar, pero la frase estaba mal** ✗:
+
+- El gallinero se resolvió **de otra manera**, y está **medido y escrito**: su portón es **un hueco de un bloque a
+  propósito** —*«los pollos pasan, los aldeanos no»*— y la propia herramienta de auditoría **salta** ese portón al
+  revisar los huecos tapados (`tools/audita_aldea.py`, apartado F). O sea: el juego **deja salir a los pollos a
+  propósito** ✓, así que el «0» de la fase 5 **no puede ser** el criterio de nada ✗.
+- **LA DECISIÓN (la robusta)**: la fase 5 fue **una idea que se resolvió de otra manera**, así que **se cierra como «no
+  es un pendiente»** ✓ y se corrige la frase del plan (nota puesta en su tabla). **No se implementa un portón nuevo**
+  dentro de una pasada de cierre ✗: eso sería una función nueva (que el portón se abra al paso y se cierre detrás), y
+  las funciones nuevas se piden, no se cuelan —y menos tocando el corral, que ya costó varias invariantes ✓ (I6 y el
+  farol del corral, entre otras).
+
 ### I248 · PUNTOS 6 (LA ZANJA EN `x=603`) Y 9 (LA CAMA SIN ACCESO): DOS DECISIONES, CON SU MEDIDA
 
 **Punto 6 · «la zanja de la mina en `x=603` (1×1, 2 de hondo, preexistente): pulido de mundo»** (auditoría del 5-oct,

@@ -132,11 +132,11 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
     lineas** y **1790 paradas** (la metrica anterior veia el **5 %** ✗), y el **99,5 %** con faena del mod en marcha. Se
     sigue usando `[Rumbo]` (peticiones de ruta) y `no consigue llegar` (rendiciones) para lo otro.
 
-6. **LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS** ✗ (**`docs/aldea-cerebro.md`** L132): pide «pollos fuera del
-    recinto: 0» y **no hay ninguna medida** de eso; ademas el gallinero tiene un **hueco de un bloque** por el que
-    los pollos **si** pasan a proposito (acta L1275), asi que el «se quedan dentro por construccion» esta **sin
-    comprobar**. Se mide con la traza del gallinero (`MEDIR_ALMACEN_Y_HUEVOS`: las gallinas del hueco) o se corrige
-    la frase.
+6. ~~**LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS**~~ — **CERRADO: NO ERA UN PENDIENTE** ✓ (9-oct-2026, **I249**): el
+    gallinero se resolvio **de otra manera** —tiene un **hueco de un bloque a proposito**, *«los pollos pasan, los
+    aldeanos no»* (acta L1275, y la auditoria **salta** ese porton)—, asi que el «pollos fuera del recinto: 0» del plan
+    **no puede ser** el criterio. La frase del plan queda corregida, y **si el jugador quiere** el porton que se abre al
+    paso y se cierra detras, es una **funcion nueva** (se pide, no se cuela en una pasada de cierre).
 
 **Cerrado hoy en este apartado** (se deja escrito, con su numero de invariante):
 - ✅ **El dato de control del arnes que no marca** — **CERRADO Y MEDIDO** (**I244**): ahora cuenta la **columna entera**

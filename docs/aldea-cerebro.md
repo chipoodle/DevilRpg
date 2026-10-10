@@ -131,6 +131,14 @@ proponen.** Cuatro piezas, todas nuestras:
 | **4** | migrar las tareas restantes (granjero, recolector, leñador, herrero, minero, guardia) al despachador | **0 avisos de aldeano** en la ventana; el aviso solo puede venir del sistema |
 | **5** | los pollos y el ganadero con el portón (tu idea): apertura al paso, cierre detrás | **pollos fuera del recinto: 0** al final de la corrida |
 
+> ⚠️ **LA FASE 5 NO SE HIZO, Y NO ES UN PENDIENTE** (comprobado el 9-oct-2026, punto 6 de la lista viva): pedía *«los
+> pollos y el ganadero con el portón: apertura al paso, cierre detrás»* y esperaba **«pollos fuera del recinto: 0»**,
+> pero el gallinero se resolvió **de otra manera**: tiene un **hueco de un bloque a propósito**, y está medido y escrito
+> en el acta (*«los pollos pasan, los aldeanos no»*, I4/`tools/audita_aldea.py` apartado F, que **salta** ese portón). O
+> sea: el juego **deja salir a los pollos a propósito**, así que aquel «0» **no puede** ser el criterio. No se
+> implementa un portón nuevo dentro de una pasada de cierre ✗; si el jugador lo quiere (apertura al paso y cierre
+> detrás), es una **función nueva** y se pide como tal.
+
 > ✅ **CERRADO (comprobado el 9-oct-2026)**: fases **1** y **2** probadas, medidas y **retiradas** (fase 1: la nota de arriba; fase 2: **I150** y `VillageManager.caminarHacia` L5600-5602, con el módulo sin cablear); fase **3** cumplida (`Entrando a la huerta` **0 y 0** y los avisos del corral a **0-1**, **I155**/I157/**I197**); y fase **4** **no procede** (migrar las tareas al despachador dejó de tener sentido al retirarse M1). Se deja la tabla porque cuenta el camino, pero no es trabajo pendiente. **La fase 5 no tiene medida en el acta** (ver la nota del portón y los pollos, arriba).
 
 **Nada de esto entra sin su media.** Y todo lo que no mejore la media, se retira y se apunta (como se ha hecho hoy con
