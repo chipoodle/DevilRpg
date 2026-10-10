@@ -6949,6 +6949,40 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I276 · LOS CUATRO PORTONES DEL MURO ESTÁN **CERRADOS** (`open=false`) — Y EL GOAL NO SABE ABRIRLOS
+
+La comprobación que faltaba antes de tocar el goal ✓, medida con `build/portones_abiertos.py` sobre el guardado del
+jugador (**solo lectura**), en el anillo de la aldea:
+
+```
+(504, 63..65, 565)  devilrpg:porton_doble   r=62.0   open=false   }  los CUATRO portones
+(504, 63..65, 566)  devilrpg:porton_doble   r=62.0   open=false   }  del muro (I219),
+(504, 63..65, 567)  devilrpg:porton_doble   r=62.0   open=false   }  en los cuatro puntos
+(565, 63..65, 504)  devilrpg:porton_doble   r=62.0   open=false   }  cardinales, a r=62
+(565, 63..65, 628)  devilrpg:porton_doble   r=62.0   open=false   }
+(537, 63, 604)  oak_fence_gate   r=47.8   open=true    }  y las compuertas de valla, que el goal
+(542, 63, 599)  oak_fence_gate   r=40.8   open=true    }  SÍ sabe abrir, están POR DENTRO del
+(542, 63, 609)  oak_fence_gate   r=49.2   open=true    }  muro (r=40-49) y ABIERTAS
+(547, 63, 604)  oak_fence_gate   r=42.5   open=true    }
+```
+
+**LA CAUSA, ENTERA Y MEDIDA** ✓✓:
+1. Los **cuatro portones del muro** son **bloques dobles** (`devilrpg:porton_doble`, I224 ✓) — **a `r=62`**, que es el
+   anillo ✓ (coincide con I219, *«PORTONES 9»*) — y están **CERRADOS** ✗ (`open=false`, los doce bloques: dos hojas por
+   tres de alto, menos la juntura ✓).
+2. El **goal que abre portones a los aldeanos** (`entity/goal/VillagerGateGoal.java`) **no menciona el bloque doble** ✗
+   (grep en I275 ✓): lo que abre son **compuertas de valla** ✓, que es exactamente lo que hay **por dentro** (r=40-49 ✓)
+   y **abierto** ✓.
+3. Así que **nadie abre los del muro** ✗ → el aldeano con faena al otro lado **no cruza** ✓ → y **`[Gate]` sale 0** en
+   una sesión entera ✓✓, mientras el goal corre 40, 18, 14… veces por las otras compuertas ✓.
+
+**EL ARREGLO, ya sin ninguna duda de dónde está** ✓: **enseñar al goal a abrir el bloque doble**, reutilizando su propia
+API —tiene `OPEN`, `SIDE`, `LAYER` y `JUNTURA` ✓, y el propio pueblo ya los abre por otro camino
+(`VillageManager.asegurarPortonesAbiertos`, citado en `DoubleGateBlock` **L50** ✓)—, y **cerrarlos detrás** como hace con
+las compuertas ✓. **Y su medida es la buena de este caso**: la traza **`[Gate]` tiene que salir** cuando un aldeano cruce
+— y eso **sí se puede ver en el arnés** ✓✓ (el arnés tiene aldeanos con faenas y portones: hoy `[Gate]` sale **0** veces
+en sus corridas ✓, así que el antes está medido ✓).
+
 ### I275 · LA CAUSA DEL `[Gate] = 0`: EL GOAL ABRE **COMPUERTAS DE VALLA**, Y EL PORTÓN DEL MURO ES EL **BLOQUE DOBLE**
 
 La lectura que pedía I274, hecha ✓ — y con **dos correcciones a mi propio acta** ✗:
