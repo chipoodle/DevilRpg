@@ -6949,6 +6949,36 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I248 · PUNTOS 6 (LA ZANJA EN `x=603`) Y 9 (LA CAMA SIN ACCESO): DOS DECISIONES, CON SU MEDIDA
+
+**Punto 6 · «la zanja de la mina en `x=603` (1×1, 2 de hondo, preexistente): pulido de mundo»** (auditoría del 5-oct,
+punto 4) → **NO PROCEDE TOCARLO, y se dice por qué** ✓:
+
+- **MEDIDO DOS VECES** con `build/zanja_603.py` (lee el guardado del jugador, **solo lectura**), buscando en la columna
+  `x=603` y en la zona de su aldea 0 (566,566) los huecos de **2 o más de alto con suelo sólido debajo**: en la primera
+  pasada, con el cielo incluido, salían las celdas de la superficie (aire sobre césped, que es **el cielo**, no un
+  hueco ✗); afinado a **bajo tierra** (de la capa 20 a la que se pisa), lo que hay es **una cueva natural** (`y=22..30`,
+  con piedra y mineral arriba y abajo) y **un hueco interior** de un edificio (`z=533`, con losa debajo y tablones
+  encima). **Ni rastro de la zanja de 1×1 y 2 de hondo** ✗.
+- **LA DECISIÓN (la robusta)**: **no se toca el mundo del jugador por un detalle cosmético** ✓. No hay defecto del mod
+  que se pueda arreglar aquí (la zanja era «preexistente» y hoy no se encuentra), y meter mano en su partida para
+  tapar un agujero de un bloque es justo el cambio que esta casa prohíbe: **tocar lo que funciona** ✗. Si algún día
+  aparece otra vez, el sondeo está en `build/zanja_603.py` para localizarla **antes** de decidir.
+
+**Punto 9 · «una cama sin acceso no se le da a nadie»** (**I43**, acta L994) → **ES UN LÍMITE, NO UN DEFECTO: pasa al
+apartado de lo aceptado a propósito** ✓:
+
+- Lo que dice el acta, y es la clave: la celda de espera exige estar a **≤2,0 bloques** de la cama, así que una cama
+  **encerrada** (muro o mobiliario delante) se queda sin dueño — y **«es construcción/mobiliario del pueblo, no del
+  reparto»** ✓. O sea: el reparto está **bien** (no le da a nadie una cama a la que no puede llegar ✓), y lo que falla,
+  si falla, es **el edificio**.
+- **Y la medida que lo respalda** (la misma entrada I43, en la partida del jugador): **`CAMAS RESUMEN: adultos=11
+  conCama=11 COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=11`** ✓ — **nadie se quedó sin cama**. El caso de la cama encerrada es
+  un **límite del banco de pruebas** (una cama metida en un cuarto cerrado), no algo que le pase al pueblo.
+- **LA DECISIÓN (la robusta)**: no se toca el reparto ✗. Un cambio ahí (dar una cama inalcanzable, o mover al aldeano
+  de sitio) sería **peor** que el límite: el riesgo es el «baile» que costó varias invariantes (I205-I209) ✓. Se deja
+  escrito en **(c)** con su porqué y con el número que lo respalda.
+
 ### I247 · PUNTO 7 CERRADO (LA TIERRA DE CULTIVO YA NO ESTÁ DEBAJO) Y DÓNDE SE MIDE EL COMPOSTERO
 
 **Punto 7 de la lista viva** —«objetos flotando y `repuso farmland en y=61`, una capa por debajo de los bancales»

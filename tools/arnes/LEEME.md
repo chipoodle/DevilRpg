@@ -521,7 +521,7 @@ asignar centro, que es lo que hace una ola nueva: sirve para ver que el **tope d
    > ⚠️ **SIGUE PENDIENTE (comprobado el 9-oct-2026)**: la prueba `celdas del anillo abiertas` marca **0** aunque esté
    > taladrando, porque mira **una celda fija por columna** y el taladro va a la altura del suelo del monstruo; es el
    > cabo suelto de **I243** (`docs/aldea-invariantes.md` L6947-L6950), se arregla mirando la **columna entera** — está
-   > en `docs/CONTINUAR.md` §2.0 (punto 2).
+   > en `docs/CONTINUAR.md` §2.0, apartado (a), punto 2 (lo cierras jugando).
 
 Las dos variantes y sus números (fina y gruesa) están en el javadoc de `medirLaMontana`.
 
@@ -724,7 +724,7 @@ probó y NO cambia nada medible** (las rendiciones salen a 1,25 por 1.000 ticks 
 > ⚠️ **SIGUE PENDIENTE (comprobado el 9-oct-2026)**: que un aldeano **cruce de verdad** el portón del muro **no está
 > medido**: cinco corridas y el instrumento no aisló el cruce (**I222**, `docs/aldea-invariantes.md` L6412-L6417). La
 > firma a buscar en el registro del jugador es `[Gate] … aldeano DENTRO · destino FUERA` y, después, el aldeano fuera —
-> está en `docs/CONTINUAR.md` §2.0 (punto 1).
+> está en `docs/CONTINUAR.md` §2.0, apartado (a), punto 1 (lo cierras jugando).
 
 ### `MEDIR_LENADOR = true` — el leñador, su arboleda y el polvo de hueso (I92/I93)
 

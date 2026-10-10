@@ -119,7 +119,10 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    es copia del guardado), (3) medir el antes, (4) aplicar el arreglo y volver a contar: tiene que bajar a ~0. El juez
    ya esta montado: `bancalN=…/compostero:NO` tiene que pasar a **`SI`**.
 
-6. **La zanja de la mina en `x=603`** ✗ (auditoria, acta L6213-6226, punto 4): pulido de mundo.
+6. ~~**La zanja de la mina en `x=603`**~~ — **CERRADO: NO PROCEDE** ✓ (9-oct-2026, **I248**). Medido dos veces con
+   `build/zanja_603.py` (guardado del jugador, solo lectura): en `x=603` **no hay** ninguna zanja de 1×1 y 2 de hondo (lo
+   que hay es una **cueva natural** en y=22..30 y un **hueco interior** de un edificio). Y la decisión robusta es **no
+   tocar el mundo del jugador por un detalle cosmético**, que es justo lo que la casa prohíbe.
 7. ~~**Objetos flotando y `repuso farmland en y=61`**~~ — **CERRADO CON MEDIDA** ✓ (9-oct-2026, **I247**): leido el
    guardado del jugador (solo lectura), **no hay ni una tierra de cultivo en la capa 61**: 204 en la 62 (donde toca) y
    los 3 composteros en la 63 ✓. Lo de la 61 era un resto del trazado viejo, ya limpiado por el asentado de la huerta
@@ -128,9 +131,8 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
     registro no se inunda) pero **ahora lleva el numero**: `paradas=N (con faena=M)`. En la corrida 182 salieron **91
     lineas** y **1790 paradas** (la metrica anterior veia el **5 %** ✗), y el **99,5 %** con faena del mod en marcha. Se
     sigue usando `[Rumbo]` (peticiones de ruta) y `no consigue llegar` (rendiciones) para lo otro.
-9. **Una cama sin acceso no se le da a nadie** (**I43**, acta L994): la celda de espera exige estar a **≤2,0 bloques**,
-    asi que una cama encerrada se queda sin dueño (limite conocido).
-10. **LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS** ✗ (**`docs/aldea-cerebro.md`** L132): pide «pollos fuera del
+
+6. **LA FASE 5 DEL PLAN DE LA ALDEA: LOS POLLOS** ✗ (**`docs/aldea-cerebro.md`** L132): pide «pollos fuera del
     recinto: 0» y **no hay ninguna medida** de eso; ademas el gallinero tiene un **hueco de un bloque** por el que
     los pollos **si** pasan a proposito (acta L1275), asi que el «se quedan dentro por construccion» esta **sin
     comprobar**. Se mide con la traza del gallinero (`MEDIR_ALMACEN_Y_HUEVOS`: las gallinas del hueco) o se corrige
@@ -147,7 +149,13 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
 - ➡️ **Las losas del tejado a +11 NO eran un pendiente**: es un limite a proposito y esta en **(c)**, abajo.
 
 **(c) ACEPTADO A PROPOSITO (no se toca, y se dice)**:
-11. **Los tejados quedan fuera del obrero** (**I60**, acta L1470): su banda es **+5/−6** sobre el nivel del pueblo
+7. **Una cama sin acceso no se le da a nadie** (**I43**, acta L994): la celda de espera exige estar a **≤2,0 bloques**,
+    asi que una cama **encerrada** (muro o mobiliario delante) se queda sin dueno — y el acta dice por que: *«es
+    construccion/mobiliario del pueblo, no del reparto»*. **La medida lo respalda** (misma entrada): en la partida,
+    `CAMAS RESUMEN: adultos=11 conCama=11 COMPARTIDAS=0 SIN CAMA=0 DURMIENDO=11` ✓ — **nadie se quedo sin cama**. Decision
+    robusta: **no se toca el reparto** (dar una cama inalcanzable o mover al aldeano seria peor: el «baile» costo
+    I205-I209). Ver **I248**.
+8. **Los tejados quedan fuera del obrero** (**I60**, acta L1470): su banda es **+5/−6** sobre el nivel del pueblo
     (`REPAIR_MAX_UP`/`REPAIR_MAX_DOWN`, `VillageManager.java` L852-853, filtro en L6974), asi que **si un tejado se
     rompe, nadie lo sube a arreglar**. El acta lo llama *«limite conocido (dicho a proposito)»* y da la razon: *«subir a
     un tejado es otra obra, no una reparacion de planta»*. **MEDIDO el 9-oct-2026** con `build/obras_pendientes.py`
@@ -156,9 +164,9 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
     el limite. *(Estaba en el apartado (b) por error mio: lo puse como «codigo pendiente» sin leer que el acta ya lo
     habia decidido asi. Si el jugador QUIERE que los tejados se reparen, eso es una funcion nueva —que el obrero trabaje
     en alto—, no un arreglo.)*
-12. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
+9. **El piso de arriba desconectado por el apiñamiento de camas** (**I104**, acta L3009): es de la plantilla y de la
     migracion de casas; **no se toco**, y lo que hay es la **red de seguridad** (`bajarDeLasCamas` + el rescate de I103).
-13. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
+10. **El minero coge picos de madera teniendo hierro** (**I141**, acta L4642): la entrada dice que **no se toca ahora**
     («no hay medida que lo pida») y nada posterior lo ha cambiado.
 
 Lo de abajo es el historial de los cinco pendientes que se cerraron en esta ronda; debajo del todo esta el historial
