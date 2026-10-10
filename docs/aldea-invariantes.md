@@ -6949,6 +6949,41 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I253 · LAS CAMAS FUERA: LA CAUSA, MEDIDA CAPA POR CAPA
+
+Continuación de **I252**, y la hipótesis **se confirma** ✓. Medido con `build/barraca_capas.py` (guardado del jugador,
+**solo lectura**), volcando el edificio de la barraca (x 588..612, z 576..598) **capa por capa**:
+
+```
+y=62   575 bloques  suelo: dark_oak_planks 285 + stone_bricks 86 + césped 199
+y=67   298 bloques  FORJADO del dormitorio: dark_oak_planks 220
+y=68   131 bloques  CAMAS (10 mitades = 5 camas) + 6 arcas   <- DENTRO, encima del forjado
+y=72   287 bloques  techo: dark_oak_planks 281
+y=73   326 bloques  TEJADO: deepslate_tiles 251 + escaleras 39
+y=74    82 bloques  TEJADO... y 4 mitades de CAMA (594-595, 583-584)  <- DOS CAMAS EN EL TEJADO ✗
+```
+
+**LO QUE ESTO DICE** ✓:
+1. **Las camas de dentro están bien puestas**: el dormitorio tiene **forjado en 67** y las camas en **68**, con sus
+   arcas ✓ — o sea `yPiso2 = 68` y el forjado en `yPiso2 - 1 = 67`, exactamente como dice el código (**L1748**).
+2. **La causa de las de fuera** es la que se sospechaba: **el mobiliario se ata al nivel del pueblo, no al suelo del
+   edificio** (`yPiso2 = nivel + BARRACA_PISO2`, **L1748**; las filas, **L1865/L1868**). Donde el edificio **sí** está a
+   la altura del pueblo, las camas caen dentro (este caso, capa 68 = su dormitorio) ✓; donde **no** lo está —la barraca
+   del pantallazo, sobre una plataforma más alta—, `yPiso2` cae **al nivel de la calle** y las camas salen **a la calle,
+   al lado de la puerta** ✗, que es exactamente lo que reportó el jugador.
+3. **Y hay DOS CAMAS EN EL TEJADO** ✗ (capa 74, encima del tejado de la 73): son **restos del trazado viejo** —cuando la
+   barraca tenía dos pisos, `BARRACA_PISO2_VIEJO = 4` (**L1234**)— que **la migración no barre**, porque busca la «cama
+   que estorba» a la **altura nueva** (`yPiso2`, **L1505** y **L1542**) y a esa altura no hay ninguna ✗.
+
+**EL ARREGLO (el robusto, atado a la causa)** — se implementa en la ronda siguiente, y es pequeño:
+- **(1) El mobiliario del dormitorio, al suelo del EDIFICIO**: `yPiso2` sale de la **base de la barraca** (su Y), no del
+  nivel del pueblo. Con eso las camas caen dentro **esté el edificio donde esté** (que es el caso del pantallazo).
+- **(2) Barrer el dormitorio VIEJO**: quitar las camas (y las arcas) que estén **dentro de la huella de la barraca y por
+  encima de su techo** — así se limpian las del tejado **sin depender de alturas históricas**, que es lo que falló.
+Y la decisión que pedía el jugador (**agrandar la casa** o **devolver el segundo piso con escaleras**) **no hace falta**
+si las 8 caben en el suelo del edificio: eso se mide en la misma ronda, contando huecos de la planta, **antes** de
+elegir. Si no caben, se dice con el número y se elige.
+
 ### I252 · LOS DOS REPORTES NUEVOS: LAS CAMAS DE LA BARRACA Y EL HAZ DEL CENTRO (lo medido y lo que falta)
 
 **B · EL HAZ DE LUZ DEL CENTRO** (el jugador: *«los efectos de partículas del centro de la aldea están desplazados a
