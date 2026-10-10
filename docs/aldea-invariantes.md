@@ -6949,6 +6949,42 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I267 · DE QUIÉN SON LAS CAMAS SUELTAS (+11 EN **LAS DOS** ALDEAS) Y POR QUÉ EL BARRIDO NO DISPARABA
+
+Responde a la pregunta que dejó I266, y la respuesta **confirma el patrón en dos aldeas distintas** ✓:
+
+Medido con `build/de_quien_son.py` (mundo del arnés, centro (470,646), cota 66, **solo lectura**), las camas por capa:
+
+```
+capa 66: 12 mitades   dx [-32 .. 55]  dz [-28 .. 39]      (repartidas por el pueblo)
+capa 71: 20 mitades   dx [25 .. 41]   dz [15 .. 27]       <- el dormitorio de la barraca
+capa 77:  4 mitades   dx [28, 29]     dz [17, 18]         <- LAS SUELTAS, una a una:
+     (498,663) (+28,+17)   (498,664) (+28,+18)   (499,663) (+29,+17)   (499,664) (+29,+18)
+     y TODAS con `deepslate_tiles` DEBAJO (el tejado de la barraca)
+```
+
+- **Son de la barraca** ✓: están al lado del grupo del dormitorio (capa 71) y **encima de su tejado** (apoyadas en
+  `deepslate_tiles`).
+- **Y están a `nivel + 11`** ✓ (capa 77 con el pueblo en 66) → **el mismo +11 que las del jugador** (capa 74 con el
+  pueblo en 63, I253) ✓✓ — el patrón es **idéntico en las dos aldeas**, que es lo más valioso de esta medida: **no es
+  cosa de su guardado**, es del trazado viejo de dos pisos ✓.
+- Las **buenas** están a **+5** (capa 71 con 66 ✓; capa 68 con 63 ✓ en su aldea) ✓ → la banda que las separa es
+  **+8 .. +20** ✓.
+
+**POR QUÉ EL BARRIDO DE I265 NO DISPARABA** ✗ (y esto es lo que hay que cambiar): su regla era **«cielo abierto
+encima»**, y estas camas tienen **el tejado de la barraca por encima** ✗ → la regla, que era buena para el caso de la
+calle (I264) **no sirve** aquí ✗. La que sirve es **relativa al edificio**: dentro de la huella de la barraca, la banda
+**+8 .. +20** ✓ (medida en las dos aldeas ✓).
+
+**Y LOS DOS INTENTOS DE ESCRIBIRLO SE RETIRARON** ✗ (se deja dicho para no repetir el camino):
+1. **En `VillageGenerator` + `CURRENT_LAYOUT` 81→82** (I265): la traza **no salió** (la regla del cielo ✗) y el salto de
+   versión **movió el pueblo** (56 → 36 mitades, I266) → **retirado** ✓.
+2. **En el latido de `VillageManager`** (junto al compostero): el método quedó **dentro de otro método** ✗ (ancla de
+   inserción mal elegida) → **error de compilación** → **retirado** ✓ (compila y lint verde después ✓).
+**Lo que toca en el siguiente intento**: el barrido **como método propio de `VillageManager`** (no de
+`VillageGenerator`, que dispara el guardián I9 y pide subir `CURRENT_LAYOUT`, que la medida prohíbe ✗), insertado **con
+el ancla comprobada** (al final de un método, no en medio), con la **banda +8..+20** ✓ y **solo camas** ✓.
+
 ### I266 · EL BARRIDO DE CAMAS **SE RETIRA**: LA MEDIDA DIJO QUE NO HACÍA NADA (Y EL SALTO DE VERSIÓN SÍ MOVIÓ EL PUEBLO)
 
 Se escribió el barrido de I265 (código, compilado, con el `CURRENT_LAYOUT` subido 81→82 como pide el guardián I9) y **se
