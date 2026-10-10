@@ -6949,6 +6949,28 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I259 · LAS CAMAS DE LAS CASAS: LA TABLA DE L9881 ES LA CASA GRANDE, NO LA CASA 1
+
+Siguiendo I257 (la casa de las camas en la calle es **la casa 1 (oeste)**), se fue a buscar **dónde se ponen esas dos
+camas** y **se descartó el candidato equivocado** ✓ (que es también un resultado, y se escribe para no repetirlo):
+
+- La tabla de camas de **L9875-9882** (`int[][] camas = {{1,2,-1},{4,2,-1}, … {14,12,1},{17,12,1}}` ✓, puestas con
+  `bed(...)` en **L9881**) es de **la casa GRANDE** —la que se levanta con `casaGrandeAleatoria` (**L328**)—: tiene
+  **diez camas** repartidas en cuartos y una tabla de **arcas** detrás (L9884-9889), con el muro de la taberna
+  (`TABERNA_FONDO`) en el mismo bloque ✓. **No es** la casa 1 ✗.
+- La casa 1 (oeste) tiene **dos** camas, y su tabla no está ahí ✗.
+
+**LO QUE ESTO DEJA CLARO** ✓: las dos camas de la casa 1 **no las pone el mod una a una**: vienen **de la plantilla
+vanilla** que se pega con **`placeVanillaHouse`** (**L325-328**), y el mod **la vacía** al levantar la casa (L274) para
+volver a amueblarla. Así que el defecto **no** está en una tabla de coordenadas nuestra ✗ (descartado ✓), sino en **cómo
+se pega o se re-amuebla esa plantilla** — y el siguiente paso es leer `placeVanillaHouse` (el pegado: **giro** y
+**espejo**, y el vaciado) y compararlo con las camas de la plantilla original, con las celdas de la casa 1 delante
+(**puerta (531,63,563)**; camas en **(531,63,560/561)** y **(531,63,565/566)**, es decir **en la misma `x` que la puerta**
+✗).
+
+**Regla que se respeta**: **no se toca la plantilla** (I6, *lo que ya funciona no se reconstruye*): si el apaño fuera
+mover las camas a mano, se moverían **solo esas dos** y con su medida (2 fuera → 0 ✓) antes de darlo por bueno.
+
 ### I258 · EL HAZ DE LUZ: GEOMETRÍA DEL KIOSCO MEDIDA, Y EL HAZ ESTÁ BIEN PUESTO
 
 El jugador confirmó que el efecto del que hablaba es **el haz de luz** (el 1 de los tres candidatos de I255). Medido

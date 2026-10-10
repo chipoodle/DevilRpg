@@ -123,10 +123,12 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
   **(531, 561)**, **(531, 565)** y **(531, 566)** de la **capa 63** — o sea **en el plano de la pared**, la MISMA `x=531`
   que la **puerta (531,563)** ✗, y por eso quedan en la calle (y **Ximena, Leñador, duerme ahí** ✗). La casa **sí tiene
   segunda planta** (capas 66-71, con escaleras), así que **no es** que no quepan: **se colocan una celda hacia fuera** ✗.
-  **Ya está localizado el culpable** ✓ (9-oct-2026, **I257**): la casa es **la «casa 1 (oeste)»** del trazado
+  **Acotado** ✓ (9-oct-2026, **I257**/**I259**): la casa es **la «casa 1 (oeste)»** del trazado
   (`VillageGenerator` L121-133, índice 0) y la levanta **`placeVanillaHouse`** (L263-318), que **vacía** la plantilla
   vanilla y la **vuelve a amueblar** — y ahí las dos camas caen **una celda hacia fuera** ✗. Siguiente paso: meterlas
-  **dentro** en ese amueblado (sin tocar la plantilla) y medir: **2 camas fuera → 0** ✓.
+  **dentro** en ese pegado/amueblado (sin tocar la plantilla) y medir: **2 camas fuera → 0** ✓. *(Descartado el
+  camino equivocado: la tabla de camas de `VillageGenerator` L9875-9882 es de la **casa grande**, no de la casa 1 —
+  ver **I259**.)*
 - **B · El haz de luz del centro** — **MEDIDO: ESTÁ BIEN PUESTO** ✓✓ (9-oct-2026, **I255**/**I258**). El jugador
   confirmó que era el haz. Comprobado en su aldea: **X/Z** = (566.5, 566.5), que es el medio de la **plataforma** del
   kiosco (9×9), de la **campana** (566,64,566) y del **farol** (566,67,566) ✓; **Y**: el haz arranca en `nivel+6` = **69**
