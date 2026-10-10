@@ -820,7 +820,7 @@ public final class VillageManager {
      *       reciban también.</li>
      * </ul>
      */
-    public static final int CURRENT_LAYOUT = 82;   // I265: el barrido de camas sueltas (NO se sube CURRENT_HOUSES: no se rehacen las casas, solo se limpia)
+    public static final int CURRENT_LAYOUT = 81;
 
     /**
      * Versión de las <b>casas</b> que debe tener una aldea: 0 = cabañas procedurales (partidas viejas),
@@ -2481,9 +2481,6 @@ public final class VillageManager {
             // (42 de 60 destinos en y=63 en una corrida). La migración de arriba no puede con ese caso —exige la celda
             // libre y allí hay césped—, así que se baja el compostero a la cota y se le pone el suelo que le falte.
             composterosMovidos.addAll(VillageGenerator.asentarLosComposterosALaCota(level, center));
-            // I265 · Y LAS CAMAS SUELTAS (fuera de su edificio: en una pared o encima de un tejado). Van aquí, con el
-            // compostero, porque esta migración corre una vez por aldea y así también arregla las ya construidas.
-            VillageGenerator.quitarCamasSueltasDeLosEdificios(level, center);
             // I166 · Y EL CIMIENTO: abajo de la aldea NO PUEDE HABER HUECO (lo pidió el jugador: *"varias
             // construcciones están hundidas un bloque y alrededor está hueco y da a un pozo, porque abajo de la villa
             // está hueco y debería ser sólido; chequea alrededor de la choza del minero"*). `sellarSuelo` tapa la capa

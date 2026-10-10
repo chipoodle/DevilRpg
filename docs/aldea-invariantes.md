@@ -6949,6 +6949,34 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I266 · EL BARRIDO DE CAMAS **SE RETIRA**: LA MEDIDA DIJO QUE NO HACÍA NADA (Y EL SALTO DE VERSIÓN SÍ MOVIÓ EL PUEBLO)
+
+Se escribió el barrido de I265 (código, compilado, con el `CURRENT_LAYOUT` subido 81→82 como pide el guardián I9) y **se
+midió antes/después** con el mundo del arnés. **La medida lo retira** ✗, y se dice con los números:
+
+**ANTES** (`build/cuenta_camas_aldea.py world`, aldea del arnés en (470,646), radio 70): **56 mitades de cama** —
+**32** en la capa 66, **20** en la 71 y **4 en la 77** ✗ (las cuatro de arriba: el mismo patrón «encima» que el del
+jugador, así que la escena servía ✓).
+
+**DESPUÉS** (corrida **184**, `-Conservar` → 36 mitades): **12** en la 66, 20 en la 71 y **4 en la 77** ✗.
+
+**LO QUE DICE ESA MEDIDA** ✗✗:
+1. **El barrido NO QUITÓ NADA**: su traza (*«N mitad(es) de cama QUITADAS por estar fuera de su edificio»*) **no sale ni
+   una vez** en el registro ✓ → las 4 de la capa 77 **siguen ahí** ✗. O **no están dentro de la huella** que yo barría
+   (solo miré **las cuatro casas del trazado y la barraca**, y esas camas deben ser de **otro** edificio), o **tienen
+   techo encima** ✗ (mi regla era «cielo abierto», y ahí puede haber un tejado viejo por encima). **Las dos cosas hay
+   que comprobarlas antes de volver a intentarlo** ✓.
+2. **Y EL SALTO DE `CURRENT_LAYOUT` SÍ MOVIÓ EL PUEBLO** ✗: la corrida trae *«REPARADA (quitados 6298 bloques de restos
+   por encima del nivel del pueblo)»* y *«CIMIENTO … puestos 11188 bloques sólidos»*, y el recuento **baja de 56 a 36
+   mitades** (20 menos en la capa 66) ✗. No se puede decir que el pueblo quedara mejor: **no mejoró la media**, así que
+   **se retira** ✓ — el barrido y el salto de versión, los dos (compila y lint verde después de retirarlos ✓).
+
+**LO QUE DEJA APRENDIDO, para el siguiente intento** ✓: la regla del «cielo abierto» es **buena** (se comprobó contra
+los cuatro casos del jugador ✓), pero **el ámbito era malo** ✗ — hay que barrer **todos** los edificios de la aldea (no
+solo las casas y la barraca) y **primero identificar de quién son** las camas sueltas (en el mundo del arnés, las 4 de
+la capa 77). Eso es lo que toca antes de volver a tocar código: **medir de quién son**, y entonces el barrido tendrá
+dónde mirar ✓ — y sin subir `CURRENT_LAYOUT` hasta que la medida diga que merece la pena mover el pueblo ✗.
+
 ### I265 · EL ARREGLO DE LAS CAMAS SUELTAS: QUÉ HACE, DÓNDE VA Y CÓMO SE MIDE (antes de escribirlo)
 
 Antes de tocar código, el arreglo **clavado** — porque un barrido mal hecho se lleva por delante **camas buenas** ✗ (y
