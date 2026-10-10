@@ -6949,6 +6949,32 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I278 · LA API REAL DEL PORTÓN DOBLE (`DoubleGateBlock` L242) Y LA TERCERA CITA CADUCADA
+
+Para el arreglo del portón (I277) hacía falta **cómo lo abre el propio mod**, y la respuesta está en su clase ✓ — con
+**otra corrección de cita vieja** ✗ (van tres: `esPortonDelMuro` en I275, el nombre del fichero del goal en I275, y
+ahora esta ✓ — todas citadas de notas antiguas, todas comprobadas con grep antes de usarlas ✓):
+
+- **`VillageManager.asegurarPortonesAbiertos` NO EXISTE** ✗: el grep en **todo** `src` solo devuelve **la cita**, dentro
+  del javadoc de `DoubleGateBlock` (**L50**) ✗. Otra vez el javadoc apuntando a algo que ya no está ✓ (y así se anota,
+  para no volver a buscarlo).
+- **LA API REAL ES LA DE `DoubleGateBlock` L242** ✓✓:
+  ```java
+  level.setBlock(p, s.setValue(OPEN, abierto).setValue(HOJA_FUERA, true), 3);
+  ```
+  o sea: **abrir/cerrar un portón doble es poner `OPEN` a lo que toque y `HOJA_FUERA = true`** en **cada** uno de sus
+  bloques ✓ — con las propiedades que ya se conocen (`OPEN`, `SIDE` con `LEFT`/`RIGHT`, `LAYER` con los tres de alto, y
+  `JUNTURA` para la celda del medio ✓, **L111-L121**) ✓. Y el propio comando de diagnóstico las lee igual
+  (`PortonDiagnosticoCommand` L87-105: cuenta celdas, junturas y abiertas ✓) → **es la puerta buena para reutilizar** ✓
+  (I277, punto 2 ✓).
+- Y una nota de la propia clase que **conviene tener presente** (L45-57): las dos hojas **abaten fuera** al abrirse, y el
+  **asedio tiene que abrir brecha en el muro** ✗ → o sea, el portón doble **no es un juguete decorativo**: si el goal lo
+  abre, se abre **de verdad** para lo que mide el muro ✓ (y de ahí que su traza lleve el lado, L373-377 ✓).
+
+**EL SIGUIENTE PASO, ya sin ambigüedad** ✓: leer las **20 líneas alrededor de L242** para quedarse con **el nombre y la
+firma** de ese método (es el que hay que llamar desde el goal ✗ en vez de escribir uno nuevo ✓) y, con eso, escribir el
+arreglo de I277 y **medirlo con `[Gate]`** en el arnés (0 → >0 ✓).
+
 ### I277 · EL PUNTO EXACTO DEL ARREGLO: EL GOAL ABRE **VALLAS** CERRADAS, Y EL PORTÓN DEL MURO ES UN **BLOQUE DOBLE**
 
 Leído el trozo donde el goal interviene de verdad (`entity/goal/VillagerGateGoal.java` **L359-397**), y explica **todo**
