@@ -6949,6 +6949,54 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I252 · LOS DOS REPORTES NUEVOS: LAS CAMAS DE LA BARRACA Y EL HAZ DEL CENTRO (lo medido y lo que falta)
+
+**B · EL HAZ DE LUZ DEL CENTRO** (el jugador: *«los efectos de partículas del centro de la aldea están desplazados a
+un lado»*). **MEDIDO** ✓:
+- El haz sale en `VillageManager` **L7681-7686**, dentro del bucle de aldeas, y su coordenada es
+  **`centro.getX() + 0.5D` / `centro.getZ() + 0.5D`** — o sea **el centro exacto de la celda del centro**, que es lo
+  correcto en XZ ✗→✓ (una celda va de `x` a `x+1`, así que su medio es `x+0.5`).
+- Y **la celda del centro es el medio de la plaza**, comprobado en el guardado del jugador con
+  `build/mapa_plaza_barraca.py` (mapa de 15×15 de la capa que se pisa): la plaza es un **7×7 de tierra** (x 563..569,
+  z 563..569) y el centro (566,566) es **justo su celda del medio** ✓.
+**LO QUE FALTA PARA CERRARLO** ✗: saber **respecto a qué** se ve desplazado. Quedan dos candidatos y se comprueban en el
+código antes de tocar: (a) el **kiosco** (la plaza tiene su plataforma y la campana *«EN EL CENTRO»*, según el propio
+código) — si el kiosco no está en la celda del centro, el haz se ve corrido respecto a la fuente/plaza; o (b) que el
+`centro` de ese bucle no sea el de la aldea que el jugador mira. **Con un pantallazo del haz** (o las coordenadas con
+F3) se cierra en un minuto.
+
+**A · LAS CAMAS DE LA BARRACA, FUERA** (el jugador pide: *«o la casa se hace más grande para meter las camas o le haces
+un segundo piso con escaleras, pero las camas no pueden estar afuera»*). **MEDIDO** ✓ con el mismo traste, en el
+guardado del jugador (solo lectura), contando mitades de cama por capa en 60 bloques a la redonda:
+
+```
+capa 63: 26 mitades   (x 518..621, z 536..602)   <- la capa que se pisa de la aldea
+capa 68: 20 mitades   (x 591..607, z 581..593)   <- un edificio 5 por encima de la plaza
+capa 74:  4 mitades   (x 594..595, z 583..584)   <- DOS CAMAS SUELTAS POR ENCIMA
+```
+
+**Y LO QUE DICE EL CÓDIGO** ✓ (`VillageGenerator`, leído con sus líneas):
+- Las camas de la barraca se ponen en **`yPiso2 = nivel + BARRACA_PISO2`** (**L1748**), repartidas en dos filas de 4
+  (`BARRACA_CAMAS_NORTE`/`_SUR`, **L1332**/**L1339**) a `bz ± (BARRACA_RADIO - 2)` (**L1865**/**L1868**), con
+  `BARRACA_RADIO = 4` (**L1217**) → con el trazado de **un piso** (`BARRACA_PISO2 = 0`, **L1228**) van **a la altura del
+  nivel del pueblo**, no a la del suelo del edificio.
+- El trazado **viejo** tenía el dormitorio en **`BARRACA_PISO2_VIEJO = 4`** (**L1234**), y la **migración** que lo
+  deshace trabaja toda ella con **`yPiso2 = nivel + BARRACA_PISO2`** (el nuevo, **L1505**) — por ejemplo, borra la «cama
+  que estorba» buscándola en **`yPiso2`** (**L1542**).
+**HIPÓTESIS (marcada como tal, aún sin confirmar)** ✗→: las **4 mitades de la capa 74** son las **camas del dormitorio
+viejo que la migración no se llevó** (las busca a la altura **nueva**, así que no las encuentra), y las camas que el
+jugador ve **fuera, al lado de la puerta**, son las de `yPiso2` cuando **el suelo del edificio no está a la altura del
+nivel del pueblo** (la barraca de su aldea está sobre una plataforma más alta). **Las dos cosas se comprueban igual**:
+localizar en el guardado las celdas exactas de la barraca (su base, `baseDeBarraca`, **L1194**) y compararlas con las dos
+cuentas del código. Eso es el siguiente paso, **antes de tocar nada**.
+
+**EL ARREGLO ROBUSTO, ya pensado** (y se elige con la medida delante): **atar el mobiliario del dormitorio al suelo del
+EDIFICIO** (`base.getY()`, lo que ya sabe `barraca(...)`) en vez de al nivel del pueblo, **y** que la migración barra
+también el dormitorio **viejo** (`nivel + BARRACA_PISO2_VIEJO`). Con eso las 8 camas quedan **dentro** sin agrandar la
+casa ni volver a levantar el piso de arriba — que es lo que el jugador pide (*«que no estén afuera»*) por el camino
+robusto: **la causa**, no el síntoma. Si la medida dice que en el suelo **no caben** las 8, entonces sí se elige entre
+**agrandar** o **devolver el segundo piso con escaleras**, y se dice con el número.
+
 ### I251 · EL ASEDIO EN VIVO, MEDIDO CON JUGADOR DE VERDAD (punto 2 de la lista viva)
 
 Lo pidió el jugador (*«¿te sirve que vaya a la siguiente aldea para revisar?»*) y **sirvió**: jugó, y el registro de su
