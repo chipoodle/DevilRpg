@@ -8356,6 +8356,64 @@ public final class VillageGenerator {
      * @return los pares {@code {viejo, nuevo}} de los composteros asentados, para que el latido mueva el
      *         {@code JOB_SITE} del granjero que apuntaba al viejo (ver {@code VillageManager}).
      */
+    /**
+     * <b>CAMAS SUELTAS FUERA DE SU EDIFICIO</b> (I265, medido el 9-oct-2026). Quita las camas que quedaron <b>fuera del
+     * interior</b> por una migración vieja. En los <b>dos</b> casos medidos son <b>duplicados</b> —se colocó la cama
+     * nueva dentro y <b>no se llevó la vieja</b>—, así que se <b>quitan</b> (no se mueven), igual que el «compostero DE
+     * MÁS» de I164:
+     * <ul>
+     *   <li><b>en el plano de una pared</b>, flanqueando su puerta: la casa 1 (oeste) tenía cuatro mitades rojas en la
+     *       columna de la puerta (x=531) y las buenas dentro (dos blancas);</li>
+     *   <li><b>encima de un tejado</b>: la barraca tenía cuatro mitades en la capa 74 y las buenas dentro en la 68.</li>
+     * </ul>
+     * <b>LA REGLA</b> (comprobada contra los cuatro casos): una cama <b>con el cielo abierto justo encima está fuera</b>
+     * —las de dentro tienen techo—. Y <b>solo se tocan camas</b> (rojas y blancas): <b>nunca</b> arcas ni cofres, que
+     * pueden tener cosas del jugador dentro. Corre en la migración, una vez por aldea (ver {@code VillageManager}).
+     *
+     * @return cuántas mitades de cama ha quitado
+     */
+    public static int quitarCamasSueltasDeLosEdificios(ServerLevel level, BlockPos center) {
+        int quitadas = 0;
+        int cota = cotaDeLaPlaza(level, center);
+        // 1) LAS CUATRO CASAS del trazado (0..3): su huella, de la cota hacia arriba.
+        for (int i = 0; i <= 3; i++) {
+            quitadas += quitarCamasSinTecho(level, trazado(center, i), 24, cota, cota + 24);
+        }
+        // 2) LA BARRACA (la de I253) y su patio.
+        int lado = 2 * BARRACA_RADIO + 3;
+        BlockPos baseBarraca = baseDeBarraca(center);
+        quitadas += quitarCamasSinTecho(level,
+                new BlockPos(baseBarraca.getX() - BARRACA_RADIO - 1, 0, baseBarraca.getZ() - BARRACA_RADIO - 1),
+                lado, cota, cota + 24);
+        if (quitadas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} mitad(es) de cama QUITADAS por estar fuera de su edificio"
+                    + " (sin techo encima: eran de más, de una migración vieja, I265)", center.toShortString(), quitadas);
+        }
+        return quitadas;
+    }
+
+    /** Quita las camas de esa huella que tengan el cielo abierto justo encima (I265). Solo camas. */
+    private static int quitarCamasSinTecho(ServerLevel level, BlockPos esquina, int lado, int yMin, int yMax) {
+        int quitadas = 0;
+        for (int dx = 0; dx < lado; dx++) {
+            for (int dz = 0; dz < lado; dz++) {
+                for (int y = yMin; y <= yMax; y++) {
+                    BlockPos p = new BlockPos(esquina.getX() + dx, y, esquina.getZ() + dz);
+                    BlockState s = level.getBlockState(p);
+                    if (!s.is(Blocks.RED_BED) && !s.is(Blocks.WHITE_BED)) {
+                        continue;
+                    }
+                    if (!level.canSeeSky(p.above())) {
+                        continue; // tiene techo: está dentro, y una cama de dentro no se toca
+                    }
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    quitadas++;
+                }
+            }
+        }
+        return quitadas;
+    }
+
     public static List<BlockPos[]> asentarLosComposterosALaCota(ServerLevel level, BlockPos center) {
         int cota = cotaDeLaPlaza(level, center);
         List<BlockPos[]> asentados = new ArrayList<>();
