@@ -6949,6 +6949,36 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I279 · LA LLAMADA EXACTA QUE TIENE QUE HACER EL GOAL: `DoubleGateBlock.abatir(...)`
+
+Cierra la búsqueda de I277/I278 ✓. La puerta que hay que reutilizar es **pública, estática y hace todo el trabajo** ✓:
+
+```java
+// DoubleGateBlock.java L215
+public static void abatir(Level level, BlockPos pos, BlockState estado, boolean abierto) {
+```
+
+- **Abre (o cierra) el portón entero** ✓: barre **las tres celdas del ancho × los tres pisos** alrededor de la celda que
+  se le da, **por estado** (solo toca bloques de portón con el **mismo `FACING`** ✓), y pone `OPEN = abierto` y
+  `HOJA_FUERA = true` en cada uno ✓ (L228-248 ✓). Da igual **cuál** de las nueve celdas se le pase ni en qué piso esté ✓
+  — que es justo lo que hace falta desde un goal, que solo sabe la celda que le estorba ✓.
+- Baja solo a la celda base con `LAYER` (**L220** ✓) y **traza** su propio resultado (`[Porton] abatir en …:
+  encontradas=N cambiadas=N …`, **L253** ✓) → **dos trazas** para la medida: la suya ✓ y la de `[Gate]` del goal ✓.
+- Y trae su historia medida, que conviene no repetir ✗: barría **de menos** (*«buscaba 2 celdas… cuando el portón del muro
+  es de 3, así que solo movía las hojas de una mitad del hueco»*, **L207-210** ✓) y **abría a medias según dónde pulsaras**
+  (**L224-227** ✓) — los dos arreglados en su día ✓.
+
+**EL ARREGLO, en una frase** ✓: en el goal, donde hoy se reconoce **una compuerta de valla** cerrada que corta la ruta
+(I277 ✓), **reconocer también el bloque doble** y llamar a **`abatir(level, pos, estado, true)`**; al salir del paso,
+**`abatir(..., false)`** para cerrarlo (como se hace con la compuerta ✓). **Lo que falta por leer** para escribirlo sin
+adivinar ✗ (y es lo único que queda): el trozo del goal **por encima de L352** —donde detecta la compuerta y decide
+abrirla— para meter ahí la rama del bloque doble **con su ancla comprobada** ✓ (lección de los tres tropiezos de las
+camas: nada de escribir sin ver el sitio ✓).
+
+**LA MEDIDA** ✓ (la mejor de todo el objetivo, porque **se puede hacer en casa**): hoy `[Gate]` sale **0 veces** en las
+corridas del arnés ✓; después del arreglo tiene que salir con `aldeano DENTRO · destino FUERA` (L373-377 ✓), y las trazas
+`[Porton] abatir` tienen que aparecer con `cambiadas=9` (tres celdas × tres pisos ✓) — o las que sean, pero **> 0** ✓.
+
 ### I278 · LA API REAL DEL PORTÓN DOBLE (`DoubleGateBlock` L242) Y LA TERCERA CITA CADUCADA
 
 Para el arreglo del portón (I277) hacía falta **cómo lo abre el propio mod**, y la respuesta está en su clase ✓ — con
