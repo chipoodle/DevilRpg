@@ -114,12 +114,13 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
 **(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA** (lo abierto, numerado; lo cerrado hoy va al final del apartado):
 
 **REPORTES NUEVOS DEL JUGADOR (9-oct-2026, con pantallazo — se miden antes de tocar)**:
-- **A · Las camas de la barraca salen FUERA de la casa** ✗ (pantallazo: dos camas rojas a los lados de la puerta, a la
-  intemperie). Lo pidió así: *«o la casa se hace más grande para meter las camas, o le haces un segundo piso con
-  escaleras, pero las camas no pueden estar afuera»*. El edificio es **la barraca de la milicia** (sus camas son
-  `RED_BED`: `VillageGenerator` **L7546-7553**, y el reparto en dos filas, `BARRACA_CAMAS_NORTE`/`_SUR` **L1332/L1339**),
-  y con el trazado de **un piso** (`BARRACA_PISO2 = 0`, I121/I123) **las 8 camas no caben dentro** ✗. *(Es de la familia
-  de **I104**, «el apiñamiento de camas».)*
+- **A · Camas fuera** — **MEDIDO Y ACOTADO** ✓/✗ (9-oct-2026, **I252**/**I253**/**I254**). Son **dos casos**:
+  (i) **dos camas EN EL TEJADO de la barraca** (capa 74 = pueblo+11), restos de un trazado viejo que **la limpieza no
+  barre** porque su banda es `pueblo+3 .. pueblo+8` (`VillageGenerator` L1759-1765) → el arreglo es una **limpieza de
+  camas sueltas** por encima del tejado (solo camas), y ya tiene su medida (contar antes: 2 ✗ / después: 0 ✓);
+  (ii) **dos camas EN LA CALLE, a los lados de una puerta** (el pantallazo): **no son de la barraca** ✗ (en la barraca
+  las de dentro están bien, capa 68) → es **otro edificio** y hay que **identificarlo antes de tocarlo** ✗: falta que el
+  jugador dé **las coordenadas (F3)** de esa casa.
 - **B · Las partículas del centro de la aldea están DESPLAZADAS a un lado** ✗. Hay que encontrar dónde se lanzan y
   centrarlas.
 

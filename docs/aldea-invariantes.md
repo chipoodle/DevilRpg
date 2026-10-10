@@ -6949,6 +6949,36 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I254 · LAS CAMAS: LO QUE CAMBIA AL LEER EL CONSTRUCTOR (y el edificio que falta identificar)
+
+Leído `barraca(...)` entero (`VillageGenerator` **L1744-1789**), el cuadro de I253 se afina **y cambia el arreglo** ✓:
+
+1. **`base` es solo XZ** (`bx`/`bz`, **L1746-1747**): el edificio **no lleva su propia altura**. Su huella se **nivela a
+   la altura del pueblo** (`nivelarHuella(..., nivel)`, **L1750-1755**), así que la planta baja queda **siempre** a
+   `nivel` ✓. Por eso, con `BARRACA_PISO2 = 0` (**L1228**), `yPiso2 = nivel` (**L1748**) es **la capa que se pisa de la
+   planta baja** → las camas caen **dentro** ✓✗→✓. *(Mi frase de I253 «el mobiliario se ata al nivel del pueblo y no al
+   suelo del edificio» era media verdad: el suelo del edificio **es** el del pueblo, porque se nivela. Esto se corrige
+   aquí, como manda la casa.)*
+2. **La limpieza del piso viejo tiene una banda fija**: al reconstruir, se pone a AIRE el volumen
+   `nivel + 3 .. nivel + BARRACA_PISO2_VIEJO + 4` = **`nivel+3 .. nivel+8`** dentro de la huella (**L1759-1765**, con
+   `BARRACA_PISO2_VIEJO = 4`, **L1234**) ✓ → pensada para el trazado de dos pisos (dormitorio en +4, tejado en +7/+8).
+3. **Y LAS CAMAS DEL TEJADO ESTÁN EN `nivel+11`** ✗ (capa **74** con el pueblo en 63, medido en su guardado con
+   `build/barraca_capas.py`): **por encima de la banda** → **sobreviven** a la limpieza. La explicación que encaja: son
+   de un trazado aún más viejo (o de cuando **la cota del pueblo era más alta**: si era 66, el dormitorio viejo caía en
+   74 ✓) y la banda, anclada a la cota **de hoy**, ya no las alcanza ✗.
+
+**LO QUE ESTO CAMBIA EN EL ARREGLO** ✓ (y por eso **no se ha tocado nada todavía**, regla de la casa):
+- **El arreglo de las camas del tejado** ya no es «atar el mobiliario al suelo del edificio» (no hace falta: el suelo
+  **es** el del pueblo) sino **una limpieza de camas sueltas**: barrer las **camas** (solo camas, nunca lo que haya
+  puesto el jugador) que estén **dentro de la huella de la barraca y por encima de su tejado**, sin depender de la cota
+  de hoy ✓. Es pequeño y tiene su medida: contar las camas por encima de `nivel+9` antes (2 camas ✗) y después (**0** ✓),
+  con el mundo del arnés (que es copia de su partida).
+- **Y las camas de la CALLE del pantallazo NO son de la barraca** ✗: en la barraca las de dentro están bien (capa 68) y
+  las sueltas están **en el tejado**, no en la calle. El edificio del pantallazo —planta baja de piedra, planta alta de
+  madera y una puerta con dos camas **en el césped, a los lados**— es **otro** ✗. Para arreglarlo hay que saber **cuál**:
+  **pido al jugador las coordenadas** (F3) de esa casa, o un pantallazo con las coordenadas a la vista. Adivinar el
+  edificio y «arreglarlo» sería exactamente el error que esta casa prohíbe ✗.
+
 ### I253 · LAS CAMAS FUERA: LA CAUSA, MEDIDA CAPA POR CAPA
 
 Continuación de **I252**, y la hipótesis **se confirma** ✓. Medido con `build/barraca_capas.py` (guardado del jugador,
