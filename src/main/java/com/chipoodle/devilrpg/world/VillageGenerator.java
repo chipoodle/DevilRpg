@@ -8356,6 +8356,52 @@ public final class VillageGenerator {
      * @return los pares {@code {viejo, nuevo}} de los composteros asentados, para que el latido mueva el
      *         {@code JOB_SITE} del granjero que apuntaba al viejo (ver {@code VillageManager}).
      */
+    /**
+     * <b>CAMAS POR ENCIMA DE LOS TEJADOS</b> (I271, medido el 9-oct-2026 en DOS aldeas). Las camas de más que dejó el
+     * trazado viejo acaban <b>encima de un tejado</b> a <b>+11</b> del nivel del pueblo, mientras que <b>todas</b> las
+     * buenas están a <b>+5</b> o menos: medido, la taberna (la posada) tiene <b>20 mitades dentro</b> en la capa 71
+     * (pueblo 66) y <b>4 de más</b> en la 77; y en la aldea del jugador, las mismas <b>4</b> en la capa 74 (pueblo 63).
+     * <p>
+     * Así que la regla es <b>de altura y de pueblo entero</b> (no de un edificio concreto ✗, que es lo que falló en
+     * I265-I268: miraba a la barraca, que está en el centro <b>+(-45,+22)</b>, y las camas están en <b>+(+28,+17)</b>):
+     * toda cama del recinto <b>por encima de {@code nivel + 9}</b> está fuera. <b>SOLO camas</b> (rojas y blancas):
+     * nunca arcas ni cofres, que pueden tener cosas del jugador dentro.
+     * <p>
+     * <b>Idempotente</b> (si no hay camas arriba no escribe ni una celda) y va en el latido para arreglar también las
+     * aldeas ya construidas <b>sin subir la versión del trazado</b> (subirla movía el pueblo y no mejoraba la media:
+     * medido en I266).
+     *
+     * @return cuántas mitades de cama ha quitado
+     */
+    public static int quitarCamasPorEncimaDeLosTejados(ServerLevel level, BlockPos center) {
+        int cota = cotaDeLaPlaza(level, center);
+        int quitadas = 0;
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                for (int y = cota + 9; y <= cota + 20; y++) {
+                    BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
+                    BlockState s = level.getBlockState(p);
+                    if (!s.is(Blocks.RED_BED) && !s.is(Blocks.WHITE_BED)) {
+                        continue;
+                    }
+                    // lint:ok I9 porque NO es construcción nueva: es un RETROFIT idempotente en el sitio (quita las
+                    // camas de más que dejó el trazado viejo) y arregla lo ya construido sin subir la versión.
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    quitadas++;
+                }
+            }
+        }
+        if (quitadas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} mitad(es) de cama QUITADAS por encima de los tejados (estaban"
+                    + " a mas de {} sobre el nivel del pueblo: eran de más, del trazado viejo, I271)",
+                    center.toShortString(), quitadas, 9);
+        }
+        return quitadas;
+    }
+
     public static List<BlockPos[]> asentarLosComposterosALaCota(ServerLevel level, BlockPos center) {
         int cota = cotaDeLaPlaza(level, center);
         List<BlockPos[]> asentados = new ArrayList<>();

@@ -114,47 +114,15 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
 **(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA** (lo abierto, numerado; lo cerrado hoy va al final del apartado):
 
 **REPORTES NUEVOS DEL JUGADOR (9-oct-2026, con pantallazo — se miden antes de tocar)**:
-- **A · Camas fuera** — **MEDIDO Y ACOTADO** ✓/✗ (9-oct-2026, **I252**/**I253**/**I254**). Son **dos casos**:
-  (i) **dos camas EN EL TEJADO de la barraca** (capa 74 = pueblo+11), restos de un trazado viejo que **la limpieza no
-  barre** porque su banda es `pueblo+3 .. pueblo+8` (`VillageGenerator` L1759-1765) → el arreglo es una **limpieza de
-  camas sueltas** por encima del tejado (solo camas), y ya tiene su medida (contar antes: 2 ✗ / después: 0 ✓);
-  (ii) **dos camas EN LA CALLE, a los lados de una puerta** — **IDENTIFICADO Y MEDIDO** ✓✓ (9-oct-2026, **I256**, con
-  las coordenadas del F3 del jugador): la casa está junto a **(531, 65, 563)** y las camas están en **(531, 560)**,
-  **(531, 561)**, **(531, 565)** y **(531, 566)** de la **capa 63** — o sea **en el plano de la pared**, la MISMA `x=531`
-  que la **puerta (531,563)** ✗, y por eso quedan en la calle (y **Ximena, Leñador, duerme ahí** ✗). La casa **sí tiene
-  segunda planta** (capas 66-71, con escaleras), así que **no es** que no quepan: **se colocan una celda hacia fuera** ✗.
-  **Acotado** ✓ (9-oct-2026, **I257**/**I259**): la casa es **la «casa 1 (oeste)»** del trazado
-  (`VillageGenerator` L121-133, índice 0) y la levanta **`placeVanillaHouse`** (L263-318), que **vacía** la plantilla
-  vanilla y la **vuelve a amueblar** — y ahí las dos camas caen **una celda hacia fuera** ✗.   ⚠️ **TRES INTENTOS, TRES RETIRADAS — Y EL PORQUÉ, YA MEDIDO** ✗ (I265/I266/I268/I269): mi barrido **sí corría** (el
-  bloque del latido está dentro de `if (% VILLAGE_POLL_TICKS == 0)` ✓), pero **miraba a la barraca**, que está en el
-  centro **+(-45,+22)** (`TRAZADO[6]`, `VillageGenerator` L120-129) ✗ — y **las camas están en +(+28,+17)**, el **mismo**
-  desplazamiento en su aldea y en la del arnés. O sea: **corrección de fondo** — ese edificio **NO es la barraca** ✗ (lo
-  dije mal en I253/I267). **Siguiente paso (sin escribir código): identificar el edificio de (+33,+21)** con un grep de
-  `VillageStorage.OFFSET`, `ANEXO_DX`, `PESQUERA`… y luego apuntar ahí el barrido y medir 4 → 0.
-
-  ⚠️ **TRES INTENTOS DE ARREGLO, LOS TRES RETIRADOS CON SU MEDIDA** ✗ (I265/I266/I268): el último, ya con **la excepción
-  que el propio lint prevé** para retrofits (`// lint:ok I9`, `tools/lint_aldea.py` L213-216), compilaba y pasaba el
-  lint pero **tampoco quitó ninguna cama** (traza ausente y las 4 de la capa 77 intactas). **Antes del cuarto intento
-  hay que medir dos cosas**: (1) dónde cae `baseDeBarraca(center)` = `trazado(center, 6)` (¿cubre mi caja esa huella?)
-  y (2) si el bloque del latido donde va la llamada (`VillageManager` L2981) **corre de verdad** o está dentro de un
-  `if` que casi nunca se cumple.
-
-  ⚠️ **EL PRIMER INTENTO DE ARREGLO SE RETIRÓ** ✗ (9-oct-2026, **I265**/**I266**): se escribió un **barrido de camas sin
-  techo** (regla buena, comprobada contra los cuatro casos de abajo) y, al medirlo en el mundo del arnés, **no quitó
-  nada** (su traza no sale) y el **salto de `CURRENT_LAYOUT`** que pide el guardián disparó una **reconstrucción gorda**
-  (56 → 36 mitades de cama ✗), así que **se retiró todo** ✓. **Siguiente intento, con la lección**: barrer **todos** los
-  edificios (no solo las casas y la barraca) y **primero medir de quién son** las camas sueltas.
-
-  **RESUELTO SIN PREGUNTAR** ✓✓ (9-oct-2026, **I264**, *corrigiendo* mi I263): dibujada la capa 63 de la casa, **dentro
-  SÍ hay camas** — dos **BLANCAS** en (535,561) y (536,561) ✓ (mi conteo anterior solo miraba las **rojas** ✗) — y las
-  **cuatro mitades rojas de la calle están en las celdas de la PARED** (`x=531`) ✗ → son **CAMAS DE MÁS** (duplicados de
-  una migración vieja, **la misma familia** que las **2 camas del tejado** de la barraca y que los composteros «de más»
-  de I164). **El arreglo, uno solo para los dos medios del reporte A**: **limpieza de camas sueltas** — quitar las que
-  estén **fuera del interior** (en la pared o encima del tejado), **solo camas**, sin tocar las de dentro ✓. Medida:
-  **antes** 4 mitades fuera ✗ / 2 blancas dentro ✓ → **después** 0 fuera ✓ y las de dentro intactas ✓.
-  **dentro** en ese pegado/amueblado (sin tocar la plantilla) y medir: **2 camas fuera → 0** ✓. *(Descartado el
-  camino equivocado: la tabla de camas de `VillageGenerator` L9875-9882 es de la **casa grande**, no de la casa 1 —
-  ver **I259**.)*
+- **A · Camas fuera** — **MEDIO CERRADO Y MEDIDO** ✓/✗ (9-oct-2026, **I271**): **(i) las de ENCIMA DE LOS TEJADOS: ARREGLADAS
+  Y MEDIDAS** ✓✓ — la regla es **de altura y de pueblo entero** (*toda cama por encima de `nivel + 9`*, porque las
+  buenas están a **+5** y las de más a **+11**, medido en **dos** aldeas), va en el **latido** como retrofit idempotente
+  (`VillageGenerator.quitarCamasPorEncimaDeLosTejados`, con `// lint:ok I9`, **sin subir `CURRENT_LAYOUT`**). Medido en
+  la corrida 186: la traza sale ✓, la capa 77 pasa de **4 mitades a 0** ✓ y las **20 de dentro siguen intactas** ✓. **En
+  su partida** las mismas cuatro están en la capa 74: **se quitan al cargar su mundo** ✓. **(ii) las de LA CASA 1 (oeste),
+  en el plano de su pared** (4 mitades rojas en `x=531`, la columna de la puerta; **dentro** hay dos blancas ✓): sigue
+  **pendiente** ✗ — es **otra regla** (cama en la pared, no por altura) y se hará igual: medida, solo camas y sin tocar
+  las de dentro.
 - **B · El haz de luz del centro** — **MEDIDO: ESTÁ BIEN PUESTO** ✓✓ (9-oct-2026, **I255**/**I258**). El jugador
   confirmó que era el haz. Comprobado en su aldea: **X/Z** = (566.5, 566.5), que es el medio de la **plataforma** del
   kiosco (9×9), de la **campana** (566,64,566) y del **farol** (566,67,566) ✓; **Y**: el haz arranca en `nivel+6` = **69**

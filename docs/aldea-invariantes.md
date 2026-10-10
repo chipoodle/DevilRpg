@@ -6949,6 +6949,34 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I271 · EL BARRIDO POR ALTURA: **FUNCIONA Y ESTÁ MEDIDO** (4 → 0, sin tocar las de dentro)
+
+Después de tres intentos retirados (I265/I266/I268) y de las dos correcciones que los explicaron (I269: miraba a la
+barraca, que está en **+(-45,+22)**, y las camas están en **+(+28,+17)**; I270: el edificio es **la taberna**, y su tabla
+es la de **L9875-9882**), el cuarto intento cambia la regla por la que **no depende de ningún edificio** ✓:
+
+- **LA REGLA** (medida en dos aldeas): las camas de más acaban **encima de un tejado** a **+11** del nivel del pueblo
+  (capa 77 con el pueblo en 66, en el arnés; capa 74 con el pueblo en 63, en la del jugador) y **todas las buenas
+  están a +5 o menos** → así que se barre **todo el recinto** por encima de **`nivel + 9`**, sin nombrar ningún edificio
+  ✗✓. **Solo camas** (rojas y blancas), nunca arcas ni cofres ✓.
+- **DÓNDE**: `VillageGenerator.quitarCamasPorEncimaDeLosTejados`, llamado desde el **latido** (junto a la vigilancia del
+  compostero, `VillageManager` L2981) con la excepción `// lint:ok I9` ✓ — **retrofit idempotente, sin subir
+  `CURRENT_LAYOUT`** (que movía el pueblo y no mejoraba la media: I266 ✓).
+
+**MEDIDO** ✓✓ (corrida **186**, `-Conservar`, mundo del arnés):
+- **LA TRAZA SALE** ✓: `[Village] Aldea en 470, 66, 646: 2 mitad(es) de cama QUITADAS por encima de los tejados (estaban a
+  mas de 9 sobre el nivel del pueblo …)` ✓ (dos veces, una por vuelta del latido: las **4** mitades ✗).
+- **LAS DE FUERA, A CERO** ✓: el recuento por capas pasa de `66: 15 · 71: 20 · 77: 4` a **`66: 15 · 71: 20`** — la
+  capa 77 **desaparece** ✓✓.
+- **Y LAS DE DENTRO, INTACTAS** ✓✓: las **20 mitades** de la capa 71 (las diez camas de la taberna) siguen ahí ✗→✓, y
+  el total baja de 56 a **35** justo en las cuatro de más ✓.
+
+**Y LO QUE ESTO ARREGLA EN LA PARTIDA DEL JUGADOR** ✓: su taberna tiene **las mismas cuatro mitades en la capa 74**
+(pueblo 63 = +11 ✓, I253), así que **en cuanto cargue su mundo, el latido las quita** ✓ — sin tocar nada más y sin mover
+el pueblo ✓ (el retrofit no sube la versión ✓). **Queda por hacer, del mismo reporte, el caso de la CASA 1**: sus cuatro
+mitades rojas están **en el plano de la pared** (capa 63, la misma `x=531` que la puerta ✗), que es **otra regla**
+(camas en la pared, no por altura) y se atacará igual: medida ✓, solo camas ✓ y sin tocar las de dentro ✓.
+
 ### I270 · EL EDIFICIO DE LAS CAMAS ES **LA TABERNA (LA POSADA)** — Y SU TABLA ES LA QUE DESCARTÉ MAL EN I259
 
 Cerrado el paso 1 de I269 ✓, y con una **segunda corrección mía** ✗:

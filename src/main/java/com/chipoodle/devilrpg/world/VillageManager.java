@@ -2978,7 +2978,11 @@ public final class VillageManager {
         // que algo lo coloca o lo recupera más tarde. Así que se comprueba aquí, cada `VILLAGE_POLL_TICKS`: es barato
         // (tres columnas) e idempotente, y si asienta alguno **muda el `JOB_SITE`** del granjero que apuntaba al viejo.
         if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L) {
-            for (BlockPos[] par : VillageGenerator.asentarLosComposterosALaCota(level, center)) {
+            // I271 · Y LAS CAMAS QUE QUEDARON POR ENCIMA DE LOS TEJADOS (a +11 del nivel; las buenas están a +5). La
+        // regla es de ALTURA y de pueblo entero, porque la de "un edificio concreto" falló tres veces (I265-I268:
+        // miraba a la barraca y las camas están en la taberna). Idempotente y sin subir la versión del trazado.
+        VillageGenerator.quitarCamasPorEncimaDeLosTejados(level, center);
+        for (BlockPos[] par : VillageGenerator.asentarLosComposterosALaCota(level, center)) {
                 for (Villager granjero : aldeanos) {
                     Optional<GlobalPos> suyo = granjero.getBrain().getMemory(MemoryModuleType.JOB_SITE);
                     if (suyo.isPresent() && suyo.get().pos().equals(par[0])) {
