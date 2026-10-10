@@ -125,7 +125,14 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
   segunda planta** (capas 66-71, con escaleras), así que **no es** que no quepan: **se colocan una celda hacia fuera** ✗.
   **Acotado** ✓ (9-oct-2026, **I257**/**I259**): la casa es **la «casa 1 (oeste)»** del trazado
   (`VillageGenerator` L121-133, índice 0) y la levanta **`placeVanillaHouse`** (L263-318), que **vacía** la plantilla
-  vanilla y la **vuelve a amueblar** — y ahí las dos camas caen **una celda hacia fuera** ✗.   ⚠️ **EL PRIMER INTENTO DE ARREGLO SE RETIRÓ** ✗ (9-oct-2026, **I265**/**I266**): se escribió un **barrido de camas sin
+  vanilla y la **vuelve a amueblar** — y ahí las dos camas caen **una celda hacia fuera** ✗.   ⚠️ **TRES INTENTOS DE ARREGLO, LOS TRES RETIRADOS CON SU MEDIDA** ✗ (I265/I266/I268): el último, ya con **la excepción
+  que el propio lint prevé** para retrofits (`// lint:ok I9`, `tools/lint_aldea.py` L213-216), compilaba y pasaba el
+  lint pero **tampoco quitó ninguna cama** (traza ausente y las 4 de la capa 77 intactas). **Antes del cuarto intento
+  hay que medir dos cosas**: (1) dónde cae `baseDeBarraca(center)` = `trazado(center, 6)` (¿cubre mi caja esa huella?)
+  y (2) si el bloque del latido donde va la llamada (`VillageManager` L2981) **corre de verdad** o está dentro de un
+  `if` que casi nunca se cumple.
+
+  ⚠️ **EL PRIMER INTENTO DE ARREGLO SE RETIRÓ** ✗ (9-oct-2026, **I265**/**I266**): se escribió un **barrido de camas sin
   techo** (regla buena, comprobada contra los cuatro casos de abajo) y, al medirlo en el mundo del arnés, **no quitó
   nada** (su traza no sale) y el **salto de `CURRENT_LAYOUT`** que pide el guardián disparó una **reconstrucción gorda**
   (56 → 36 mitades de cama ✗), así que **se retiró todo** ✓. **Siguiente intento, con la lección**: barrer **todos** los

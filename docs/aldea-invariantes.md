@@ -6949,6 +6949,32 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I268 · TERCER INTENTO DEL BARRIDO (RETROFIT IDEMPOTENTE): **MEDIDO Y RETIRADO TAMBIÉN**
+
+Se encontró **el mecanismo que el propio proyecto tiene para esto** ✓: el guardián **I9** se puede exceptuar **a mano en
+la propia línea** con `// lint:ok I9 porque …`, y está pensado **exactamente** para este caso —`tools/lint_aldea.py`
+**L213-216**: *«Se usa cuando NO es una construcción nueva que haya que rehacer, sino un **RETROFIT en el sitio** que
+arregla lo ya construido con una **pasada idempotente** (así el mundo guardado se corrige **sin subir la versión del
+trazado**)»* ✓✓. Así que se escribió el barrido **con esa excepción** (banda `+8 .. +20` medida en dos aldeas, **solo
+camas**, en el latido junto al compostero): **compilaba y el lint quedaba verde** ✓.
+
+**Y LA MEDIDA LO RETIRA OTRA VEZ** ✗, con sus números (corrida **185**, `-Conservar`):
+- la traza (*«… mitad(es) de cama QUITADAS de encima de la barraca …»*) **no sale ni una vez** ✗;
+- y las **4 mitades de la capa 77 siguen ahí** ✗ (el recuento total, 38, con las 4 en la 77 — el pueblo cambia solo,
+  que su latido repone cosas).
+
+**LO QUE ESO DESCARTÓ, que es lo que vale** ✓: **no era la banda** (77 está dentro de +8..+20 con el pueblo en 66 ✓) ni
+el lint ni la excepción ✗. Quedan **dos** sospechosos, y son los que hay que medir **antes** del cuarto intento:
+1. **Dónde cae `baseDeBarraca(center)`** (`trazado(center, 6)`, **L1195**): si la barraca del arnés **no está** en
+   (centro + 33, +21), mi caja (`±(BARRACA_RADIO+1)` = ±5) **no la cubre** ✗ y el barrido mira a otro sitio. Medirlo es
+   imprimir esa celda.
+2. **Si el sitio donde puse la llamada corre de verdad**: se colgó **antes** del `for (… asentarLosComposterosALaCota
+   …)` del latido (**VillageManager L2981**), y si ese bloque está **dentro de un `if`** que casi nunca se cumple ✗, la
+   llamada **no se ejecuta** ✓ — eso explicaría la traza ausente **mejor** que nada.
+Conclusión: **el barrido se retira** (tercer intento, tres retiradas ✓) y **antes del cuarto** hay que medir **esas dos
+cosas** (una es imprimir una celda; la otra es leer 20 líneas alrededor de L2981). **Nada de escribir el cuarto a
+ciegas** ✗.
+
 ### I267 · DE QUIÉN SON LAS CAMAS SUELTAS (+11 EN **LAS DOS** ALDEAS) Y POR QUÉ EL BARRIDO NO DISPARABA
 
 Responde a la pregunta que dejó I266, y la respuesta **confirma el patrón en dos aldeas distintas** ✓:
