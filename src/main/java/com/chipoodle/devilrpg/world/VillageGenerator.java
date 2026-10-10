@@ -8376,10 +8376,27 @@ public final class VillageGenerator {
     public static int quitarCamasPorEncimaDeLosTejados(ServerLevel level, BlockPos center) {
         int cota = cotaDeLaPlaza(level, center);
         int quitadas = 0;
+        // REGLA B (I272): Y TAMBIÉN LAS QUE ESTÁN **EN LA CALLE**, a la altura de la casa pero **con el cielo abierto
+        // encima** — es el caso de la casa 1 (oeste) del jugador: cuatro mitades rojas en el PLANO DE SU PARED (la
+        // misma columna que la puerta) y las buenas dentro (dos blancas). Comprobado contra los cuatro casos medidos:
+        // las de la calle ven el cielo ✓ y las de dentro tienen techo ✓ (por eso la regla distingue).
         for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
             for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
                 if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
                     continue;
+                }
+                for (int y = cota - 2; y <= cota + 8; y++) {
+                    BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
+                    BlockState s = level.getBlockState(p);
+                    if (!s.is(Blocks.RED_BED) && !s.is(Blocks.WHITE_BED)) {
+                        continue;
+                    }
+                    if (!level.canSeeSky(p.above())) {
+                        continue; // tiene techo: está dentro, y una cama de dentro no se toca
+                    }
+                    // lint:ok I9 porque es retrofit idempotente (quita camas de la calle), no construcción nueva.
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    quitadas++;
                 }
                 for (int y = cota + 9; y <= cota + 20; y++) {
                     BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);

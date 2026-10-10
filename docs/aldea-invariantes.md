@@ -6949,6 +6949,31 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I272 · LA REGLA B (CAMAS CON EL CIELO ABIERTO): NEUTRA EN EL ARNÉS, Y ES LA QUE ARREGLA EL CASO DEL JUGADOR
+
+Segunda mitad del reporte A ✓: las camas de la **casa 1 (oeste)**, que están **en el plano de la pared** (cuatro mitades
+rojas en `(531,63,560/561)` y `(531,63,565/566)`, la misma columna que la puerta ✗; **dentro** hay dos blancas ✓,
+**I256/I264**). La regla que las cubre es la que ya se había medido contra los cuatro casos y que **solo falló por el
+ámbito** (I265 miraba a la barraca ✗):
+
+> **REGLA B: una cama con el CIELO ABIERTO encima está en la calle** — las de dentro tienen techo.
+
+Comprobada contra los cuatro casos medidos: las rojas de la calle (casa 1) ven el cielo ✓ → fuera; las **blancas de
+dentro** (535/536,561) tienen techo ✓ → se quedan; las del tejado ven el cielo ✓ → fuera (y esas ya las quita la regla
+A, I271 ✓); las de dentro de la taberna tienen techo ✓ → se quedan. Se aplica **sobre todo el recinto** (no a un
+edificio ✗), de `nivel - 2` a `nivel + 8` —a la altura de la casa— y **solo camas** ✓
+(`VillageGenerator.quitarCamasPorEncimaDeLosTejados`, con el mismo `// lint:ok I9` y en el latido ✓).
+
+**MEDIDO EN EL ARNÉS** ✓ (corrida **187**, `-Conservar`): **la traza NO sale** y **la cuenta queda igual** — `66: 15`,
+`71: 20`, total **35** ✓ → es decir: **no quitó ninguna cama y no rompió ninguna** ✓✓. Eso es lo que se puede medir ahí,
+porque **la casa 1 del arnés no tiene camas** (su solar se miró en I262 y estaba vacío ✗): el arnés prueba que la regla
+**no da falsos positivos** ✓, y **el caso que arregla es el del jugador**, cuyo «antes» **sí está medido** (4 mitades
+fuera ✗ y 2 blancas dentro ✓) → **en cuanto cargue su mundo, el latido las quita** ✓ (igual que la regla A ✓).
+
+**Decisión escrita** ✓: la regla B **se queda** (no se retira) porque **no hay medida que diga que empeora** ✓ (la del
+arnés es neutra ✓) y porque **es la respuesta al caso medido del jugador** ✓; si en su partida quitara una cama buena,
+se retira y se dice ✓ (la comprobación es el `CAMAS RESUMEN` del arnés y el recuento por capas ✓).
+
 ### I271 · EL BARRIDO POR ALTURA: **FUNCIONA Y ESTÁ MEDIDO** (4 → 0, sin tocar las de dentro)
 
 Después de tres intentos retirados (I265/I266/I268) y de las dos correcciones que los explicaron (I269: miraba a la
