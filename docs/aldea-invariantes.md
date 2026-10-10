@@ -6949,6 +6949,41 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I265 · EL ARREGLO DE LAS CAMAS SUELTAS: QUÉ HACE, DÓNDE VA Y CÓMO SE MIDE (antes de escribirlo)
+
+Antes de tocar código, el arreglo **clavado** — porque un barrido mal hecho se lleva por delante **camas buenas** ✗ (y
+esta casa mide antes de tocar). Los dos patrones están **medidos**, no supuestos ✓:
+
+**PATRÓN 1 · camas en el plano de una PARED, flanqueando una puerta** (casa 1 oeste, I256/I264): las cuatro mitades
+rojas en `x=531` —la columna de la puerta— con **camas buenas dentro** (dos blancas, en (535,561) y (536,561) ✓).
+**PATRÓN 2 · camas ENCIMA de un tejado** (barraca, I253): las cuatro mitades en la capa **74**, con las buenas dentro en
+la **68** ✓.
+
+**QUÉ HACE EL ARREGLO** ✓ (una sola regla, dos comprobaciones):
+1. **Quitar** (nunca mover) las camas que cumplan un patrón: en los dos casos son **duplicados** —se colocó la cama
+   nueva dentro y **no se llevó la vieja**—, así que moverlas dejaría la casa con camas de sobra ✗. Se **quitan**, que es
+   lo que ya hace el proyecto con los **composteros «de más»** (**I164**, `VillageGenerator` L8363-8382: *«quitado un
+   compostero DE MÁS»*) ✓ — **la misma forma**, y por eso se copia.
+2. **Solo camas** (`Blocks.RED_BED` **y** `Blocks.WHITE_BED`, que es la que se me escapó en I263 ✗): **nunca** arcas,
+   cofres ni nada del jugador ✓ (un cofre puede tener cosas dentro ✗ y perderlas sería imperdonable).
+3. **Nunca** tocar una cama **con suelo firme debajo y techo encima** (el interior ✓): el barrido solo mira **las celdas
+   de la pared y las de por encima del tejado**, no «todo lo que no sea interior» ✗.
+
+**DÓNDE VA** ✓: en la **migración** que ya corre una vez por aldea al cargarla — donde hoy se llama
+`VillageGenerator.asentarLosComposterosALaCota` (`VillageManager` **L2483**) —, con nombre propio
+(`quitarCamasSueltasDeLosEdificios`, `VillageGenerator`), para que **también arregle las aldeas ya construidas** ✓ (que
+es el caso del jugador) y no solo las nuevas ✓.
+
+**CÓMO SE MIDE** ✓ (ya montado, con las herramientas que existen):
+- **Antes** (su guardado, medido): casa 1 → **4 mitades rojas fuera** ✗ + 2 blancas dentro ✓; barraca → **4 mitades en
+  la capa 74** ✗ + 10 dentro en la 68 ✓.
+- **Después**: **0 fuera** en los dos casos ✓ y **las de dentro intactas** (2 blancas y 10) ✓ → con
+  `build/casa_camas_calle.py`, `build/barraca_capas.py` y `build/mapa_casa1.py` sobre la copia del arnés ✓.
+- Y el **juez del juego**: el `CAMAS RESUMEN` del arnés (I43) — que el pueblo **no pierda ni una cama** ✓ — y que
+  **Ximena duerma dentro** ✓.
+
+Si el barrido dejara el pueblo con **menos camas** de las que necesita, **se retira y se dice** ✓ (regla de la casa).
+
 ### I264 · **CORRECCIÓN DE I263**: LA CASA **SÍ** TIENE CAMAS DENTRO (BLANCAS) — LAS ROJAS DE LA CALLE SON DE MÁS
 
 **Me equivoqué en I263, y se corrige aquí** ✗→✓ (regla de la casa: la hipótesis falsa se deja escrita). Dije que «dentro
