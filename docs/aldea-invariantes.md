@@ -6949,6 +6949,41 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I280 · LA LÍNEA EXACTA QUE DEJA AL PUEBLO SIN ABRIR EL PORTÓN DEL MURO (`VillagerGateGoal` L313-314)
+
+La lectura que faltaba (I279) está hecha, y el caso queda **señalado con el dedo** ✓✓:
+
+```java
+// VillagerGateGoal.java L307-323 · «La puerta de valla DE VERDAD (existe en el mundo) más cercana de la lista»
+private BlockPos puertaValidaMasCercana(ServerLevel level) {
+    for (BlockPos p : portones) {
+        if (!(level.getBlockState(p).getBlock() instanceof FenceGateBlock)) {
+            continue; // L313-314: «esa ya no es una puerta (o la lista está rancia): no cuenta»  ✗✗
+        }
+        ...
+```
+
+**AHÍ ESTÁ** ✓✓: el goal recorre su lista de portones y **descarta todo lo que no sea una compuerta de valla**
+(`FenceGateBlock`) ✗ — y **los cuatro portones del muro son el bloque doble** (I276: `devilrpg:porton_doble`,
+**cerrados** ✓). Así que, aunque estuvieran en la lista, **este filtro los tira** ✗ y el goal **nunca** los abre → el
+aldeano con faena al otro lado no cruza → **`[Gate]` 0** ✓✓ (y el comentario de la propia línea lo dice sin saberlo: *«o
+la lista está rancia»* ✓).
+
+**Y LA LISTA**: el javadoc de `portonesDelAnexo` (**L325-331** ✓) dice qué es esa lista: *«los dos del **anexo** (el
+corral y el gallinero)… y las **cuatro puertas de valla de cada parcela** de la granja»* ✗ — **el muro no se nombra** ✓ y
+la lista vive en `VillageGenerator.todosLosPortones` (**I4** ✓, que también usan el despeje del hueco y el filtro del
+plano, **I54** ✓). O sea que hay **dos** cosas que comprobar antes de escribir ✗ (y las dos son de una lectura ✓):
+1. **¿`todosLosPortones` incluye los portones del muro?** (si los incluye como celdas de compuerta **viejas** ✗, el
+   filtro de L313 los tira ✓; si **no** los incluye, hay que añadirlos ✓). En su aldea hay **cuatro** bloques dobles a
+   `r=62` (I276 ✓) y la traza de I219 (*«PORTONES 9»*) sugiere que la lista **los cuenta** ✓.
+2. **Qué hace `abrirPorton(...)`** (**L338** ✓) —el ayudante que el goal llama para abrir ✓—: si es solo para compuertas
+   ✓, hay que darle la rama del bloque doble llamando a **`DoubleGateBlock.abatir(...)`** (**L215**, I279 ✓).
+
+**EL ARREGLO, ya con las líneas exactas** ✓: (a) en **L313-315**, aceptar **también** el bloque doble como portón válido
+✓; (b) en el ayudante que abre, llamar a `abatir(level, pos, estado, true)` para el bloque doble ✓ (y al cerrar,
+`false` ✓); (c) y, si `todosLosPortones` no los trae, **añadirlos donde vive la lista** (I4 ✓, un solo sitio ✓). **Y su
+medida, la buena**: `[Gate]` **0 → >0** en el arnés ✓, con las trazas `[Porton] abatir … cambiadas>0` ✓.
+
 ### I279 · LA LLAMADA EXACTA QUE TIENE QUE HACER EL GOAL: `DoubleGateBlock.abatir(...)`
 
 Cierra la búsqueda de I277/I278 ✓. La puerta que hay que reutilizar es **pública, estática y hace todo el trabajo** ✓:
