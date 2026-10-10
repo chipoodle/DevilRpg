@@ -6949,6 +6949,27 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I262 · SONDEO INCONCLUSO EN LA ALDEA NUEVA, Y LA COMPROBACIÓN MÁS CORTA PARA CERRAR LAS CAMAS
+
+Se intentó el paso final de I261 por el camino barato: mirar **la misma casa en una aldea nueva** (la que funda el
+arnés, centro (470,646)) para saber si allí las camas salen dentro ✓ o fuera ✗. **NO SIRVIÓ** ✗ y se dice, porque es un
+intento fallido y así no se repite: `build/casa1_en_aldea_nueva.py` **no encuentra ni una cama** en la ventana del solar
+de la casa 1 (x 426..442, z 632..648, capas 64..76); en la capa de la cota solo hay **césped (259)**, algo de adoquín y
+tablones (12/9) y un camino → o ese solar no es el de la casa 1 en ese mundo, o el arnés no llegó a levantar las casas
+cuando se hizo la copia ✗. **Conclusión: el sondeo no decide nada** ✓ (queda escrito como intento fallido).
+
+**LA COMPROBACIÓN MÁS CORTA, y es para el jugador** ✓ (una pregunta, no una obra):
+**¿esa casa tiene también camas DENTRO?** Porque los dos casos posibles llevan a arreglos distintos:
+1. **Si dentro también hay camas** → las de la calle son **de más** (duplicados de una migración vieja que colocó unas y
+   no se llevó las otras, la **misma familia** que las **dos camas del tejado** de la barraca, I253) ✗ → el arreglo es
+   una **limpieza de camas sueltas** de la casa (solo camas, nunca lo que haya puesto el jugador ✓), con su medida:
+   **2 fuera → 0** ✓.
+2. **Si dentro NO hay ninguna** → la casa se quedó **sin camas dentro** y las de la calle son las **suyas**, mal puestas ✗
+   → el arreglo es **meterlas dentro** (recolocar esas dos, sin tocar la plantilla, I6) y medir que quedan dentro ✓ y
+   que el aldeano duerme dentro ✓.
+Y **con cualquiera de las dos respuestas el arreglo es pequeño y medible** ✓ — por eso la pregunta vale más que seguir
+sondeando a ciegas ✗.
+
 ### I261 · `placeVanillaHouse` (PASOS 3 Y 4): EL MOD **NO** COLOCA LAS CAMAS DE LAS CASAS, LAS CUENTA
 
 Cerrando la búsqueda que abrió I260, leídos los pasos que quedaban de `placeVanillaHouse` (**L5793-5832**):
