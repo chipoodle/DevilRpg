@@ -123,8 +123,10 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
   **(531, 561)**, **(531, 565)** y **(531, 566)** de la **capa 63** — o sea **en el plano de la pared**, la MISMA `x=531`
   que la **puerta (531,563)** ✗, y por eso quedan en la calle (y **Ximena, Leñador, duerme ahí** ✗). La casa **sí tiene
   segunda planta** (capas 66-71, con escaleras), así que **no es** que no quepan: **se colocan una celda hacia fuera** ✗.
-  Siguiente paso: el constructor de esas dos camas (llamadas a `bed(...)` y el constructor de casas) → meterlas **dentro**
-  y medirlo.
+  **Ya está localizado el culpable** ✓ (9-oct-2026, **I257**): la casa es **la «casa 1 (oeste)»** del trazado
+  (`VillageGenerator` L121-133, índice 0) y la levanta **`placeVanillaHouse`** (L263-318), que **vacía** la plantilla
+  vanilla y la **vuelve a amueblar** — y ahí las dos camas caen **una celda hacia fuera** ✗. Siguiente paso: meterlas
+  **dentro** en ese amueblado (sin tocar la plantilla) y medir: **2 camas fuera → 0** ✓.
 - **B · Las partículas del centro de la aldea están DESPLAZADAS a un lado** ✗ → **MEDIDO Y NO SE REPRODUCE** ✓
   (9-oct-2026, **I255**): en su aldea el haz sube por **(566.5, 566.5)** y ahí están **el centro de la plataforma del
   kiosco** (un 9×9 de piedra), la **campana** (566,64,566, `dx=+0 dz=+0`) y el **farol** (566,67,566) ✓✓. Su guardado

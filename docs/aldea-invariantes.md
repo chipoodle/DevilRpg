@@ -6949,6 +6949,28 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I257 · LA CASA DE LAS CAMAS EN LA CALLE: ES LA «CASA 1 (OESTE)», PLANTILLA VANILLA AMUEBLADA POR EL MOD
+
+Continuación de **I256**, y ya está **localizada** ✓ (por el desplazamiento que dio el F3 del jugador):
+
+- La tabla del trazado (`VillageGenerator` **L121-133**) empieza con **`{-36, -7} // 0: casa 1 (oeste)`** ✓ — y la
+  puerta que se midió está en **(531, 563)**, o sea el centro **(566,566) + (-35, -3)** ✓ → la casa del pantallazo es
+  **la casa 1 (oeste)**, índice **0** de la tabla ✓.
+- **Quién la levanta**: `VillageGenerator` **L263-318**. Las casas **no** son procedurales: son **plantillas del propio
+  juego** puestas con **`placeVanillaHouse`** (L314-315: *«son CASAS DE VERDAD, plantillas del propio juego … no cabañas
+  procedurales»*), y la aldea **las vacía al levantarlas** (L274: *«las casas pierden lo que tengan dentro»* ✓) para
+  **volver a amueblarlas** ella.
+- **Y AHÍ ESTÁ EL DEFECTO** ✓: el mobiliario que el mod vuelve a poner —las **dos camas**— cae **una celda hacia fuera**
+  (en el plano de la pared, `x=531`, la misma columna que la puerta ✗), en vez de dentro de la habitación. En la casa 1
+  eso son las camas de **(531,63,560)**, **(531,63,561)**, **(531,63,565)** y **(531,63,566)** ✓ (I256), y encima
+  **una aldeana duerme ahí** (Ximena, Leñador) ✗.
+
+**EL ARREGLO (siguiente ronda, con el caso ya en la mano)**: en el amueblado de la casa (el bloque de `placeVanillaHouse`
+y quien le ponga las camas) **meter las camas dentro** de la habitación —una celda hacia dentro, o la que diga la
+plantilla— **y no tocar la plantilla** (I6: *lo que ya funciona no se reconstruye*). Y su **medida**: en el mundo del
+arnés (copia de su partida) las **dos camas dentro** y **0 camas en la calle**; el «antes» ya está medido y es **2 camas
+fuera** ✗.
+
 ### I256 · LA CASA DE LAS CAMAS EN LA CALLE: IDENTIFICADA Y MEDIDA (el jugador dio las coordenadas)
 
 El jugador mandó una captura **con el F3**: estaba en **(526, 63, 563)** mirando al este, apuntando a **(531, 65, 563)**
