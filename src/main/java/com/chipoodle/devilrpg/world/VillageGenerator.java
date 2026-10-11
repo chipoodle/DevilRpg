@@ -2505,6 +2505,10 @@ public final class VillageGenerator {
         // pies al entrar: `pies=water` con `alcanza=NO` en su registro). Va aquí, con el resto de la pasada, para que lo
         // reciban también las aldeas ya construidas (es idempotente: si el paso está bien, no toca nada).
         asegurarElPasoDeLasCompuertas(level, center, nivel);
+        // I306 · Y LOS RESTOS DE TRAZADOS VIEJOS POR DEBAJO DE LA COTA (los «troncos flotando» del jugador: 408 oak_log
+        // en la capa 61, formando la muralla vieja). Auditor + retrofit, como los faroles: aquí se quitan (idempotente)
+        // y la traza deja el número.
+        troncosBajoLaCota(level, center, nivel, false);
         for (BlockPos esquina : esquinas) {
             farolSobreElPoste(level, esquina);
         }
@@ -8668,6 +8672,63 @@ public final class VillageGenerator {
                 }
             }
         }
+    }
+
+    /**
+     * <b>LOS TRONCOS QUE QUEDARON POR DEBAJO DE LA COTA</b> (I306, medido el 11-oct-2026). El jugador veía «troncos
+     * flotando» ✗ y medidos eran **408 {@code oak_log}, todos en la capa 61** —una por debajo de la cota 63— y
+     * **formando líneas**: la **muralla vieja** de la aldea que dejó una migración, no un árbol mal talado ✓ (la regla
+     * del leñador, I24, está bien y no se toca ✗).
+     * <p>
+     * <b>La regla es limpia</b>: un árbol del pueblo **nace EN la cota** (el suelo se anda a la cota ✓), así que su
+     * tronco **nunca baja de ahí** → cualquier tronco **estrictamente por debajo** es un resto ✓. Y se comprueba
+     * además que **no tenga copa cerca** (hojas en 2 celdas a la redonda y 4 hacia arriba ✓): si la tiene, es parte de
+     * un árbol vivo y **no se toca** ✗. Es la receta de los faroles (auditor + retrofit ✓), idempotente.
+     *
+     * @param soloContar si es {@code true}, no quita nada: solo cuenta y lo deja en el registro (el auditor ✓)
+     * @return cuántos troncos hay (o se han quitado)
+     */
+    public static int troncosBajoLaCota(ServerLevel level, BlockPos center, int cota, boolean soloContar) {
+        int cuantos = 0;
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                for (int y = cota - 1; y >= cota - 16; y--) {
+                    BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
+                    if (!level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
+                        continue;
+                    }
+                    boolean copa = false;
+                    for (int dy = 1; dy <= 4 && !copa; dy++) {
+                        for (int ex = -2; ex <= 2 && !copa; ex++) {
+                            for (int ez = -2; ez <= 2; ez++) {
+                                if (level.getBlockState(p.offset(ex, dy, ez)).is(net.minecraft.tags.BlockTags.LEAVES)) {
+                                    copa = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (copa) {
+                        continue; // es parte de un árbol vivo: no se toca
+                    }
+                    cuantos++;
+                    if (!soloContar) {
+                        // lint:ok I9 porque NO es construcción nueva: es un RETROFIT idempotente en el sitio que quita
+                        // los restos de una migración vieja (la muralla que quedó una capa por debajo de la cota).
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        if (cuantos > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} tronco(s) POR DEBAJO de la cota {} ({}) — restos de un"
+                    + " trazado viejo (I306)", center.toShortString(), cuantos, cota,
+                    soloContar ? "solo contados" : "quitados");
+        }
+        return cuantos;
     }
 
     /**
