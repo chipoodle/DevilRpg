@@ -7290,6 +7290,31 @@ animal** ✓, **L347-370** ✓).
 *Medida*: **0 sacrificios y 0 adopciones fuera del radio de 24** ✓ y **0** guardián a más de 24 del núcleo ✓ — la misma de
 I308 ✓, ahora con el sitio exacto ✓.
 
+### I318 · EL PAR DE CORRIDAS (196 + 197): **LAS CAMAS, CERRADAS** (0 Y 0); EL CONTADOR DE TRONCOS **NO SE MUEVE** (y se dice)
+
+Primer **par de corridas** hecho como manda el banco (I314 ✓): **196 sin banderas** (copia su partida y hace el trabajo ✓)
+y **197 con `-Conservar`** (mide el pueblo **asentado** ✓), las dos con el **centro del arnés en su aldea** (I312 ✓),
+sobre `run\world` y **sin tocar `run\saves`** ✓.
+
+**LO QUE QUEDA CERRADO** ✓✓ — **las camas de su aldea**:
+```
+CAMAS EN LA CALLE (capa 63, x=531) : 4  ✗  ->  0  ✓✓
+CAMAS ENCIMA DEL TEJADO (>= 72)     : 4  ✗  ->  0  ✓✓
+```
+O sea: **los dos medios del reporte A están cerrados y medidos en su partida** ✓ (con el arreglo del **plan**,
+I298 ✓, para que el obrero no las reponga ✓, y la regla de las **mitades huérfanas**, I311 ✓).
+
+**LO QUE **NO** SE MUEVE, y no se da por bueno** ✗: el contador de `build/troncos_flotando_aldea.py` sigue diciendo
+**408** (408 → 408 ✗) y en la 197 **no hay traza** del retrofit (solo el paso de las compuertas: 1 celda ✓). **Dos
+posibilidades, y hay que medir cuál** ✗ (no se elige a dedo):
+1. **El retrofit no corre** en el pueblo asentado (las pasadas son **condicionales** ✗, y ya me engañó una vez: I314 ✓).
+2. **El contador cuenta otra cosa**: su definición es «tronco **sin nada sólido debajo en su columna**» ✓ — que incluye
+   troncos **POR ENCIMA de la cota** ✗ (vigas de edificios, postes ✓), y el retrofit mira **de la cota hacia abajo**
+   (L313 ✓) → si los 408 están **arriba**, el retrofit hace bien en no tocarlos ✓✓ y **el contador es el que está mal
+   definido** ✗.
+**La medida que lo decide** ✓ (barata): volcar **la capa de cada uno de los 408** ✓ (una línea) — si están por encima de
+la cota, es el contador ✗; si están por debajo y siguen ahí, es que el barrido no corre ✓.
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
