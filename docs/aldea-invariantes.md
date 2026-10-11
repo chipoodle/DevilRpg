@@ -7169,6 +7169,36 @@ perseguir y vuelve al núcleo** ✓. Es su propia regla declarada (L77-78 ✓) y
 en la guarida ✓. *Medida del lote*: **0 cultivadores a más de 24 del núcleo** ✓, **0 sacrificios fuera del radio** ✓ y
 **0 adopciones** de ganado del pueblo ✓ (hoy el código admite lo contrario ✗).
 
+### I310 · LOTE DE PRUEBAS (CORRIDA 192): EL PLAN DE LAS CAMAS **FUNCIONA**, Y QUEDAN DOS HUECOS MEDIDOS
+
+Primer lote con **todo compilado** (`BUILD SUCCESSFUL` ✓ — el cliente soltó el jar ✓) y corrido **sobre una copia de la
+aldea del jugador** (`tanda-rapida.ps1 192`, sin banderas: el banco copia `run\saves\New World` a `run\world` ✓,
+`run\saves` intacto ✓).
+
+**LO QUE SALE BIEN** ✓✓ (con sus números, antes → después):
+- **`El obrero repuso red_bed` : 4 líneas cada pocos segundos ✗ → **0** ✓✓ — **el arreglo del PLAN (I298) funciona** ✓:
+  el barrido va en la pasada de construcción y el plano nace sin esas camas ✓.
+- **CAMAS ENCIMA DEL TEJADO (≥ 72)**: **4 mitades ✗ → 0** ✓✓ (la regla por altura, I271 ✓).
+- Y el barrido de **restos por debajo de la cota** (I306 ✓) **corre** ✓: **16 trazas** de `N tronco(s) POR DEBAJO de la
+  cota … (quitados)` ✓.
+
+**LOS DOS HUECOS, medidos y con su causa** ✗:
+1. **CAMAS EN LA CALLE: 4 mitades ✗ → 3** ✗ (no 0). **Causa**: una cama son **DOS celdas** (pie y cabecera ✓) y el
+   barrido quita **la mitad que encuentra** ✓ → deja la otra colgando ✗ (4 → 3 = se quitó **una** mitad ✓✓). **Arreglo**:
+   al encontrar una cama suelta, quitar **la cama ENTERA** (las dos celdas ✓) — es el arreglo de raíz y la medida pasa a
+   **4 → 0** ✓.
+2. **TRONCOS FLOTANDO: 408 ✗ → 398** ✗ (solo 10 ✓). **Causa medida en la traza**: el retrofit corrió en **otra** aldea
+   (`Aldea en 470, 63, 646: 4 tronco(s) POR DEBAJO de la cota 46 (quitados)` ✓ — **la del arnés** ✗) y **no** en la del
+   jugador: el sitio donde lo puse (la pasada de la **pesquera**, junto a `posarFarolesFlotantes`) **no se ejecuta** para
+   su aldea en esta corrida ✗✓ — el mismo problema de ámbito que ya tuvo el barrido de camas (I285 ✓). **Arreglo**: llevar
+   el retrofit a un sitio que **siempre** corra para cada aldea (el **latido**, como red de seguridad del barrido de
+   camas ✓), además de en la pasada ✓.
+
+**Y lo que NO ha salido en esta corrida** (ni bien ni mal, simplemente no hubo ocasión ✗): `el muro NO se repone` (0 ✓ —
+no hubo asedio en esa aldea), `la cota sube de` (0 ✓ — el camino de pantano no se pisó) y `golem de hierro en` (0 ✓ — su
+aldea no se reconstruyó). **No se dan por medidos** ✓: sus medidas siguen pendientes de una corrida con asedio y con una
+aldea nueva de pantano ✓ (la próxima del lote).
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
