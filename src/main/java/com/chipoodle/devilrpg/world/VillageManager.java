@@ -7681,7 +7681,13 @@ public final class VillageManager {
             boolean protegida = saved.isSiegeResolved(i) && !saved.isFallen(i);
             // HAZ DE LUZ: columna de partículas brillantes sobre el kiosco (se ve a lo lejos). Es la ÚNICA señal del
             // sello desde la migración 58 (el beacon del tejado se quitó: no hacía nada).
-            if (protegida && distSqr < 128.0D * 128.0D) {
+            // I303 · SOLO DENTRO DEL RECINTO DE ESA ALDEA (medido el 11-oct-2026, con captura del jugador: «se ve
+            // claramente como el haz de luz no está en el centro de la villa» ✗). El haz es la señal del SELLO sobre el
+            // kiosco ✓, y se dibujaba para **cualquier** objetivo a menos de 128 bloques ✗ —incluido uno cuyo pueblo
+            // **todavía no existe**— así que aparecía en mitad del campo, sobre un árbol, lejos del kiosco del jugador ✓✓.
+            // Con el radio del RECINTO (`FENCE_RADIUS`, el mismo del muro ✓) el haz sale **solo** cuando el jugador está
+            // en esa aldea, o sea siempre **sobre su kiosco** ✓, que es lo que debe señalar.
+            if (protegida && distSqr < (double) VillageGenerator.FENCE_RADIUS * VillageGenerator.FENCE_RADIUS) {
                 int cota = VillageGenerator.cotaDeLaPlaza(level, centro);
                 for (int h = 0; h < 14; h++) {
                     level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
