@@ -7251,6 +7251,25 @@ Y las dos, **con el centro del arnés en su aldea** (copia temporal ✓, I312 �
 **asedio** y con **aldea nueva**— `0` reconstrucciones del muro ✓, `0` sofocaciones ✓, `0` madera en los túneles ✓ y
 `1` haz por aldea ✓.
 
+### I315 · EL INVOCADOR: EL TRABAJO Y LA ADOPCIÓN **YA ESTÁN LIMITADOS POR RADIO** — FALTA VER QUÉ GOAL LO LLEVA AL PUEBLO
+
+Continuación de I308/I309 ✓, y el candado tiene que ir **en otro sitio** del que parecía ✗: medido en su clase
+(`SculkCultivatorEntity`), **lo que ya está acotado** es:
+- **`nearbyAnimals()` (L593-597)**: *«Animales vivos **dentro del radio de trabajo** (el "ganado" de la granja)»* ✓ — usa
+  un radio alrededor de **su** centro ✓.
+- **La adopción**: *«Adoptar como ganado a lo que aparezca **DENTRO del foso del corral**»* (**L387-388** ✓).
+- **Y la persecución de amenazas**: `ThreatTargetGoal` (**L412** ✓), *«como el `NearestAttackableTargetGoal` vanilla, pero
+  con el **radio de amenaza**»* ✓ — es para **amenazas** (jugadores y similares), no para ganado ✓.
+
+**CONCLUSIÓN, y cambia el sitio del arreglo** ✓✓: **el radio no es lo que falla** ✗ — lo que hay que ver es **qué goal**
+lleva al guardián a por animales **que no son de su guarida** ✗ (el caso del jugador: el **corral del pueblo**, a 114
+bloques de la guarida ✓). Los candidatos, con sus líneas, para leerlos seguidos ✓: **`BreedAnimalsGoal`** (**L385** ✓,
+*«la única situación en la que criar más es la forma de desbloquear la granja»* ✓), el **sacrificio** (`feedNearbyCatalysts`,
+**L347-370** ✓, que alimenta los catalizadores **donde cae el animal** ✗) y el **`LIVESTOCK_TAG`** (el rebaño del corral,
+**L602** ✓). El arreglo será, otra vez, **una sola puerta** ✓: que el guardián **solo pueda cazar/adoptar** animales que
+estén **dentro de su radio de trabajo** ✓ (la condición que **ya usa** para el ganado ✓) — y su medida no cambia:
+**0 sacrificios y 0 adopciones fuera del radio de 24** ✓ y **0** guardián a más de 24 de su núcleo ✓.
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
