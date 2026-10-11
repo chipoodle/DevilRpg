@@ -7315,6 +7315,30 @@ posibilidades, y hay que medir cuál** ✗ (no se elige a dedo):
 **La medida que lo decide** ✓ (barata): volcar **la capa de cada uno de los 408** ✓ (una línea) — si están por encima de
 la cota, es el contador ✗; si están por debajo y siguen ahí, es que el barrido no corre ✓.
 
+### I320 · EL RETROFIT QUITA LOS 408 Y **ALGO LOS VUELVE A PONER**: ES **EL PLAN** (LA MISMA LECCIÓN QUE LAS CAMAS)
+
+El par de corridas nuevo (**198** sin banderas + **199** con `-Conservar` ✓, centro en su aldea ✓) da un resultado que
+**no cuadra** ✗ y que, al mirarlo, **explica los dos items que quedaban** ✓✓:
+- **TRONCOS FLOTANDO: 408 → 408** ✗ — **igual que antes** del arreglo de I319 ✗.
+- **CAMAS EN LA CALLE: 0 (en la corrida 197 ✓) → 4 otra vez** ✗.
+
+**Y la explicación es la misma para los dos** ✓✓: **algo los VUELVE A PONER** ✗ — y ese algo es **el PLAN de la aldea**,
+que es exactamente lo que descubrí con las camas (I298 ✓: *«El obrero repuso Block{minecraft:red_bed} en
+BlockPos{x=531, y=63, z=566}»* **cada pocos segundos** ✓) y por lo que aquel arreglo funcionó (**poner el barrido ANTES
+de capturar el plano** ✓). Aquí pasa lo mismo: el retrofit **quita** los 408 ✓ (la corrida 194 lo midió: **2874 quitados**
+✓) y **el obrero/la reparación los repone**, porque **el plano todavía los pide** ✗✓.
+
+**LO QUE TOCA, y ya sé hacerlo** ✓: **el mismo arreglo que las camas** — que el barrido de restos corra **antes de
+`terminarGrabacion`** ✓ para que **el plano nazca sin ellos** ✓, y que en una aldea ya construida **el plano se recapture**
+con el mundo ya limpio ✓. **No hay que tocar la regla del barrido** ✓ (I319 ya la dejó buena: los 408 son de `y=61`, por
+debajo de la cota, y ahí tronco = resto ✓) — **lo que falla es el ORDEN**, y es el mismo fallo de orden que las camas ✓.
+
+**Y una nota honesta sobre las medidas** ✗: las corridas **no son reproducibles una a una** ✓ (la 197 dio camas 0 y la
+199 dio 4, con el mismo código de camas ✓) — porque el estado del pueblo cambia entre corridas (reparaciones, plan,
+errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** ✓ (`N tronco(s) POR DEBAJO de la cota … (quitados)`
+✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
+contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
