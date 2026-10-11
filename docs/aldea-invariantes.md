@@ -6949,6 +6949,35 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I287 · LA PAUSA DEL ASEDIO, **PROVOCADA Y MEDIDA** EN EL ARNÉS: LA TRAZA SALE CON SU MOTIVO
+
+Punto (2) del objetivo ✓. El montaje: en la **copia temporal** del arnés (que se borra antes de commitear ✓ y nunca se
+sube ✓) se enciende su propio interruptor de asedio en vivo —`GuardHarness` **L134**: `MEDIR_ASEDIO_VIVO = false → true`—
+que es el que **saca al jugador de pega de la aldea y lo devuelve** (**L2127/L2131** ✓), y se deja el centro en la aldea
+del jugador (I286 ✓). Corrida **191**, sin banderas (el banco copia `run\saves\New World` a `run\world` ✓; `run\saves`
+no se toca ✓).
+
+**Y LA TRAZA SALE** ✓✓, una vez, palabra por palabra:
+
+```
+[Village] Asedio de la aldea 3 EN PAUSA: el jugador que la defiende NO esta conectado:
+          el reloj se para y la aldea NO puede caer
+```
+
+**LO QUE ESO VERIFICA** ✓✓ (y era lo único que faltaba de este punto):
+1. **El instrumento funciona** ✓: es exactamente el camino de `VillageManager` **L1438-1445** (la traza de **transición**,
+   `if (!d.enPausa)` ✓) y sale **con su motivo** ✓ — en este caso el de **jugador no conectado** ✓, que es la rama
+   `distanciaAlCentro == DISTANCIA_SIN_JUGADOR (-1.0)` (**L2165/L2175** ✓): el jugador de pega del arnés **no está en la
+   lista de jugadores** del servidor ✓, así que cae por ahí ✓.
+2. **Y la regla que protege la partida, confirmada en vivo** ✓✓: *«el reloj se para y la aldea **NO puede caer**»* ✓ —
+   que es justo lo que I283/I284 dijeron que hacía ✓ y lo que le pasó al jugador en su día (se fue con los zombis dentro
+   y al volver la aldea estaba en ruinas ✓, el porqué que el propio código cita ✓).
+
+**LO QUE QUEDA DE ESTE PUNTO** ✓ (y es del jugador, no del código): la **otra variante** de la misma traza — la del
+jugador **conectado pero lejos** (`distancia > RADIO_ASEDIO_CON_JUGADOR`, con su distancia en el mensaje ✓) — necesita un
+jugador **de verdad** en la lista ✓ (el de pega no lo está ✗) → **su prueba viva**: con un asedio en curso, alejarse
+**más de 128 bloques** y volver (I86/I89 ✓). El instrumento está **verificado**; lo que falta es verla con su número ✓.
+
 ### I286 · LA MEDIDA QUE FALTABA: EL BARRIDO, **SOBRE LA COPIA DE LA ALDEA DEL JUGADOR** (4 → 0 Y 4 → 0)
 
 Cerrada la prueba de I285 ✓✓ — y esta vez **sobre su aldea de verdad**, en una copia ✓ (`run\saves` no se ha tocado ✓):
