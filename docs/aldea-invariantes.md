@@ -7270,6 +7270,26 @@ bloques de la guarida ✓). Los candidatos, con sus líneas, para leerlos seguid
 estén **dentro de su radio de trabajo** ✓ (la condición que **ya usa** para el ganado ✓) — y su medida no cambia:
 **0 sacrificios y 0 adopciones fuera del radio de 24** ✓ y **0** guardián a más de 24 de su núcleo ✓.
 
+### I316 · EL CANDADO DEL INVOCADOR VA EN SU **`setTarget`** (LA PUERTA ÚNICA)
+
+Remate del sitio, medido leyendo sus dos goals ✓:
+- **`BreedAnimalsGoal` (L886)**: su `canUse()` trabaja con **`cult.livestock()`** ✓ = *«el rebaño del corral: solo los
+  animales marcados como ganado (`LIVESTOCK_TAG`)»* (**L602** ✓) → **NO** es el que va a por los animales del pueblo ✗
+  (cría **su** rebaño ✓; y L385 ya lo dice: *«la única situación en la que criar más es la forma de desbloquear la
+  granja»* ✓).
+- **Y la puerta única existe** ✓: **L155** habla de *«Objetivo al que se ha renunciado por inalcanzable (**ver
+  `setTarget`**)»* → hay un **`setTarget` propio** en la entidad ✓, que es por donde pasa **todo** objetivo que se pone
+  (amenaza **o animal** ✓), igual que `breakBlockAt` en el asaltante (I297 ✓) y `puertaValidaMasCercana` en los portones
+  (I301 ✓).
+
+**EL ARREGLO, entonces, es una sola condición en `setTarget`** ✓: si el objetivo es un **`Animal`** y está **fuera del
+radio de trabajo respecto al hogar** → **no se acepta** ✓ (se ignora y el guardián sigue con su faena ✓). Así el guardián no
+puede salir a por el **ganado del pueblo** ✗ (el caso del jugador, con el corral a 114 bloques ✓) y el sacrificio cae
+**donde tiene que caer**: en su guarida ✓ (porque `feedNearbyCatalysts` alimenta los catalizadores **donde muere el
+animal** ✓, **L347-370** ✓).
+*Medida*: **0 sacrificios y 0 adopciones fuera del radio de 24** ✓ y **0** guardián a más de 24 del núcleo ✓ — la misma de
+I308 ✓, ahora con el sitio exacto ✓.
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
