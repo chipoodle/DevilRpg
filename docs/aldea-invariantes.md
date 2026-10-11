@@ -7227,6 +7227,30 @@ crezca ✓) — es la misma condición de "flotando" que ya usa el auditor ✓. 
 (copía temporal ✓) — sin eso, el latido no corre allí y el número **no se mueve aunque el código esté bien** ✗✓ (me pasó
 en 192/193 y ya me pasó con las camas en I285 ✓).
 
+### I314 · HALLAZGO DE MÉTODO: UNA CORRIDA SUELTA **NO** MIDE LOS BARRIDOS — SE MIDE LA **SEGUNDA** (`-Conservar`)
+
+Continuación de I312/I313, y esto es tan importante como un arreglo ✓. La corrida **195** (con el centro en su aldea ✓ y
+el barrido extendido a la cota ✓) dio los contadores **sin mover**: **408** troncos flotando ✗ y **4** mitades de cama en la
+calle ✗ — y las trazas solo enseñaban el **paso de las compuertas** (24 ✓), **ni una** del barrido de restos ni de las
+camas ✗ (que en la corrida **194** sí salían: 2874 ✓).
+
+**LA CAUSA ES DEL MÉTODO, NO (todavía) DEL CÓDIGO** ✓✓: **cada corrida arranca copiando la partida otra vez** (sin
+`-Conservar` el banco borra la copia y la vuelve a copiar ✓), así que el pueblo **vuelve a migrar/capturar su plano desde
+cero** ✓ y **las pasadas son condicionales** (dependen del estado de cada aldea en ese instante: si ya está «al día», no
+hacen nada ✗) → **comparar una corrida suelta es ruido** ✗✓, y me ha hecho dudar dos veces de arreglos que están bien (y
+una vez di por bueno un número que no lo era ✗).
+
+**LA FORMA CORRECTA, y la dice el propio banco** ✓ (comentario de `tanda-rapida.ps1`, L15-17 ✓): *«con `-Conservar`, la
+primera corrida deja el mundo **ya migrado** y las siguientes miden el pueblo **ASENTADO**»* ✓ → o sea:
+1. **Una corrida sin banderas** (copia su partida y la migra ✓) — es la que «hace el trabajo» ✓.
+2. **Y una segunda con `-Conservar`** (mide el pueblo **asentado** ✓) — **esa** es la que hay que contar ✓.
+Y las dos, **con el centro del arnés en su aldea** (copia temporal ✓, I312 ✓) — si no, el latido no corre allí ✗.
+
+**LO QUE QUEDA, entonces, en la cola de pruebas** ✓: correr el par (sin banderas + `-Conservar`) y contar en la segunda:
+**408 → 0** troncos flotando ✓, **4 → 0** mitades en la calle ✓, **0** `El obrero repuso red_bed` ✓, y —en una corrida con
+**asedio** y con **aldea nueva**— `0` reconstrucciones del muro ✓, `0` sofocaciones ✓, `0` madera en los túneles ✓ y
+`1` haz por aldea ✓.
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
