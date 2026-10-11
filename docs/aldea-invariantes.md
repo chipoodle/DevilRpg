@@ -7021,6 +7021,56 @@ registro del jugador había asaltantes gastando su presupuesto de 40 bloques en 
 (`pica Block{minecraft:oak_log} en 949, 63, 943 (le quedan 35)` ✓) y **no abrían nada** de la muralla ✗. *Medida*: 0
 bloques de madera en las trazas de `pica Block` ✓.
 
+### I302 · LA GRANJA: LO QUE PEDÍA EL JUGADOR **YA ESTABA**, Y LO ROMPÍAN DOS FALLOS
+
+Petición literal del jugador (11-oct-2026): *«¿tan difícil es crear un goal que meta al granjero al centro de la granja,
+escanee la superficie, plante las vacías, coseche las listas, repare las rotas, acumule hasta no tener espacio, genere
+bonemeal del excedente de semillas guardando algo para la siguiente plantada, y que los tres granjeros se repartan una
+granja cada uno sin estorbarse?»* ✓. **Medido: casi todo eso YA ESTÁ en `VillagerFarmGoal`** ✓ — y con **sus propias
+palabras** citadas en el código:
+
+- **Planta** en la tierra vacía, con semillas del inventario **o de la despensa** (**L43** ✓).
+- **Llena el compostero** con las semillas que le **sobran** (trigo y betabel): *«es de donde sale…»* (**L46** ✓).
+- **RESERVA PARA LA SIGUIENTE PLANTADA** ✓: `SEMILLAS_MAX = 8` (**L85** ✓), `SEMILLAS_PARA_COMPOSTAR = 8` (**L99** ✓) y el
+  comentario de **L110**: *«Si la despensa tiene MÁS semillas que esto, se lleva unas cuantas para el compostero: es la
+  **reserva**…»* ✓ — afinada además con **un reporte suyo anterior**: *«se están acumulando demasiadas semillas; lo ideal
+  es que 2/3…»* (**L102-104** ✓, medido: 261 de trigo y 425 de betabel en su guardado ✓).
+- **Reparto por parcela** ✓ y **una granja por granjero**: `miParcela` (**L1151** ✓) y `bancalSinDueno` (**L1172** ✓) — y en
+  su registro de esta noche se ven **tres** granjeros reclamando **tres** estaciones distintas ✓.
+- Y lleva **lo cosechado a la despensa** y **trae recambios** ✓ (trazas medidas en su registro: `El granjero: Guardo 9 en
+  la despensa` ✓, `Trajo 7 del almacen a la despensa` ✓).
+
+**ENTONCES, ¿POR QUÉ SE ATORABA?** ✗✓ — porque **dos fallos le destruían la faena**, y son los que van arreglados en esta
+misma tanda: **(i)** el **paso de la compuerta encharcado** (I300 ✓: se quedaba con `pies=water` y `alcanza=NO` ✗) y
+**(ii)** **dos goals peleándose por su compuerta** (I301 ✓: `corriendo=[VillagerFarmGoal VillagerGateGoal]` con `METIDO en
+la puerta` **cada segundo** ✗). Un granjero que no consigue **entrar** no puede plantar, ni cosechar, ni abonar ✓✓.
+
+**LO QUE SÍ FALTA DE SU LISTA** ✗ (y es un cambio de diseño, no un arreglo): **«meterse al centro y ESCANEAR la
+superficie»** — hoy trabaja **celda a celda** (y por eso da tirones con el plan y con la puerta ✓). Se hará como estado
+único (`yendoAlCentro → escaneando → faena`) con el **escaneo cacheado** ✓, y su medida es la que ya existe: `[Huerta]
+parcelas al nivel N: 0 celda(s) SIN SEMBRAR, 0 PISOTEADA(s)` ✓ **más** `0` fallos de llegada con `pies=water` ✓.
+
+### I301 · UN SOLO DUEÑO POR COMPUERTA: LAS DE LAS PARCELAS SALEN DE LA LISTA DEL GOAL DE PORTONES
+
+`VillagerGateGoal.portonesDelAnexo`: se construye su lista **filtrando las compuertas de las parcelas**
+(`VillageGenerator.portonesDeLosBancales`, **L8652**) de la lista única (`todosLosPortones`, I4 ✓) → este goal se queda
+con **el corral, el gallinero y los cuatro portones del muro** ✓ y la compuerta de la parcela **la lleva la granja** ✓.
+**Causa medida**: el granjero ya se la abre él mismo (`VillagerFarmGoal` **L151-152** ✓) y con los dos goals abriéndola, la
+puerta abría y cerraba como loca ✗ (*«estaba METIDO en la puerta … se la abro para que salga»* **cada segundo** ✓). Se hace
+en su **lista propia** para no tocar el **despeje del hueco** ni el **filtro del plano** (I54 ✓), que siguen usando
+`todosLosPortones` ✓. *Medida*: 0 líneas con los dos goals sobre la misma compuerta y 0 `METIDO en la puerta` de granjeros ✓.
+
+### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
+
+`VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
+(`portonesDeLosBancales` ✓) y **afirma el suelo de los dos lados** (dos celdas a cada lado ✓), **solo si es aire o agua**
+—nunca algo construido ✗— y deja libre el hueco de arriba para que quepa el aldeano ✓; idempotente y con traza
+(`N celda(s) del paso de las compuertas afirmadas` ✓). Se llama en la **pasada de construcción**, así que lo reciben
+también las aldeas ya construidas ✓. **Causa medida**: el granjero se atoraba con el agua bajo los pies
+(`pies=water cabeza=air suelo=dirt`, `alcanza=NO` ✓) y el agua **no está dentro** de la parcela —la acequia,
+`PLOT_WATER_ROW` **L153**, no llega a los extremos a propósito, `esAguaDeLaAcequia` **L680** ✓— sino **fuera** de la
+compuerta, que es hacia donde abre ✗. *Medida*: 0 fallos de llegada con `pies=water` y 0 celdas de agua en las entradas ✓.
+
 ### I296 · EL MURO **NO SE REPONE CON EL ASEDIO EN MARCHA** (arregla las dos cosas de golpe)
 
 `VillageGenerator`, antes de `rehacerMuro`: si hay `AggressiveZombieEntity` a menos de 96 bloques del centro, **el muro no
