@@ -7015,6 +7015,20 @@ public final class VillageGenerator {
         DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO esta a la cota {} (solo {} de {} celdas del anillo lo"
                         + " tienen; hojas apiladas: {}; portones mal puestos: {}): se reconstruye a su nivel. FALTAN: {}",
                 center, cota, conMuro, ring.size(), hojaApilada, portonesMal, faltantes(level, ring, cota));
+        // I296 · NO SE REPONE EL MURO CON EL ASEDIO EN MARCHA (medido el 11-oct-2026, reporte del jugador: «los zombies
+        // del asedio no están rompiendo la muralla, se están tardando mucho en atravesarla y algunos murieron por
+        // sofocación»). Este reconstruido existe para los RESTOS DE MIGRACIÓN (el muro a la cota mala), no para el
+        // DAÑO DE BATALLA ✗: medido en su registro, las celdas que el aviso «echa en falta» son justo las que el
+        // asaltante acababa de picar (939,0,954 / 938,0,956 / 949,0,943 contra 949,63/64,943), así que la brecha se
+        // cerraba sola, el túnel volvía a empezar (54 veces «le quedan 40» ✗) y la aldea no caía nunca; y si el bloque
+        // caía donde estaba el que cavaba, el asaltante moría ASFIXIADO ✗. Con asaltantes cerca, el muro no se toca:
+        // la brecha ES el juego (lo dice el propio diseño: «el asedio TIENE que abrir brecha en el MURO»).
+        if (!level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
+                new net.minecraft.world.phys.AABB(center).inflate(96.0D)).isEmpty()) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO se repone: hay asedio en marcha (la brecha es el"
+                    + " juego; se repondra cuando el pueblo este a salvo)", center.toShortString());
+            return;
+        }
         rehacerMuro(level, center);
     }
 
