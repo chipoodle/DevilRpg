@@ -2471,6 +2471,15 @@ public final class VillageGenerator {
         esquinas.add(new BlockPos(base.getX() - LAGO_RADIO - 1, nivel, base.getZ() - LAGO_RADIO - 1));
         esquinas.add(new BlockPos(base.getX() + LAGO_RADIO + 1, nivel, base.getZ() + LAGO_RADIO + 1));
         posarFarolesFlotantes(level, esquinas);
+        // I298 · Y LAS CAMAS DE MÁS, TAMBIÉN AQUÍ (medido el 11-oct-2026 en el registro del jugador: «El obrero repuso
+        // Block{minecraft:red_bed} en BlockPos{x=531, y=63, z=566}», una y otra vez, cada pocos segundos ✗). La causa
+        // es de orden, y es la lección de esta noche: **el obrero repone lo que dice el PLAN**, y el barrido de camas
+        // (I271/I272) va en el LATIDO, o sea DESPUÉS de que el plano se capturara ✗ → el uno quita y el otro pone, para
+        // siempre. Poniéndolo aquí —en la pasada de construcción, ANTES de `terminarGrabacion`— el plano **nace ya sin
+        // esas camas** y el obrero no las vuelve a poner ✓. (Y en una aldea ya construida, como la suya, el plano se
+        // recaptura en la siguiente reparación —ver el comentario de `posarFarolesFlotantes`—, así que la pelea termina
+        // sola en cuanto pase un ciclo de reparación ✓; medible: 0 líneas «El obrero repuso … red_bed».)
+        quitarCamasPorEncimaDeLosTejados(level, center);
         for (BlockPos esquina : esquinas) {
             farolSobreElPoste(level, esquina);
         }
