@@ -8697,10 +8697,16 @@ public final class VillageGenerator {
                 if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
                     continue;
                 }
-                for (int y = cota - 1; y >= cota - 16; y--) {
+                // I313 · Y SE MIRA TAMBIÉN **LA PROPIA COTA**, pero solo si el tronco está FLOTANDO (aire debajo): medido
+                // en la corrida 194, quedaban 408 troncos que no bajaban de la cota y por eso el barrido no los veía ✗.
+                // Con suelo firme debajo, en cambio, es un árbol del pueblo y NO se toca ✓.
+                for (int y = cota; y >= cota - 16; y--) {
                     BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
                     if (!level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
                         continue;
+                    }
+                    if (level.getBlockState(p.below()).isSolid()) {
+                        continue; // tiene suelo firme debajo: es un árbol del pueblo, no un resto
                     }
                     boolean copa = false;
                     for (int dy = 1; dy <= 4 && !copa; dy++) {
