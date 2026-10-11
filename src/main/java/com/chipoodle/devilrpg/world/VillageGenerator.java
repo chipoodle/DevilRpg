@@ -8705,8 +8705,12 @@ public final class VillageGenerator {
                     if (!level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
                         continue;
                     }
-                    if (level.getBlockState(p.below()).isSolid()) {
-                        continue; // tiene suelo firme debajo: es un árbol del pueblo, no un resto
+                    // I319 · EL «SUELO FIRME DEBAJO» SOLO VALE **EN LA COTA** (medido el 11-oct-2026 en el par de
+                    // corridas: los 408 troncos son de `y=61`, POR DEBAJO de la cota 63, y estaban apoyados en el
+                    // terreno, asi que esta comprobacion los salvaba y el retrofit no los quitaba). Un arbol del pueblo
+                    // NACE en la cota, asi que su tronco no puede estar por debajo: ahi, tronco = resto, tenga suelo o no.
+                    if (y >= cota && level.getBlockState(p.below()).isSolid()) {
+                        continue; // EN la cota y con suelo firme debajo: es un arbol del pueblo, no un resto
                     }
                     boolean copa = false;
                     for (int dy = 1; dy <= 4 && !copa; dy++) {
@@ -8719,8 +8723,8 @@ public final class VillageGenerator {
                             }
                         }
                     }
-                    if (copa) {
-                        continue; // es parte de un árbol vivo: no se toca
+                    if (copa && y >= cota) {
+                        continue; // EN la cota y con copa cerca: es parte de un arbol vivo, no se toca
                     }
                     cuantos++;
                     if (!soloContar) {
