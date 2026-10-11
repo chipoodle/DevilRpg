@@ -7092,6 +7092,35 @@ y eso es **la receta del punto 5** ✓ (auditor + retrofit, como se hizo con los
 *Medida del lote*: **0 troncos de muralla vieja por debajo de la cota** ✓ (hoy: **408** ✗) y **0 troncos flotando** en la
 aldea ✓ — y el leñador **se queda como está** ✓ (su medida propia: troncos sin apoyo tras una tala = 0 ✓).
 
+### I307 · EL HAMBRE **NO** ES UN FALLO DE ENTREGA: LA CADENA FUNCIONA Y LA ALDEA SE RECUPERA SOLA
+
+Cierre del punto 8 ✓, medido en **su propio registro** (`run/logs/latest.log`), que decide entre las dos causas que
+quedaban (¿la **entrega** o la **economía**? ✗):
+
+```
+[Village] El granjero: Trajo 7 del almacen a la despensa        <- DEL ALMACÉN A LA DESPENSA ✓
+[Village] El granjero: Guardo 1 / 9 / 7 en la despensa          <- DE LA COSECHA A LA DESPENSA ✓
+[Village] El cocinero: cogio 4 tronco(s) del almacen para el ahumador (aldea 1; quedan 124 en el almacen)
+[Village] La aldea 0 vuelve a tener comida                      <- SE RECUPERA SOLA ✓
+```
+
+Y los números del propio registro: **3** veces `Guardo N en la despensa` ✓, **1** `Trajo N del almacen` ✓ y **1**
+cocinada ✓ — o sea **la cadena entera funciona** ✓ (cosecha → despensa, almacén → despensa, cocina ✓) y el almacén
+**no está seco** (124 troncos ✓ para el ahumador).
+
+**CONCLUSIÓN, y cambia el arreglo del punto** ✓✓: **no hay que tocar la entrega** ✗ — lo que pasó es **economía tensa**:
+el pueblo produce **a oleadas** (los cultivos tardan en crecer ✓) y come **de forma continua** ✓, con el **asedio** de por
+medio (los aldeanos parados ✓, I296) y **13 bocas** ✗ → la despensa llegó a **0** (y a comerse las reservas ✓: `RESERVA_PAN`
+16 puntos, `RESERVA_VEGETAL` 32 ✓) y luego **se recuperó sola** en cuanto entró la cosecha ✓✓.
+
+**LO QUE TOCA, entonces, es dimensionar el colchón con la población** ✗ (no tocar la cadena ✓): hoy las reservas son
+constantes (`VillagePantry`: `RESERVA_PAN = 4` = 16 puntos, `RESERVA_VEGETAL = 16` = 32 ✓) y **no miran cuántas bocas
+hay** ✓ — con **13 aldeanos** eso es un colchón de apenas unos minutos de consumo ✗. La opción robusta es que el objetivo
+de despensa **escale con el número de aldeanos** (y que, por debajo del colchón, el pueblo **racione** en vez de
+vaciarse ✓), y **su medida es directa**: en una corrida del arnés, la traza `Aldea N: comida M puntos` **no debe bajar
+del colchón** ✓ (hoy baja a 0 ✗) y **0** avisos de `pasa hambre` ✓ con el pueblo comiendo ✓. **No se toca ninguna
+constante sin esa medida** ✓ (regla de la casa).
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
