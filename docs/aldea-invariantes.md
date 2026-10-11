@@ -6949,6 +6949,46 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I289 · «LA ALDEA PASA HAMBRE»: LO MEDIDO, Y DÓNDE MIRAR (la entrega, no el cultivo)
+
+El jugador avisó a las 02:28 (de noche, en su partida): *«La aldea pasa hambre: la despensa está vacía»* ✗. Medido todo lo
+que se puede medir sin tocar su partida ✓:
+
+**LO QUE DICE EL REGISTRO** ✓: `[Village] La aldea 0 pasa hambre: 6 boca(s) sin su racion y 0 punto(s) en la despensa` ✓
+y `[Village] Aldea 0: comida 0 puntos, 13 aldeanos, 27 camas, 0 raciones en el ultimo minuto` ✓ (0 puntos y **ninguna
+ración repartida** ✓). Y un dato clave: **el `latest.log` de esta sesión empieza ahí** ✓ → el aviso salió **al cargar el
+mundo** ✓ → **la despensa ya estaba vacía** ✗: se vació **antes**, en la sesión anterior (la del asedio ✓, la que tiene las
+1790 paradas y los 8 asediadores ✓).
+
+**LO QUE DICE SU GUARDADO** ✓ (`build/cultivos_del_jugador.py`, solo lectura):
+- **222 celdas de tierra de cultivo y 222 cultivos** (trigo 78, zanahoria 48, patata 48, remolacha 48) → **ni una parcela
+  vacía** ✓ y **14 recién plantados (edad 0)** ✓ → **los granjeros SÍ han trabajado** (plantar y replantar ✓).
+- Pero solo **27 maduros** (remolacha 19, patata 4, trigo 3, zanahoria 1) ✓ → la mayoría está **creciendo** ✓ → la
+  producción llega **a oleadas** ✓, no de forma continua ✓.
+
+**Y LOS NÚMEROS DE LA DESPENSA** ✓ (`VillagePantry`): pan 4 puntos, vegetal 2, trigo 1 (y 3 trigos por hogaza ✓); y el
+pueblo **protege reservas** ✗: `RESERVA_PAN = 4` (**16 puntos**), `RESERVA_VEGETAL = 16` (**32**), `RESERVA_CRUDA = 8`,
+`RESERVA_COCIDA = 4` ✓ → **un pueblo sano no baja de ~50 puntos** ✓ → **estar a 0 significa que se comió hasta las
+reservas** ✗✗ (hambre de verdad, no un aviso de ajuste ✓).
+
+**ENTONCES, ¿POR QUÉ?** ✓ — descartado lo que **no** es, con la medida delante:
+- **NO es que no cultivaran** ✗: 222/222 plantado y 14 recién sembrados ✓.
+- **NO es solo la noche** ✗: de noche duermen (vanilla ✓) y no cosechan ✓, pero eso solo explica que **siga** vacía hasta
+  el amanecer ✓, no que llegara a cero ✓.
+- **SÍ es compatible con todo lo medido**: **la entrega** ✗ — lo cosechado tiene que **llegar a la despensa** (el
+  **recolector**, `VillagerCollectGoal` ✓, que va a las parcelas y al almacén ✓ y reparte ✓, y el **cocinero**,
+  `VillagerCookGoal` ✓, que convierte trigo y crudo en pan ✓). En esa sesión hubo **1790 paradas** (`PARAR` ✓) y entre
+  ellas aparecen los goals del pueblo peleándose (`VillagerFarmGoal`/`VillagerGateGoal`/`VillagerRepairGoal` ✓) → un
+  pueblo que se pasa el día **parado y replanificando** ✗ trabaja poco ✓ → y con **13 bocas** ✓ comiendo ✓, la despensa
+  se vacía ✓✓. **Y el asedio** ✓ (horas con los aldeanos parados ✗) es el empujón final ✓.
+
+**LO QUE FALTA POR MEDIR** ✓ (y es lo que hay que hacer antes de tocar nada ✗): **el contenido de los cofres** — la
+**despensa** (el doble cofre de la cocina de la taberna ✓, `VillagePantry`/`TABERNA_DESPENSA` ✓) contra el **almacén**
+(`VillageStorage.OFFSET = (48,0,21)` → centro +(48,21) ✓) y los cofres de las parcelas ✓. Si el almacén y las parcelas
+**rebosan** y la despensa está a 0 ✓ → **el fallo es la entrega** ✓✓ (y ahí hay arreglo de raíz ✓); si **todos** están
+vacíos ✓ → el problema es **producción/consumo** ✓ (y ahí se mira el equilibrio ✓). Para leerlos hay herramienta propia:
+`tools/nbtdump.py` (el que usa la auditoría ✓) → **una lectura, no un cambio** ✓.
+
 ### I288 · PUNTO 3 DE LA LISTA (LA BARRA DEL CLIENTE Y EL CLIC EN LA PIEDRA): **VEREDICTO MEDIDO**
 
 Punto (3) del objetivo: *«intentar cerrarlo con lo que se pueda medir desde aquí»* ✓ — y la respuesta es que **su mitad de
