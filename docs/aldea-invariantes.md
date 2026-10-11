@@ -7060,6 +7060,38 @@ puerta abría y cerraba como loca ✗ (*«estaba METIDO en la puerta … se la a
 en su **lista propia** para no tocar el **despeje del hueco** ni el **filtro del plano** (I54 ✓), que siguen usando
 `todosLosPortones` ✓. *Medida*: 0 líneas con los dos goals sobre la misma compuerta y 0 `METIDO en la puerta` de granjeros ✓.
 
+### I305 · LOS «TRONCOS FLOTANDO» **NO SON DEL LEÑADOR**: ES LA MURALLA VIEJA UNA CAPA POR DEBAJO DE LA COTA
+
+Reporte del jugador (11-oct-2026): *«el leñador cuando corta un árbol no corta todos los troncos y quedan troncos
+flotando, dando un aspecto irreal»* ✗. **Medido en su guardado** (`build/troncos_flotando_aldea.py`, solo lectura, aldea
+0 en (566,566) cota 63, radio 80): **408 troncos flotando** ✗ — y son **TODOS `oak_log`**, **TODOS en la capa 61**
+(**)una capa POR DEBAJO de la cota**) y **formando LÍNEAS** ✓✓:
+
+```
+(503, 61, 563) (503, 61, 564) … (503, 61, 569)
+(504, 61, 555) (504, 61, 556) … (504, 61, 574)
+```
+
+**Eso no es un árbol mal talado** ✗: es la **muralla/valla VIEJA de la aldea, una capa más abajo** ✓✓ — el mismo caso que
+su reporte del **terreno anterior** (punto 5: *«aparecen bloques que no se borraron flotando en la aldea, que son del
+terreno anterior»* ✗). Y encaja con lo que su registro dice del leñador, que **sí está funcionando** ✓:
+
+```
+[Village] El lenador: talo 5 tronco(s) (5 de la columna y 0 que colgaban) y desramo 44 hoja(s)
+[Village] El lenador: remato 3 tronco(s) que quedaban colgando alrededor del tocon 522, 63, 549
+```
+
+O sea: **la regla de I24 funciona** ✓ (tala la columna, **remata** lo que cuelga y desrama ✓) — lo que el jugador ve
+**no lo pone el leñador** ✗, lo dejó **una migración** hace capas ✓.
+
+**CONSECUENCIA PARA EL ARREGLO** ✓ (y es la lección de I302 otra vez: hay que medir **de quién** es el síntoma antes de
+tocar ✗): **no** hay que tocar la regla del leñador ✓ — hay que quitar **la muralla vieja que quedó por debajo de la cota**,
+y eso es **la receta del punto 5** ✓ (auditor + retrofit, como se hizo con los **faroles** flotantes: `auditarFarolesFlotantes`
++ `posarFarolesFlotantes` ✓): un **auditor** que cuente los troncos/restos por debajo de la cota que forman línea y un
+**retrofit** que los quite **solo si no son parte de nada vivo** (ni árbol con copa, ni construcción, ni algo del jugador ✗).
+*Medida del lote*: **0 troncos de muralla vieja por debajo de la cota** ✓ (hoy: **408** ✗) y **0 troncos flotando** en la
+aldea ✓ — y el leñador **se queda como está** ✓ (su medida propia: troncos sin apoyo tras una tala = 0 ✓).
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
