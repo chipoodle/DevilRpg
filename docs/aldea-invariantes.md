@@ -7121,6 +7121,32 @@ vaciarse ✓), y **su medida es directa**: en una corrida del arnés, la traza `
 del colchón** ✓ (hoy baja a 0 ✗) y **0** avisos de `pasa hambre` ✓ con el pueblo comiendo ✓. **No se toca ninguna
 constante sin esa medida** ✓ (regla de la casa).
 
+### I308 · EL INVOCADOR: **TIENE HOGAR Y SE GUARDA** — HAY QUE IMPONERLE SU RADIO DE 24 AL ACTUAR
+
+Reporte del jugador (11-oct-2026), aclarado por él mismo: *«no estaba el invocador en la guarida, al lado de la última
+aldea que visité»* ✗ y **sí** estaba *«sacrificando animales para expandir la infección»* ✓. Medido en el código
+(`SculkCultivatorEntity`) y en su registro:
+
+- **Su propia clase declara la regla** ✓: `WORK_RADIUS = 24` —*«Radio en el que el cultivador trabaja (**respecto al núcleo
+  de su guarida**)»* (**L77-78** ✓)— y **L62-64**: *«aparece **SOLO en las guaridas**… **cría una granja macabra**:
+  alimenta a los animales **de la guarida**»* ✓.
+- **Y SÍ guarda el hogar** ✓: **L151** *«"Hogar" (núcleo de su guarida): patrulla un radio alrededor»*, y **L210-212**
+  explica por qué es imprescindible guardarlo: *«Sin guardarlo, un guardián que sobrevive a un reinicio de la partida
+  **se queda sin "hogar"**, muere sin avisar y **el sello nunca se rompe**»* ✓.
+- **En su registro, la Guarida 0 está pegada a su aldea** ✓ (`[Lair] Guarida 0 pre-generada en {576, 71, 680}`, núcleo
+  `{576, 63, 680}` ✓, a unos **114 bloques** del centro de su aldea) y el guardián `bbcf9e3b…` **trabaja** ✓:
+  *«retoma la faena…»*, *«vuelve al trabajo: siembra de catalizadores»* y **«adopta 1 animal(es) nacidos en el corral como
+  ganado de la guarida»** ✓.
+
+**EL ARREGLO, y es su propia regla** ✓: **imponer el radio**. El cultivador solo puede **adoptar y sacrificar** animales
+que estén **dentro de `WORK_RADIUS` (24) de su hogar** ✓ y, si se aleja más, **vuelve al núcleo** ✓ — así no puede irse al
+**corral del pueblo** (que es lo que el jugador ve ✗) y su guarida no se queda vacía ✓. Se hace en los **dos** sitios
+donde actúa: el **sacrificio** (su traza `[Sculk] Sacrificio en {} alimentó N catalizador(es)`, **L368** ✓) y la
+**adopción** (`adopta N animal(es)…` ✓), con **la misma condición** en los dos ✓ (una sola puerta, como en `breakBlockAt`
+del asaltante, I297 ✓).
+*Medida del lote*: **0 sacrificios** y **0 adopciones fuera del radio de 24** ✓ y **0** cultivadores a más de 24 del
+núcleo de su guarida ✓ (hoy puede alejarse sin freno ✗).
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
