@@ -6949,7 +6949,46 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
-### I290 · EL HAMBRE ES **RECURRENTE**: LE PASA A MUCHAS ALDEAS EN MUCHAS SESIONES
+### I291 · EL GOLEM QUE NACE DENTRO DE UNA COLUMNA DEL KIOSCO (arreglo preparado, pendiente de aplicar)
+
+Reporte: *«uno de los golems SIEMPRE se spawnea en una de las columnas de la aldea y recibe daño por sofocación, en
+TODAS las aldeas»* ✗. **Causa localizada con su línea** ✓: `VillageGenerator` **L7867** convoca al golem en
+**`center.offset(4, 0, 4)`** ✓ y las **cuatro columnas del kiosco** están **justo a ±4 del centro** ✓ → **siempre** cae
+dentro de un pilar ✓✓ (de ahí el «en todas las aldeas» ✓). El método `spawnIronGolem` (**L5615-5628**) ya intenta
+esquivarlo (*«comprobar que quepa, para que no se asfixie»* ✓) con `spawnY` + `huecoLibre`, pero **falla en ese caso** ✗.
+**El arreglo está PREPARADO** ✓ (`.migration-tools/i291_golem.py`, **sin aplicar todavía** ✗): comprobar que la celda está
+libre **de verdad** (aire, aire encima, suelo firme debajo ✓) y, si no, **buscar hueco en seis celdas a la redonda** ✓;
+si no hay ninguno, **no convocarlo y avisar** ✓ (mejor eso que uno asfixiándose ✓). **Medida**: golems nacidos en una celda
+**no libre** = **0** ✓ (y su salud estable ✓).
+
+### I292 · RESTOS DEL TERRENO VIEJO **FLOTANDO** EN LA ALDEA (reporte del jugador, 11-oct-2026)
+
+Reporte: *«spawnea la aldea y aparecen bloques que no se borraron flotando en la aldea, que son del terreno anterior»* ✗
+— o sea: al fundar/levantar una aldea quedan **bloques sueltos del terreno de antes** en el aire ✓.
+
+**LO QUE YA EXISTE (y por eso NO es que no se limpie, es que se limpia de menos)** ✓:
+- El **«Solar limpio»** de cada casa (`VillageGenerator`, en `placeVanillaHouse`: airea **la huella de la plantilla** y
+  cuatro bloques por encima ✓).
+- El **cimiento** al final de la construcción: `afianzarElSuelo(level, center, FENCE_RADIUS + 24, cota)` ✓ (I182 ✓).
+- Y la **reparación** de la aldea, que ya traza `REPARADA (quitados N bloques de restos por encima del nivel del pueblo)`
+  ✓ (medido: 6.298 bloques en una corrida del arnés ✓).
+
+**LA SOSPECHA, ya con fundamento** ✓: esas tres limpiezas trabajan **por huella** (la casa, el recinto, la pasada de
+reparación ✓) y **no por “esto está flotando”** ✗ → un bloque del terreno viejo **fuera de las huellas** (o por encima del
+techo, donde la limpieza no llega ✓) **se queda** ✓. **Medida que hay que hacer**: contar, en una aldea del arnés,
+bloques **flotando** (con aire debajo y fuera del **plano** de la aldea ✓) — antes y después del arreglo ✓. El arreglo
+robusto: una pasada **por flotación** (no por huella ✗) sobre el recinto, **quitar lo que no esté en el plano** ✓ —
+respetando lo que haya puesto el jugador ✗ (que es la regla de siempre: solo lo que no es suyo ✓).
+
+### I293 · EL LEÑADOR DEJA **TRONCOS FLOTANDO** (reporte del jugador, 11-oct-2026)
+
+Reporte: *«el leñador cuando corta un árbol no corta todos los troncos y quedan troncos flotando, dando un aspecto
+irreal»* ✗. **Dónde mirar** ✓: `VillagerLumberjackGoal` (el que tala ✓) — y el patrón del arreglo es el mismo de siempre en
+este proyecto: **quitar el resto del árbol entero** (los troncos que quedan ✓ y las hojas que queden colgando ✓), **solo
+lo del árbol** ✓ (nunca lo del jugador ✓). **Medida**: tras una tala en el arnés, contar **troncos del árbol sin apoyo**
+(con aire debajo ✓) = **0** ✓ — antes: los que salgan ✓.
+
+### I291 · EL GOLEM QUE NACE DENTRO DE UNA COLUMNA (arreglo preparado)
 
 Continuación de I289, y el dato que **cambia el diagnóstico** ✓: el jugador avisó de que se iba a la **siguiente aldea** a
 probar la pausa del asedio y **si se acaba la despensa en la primera noche** ✓ — así que se leyeron **todos** los registros

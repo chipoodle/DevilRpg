@@ -190,6 +190,18 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
   **dentro** en ese pegado/amueblado (sin tocar la plantilla) y medir: **2 camas fuera → 0** ✓. *(Descartado el
   camino equivocado: la tabla de camas de `VillageGenerator` L9875-9882 es de la **casa grande**, no de la casa 1 —
   ver **I259**.)*
+- **C · EL GOLEM QUE SE ASFIXIA EN UNA COLUMNA** ✗ (11-oct-2026, reporte: *«uno de los golems SIEMPRE se spawnea en una de las
+  columnas de la aldea y recibe daño por sofocación, en TODAS las aldeas»*): **causa medida** — el golem se convoca en
+  `center.offset(4,0,4)` (`VillageGenerator` L7867) y las cuatro columnas del kiosco están **a ±4** → siempre dentro de un
+  pilar ✓. **Arreglo PREPARADO sin aplicar** (`i291_golem.py`): celda libre de verdad + búsqueda alrededor + aviso si no
+  hay hueco. Medida: golems en celda no libre = 0.
+- **D · RESTOS FLOTANTES DEL TERRENO VIEJO AL FUNDAR** ✗ (11-oct-2026, **I292**): la limpieza es **por huella** (solar de
+  cada casa, cimiento, reparación) y lo que queda **fuera de esas huellas** se queda flotando ✓. Arreglo: pasada **por
+  flotación** en el recinto (quitar lo que no esté en el plano; nunca lo del jugador). Medida: bloques flotando que no son
+  del plano → 0.
+- **E · EL LEÑADOR DEJA TRONCOS FLOTANDO** ✗ (11-oct-2026, **I293**): *«no corta todos los troncos y quedan troncos
+  flotando»*. Dónde: `VillagerLumberjackGoal`. Arreglo: quitar el **resto del árbol** (troncos y hojas que cuelgan), solo
+  lo del árbol. Medida: troncos del árbol sin apoyo tras una tala → 0.
 - **B · El haz de luz del centro** — **MEDIDO: ESTÁ BIEN PUESTO** ✓✓ (9-oct-2026, **I255**/**I258**). El jugador
   confirmó que era el haz. Comprobado en su aldea: **X/Z** = (566.5, 566.5), que es el medio de la **plataforma** del
   kiosco (9×9), de la **campana** (566,64,566) y del **farol** (566,67,566) ✓; **Y**: el haz arranca en `nivel+6` = **69**
