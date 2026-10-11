@@ -635,6 +635,16 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
         if (target != null && target == rejectedTarget && rejectedTicks > 0) {
             return; // ya se le soltó por inalcanzable: hasta que se le pase la memoria, no cuenta como amenaza
         }
+        // I317 · Y NO SALE DE SU GUARIDA A POR GANADO AJENO (medido el 11-oct-2026, reporte del jugador: el guardián
+        // «sacrificando animales para expandir la infección» ✗, con su guarida a 114 bloques de la aldea ✓). El
+        // sacrificio alimenta los catalizadores **donde muere el animal** (`feedNearbyCatalysts`, L347-370 ✓), así que
+        // si sale a por el ganado del pueblo **la infección crece allí** ✗. La regla es la suya: `WORK_RADIUS` es «el
+        // radio en el que el cultivador trabaja **respecto al núcleo de su guarida**» (L77-78 ✓) → un `Animal` fuera de
+        // ese radio **no es faena suya** y no se acepta ✓. (Las amenazas ya tienen su propio radio: `THREAT_RADIUS` ✓.)
+        if (target instanceof Animal
+                && target.blockPosition().distSqr(workCenter()) > (double) WORK_RADIUS * WORK_RADIUS) {
+            return;
+        }
         super.setTarget(target);
     }
 
