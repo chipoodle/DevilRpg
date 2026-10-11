@@ -418,6 +418,15 @@ public final class VillageGenerator {
         // mundo nuevo, mientras el arnés —que mide sobre su guardado viejo, y ése sí migra— lo daba por arreglado.
         afianzarElSuelo(level, center, FENCE_RADIUS + 24, cotaDeLaPlaza(level, center));
 
+        // I321 · LOS BARRIDOS, ANTES DE CAPTURAR EL PLANO (medido el 11-oct-2026, corridas 198+199). El retrofit QUITABA
+        // los 408 troncos y el obrero los VOLVIA A PONER, porque el PLAN todavia los pedia ✗ (la misma leccion de las
+        // camas, I298): uno quita y el otro repone, para siempre. Aqui, justo ANTES de `terminarGrabacion()`, el plano se
+        // captura con el mundo YA limpio -> nace sin esas piezas y el obrero no las repone ✓. Los tres barridos son
+        // idempotentes y baratos (si no hay nada que hacer, no escriben ni una celda).
+        int cotaDelPlano = cotaDeLaPlaza(level, center);
+        troncosBajoLaCota(level, center, cotaDelPlano, false);
+        quitarMitadesDeCamaHuerfanas(level, center);
+        asegurarElPasoDeLasCompuertas(level, center, cotaDelPlano);
         return terminarGrabacion();
     }
 
