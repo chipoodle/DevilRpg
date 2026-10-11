@@ -6980,6 +6980,37 @@ bloques **flotando** (con aire debajo y fuera del **plano** de la aldea ✓) —
 robusto: una pasada **por flotación** (no por huella ✗) sobre el recinto, **quitar lo que no esté en el plano** ✓ —
 respetando lo que haya puesto el jugador ✗ (que es la regla de siempre: solo lo que no es suyo ✓).
 
+### I294 · LA PAUSA DEL ASEDIO, **VERIFICADA EN VIVO** CON JUGADOR DE VERDAD (y dos hallazgos del mismo registro)
+
+El jugador entró a la **aldea 1 (Aldea de Raíz Profunda)** y allí saltó el asedio ✓. En su registro salen **las dos
+líneas** que eran la única variante que faltaba de I283/I284 (**jugador conectado pero lejos** ✓):
+
+```
+03:24:41  [Village] Asedio de la aldea 1 EN PAUSA: el jugador no esta en la aldea (a 128 bloques del centro):
+                    el reloj se para y la aldea NO puede caer
+03:25:38  [Village] Aldea 1: el jugador ha vuelto al asedio; se le da el tiempo entero otra vez (120 s de margen)
+```
+
+**LO QUE ESO CIERRA** ✓✓: la **pausa** con su distancia ✓, la **reanudación** al volver ✓, y **la regla que protege la
+partida** (*«la aldea NO puede caer»* ✓) — todo con un jugador real, que es lo que el arnés no podía dar ✓. El punto 2 de
+la lista queda **cerrado y medido** ✓.
+
+**Y DOS HALLAZGOS DEL MISMO REGISTRO, que hay que apuntar antes de que se pierdan** ✓:
+
+1. **QUIÉN REPONE LAS CAMAS** ✗✓ (responde al hilo que dejó I286: *«algo repone camas arriba entre vueltas del latido»*):
+   el registro lo dice con nombre y apellidos —
+   `[Village] El obrero repuso Block{minecraft:red_bed} en BlockPos{x=531, y=63, z=566}` (y 531,560 / 531,561 / 531,565
+   ✓, una y otra vez, cada pocos segundos ✗). O sea: **es el obrero** (`VillagerRepairGoal` ✓) **reponiendo lo que pide el
+   PLAN** ✓ — porque el plan de la aldea **todavía tiene esas camas apuntadas** ✗ → mi barrido las quita ✓ y el obrero las
+   vuelve a poner ✓ = **la pelea** que se veía en la traza ✓✓. **Consecuencia para el arreglo (y es importante)**: el
+   barrido **no es la solución de raíz** ✗ — hay que **arreglar el PLAN** (que no apunte esas camas ✓), o el obrero las
+   repondrá siempre ✓. Queda como el siguiente paso de A(ii) ✓.
+2. **EL GOLEM, CONFIRMADO EN UNA ALDEA NUEVA** ✓: al levantar la aldea 1 sale
+   `[Village] golem de hierro en BlockPos{x=994, y=63, z=994}` ✓ — y el centro de esa aldea es **(990, 71, 990)** ✓ →
+   **+4, +4** ✓✓ = **exactamente la celda de una de las columnas del kiosco** ✗, que es la causa medida en I291 ✓ (de ahí
+   el «SIEMPRE, en todas las aldeas» del jugador ✓). El arreglo **preparado** (celda libre de verdad + búsqueda alrededor)
+   es el que toca aplicar ✓.
+
 ### I293 · EL LEÑADOR DEJA **TRONCOS FLOTANDO** (reporte del jugador, 11-oct-2026)
 
 Reporte: *«el leñador cuando corta un árbol no corta todos los troncos y quedan troncos flotando, dando un aspecto
