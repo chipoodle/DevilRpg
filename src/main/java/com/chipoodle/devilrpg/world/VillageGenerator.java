@@ -2480,6 +2480,10 @@ public final class VillageGenerator {
         // recaptura en la siguiente reparación —ver el comentario de `posarFarolesFlotantes`—, así que la pelea termina
         // sola en cuanto pase un ciclo de reparación ✓; medible: 0 líneas «El obrero repuso … red_bed».)
         quitarCamasPorEncimaDeLosTejados(level, center);
+        // I300 · Y EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, SECO Y FIRME (el granjero se atoraba con el agua bajo los
+        // pies al entrar: `pies=water` con `alcanza=NO` en su registro). Va aquí, con el resto de la pasada, para que lo
+        // reciban también las aldeas ya construidas (es idempotente: si el paso está bien, no toca nada).
+        asegurarElPasoDeLasCompuertas(level, center, nivel);
         for (BlockPos esquina : esquinas) {
             farolSobreElPoste(level, esquina);
         }
@@ -8643,6 +8647,49 @@ public final class VillageGenerator {
                 }
             }
         }
+    }
+
+    /**
+     * <b>EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, FIRME Y SECO</b> (I300, medido el 11-oct-2026). El granjero se
+     * atoraba con el agua bajo los pies al entrar a su parcela (en el registro del jugador: {@code no consigue llegar a
+     * … alcanza=NO; pies=water cabeza=air suelo=dirt} ✗). El agua <b>no</b> estaba dentro —la acequia no llega a los
+     * extremos a propósito, {@code esAguaDeLaAcequia}— sino <b>fuera</b> de la compuerta, que es hacia donde abre. Aquí
+     * se afirma el suelo de <b>los dos lados</b> de cada compuerta, <b>solo si es aire o agua</b> (nunca algo construido
+     * ✗) y se deja el hueco de arriba libre para que quepa el aldeano. Es idempotente.
+     *
+     * @return cuántas celdas de suelo se han afirmado
+     */
+    public static int asegurarElPasoDeLasCompuertas(ServerLevel level, BlockPos center, int nivel) {
+        int puestas = 0;
+        for (BlockPos porton : portonesDeLosBancales(center, nivel)) {
+            BlockState estado = level.getBlockState(porton);
+            if (!(estado.getBlock() instanceof FenceGateBlock)) {
+                continue; // esa ya no es una compuerta: no se toca
+            }
+            Direction mira = estado.getValue(FenceGateBlock.FACING);
+            for (Direction lado : new Direction[]{mira, mira.getOpposite()}) {
+                for (int paso = 1; paso <= 2; paso++) {
+                    BlockPos pie = porton.relative(lado, paso);
+                    BlockState abajo = level.getBlockState(pie);
+                    if (abajo.isAir() || !abajo.getFluidState().isEmpty()) {
+                        // lint:ok I9 porque NO es construcción nueva: es un RETROFIT idempotente en el sitio que
+                        // arregla lo ya construido (el paso encharcado de las compuertas) y no rehace la aldea.
+                        colocar(level, pie, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                        puestas++;
+                    }
+                    BlockPos hueco = pie.above();
+                    BlockState arriba = level.getBlockState(hueco);
+                    if (!arriba.isAir() && !arriba.getFluidState().isEmpty()) {
+                        colocar(level, hueco, Blocks.AIR.defaultBlockState(), 3); // el agua de encima, fuera
+                    }
+                }
+            }
+        }
+        if (puestas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} celda(s) del paso de las compuertas afirmadas (secas y"
+                    + " firmes: el granjero no se queda con los pies en el agua, I300)", center.toShortString(), puestas);
+        }
+        return puestas;
     }
 
     /**
