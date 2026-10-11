@@ -6980,6 +6980,57 @@ bloques **flotando** (con aire debajo y fuera del **plano** de la aldea ✓) —
 robusto: una pasada **por flotación** (no por huella ✗) sobre el recinto, **quitar lo que no esté en el plano** ✓ —
 respetando lo que haya puesto el jugador ✗ (que es la regla de siempre: solo lo que no es suyo ✓).
 
+### I299 · LA GRANJA: EL AGUA ESTÁ **FUERA** DE LA COMPUERTA, Y LA COMPUERTA NECESITA **DUEÑO ÚNICO**
+
+Reporte del jugador (11-oct-2026): *«los granjeros se siguen atorando cuando quieren entrar a la granja cuando hay agua
+debajo de ellos y las puertas de las granjas abren y cierran como locas»* ✗. Medido, y **el proyecto ya sabía de esto** ✓
+(dos reportes anteriores del mismo jugador):
+- **`VillageGenerator` L161-162**: *«el granjero **trepaba la valla** en vez de entrar por la compuerta»* ✓ — y **L672-676**,
+  la otra causa: la **altura del escalón** de la compuerta ✓.
+- **La acequia** es `PLOT_WATER_ROW` (**L153**) y `esAguaDeLaAcequia` (**L680**) la limita a `dx > 0 && dx < PLOT_WIDTH-1`
+  → **los extremos quedan fuera a propósito** ✓.
+- **Y las compuertas de la parcela están en `bx ± r`** (**L4127/L4136** ✓) — sobre la línea de la acequia y **abriendo
+  hacia FUERA** ✗ → el agua que pisa el granjero **no está en la parcela, está fuera** ✓ (la aldea 1 es la del lago, y su
+  registro lo dice: `no consigue llegar a … (alcanza=NO; **pies=water** cabeza=air suelo=dirt)` ✓).
+
+**DOS ARREGLOS DE RAÍZ** ✓: **(1)** el **suelo de fuera de cada compuerta, firme y seco** (la receta de `afianzarElSuelo`
+aplicada a las cuatro compuertas ✓) — *medida*: 0 fallos de llegada con `pies=water` y 0 celdas de agua en las entradas ✓;
+**(2) DUEÑO ÚNICO de la compuerta** ✗→✓: hoy `VillagerFarmGoal` se la abre él mismo (**L151-152** ✓) **y** `VillagerGateGoal`
+también ✗ —medido en su registro: `corriendo=[VillagerFarmGoal VillagerGateGoal]` y `METIDO en la puerta` **cada segundo** ✓—
+así que **la lleva el goal de la granja** y el de portones **cede** ✓ — *medida*: 0 líneas con los dos sobre la misma
+compuerta ✓. Y el **goal único** que pidió el jugador (centro → escaneo → plantar → cosechar → reparar → acumular →
+bonemeal **con reserva** → tres granjeros, una granja cada uno ✓) **conserva el reparto que ya existe**
+(`miParcela` **L1151**, `bancalSinDueno` **L1172** ✓).
+
+### I298 · LAS CAMAS DE MÁS SE QUITAN **ANTES** DE CAPTURAR EL PLANO (el obrero ya no las repone)
+
+`VillageGenerator`: el barrido de camas se llama **también en la pasada de construcción**, antes de `terminarGrabacion`
+(junto a `posarFarolesFlotantes`) ✓. **Causa medida** en el registro del jugador: `El obrero repuso
+Block{minecraft:red_bed} en BlockPos{x=531, y=63, z=566}`, una y otra vez ✗ → **el obrero repone lo que dice el PLAN** y el
+barrido (I271/I272) iba en el **latido**, o sea **después** de capturarlo: uno quita y el otro pone, para siempre ✓. Con el
+barrido dentro de la pasada, **el plano nace sin esas camas** ✓; y en una aldea ya construida el plano **se recaptura en la
+siguiente reparación** (ver el comentario de `posarFarolesFlotantes` ✓), así que la pelea termina sola ✓. *Medida*: 0
+líneas `El obrero repuso … red_bed` ✓.
+
+### I297 · EL ASALTANTE NO GASTA EL TÚNEL EN **MADERA**
+
+`AggressiveZombieEntity.breakBlockAt` (**L320**, **la única puerta** por la que pasan los tres caminos de picado ✓), junto
+a las otras reglas «no se pica» (el muro protegido y los tablones del asalto, I239 ✓): si el bloque es de las **etiquetas
+del juego** `LOGS` o `LEAVES`, **no se pica** ✓ (cubre cualquier madera, también de mods ✓). **Causa medida**: en el
+registro del jugador había asaltantes gastando su presupuesto de 40 bloques en los **árboles** que tocan el anillo
+(`pica Block{minecraft:oak_log} en 949, 63, 943 (le quedan 35)` ✓) y **no abrían nada** de la muralla ✗. *Medida*: 0
+bloques de madera en las trazas de `pica Block` ✓.
+
+### I296 · EL MURO **NO SE REPONE CON EL ASEDIO EN MARCHA** (arregla las dos cosas de golpe)
+
+`VillageGenerator`, antes de `rehacerMuro`: si hay `AggressiveZombieEntity` a menos de 96 bloques del centro, **el muro no
+se toca** ✓ y la brecha queda viva —*«el asedio **tiene que abrir brecha en el MURO**»*, dice el propio diseño ✓—.
+**Causa medida**: el reconstruido existe para los **restos de migración** (muro a la cota mala ✓), **no** para el **daño de
+batalla** ✗, y confundirlos era el fallo: las celdas que el aviso «echa en falta» (`939,0,954` / `938,0,956` / `949,0,943` ✓)
+son **exactamente** las que el asaltante acababa de picar (`949,63/64,943` ✓) → la brecha se cerraba sola, el túnel volvía a
+**40** (**54 veces** en su registro ✗) y la aldea no caía nunca; y si el bloque caía donde estaba el que cavaba, moría
+**asfixiado** ✓✓. *Medida*: **0 reconstrucciones** durante un asedio y **0 sofocaciones** por reponer ✓.
+
 ### I295 · EL ASEDIO NO ROMPE EL MURO: **EL OBRERO LO REPONE MIENTRAS LO ESTÁN PICANDO** (y por eso se asfixian)
 
 Reporte del jugador (11-oct-2026): *«los zombies del asedio no están rompiendo la muralla, se están tardando mucho en
