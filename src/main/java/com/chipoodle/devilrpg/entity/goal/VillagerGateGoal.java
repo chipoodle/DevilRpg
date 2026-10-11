@@ -336,7 +336,22 @@ public class VillagerGateGoal extends Goal {
      * usan también el despeje del hueco y el filtro del plano (I54).
      */
     private static List<BlockPos> portonesDelAnexo(BlockPos center, int nivel) {
-        return VillageGenerator.todosLosPortones(center, nivel);
+        // I301 · LAS COMPUERTAS DE LAS PARCELAS NO SON DE ESTE GOAL (medido el 11-oct-2026, reporte del jugador: «las
+        // puertas de las granjas abren y cierran como locas» ✗). El granjero YA se las abre él mismo —`VillagerFarmGoal`
+        // tiene su propia lógica de compuerta, a la distancia que necesita para entrar— y, con los dos goals abriéndolas,
+        // la compuerta no paraba: en su registro sale `corriendo=[VillagerFarmGoal VillagerGateGoal]` con
+        // `estaba METIDO en la puerta … se la abro para que salga` CADA SEGUNDO ✗✓. La regla es la de la casa: UN SOLO
+        // DUEÑO por recurso → la compuerta de la parcela la lleva la granja ✓, y aquí quedan el corral, el gallinero y
+        // los cuatro portones del muro (que sí son de este goal ✓).
+        List<BlockPos> todos = VillageGenerator.todosLosPortones(center, nivel);
+        List<BlockPos> deBancales = VillageGenerator.portonesDeLosBancales(center, nivel);
+        List<BlockPos> mios = new java.util.ArrayList<>(todos.size());
+        for (BlockPos p : todos) {
+            if (!deBancales.contains(p)) {
+                mios.add(p);
+            }
+        }
+        return mios;
     }
 
     /** Abre el portón (con su chirrido) y lo apunta como "abierto por el pueblo". */
