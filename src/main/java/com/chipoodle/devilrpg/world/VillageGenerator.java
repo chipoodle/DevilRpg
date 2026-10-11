@@ -298,6 +298,27 @@ public final class VillageGenerator {
             nivelVilla = waterLevel + 1; // el suelo de la isla va al nivel del agua: se anda un bloque por encima
         } else {
             nivelVilla = levelTerrain(level, center, LEVEL_RADIUS);
+        // I304 · Y EN PANTANO LA COTA NO PUEDE QUEDAR AL NIVEL DEL AGUA (medido el 11-oct-2026, reporte del jugador:
+        // «cuando es bioma de pantano, la aldea no genera bien su suelo y aparecen regiones inundadas» ✗, con captura).
+        // Este es el camino del terreno seco, y `waterSurfaceForArea` devolvió -1 porque no es una zona de AGUA entera
+        // (la isla flotante es para el mar y los lagos ✓); pero en un pantano el agua está A RAS DE SUELO **por trozos**:
+        // si la cota queda a su altura, el agua se queda dentro del recinto y salen las manchas ✗✓. Se mira la
+        // superficie de agua de CADA columna de la plaza (waterSurface, L7656) y la cota se pone **por encima de la más
+        // alta** — el pueblo se anda, no se nada ✓ — y el nivelado que viene después sube el suelo solo ✓.
+        int aguaMasAlta = -1;
+        for (int dx = -LEVEL_RADIUS; dx <= LEVEL_RADIUS; dx++) {
+            for (int dz = -LEVEL_RADIUS; dz <= LEVEL_RADIUS; dz++) {
+                int superficie = waterSurface(level, center.getX() + dx, center.getZ() + dz);
+                if (superficie > aguaMasAlta) {
+                    aguaMasAlta = superficie;
+                }
+            }
+        }
+        if (aguaMasAlta >= nivelVilla) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: la cota sube de {} a {} para quedar por ENCIMA del agua de su"
+                    + " zona (pantano; I304)", center.toShortString(), nivelVilla, aguaMasAlta + 1);
+            nivelVilla = aguaMasAlta + 1;
+        }
         }
         // LA COTA DE LA ALDEA QUEDA FIJADA AQUÍ, y esta es la buena (29-sep-2026). Es la que acaba de usar el
         // generador para nivelar el terreno, así que TIENE que ser la que usen después el latido y los goals. Sin
