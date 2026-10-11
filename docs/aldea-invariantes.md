@@ -6949,6 +6949,37 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I285 · PRUEBA SOBRE LA COPIA DE LA ALDEA DEL JUGADOR: **NO MIDE** — SU ALDEA NO LATE SI NO HAY JUGADOR DENTRO
+
+Primer intento de cerrar la medida que faltaba (el barrido sobre **su** aldea, no sobre la del arnés) ✓, y **sale
+negativa** ✗ — con el porqué medido, que es lo que vale ✓:
+
+**CÓMO SE HIZO** ✓ (y el hallazgo de cómo hacerlo, que es útil para siempre): la regla de oro del banco (`tanda-rapida.ps1`
+**L15-18** y **L52-54**) es que **sin `-Conservar` el script borra SOLO la copia (`run\world`) y copia
+`run\saves\New World` encima** ✓ — o sea que **el arnés ya mide sobre una copia de la partida del jugador** ✓ y
+`run\saves` no se toca jamás ✓. Yo venía usando `-Conservar` ✗ (que **conserva** la copia anterior) y por eso medía otra
+aldea ✓. Corrida **189**, sin banderas ✓.
+
+**EL «ANTES» DE SU ALDEA** ✓ (contado en su guardado, **solo lectura**, `build/cuenta_camas_jugador.py`):
+**60 mitades** (50 rojas / 10 blancas) — **36 en la capa 63**, **20 en la 68** y **4 en la 74**; de ellas, **4 EN LA CALLE**
+(capa 63, la columna `x=531` de la puerta de la casa 1 ✓) y **4 ENCIMA DEL TEJADO** (≥ 72 ✓) — justo los dos casos que el
+barrido tiene que quitar ✓.
+
+**EL «DESPUÉS» (la copia, `run\world`)** ✗: **las mismas 60 mitades**, con **las 4 de la capa 74 y las 4 de la calle
+todavía ahí** ✗✗.
+
+**Y LA TRAZA LO EXPLICA** ✓✓: el barrido **sí corrió**, pero dice **`Aldea en 470, 63, 646`** ✗ — **la aldea del propio
+arnés**, no la del jugador (566,566) ✓. O sea: **el latido de un pueblo solo corre con un jugador dentro** ✓ (es la misma
+mecánica que la **pausa del asedio**, I283/I284 ✓: `jugadorEnLaAldea`, `RADIO_ASEDIO_CON_JUGADOR` ✓) → el jugador de pega
+del arnés está en **su** aldea ✓ y **la del jugador no late** ✗ → **el barrido no llega a ejecutarse allí** ✓✓. No es un
+fallo del barrido: es que **la prueba estaba mal montada** ✗.
+
+**LO QUE TOCA PARA MEDIRLO DE VERDAD** ✓ (y es pequeño y temporal, nunca se sube): en la **copia temporal del arnés**
+(`tools/arnes/GuardHarness.java`, que se copia a `src` y **se borra antes de commitear** ✓) poner al **jugador de pega
+dentro de la aldea del jugador** (566,566) ✗ —donde hoy lo pone en la suya (470,646)— y repetir la corrida ✓ → entonces su
+aldea late, el barrido corre **allí** y la medida será real: **las 4 de la capa 74 y las 4 de la calle → 0**, con las 20
+de la capa 68 y las blancas de dentro intactas ✓.
+
 ### I284 · EL INSTRUMENTO DE LA PAUSA DEL ASEDIO **YA EXISTE**: EL PUNTO SE CIERRA SIN ESCRIBIR CÓDIGO
 
 La penúltima suposición falsa de esta lista ✗→✓ (van cuatro: `esPortonDelMuro`, el nombre del fichero del goal,
