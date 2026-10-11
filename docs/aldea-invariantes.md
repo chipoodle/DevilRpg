@@ -6949,6 +6949,34 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I290 · EL HAMBRE ES **RECURRENTE**: LE PASA A MUCHAS ALDEAS EN MUCHAS SESIONES
+
+Continuación de I289, y el dato que **cambia el diagnóstico** ✓: el jugador avisó de que se iba a la **siguiente aldea** a
+probar la pausa del asedio y **si se acaba la despensa en la primera noche** ✓ — así que se leyeron **todos** los registros
+guardados (`run/logs/`, **2.646 ficheros**, incluidos los girados `.log.gz`, con `build/despensa_en_el_tiempo.py` ✓) y el
+aviso **no es un caso suelto** ✗:
+
+```
+2026-09-14-12: La aldea 8  se quedo sin comida: pasa hambre
+2026-09-14-14: La aldea 7  se quedo sin comida: pasa hambre
+2026-09-14-7:  La aldea 9  se quedo sin comida: pasa hambre
+2026-09-15-11: La aldea 10 se quedo sin comida: pasa hambre
+```
+
+**LO QUE ESO SIGNIFICA** ✓✓: **no es el asedio de hoy** ✗ ni un caso raro ✓ — es un patrón: **las aldeas se quedan sin
+comida de forma repetida**, en aldeas distintas y sesiones distintas ✓. O sea, o **la entrega de comida a la despensa falla
+de forma sistemática** ✗ (lo que apunta I289: el recolector y el cocinero ✓), o **la economía no da para el pueblo que
+hay** ✗ (13 bocas ✓ contra reservas de ~50 puntos ✓ y cosechas a oleadas ✓).
+**Y con eso, la pregunta del jugador** (*«¿se acaba la despensa en la primera noche?»*) **tiene ya una respuesta
+probable y medida en su historial**: **sí, se acaba, y en muchas aldeas** ✗ — falta ver **a qué ritmo** ✓ (para lo que
+está la lectura de los cofres de I289, y la observación directa que va a hacer él ✓).
+
+**LO QUE HAY QUE HACER CON ESTO** ✓ (la decisión robusta, escrita): **no tocar el equilibrio a ciegas** ✗ — primero la
+**medida que separa las dos causas** ✓ (despensa contra almacén y parcelas, I289 ✓): si el almacén rebosa, el fallo es la
+**entrega** ✓ y el arreglo va ahí ✓; si todo está vacío, es **producción/consumo** ✓ y entonces se ajusta con números
+(cuántos puntos produce una parcela al día contra lo que come el pueblo ✓). Hasta entonces, **ni una constante se mueve**
+✓ (regla de la casa: lo que no mejore la media, se retira; y aquí ni siquiera sabemos **cuál** de las dos es ✗).
+
 ### I289 · «LA ALDEA PASA HAMBRE»: LO MEDIDO, Y DÓNDE MIRAR (la entrega, no el cultivo)
 
 El jugador avisó a las 02:28 (de noche, en su partida): *«La aldea pasa hambre: la despensa está vacía»* ✗. Medido todo lo
