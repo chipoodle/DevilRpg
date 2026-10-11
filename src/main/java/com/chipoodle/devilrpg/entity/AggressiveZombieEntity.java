@@ -330,6 +330,14 @@ public class AggressiveZombieEntity extends Zombie {
         }
         BlockState bs = level().getBlockState(pos);
         Block b = bs.getBlock();
+        // I297 · Y LA MADERA NO SE PICA (medido el 11-oct-2026, reporte del jugador: «no están rompiendo la muralla y se
+        // están tardando mucho en atravesarla»). En su registro hay asaltantes gastando el presupuesto de 40 bloques en
+        // los ÁRBOLES que tocan el anillo: «pica Block{minecraft:oak_log} en 949, 63, 943 (le quedan 35)» → no abren
+        // NADA de la muralla. La madera no es lo que cierra el pueblo, así que se ignora (troncos y hojas, con las
+        // ETIQUETAS del juego, que cubren cualquier madera) y el asaltante sigue con lo que sí cuenta.
+        if (bs.is(net.minecraft.tags.BlockTags.LOGS) || bs.is(net.minecraft.tags.BlockTags.LEAVES)) {
+            return;
+        }
         if (b.defaultDestroyTime() < 0.0F) {
             return; // inquebrantable
         }
