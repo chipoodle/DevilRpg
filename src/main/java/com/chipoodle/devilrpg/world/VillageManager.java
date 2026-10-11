@@ -2982,6 +2982,13 @@ public final class VillageManager {
         // regla es de ALTURA y de pueblo entero, porque la de "un edificio concreto" falló tres veces (I265-I268:
         // miraba a la barraca y las camas están en la taberna). Idempotente y sin subir la versión del trazado.
         VillageGenerator.quitarCamasPorEncimaDeLosTejados(level, center);
+        // I311 · Y LAS DOS REDES DE SEGURIDAD QUE FALTABAN EN EL LATIDO (medido en el lote 192): el retrofit de los
+        // restos por debajo de la cota (I306) corría solo en la pasada de la pesquera, que NO se ejecuta para todas las
+        // aldeas -> en la del jugador quedaban 398 troncos ✗; y las mitades de cama huérfanas (I311) se quedaban
+        // colgando ✗. Aquí van las dos, que el latido sí corre para cada aldea: idempotentes y baratas (si no hay nada
+        // que hacer, no escriben ni una celda).
+        VillageGenerator.troncosBajoLaCota(level, center, VillageGenerator.cotaDeLaPlaza(level, center), false);
+        VillageGenerator.quitarMitadesDeCamaHuerfanas(level, center);
         for (BlockPos[] par : VillageGenerator.asentarLosComposterosALaCota(level, center)) {
                 for (Villager granjero : aldeanos) {
                     Optional<GlobalPos> suyo = granjero.getBrain().getMemory(MemoryModuleType.JOB_SITE);

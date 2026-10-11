@@ -2509,6 +2509,8 @@ public final class VillageGenerator {
         // en la capa 61, formando la muralla vieja). Auditor + retrofit, como los faroles: aquí se quitan (idempotente)
         // y la traza deja el número.
         troncosBajoLaCota(level, center, nivel, false);
+        // I311 · Y LAS MITADES DE CAMA QUE QUEDARON COLGANDO, en la misma pasada (una cama son dos celdas).
+        quitarMitadesDeCamaHuerfanas(level, center);
         for (BlockPos esquina : esquinas) {
             farolSobreElPoste(level, esquina);
         }
@@ -8729,6 +8731,55 @@ public final class VillageGenerator {
                     soloContar ? "solo contados" : "quitados");
         }
         return cuantos;
+    }
+
+    /**
+     * <b>LAS MITADES DE CAMA HUÉRFANAS</b> (I311, medido el 11-oct-2026 en el lote 192). Una cama son <b>dos celdas</b>
+     * (pie y cabecera ✓) y el barrido quitaba <b>solo la mitad que encontraba</b>, dejando la otra colgando ✗ —
+     * medido: en la calle del jugador, <b>4 mitades → 3</b> en vez de 0 ✗✓. Aquí se quita la mitad que se quedó
+     * <b>sin pareja</b>: se miran las dos celdas del eje de la cama y, si en ninguna hay cama, esta es huérfana ✓.
+     * <b>Solo camas</b> ✓ (nunca arcas ni cofres ✗) e idempotente ✓.
+     *
+     * @return cuántas mitades huérfanas ha quitado
+     */
+    public static int quitarMitadesDeCamaHuerfanas(ServerLevel level, BlockPos center) {
+        int quitadas = 0;
+        int cota = cotaDeLaPlaza(level, center);
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                for (int y = cota - 6; y <= cota + 26; y++) {
+                    BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
+                    BlockState s = level.getBlockState(p);
+                    if (!s.is(Blocks.RED_BED) && !s.is(Blocks.WHITE_BED)) {
+                        continue;
+                    }
+                    Direction mira = s.getValue(net.minecraft.world.level.block.BedBlock.FACING);
+                    boolean tienePareja = false;
+                    for (Direction lado : new Direction[]{mira, mira.getOpposite()}) {
+                        BlockState suya = level.getBlockState(p.relative(lado));
+                        if (suya.is(Blocks.RED_BED) || suya.is(Blocks.WHITE_BED)) {
+                            tienePareja = true;
+                            break;
+                        }
+                    }
+                    if (tienePareja) {
+                        continue; // está entera: no se toca
+                    }
+                    // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita la mitad que quedó colgando), no
+                    // construcción nueva: arregla lo ya construido sin rehacer la aldea.
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                    quitadas++;
+                }
+            }
+        }
+        if (quitadas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} mitad(es) de cama HUERFANAS quitadas (se habian quedado"
+                    + " sin pareja; una cama son dos celdas, I311)", center.toShortString(), quitadas);
+        }
+        return quitadas;
     }
 
     /**

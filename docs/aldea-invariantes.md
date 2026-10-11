@@ -7199,6 +7199,34 @@ no hubo asedio en esa aldea), `la cota sube de` (0 ✓ — el camino de pantano 
 aldea no se reconstruyó). **No se dan por medidos** ✓: sus medidas siguen pendientes de una corrida con asedio y con una
 aldea nueva de pantano ✓ (la próxima del lote).
 
+### I312 · CORRIDA 194, CON EL CENTRO EN **SU** ALDEA: EL RETROFIT CORRE (2874 QUITADOS) Y QUEDA UN MATIZ MEDIDO
+
+La corrida 193 **no movió nada** ✗ y la causa era **el montaje, no el código** ✓: el latido de una aldea **solo corre con
+un jugador dentro**, y el jugador de pega del arnés estaba en **la aldea del arnés** ✗ (el mismo caso de I285 ✓). Con el
+**centro movido a su aldea** (copía temporal del arnés, `CENTRO = 566,63,566` ✓, nunca se sube ✓) la corrida **194** sí
+mide su aldea ✓✓:
+
+```
+[Village] Aldea en 566, 63, 566: 24 celda(s) del paso de las compuertas afirmadas (secas y firmes…)
+[Village] Aldea en 566, 63, 566: 2874 tronco(s) POR DEBAJO de la cota 63 (quitados) — restos de un trazado viejo
+[Village] Aldea en 566, 63, 566: 11 / 10 / 10 / 12 tronco(s) POR DEBAJO de la cota 63 (quitados)   ← el latido repasa
+```
+
+**LO QUE ESO VERIFICA** ✓✓: **(a)** el **paso de las compuertas** (I300) afirmó **24 + 1** celdas en su aldea ✓ (el agua
+de las entradas, arreglada ✓); **(b)** el **retrofit de restos** (I306) **corre en su aldea** ✓ y quitó **2874** troncos de
+trazados viejos ✓; y **(c)** de la corrida anterior sigue en pie el mejor número de todos: **`El obrero repuso red_bed` = 0**
+✓ (el plan de las camas, I298 ✓).
+
+**EL MATIZ QUE QUEDA, medido** ✗: el contador de `build/troncos_flotando_aldea.py` **sigue diciendo 408** ✗ — y la razón
+está en la **regla**, no en el barrido ✓: el retrofit mira **estrictamente POR DEBAJO de la cota** (`y = cota-1 … cota-16`
+✓) y esos 408 están **EN la cota** ✗ con **aire debajo** (flotando ✓) → no los toca ✓✓. **El arreglo del matiz**: incluir
+**la propia cota** en el barrido **cuando no haya nada sólido debajo** ✓ (un tronco sobre aire está flotando, crezca donde
+crezca ✓) — es la misma condición de "flotando" que ya usa el auditor ✓. *Medida*: **408 → 0** ✓.
+
+**Y la lección del montaje, para no repetirla** ✓: **toda medición sobre su aldea exige el centro del arnés en su aldea**
+(copía temporal ✓) — sin eso, el latido no corre allí y el número **no se mueve aunque el código esté bien** ✗✓ (me pasó
+en 192/193 y ya me pasó con las camas en I285 ✓).
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
