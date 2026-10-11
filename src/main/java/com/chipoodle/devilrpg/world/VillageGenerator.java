@@ -5612,12 +5612,48 @@ public final class VillageGenerator {
         }
     }
 
+    /**
+     * <b>LA CELDA LIBRE MÁS CERCANA PARA EL GOLEM</b> (I291). Devuelve una celda con <b>aire</b>, <b>aire encima</b>
+     * (el golem mide dos de alto) y <b>suelo firme debajo</b> — o {@code null} si no hay ninguna en seis celdas a la
+     * redonda. Se mira primero la celda pedida y luego los anillos, para no mover al golem si no hace falta.
+     */
+    private static BlockPos celdaLibreParaElGolem(ServerLevel level, BlockPos alrededor) {
+        for (int r = 0; r <= 6; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                        continue;
+                    }
+                    for (int dy = -2; dy <= 2; dy++) {
+                        BlockPos p = alrededor.offset(dx, dy, dz);
+                        if (level.isEmptyBlock(p) && level.isEmptyBlock(p.above())
+                                && level.getBlockState(p.below()).isSolid()) {
+                            return p;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     /** Spawnea un golem de hierro que defiende la aldea. */
     private static void spawnIronGolem(ServerLevel level, BlockPos pos) {
         // Fijar la Y al suelo real (la isla/terreno) y comprobar que quepa, para que no spawnee bajo la aldea
         // ni se asfixie.
         int y = spawnY(level, pos.getX(), pos.getZ());
         BlockPos posicion = huecoLibre(level, new BlockPos(pos.getX(), y, pos.getZ()));
+        // I291 · Y SI AUN ASÍ NO CABE, SE BUSCA HUECO AL LADO (medido el 11-oct-2026, reporte del jugador: «uno de
+        // los golems SIEMPRE se spawnea en una de las columnas de la aldea y recibe daño por sofocación, en TODAS
+        // las aldeas»). La causa es que el sitio del pueblo es `center.offset(4, 0, 4)` (L7867) y las CUATRO COLUMNAS
+        // del kiosco están justo a ±4 del centro → el golem nacía dentro de un pilar ✗. Aquí se comprueba que la
+        // celda esté libre DE VERDAD (aire, aire encima y suelo firme debajo) y, si no, se busca alrededor.
+        posicion = celdaLibreParaElGolem(level, posicion);
+        if (posicion == null) {
+            DevilRpg.LOGGER.warn("[Village] No hubo hueco para el golem de la aldea en {}: no se convoca (mejor eso"
+                    + " que uno asfixiándose dentro de un bloque)", pos.toShortString());
+            return;
+        }
         IronGolem golem = EntityType.IRON_GOLEM.create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         if (golem != null) {
             golem.moveTo(posicion.getX() + 0.5D, posicion.getY(), posicion.getZ() + 0.5D, 0.0F, 0.0F);
