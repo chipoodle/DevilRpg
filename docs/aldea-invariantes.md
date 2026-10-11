@@ -7147,6 +7147,28 @@ del asaltante, I297 ✓).
 *Medida del lote*: **0 sacrificios** y **0 adopciones fuera del radio de 24** ✓ y **0** cultivadores a más de 24 del
 núcleo de su guarida ✓ (hoy puede alejarse sin freno ✗).
 
+### I309 · EL PROPIO CÓDIGO CONFIESA EL CASO DEL JUGADOR: «EL GUARDIÁN LO CAZA POR LA PLATAFORMA»
+
+Remate del punto 9 ✓ (I308), y el sitio donde hay que poner el candado **no** es el sacrificio ✗ — es **antes**: en la
+elección de **a quién persigue**. Lo dice el **propio comentario** de `SculkCultivatorEntity.feedNearbyCatalysts`
+(**L365-367** ✓):
+
+> *«Se registra SIEMPRE, aunque no hubiera ningún catalizador cerca: si no, un sacrificio **lejos del corral** (cuando
+> **el ganado se escapa** y **el guardián lo caza por la plataforma**) no dejaba ni una línea en el log y parecía que el
+> guardián no estaba sacrificando nada.»* ✗
+
+O sea: **está escrito en el código** que el guardián **persigue al ganado que se escapa** ✗✓ — que es, palabra por
+palabra, lo que el jugador vio (*«estaba sacrificando animales para expandir la infección»* ✓, lejos de su guarida ✗, con
+la guarida al lado de su aldea ✓). Y en `feedNearbyCatalysts` (L347-370 ✓) se ve el mecanismo: **el sacrificio alimenta
+los catalizadores que haya cerca de donde murió el animal** ✓ — así que **la infección crece donde cae el animal**, no
+donde está la guarida ✗✓.
+
+**EL CANDADO, entonces, va en la PERSECUCIÓN** ✓ (no en el sacrificio ✗): el guardián **solo puede tener como objetivo**
+un animal que esté **dentro de `WORK_RADIUS` (24) de su hogar** ✓, y si él mismo se aleja más de ese radio, **deja de
+perseguir y vuelve al núcleo** ✓. Es su propia regla declarada (L77-78 ✓) y deja el sacrificio **donde tiene que caer**:
+en la guarida ✓. *Medida del lote*: **0 cultivadores a más de 24 del núcleo** ✓, **0 sacrificios fuera del radio** ✓ y
+**0 adopciones** de ganado del pueblo ✓ (hoy el código admite lo contrario ✗).
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
