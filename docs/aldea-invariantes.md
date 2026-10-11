@@ -6980,6 +6980,45 @@ bloques **flotando** (con aire debajo y fuera del **plano** de la aldea ✓) —
 robusto: una pasada **por flotación** (no por huella ✗) sobre el recinto, **quitar lo que no esté en el plano** ✓ —
 respetando lo que haya puesto el jugador ✗ (que es la regla de siempre: solo lo que no es suyo ✓).
 
+### I295 · EL ASEDIO NO ROMPE EL MURO: **EL OBRERO LO REPONE MIENTRAS LO ESTÁN PICANDO** (y por eso se asfixian)
+
+Reporte del jugador (11-oct-2026): *«los zombies del asedio no están rompiendo la muralla, se están tardando mucho en
+atravesarla y algunos murieron por sofocación»* ✗. Medido en su registro (`run/logs/latest.log`, asedio de la aldea 1):
+
+```
+pica Block (los asediadores) ................. 136
+el muro NO esta a la cota ....................   9
+muro reconstruido al nivel del pueblo 63 .....   9
+(le quedan 40 de tunel) ......................  54   <- EMPEZANDO DE CERO, una y otra vez  ✗
+
+FALTAN: 939, 0, 954 · 938, 0, 956 · 949, 0, 943   <- lo que el obrero REPONE
+pica Block{oak_log} en 949, 64, 943 (le quedan 35)   <- lo que el asediador PICA
+```
+
+**LA CAUSA, con las tres piezas encajadas** ✓✓:
+1. **El obrero reconstruye el anillo DURANTE el asedio** ✗: la comprobación del muro (*«el muro NO está a la cota… se
+   reconstruye a su nivel»*) salta **9 veces** y **las celdas que «echa en falta» son justo las que el asediador acaba de
+   abrir** ✓✓ (`939,0,954`, `938,0,956`, `949,0,943` ✓ contra `949,63/64,943` ✓). O sea: **la brecha se cierra sola** ✗ y
+   el túnel del asaltante **vuelve a 40** ✓ — que es exactamente lo que se ve: **54 veces «le quedan 40»** ✓✓. Por eso
+   **no rompen el muro y tardan una eternidad** ✓. Y va **contra el diseño del propio mod**, que dice (javadoc de
+   `DoubleGateBlock`): *«el asedio **tiene que abrir brecha en el MURO**»* ✓.
+2. **Algunos pican ÁRBOLES, no el muro** ✗: en `949,63/64,943` lo que pica es `oak_log` ✓ (madera, no piedra) → hay
+   asaltantes gastando su presupuesto de 40 bloques en **troncos** cerca del anillo ✓ (la arboleda del pueblo toca el
+   muro) → **nunca abren nada** ✓.
+3. **Y LA SOFOCACIÓN** ✗ (lo que mata a algunos): el obrero repone el anillo **en la celda donde está el que cava** ✓ →
+   el asaltante **acaba dentro del bloque** ✓✓ y se asfixia ✓. **Este proyecto ya tiene esa regla escrita para los
+   portones** (*«NO se cierra un portón con alguien dentro»*, **I157**, medido: una granjera quedaba atrapada ✓) → hay que
+   aplicarla **igual** al anillo del muro ✓.
+
+**LOS TRES ARREGLOS, de raíz** ✓ (y los tres con su medida):
+1. **No reponer el anillo mientras hay asedio en esa aldea** ✓ (la brecha es el juego ✓): el que reconstruye es el
+   obrero/la reparación → que **se pause** con asedio activo ✓. *Medida*: `(le quedan 40)` deja de repetirse y aparece la
+   brecha; **0 reconstrucciones** durante el asedio ✓.
+2. **No poner un bloque del anillo donde haya una entidad viva** ✓ (la regla de I157, generalizada ✓). *Medida*:
+   **0 asaltantes muertos por sofocación** en una corrida del arnés ✓.
+3. **Que el asaltante no gaste el túnel en madera** ✓: al elegir qué picar, **ignorar troncos y hojas** ✓ (y apuntar al
+   anillo ✓). *Medida*: **0 bloques de madera** en las trazas de `pica Block` durante un asedio ✓.
+
 ### I294 · LA PAUSA DEL ASEDIO, **VERIFICADA EN VIVO** CON JUGADOR DE VERDAD (y dos hallazgos del mismo registro)
 
 El jugador entró a la **aldea 1 (Aldea de Raíz Profunda)** y allí saltó el asedio ✓. En su registro salen **las dos
