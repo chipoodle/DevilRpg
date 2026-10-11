@@ -6949,6 +6949,35 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I288 · PUNTO 3 DE LA LISTA (LA BARRA DEL CLIENTE Y EL CLIC EN LA PIEDRA): **VEREDICTO MEDIDO**
+
+Punto (3) del objetivo: *«intentar cerrarlo con lo que se pueda medir desde aquí»* ✓ — y la respuesta es que **su mitad de
+datos ya está medida por el arnés** ✓ y **su mitad de píxeles no se puede medir sin ventana** ✗. Con las piezas
+identificadas ✓ (y con dos citas más comprobadas, que ya van seis en esta lista ✓):
+
+- **La barra es la «barra de aldea»** ✓: vive en `PlayerAuxiliaryCapabilityInterface` (**L43-55**): *«¿Ha entrado ya en la
+  aldea de ese objetivo? Ese es el descubrimiento: la barra de aldea…»*, y **no enseña dirección hasta que la piedra o un
+  clérigo se la dan** ✓ (`PlayerAuxiliaryCapabilityImplementation` **L217**: *«la barra de aldea no enseñará dirección
+  hasta que la piedra o un clérigo se la den»* ✓).
+- **«La piedra» es la piedra de lore** ✓ (`LoreStoneBlock`, **L86**): *«…hasta que no se lee (o el clérigo habla), la
+  barra…»* ✓.
+- **Y EL INSTRUMENTO YA ESTÁ PUESTO** ✓✓: el arnés registra **cada 10 s** *«qué aldeas tiene **descubiertas**
+  (`aldeasVisitadas`) y **reveladas** (`aldeasReveladas`), el nombre y el estado de cada una, **qué dibujaría la barra de
+  aldea**, el rumbo a la siguiente…»* (`GuardHarness` **L98-104** ✓) — con el caso explícito *«(3) que la barra quede
+  **OCULTA** mientras no haya revelado ni visitado nada»* ✓ y el medido *«`revelada(4)=true` con la barra en
+  `Aldea  (… m)`»* (**L120** ✓).
+
+**EL VEREDICTO** ✓: del punto 3, lo que se puede medir desde aquí (**el contenido de la barra**, sus dos estados —oculta y
+con rumbo— y **el descubrimiento/revelado de cada aldea** ✓) **ya está instrumentado y medido** ✓; lo que **no** se puede
+es **el dibujo en el cliente** ✗ (este banco no tiene ventana ✗, y por eso el punto está marcado desde el principio como
+*«solo se pueden cerrar jugando»* ✓). **Y el clic en la piedra** ✓ tiene su efecto medible por el mismo camino (el
+descubrimiento ✓); lo que falta es **el clic de un jugador de verdad** ✗ — que es, otra vez, prueba de partida ✓.
+
+**Así que el punto 3 NO se cierra desde aquí, y se dice con el porqué** ✗: su mitad de datos está medida ✓, su mitad de
+píxeles necesita ventana ✗. Lo que el jugador tiene que mirar es **una sola cosa**: con una aldea **descubierta**, que la
+barra enseñe el nombre y el rumbo ✓ (y que con nada descubierto esté oculta ✓, que es lo que el arnés ya comprueba por el
+lado de los datos ✓).
+
 ### I287 · LA PAUSA DEL ASEDIO, **PROVOCADA Y MEDIDA** EN EL ARNÉS: LA TRAZA SALE CON SU MOTIVO
 
 Punto (2) del objetivo ✓. El montaje: en la **copia temporal** del arnés (que se borra antes de commitear ✓ y nunca se

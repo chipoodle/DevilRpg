@@ -122,7 +122,13 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
    **`OLEADA de 8 asediadores intentados, 8 colocados`** ✓ y **`Aldea 0 salvada`** (+1 nivel, y se anuncia el nombre:
    **Valleverde**) ✓✓. **Lo que falta es LA PAUSA** ✗ (alejarse más de 128 bloques y volver): no hay traza de eso en el
    registro ni en el mod, así que necesita instrumento propio.
-3. **La barra dibujada en el cliente y el clic en la piedra** (**I87**, acta L2138): la tabla de nombres si esta (30
+3. **La barra dibujada en el cliente y el clic en la piedra** — **VEREDICTO MEDIDO** ✓/✗ (9-oct-2026, **I288**): la barra
+   es la **de aldea** (`PlayerAuxiliaryCapabilityInterface` L43-55: no enseña dirección hasta que la **piedra de lore** o
+   un clérigo se la dan ✓) y **su mitad de DATOS ya la mide el arnés** (registra cada 10 s `aldeasVisitadas`,
+   `aldeasReveladas` y **«qué dibujaría la barra»**, `GuardHarness` L98-104 ✓, incluido que quede **oculta** sin nada
+   descubierto ✓). Lo que **no** se puede medir aquí es **el dibujo en el cliente** ✗ (el banco no tiene ventana) → es
+   prueba de partida: con una aldea **descubierta**, que la barra enseñe nombre y rumbo ✓. El **clic en la piedra** tiene
+   su efecto medible por el mismo camino (el descubrimiento ✓); falta el clic de un jugador de verdad.
    nombres), pero lo medido es el **texto** de `VillageBarText`, no el **pixel** en pantalla ni el clic en vivo.
 4. ~~**Los 14 faroles de la aldea 0**~~ — **CERRADO POR MEDIDA** ✓ (9-oct-2026, **I250**): la auditoria versionada
    (`tools/audita_aldea.py`) da **0 faroles sin apoyo** en su aldea (y 0 en las otras cinco listas: vallas, cofres
