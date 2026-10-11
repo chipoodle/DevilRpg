@@ -6949,6 +6949,42 @@ rompe lo que le estorba y sigue hacia el centro ✓ (su prioridad ✓). Es la mi
 3. **El nado a velocidad normal** ✗ y el `MAX_ESCAPE_TICKS = 200` ✓ (que se rinda y se quede parado ✗) → **hecho en
    I215** (más abajo).
 
+### I286 · LA MEDIDA QUE FALTABA: EL BARRIDO, **SOBRE LA COPIA DE LA ALDEA DEL JUGADOR** (4 → 0 Y 4 → 0)
+
+Cerrada la prueba de I285 ✓✓ — y esta vez **sobre su aldea de verdad**, en una copia ✓ (`run\saves` no se ha tocado ✓):
+
+**EL FALLO DE MONTAJE QUE LO IMPEDÍA, Y SU ARREGLO** ✓: el arnés traía una **constante caducada** —`GuardHarness`
+**L36**: `CENTRO = new BlockPos(470, 63, 646)`— y en su propio texto decía *«corre sobre **su aldea de verdad** (aldea 0,
+centro 470/646, cota 63)»* (**L174**, **L193**, **L210** ✓). Pero **la aldea 0 del jugador es (566,566)**, cota 63 (medido
+por la auditoría y por las camas que se contaron ahí ✓) ✗ → el jugador de pega estaba en **otra** aldea y **la suya no
+latía** ✓. Arreglo de la **prueba** (no del mod ✓): en la **copia temporal** del arnés
+(`src/main/java/com/chipoodle/devilrpg/debug/GuardHarness.java`, que se borra antes de commitear ✓ y **nunca se sube** ✓)
+se cambia **esa línea** a `new BlockPos(566, 63, 566)` ✓ (1 sola aparición ✓).
+
+**Y LA MEDIDA, CON SUS NÚMEROS** ✓✓ (corrida **190**, sin banderas → el banco copia `run\saves\New World` a
+`run\world` ✓, así que se mide **su** aldea):
+
+| | ANTES (su guardado, solo lectura) | DESPUÉS (la copia, tras la corrida) |
+|---|---|---|
+| mitades en total | **60** (50 rojas / 10 blancas) | **52** ✓ |
+| capa 63 | 36 | 32 ✓ |
+| capa 68 | **20** | **20** ✓ **intactas** |
+| capa 74 | **4** ✗ | **0** ✓✓ |
+| **EN LA CALLE** (capa 63, `x=531`) | **4** ✗ | **0** ✓✓ |
+| **ENCIMA DEL TEJADO** (≥ 72) | **4** ✗ | **0** ✓✓ |
+| blancas de dentro (casa 1) | 10 | **10** ✓ idénticas (celda por celda ✓) |
+
+- **La traza nombra SU aldea** ✓✓: `[Village] Aldea en 566, 63, 566: 4 mitad(es) de cama QUITADAS por encima de los
+  tejados (estaban a mas de 9 sobre el nivel del pueblo…)` ✓ — y en las vueltas siguientes del latido, más
+  (`1`, `2`, `2`) ✗: **algo vuelve a poner camas arriba y el barrido las vuelve a quitar** ✓ → **el barrido gana** (el
+  recuento final es **0** arriba ✓) pero queda anotado que **el que las repone sigue ahí** ✗ (siguiente hilo a tirar, ya
+  sin prisa: quién las recoloca entre vueltas ✓).
+- **Y las de dentro, exactamente las mismas diez celdas** ✓ (las dos blancas de la casa 1 y las de la taberna ✓) → **no
+  se ha tocado ninguna buena** ✓✓, que era el riesgo de todo el arreglo ✓.
+
+**Con esto, el punto (1) del objetivo está cumplido y medido en la aldea del jugador** ✓✓ — y sin haber tocado su
+partida: siempre sobre la copia ✓.
+
 ### I285 · PRUEBA SOBRE LA COPIA DE LA ALDEA DEL JUGADOR: **NO MIDE** — SU ALDEA NO LATE SI NO HAY JUGADOR DENTRO
 
 Primer intento de cerrar la medida que faltaba (el barrido sobre **su** aldea, no sobre la del arnés) ✓, y **sale

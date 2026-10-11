@@ -126,7 +126,12 @@ cerrando y **como**). Va separado por **quien puede cerrarlo**:
 **(b) CODIGO PENDIENTE, PEQUEÑO Y MEDIBLE YA** (lo abierto, numerado; lo cerrado hoy va al final del apartado):
 
 **REPORTES NUEVOS DEL JUGADOR (9-oct-2026, con pantallazo — se miden antes de tocar)**:
-- **A · Camas fuera** — **(i) LAS DE ENCIMA DE LOS TEJADOS: ARREGLADAS Y MEDIDAS** ✓✓ (9-oct-2026, **I271**: regla de
+- **A · Camas fuera** — **CERRADO Y MEDIDO EN SU PROPIA ALDEA** ✓✓✓ (9-oct-2026, **I271**-**I286**): en una **copia** de su
+  partida (nunca `run\saves` ✓), la corrida **190** deja: **capa 74 (tejado) 4 → 0** ✓, **en la calle (`x=531`) 4 → 0** ✓,
+  **capa 68 (dentro) 20 → 20** ✓ y las **blancas de dentro idénticas** ✓ (celda por celda). La traza nombra su aldea
+  (`Aldea en 566, 63, 566`) ✓. Queda anotado un hilo **sin prisa** ✗: algo repone camas arriba entre vueltas del latido
+  (se ven `4`, `1`, `2`, `2` quitadas ✓) — el barrido gana (0 al final ✓), pero **quién las repone sigue ahí**.
+  **(i) LAS DE ENCIMA DE LOS TEJADOS: ARREGLADAS Y MEDIDAS** ✓✓ (9-oct-2026, **I271**: regla de
   **altura y pueblo entero** —toda cama por encima de `nivel + 9`—, en el latido como retrofit idempotente con
   `// lint:ok I9` y **sin subir `CURRENT_LAYOUT`**; medido en la corrida 186: la traza sale ✓, la capa 77 pasa de **4
   mitades a 0** ✓ y las **20 de dentro siguen intactas** ✓; **en su partida se quitan al cargar el mundo** ✓).
