@@ -7339,6 +7339,24 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I349 · EL PANTANO: SEGUNDA SEMILLA, MISMA RESPUESTA (sin ocasion) — y dejo de tirar corridas
+
+Corrida **77 con -MundoNuevo** ✓ (mundo limpio, no toca 
+un\saves ✓) buscando la traza del punto 6:
+`
+'la cota sube de'       : 0   <- el pueblo nuevo NO cayo en agua ni pantano
+'isla flotante'         : 0   <- tampoco el camino del mar/lago
+'golem de hierro en'    : 0   <- sin ocasion (nace al reconstruir)
+'muro reconstruido'     : 0   <- sin ocasion
+'el muro NO se repone'  : 0   ✓ <- esto SI importa: ni un aviso falso (la guardia del asedio esta sana, I338)
+`
+**CONCLUSION** ✓: con dos mundos nuevos distintos, **el pueblo del banco no ha caido en agua** ✗ -> la medida del
+pantano **sigue sin ocasion** ✓ y **no se da por buena** ✗ (la leccion de I327 ✓). **Y dejo de tirar corridas** ✗: cada
+intento cuesta minutos y no cambia nada ✓ — la ocasion la dara **una aldea de pantano de verdad** (su partida ✓ o un
+mundo con agua ✓), y alli la traza es **una linea**: la cota sube de N a M para quedar por ENCIMA del agua de su zona ✓.
+**Lo que SI queda medido de esta corrida** ✓: **l muro NO se repone = 0** ✓, o sea que la guardia nueva (I338 ✓) **no
+tiene falsos positivos** ni en un mundo recien nacido ✓.
+
 ### I348 · LA MEDIDA DEL GOLEM: **SIN OCASION** (y por que no se puede sacar del guardado)
 
 Comprobado en esta ronda ✓, sin adornos:
