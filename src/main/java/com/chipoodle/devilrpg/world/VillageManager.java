@@ -1898,6 +1898,16 @@ public final class VillageManager {
         if (wave.isEmpty()) {
             return;
         }
+        // I378 · UNA ALDEA CAIDA NO VUELVE A SER ASEDIADA. El jugador lo vio: "si ya habia caido, porque entonces reinicio
+        // el asedio?". El asedio clasico ya lo comprobaba, pero la HORDA DEL MUNDO entraba por aqui sin mirar isFallen,
+        // asi que a una aldea ya caida (derrota definitiva) le seguian llegando hordas. Y si ya hay una horda en curso
+        // para esa aldea, tampoco se apila otra.
+        if (VillageSavedData.get(level).isFallen(settlement.objectiveIndex())
+                || isUnderWorldSiege(level, settlement.objectiveIndex())) {
+            DevilRpg.LOGGER.info("[Horda] la aldea {} ya cayo o ya tiene horda: NO se le manda otra (I378)",
+                    settlement.objectiveIndex());
+            return;
+        }
         WORLD_SIEGES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave));
         // Los que marchan contra la aldea van marcados con brillo, igual que la ola del asedio clásico: es la
