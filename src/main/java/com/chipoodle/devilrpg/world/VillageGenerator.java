@@ -993,7 +993,7 @@ public final class VillageGenerator {
         if (!viejas.isEmpty()) {
             Direction mira = level.getBlockState(viejas.get(0)).getValue(BellBlock.FACING);
             for (BlockPos vieja : viejas) {
-                colocar(level, vieja, Blocks.AIR.defaultBlockState(), 2);
+                colocar(level, vieja, Blocks.AIR.defaultBlockState(), 3);
                 cambios++;
             }
             if (!centrada) {
@@ -1046,7 +1046,7 @@ public final class VillageGenerator {
                             Blocks.STONE_BRICKS.defaultBlockState(), 3);
                     for (int dy = 0; dy <= 2; dy++) {
                         colocar(level, new BlockPos(c.getX() + dx, nivel + dy, c.getZ() + dz),
-                                Blocks.AIR.defaultBlockState(), 2);
+                                Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
@@ -1140,7 +1140,7 @@ public final class VillageGenerator {
             for (int dz = -3; dz <= 3; dz++) {
                 BlockPos suelo = new BlockPos(c.getX() + dx, nivel, c.getZ() + dz);
                 if (level.getBlockState(suelo).is(Blocks.STONE_BRICKS)) {
-                    colocar(level, suelo, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, suelo, Blocks.AIR.defaultBlockState(), 3);
                     quitados++;
                 }
                 for (int dy = 1; dy <= 3; dy++) {
@@ -1148,13 +1148,13 @@ public final class VillageGenerator {
                     BlockState estado = level.getBlockState(q);
                     if (estado.is(Blocks.OAK_LOG) || estado.is(Blocks.LANTERN)
                             || estado.getBlock() instanceof ChestBlock) {
-                        colocar(level, q, Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, q, Blocks.AIR.defaultBlockState(), 3);
                         quitados++;
                     }
                 }
                 BlockPos techo = new BlockPos(c.getX() + dx, nivel + 4, c.getZ() + dz);
                 if (level.getBlockState(techo).is(Blocks.OAK_PLANKS)) {
-                    colocar(level, techo, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, techo, Blocks.AIR.defaultBlockState(), 3);
                     quitados++;
                 }
             }
@@ -1223,14 +1223,14 @@ public final class VillageGenerator {
             for (int dz = -2; dz <= 2; dz++) {
                 BlockPos suelo = new BlockPos(viejo.getX() + dx, nivel, viejo.getZ() + dz);
                 if (level.getBlockState(suelo).is(Blocks.STONE_BRICKS)) {
-                    colocar(level, suelo, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, suelo, Blocks.AIR.defaultBlockState(), 3);
                 }
                 for (int y = nivel + 1; y <= nivel + 4; y++) {
                     BlockPos q = new BlockPos(viejo.getX() + dx, y, viejo.getZ() + dz);
                     BlockState estado = level.getBlockState(q);
                     if (estado.is(Blocks.OAK_LOG) || estado.is(Blocks.OAK_PLANKS) || estado.is(Blocks.LANTERN)
                             || estado.getBlock() instanceof ChestBlock) {
-                        colocar(level, q, Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, q, Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
@@ -1596,7 +1596,7 @@ public final class VillageGenerator {
             for (int dz = BARRACA_RADIO - 2; dz <= BARRACA_RADIO - 1; dz++) {
                 BlockPos vieja = new BlockPos(bx + BARRACA_ESCALERA_DX, yPiso2, bz + dz);
                 if (level.getBlockState(vieja).is(Blocks.RED_BED)) {
-                    colocar(level, vieja, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, vieja, Blocks.AIR.defaultBlockState(), 3);
                     camas++;
                 }
             }
@@ -1619,7 +1619,7 @@ public final class VillageGenerator {
                 guardarEnElAlmacen(level, center, contenedor);   // no hay dónde ponerla: al almacén, no al suelo
             }
             if (contenedorVacio(level, arcaVieja)) {
-                colocar(level, arcaVieja, Blocks.AIR.defaultBlockState(), 2);
+                colocar(level, arcaVieja, Blocks.AIR.defaultBlockState(), 3);
                 arcas++;
             }
         }
@@ -1814,7 +1814,7 @@ public final class VillageGenerator {
         for (int dx = -r - 1; dx <= r + 1; dx++) {
             for (int dz = -r - 1; dz <= r + 1; dz++) {
                 for (int dy = 3; dy <= BARRACA_PISO2_VIEJO + 4; dy++) {
-                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
@@ -1824,7 +1824,7 @@ public final class VillageGenerator {
             for (int dz = -r; dz <= r; dz++) {
                 colocar(level, new BlockPos(bx + dx, nivel - 1, bz + dz), Blocks.STONE_BRICKS.defaultBlockState(), 3);
                 for (int dy = 0; dy <= 2; dy++) {
-                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
                 }
                 // EL FORJADO SOLO SI HAY PISO ARRIBA: con la barraca de un solo nivel (BARRACA_PISO2 = 0) el forjado
                 // caería en `nivel - 1`, que es EL SUELO DE PIEDRA de la sala de armas, y lo cambiaría por tablones.
@@ -1833,7 +1833,7 @@ public final class VillageGenerator {
                             Blocks.OAK_PLANKS.defaultBlockState(), 3);
                     for (int dy = 0; dy <= 2; dy++) {
                         colocar(level, new BlockPos(bx + dx, yPiso2 + dy, bz + dz),
-                                Blocks.AIR.defaultBlockState(), 2);
+                                Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
@@ -1902,7 +1902,7 @@ public final class VillageGenerator {
                     bz + BARRACA_ESCALERA_PIE_DZ - k);
             colocar(level, escalon, Blocks.OAK_STAIRS.defaultBlockState()
                     .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
-            colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 2);
+            colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
         }
         // 6b) EL HUECO DEL FORJADO, encima de los escalones que pasan POR DEBAJO de él (los tres primeros): son las
         //     TRES celdas que necesita el que sube (I26: el juego levanta al jugador 0,6 al ganar un escalón y
@@ -1911,7 +1911,7 @@ public final class VillageGenerator {
         //     se quedaba a 1,0 del suelo del dormitorio y "solo se sube saltando").
         for (int k = 0; k < BARRACA_ESCALONES - 1; k++) {
             colocar(level, new BlockPos(bx + BARRACA_ESCALERA_DX, yPiso2 - 1, bz + BARRACA_ESCALERA_PIE_DZ - k),
-                    Blocks.AIR.defaultBlockState(), 2);
+                    Blocks.AIR.defaultBlockState(), 3);
         }
         // 7) EL DORMITORIO (piso de arriba): las camas en dos filas con el pasillo en medio, con sus arcas y sus
         //    faroles. Son las que dan litera a los guardias y las que dejan crecer al pueblo (vanilla pide una cama
@@ -2330,7 +2330,7 @@ public final class VillageGenerator {
                 if (dy == 1 && !estado.getValue(LanternBlock.HANGING)) {
                     break;
                 }
-                colocar(level, alto, Blocks.AIR.defaultBlockState(), 2);   // el farol flotante (o el colgado de un poste)
+                colocar(level, alto, Blocks.AIR.defaultBlockState(), 3);   // el farol flotante (o el colgado de un poste)
                 arreglados += farolSobreElPoste(level, apoyo);
                 break;
             }
@@ -2351,7 +2351,7 @@ public final class VillageGenerator {
             return false; // ya está
         }
         if (actual.is(Blocks.OAK_DOOR)) {
-            colocar(level, porton.above(), Blocks.AIR.defaultBlockState(), 2); // la mitad de arriba de la puerta
+            colocar(level, porton.above(), Blocks.AIR.defaultBlockState(), 3); // la mitad de arriba de la puerta
         } else if (!actual.isAir()) {
             return false; // el jugador puso otra cosa ahí: no se toca
         }
@@ -2725,7 +2725,7 @@ public final class VillageGenerator {
                     colocar(level, p, Blocks.SAND.defaultBlockState(), 3);
                 }
                 for (int y = nivel; y <= nivel + 4; y++) {
-                    colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, new BlockPos(bx + dx, y, bz + dz), Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
@@ -2744,7 +2744,7 @@ public final class VillageGenerator {
                 colocar(level, new BlockPos(caseta.getX() + dx, nivel - 1, caseta.getZ() + dz), tablon, 3);
                 for (int dy = 0; dy <= 4; dy++) {
                     colocar(level, new BlockPos(caseta.getX() + dx, nivel + dy, caseta.getZ() + dz),
-                            Blocks.AIR.defaultBlockState(), 2);
+                            Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
@@ -3687,7 +3687,7 @@ public final class VillageGenerator {
                         continue; // el agua ocupa la capa del suelo: no se pone aire encima de ella
                     }
                     colocar(level, new BlockPos(c.getX() + dx, nivel + dy, c.getZ() + dz),
-                            Blocks.AIR.defaultBlockState(), 2);
+                            Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
@@ -3735,9 +3735,9 @@ public final class VillageGenerator {
         //    el obrero la mantiene). Lo que cava el minero de ahí para abajo es suyo (I102).
         BlockPos boca = celdaDelCaracolDesdeElEje(c, nivel, 0);
         colocar(level, boca, piezaDelCaracol(0), 3);
-        colocar(level, boca.above(), Blocks.AIR.defaultBlockState(), 2);
-        colocar(level, boca.above(2), Blocks.AIR.defaultBlockState(), 2);
-        colocar(level, boca.above(3), Blocks.AIR.defaultBlockState(), 2);
+        colocar(level, boca.above(), Blocks.AIR.defaultBlockState(), 3);
+        colocar(level, boca.above(2), Blocks.AIR.defaultBlockState(), 3);
+        colocar(level, boca.above(3), Blocks.AIR.defaultBlockState(), 3);
         // El marco de la entrada: dos postes de tronco en las paredes (a `nivel` y `nivel + 1`, que es el hueco de
         // paso) y una viga de tablones encima (a `nivel + 2`: deja las tres celdas que pide el juego para subir,
         // I26). Los lados son las celdas del radio (por dentro y por fuera del anillo).
@@ -3884,7 +3884,7 @@ public final class VillageGenerator {
             for (int z = z0; z <= z1; z++) {
                 colocar(level, new BlockPos(x, nivel - 1, z), Blocks.STONE_BRICKS.defaultBlockState(), 3);
                 for (int dy = 0; dy <= 2; dy++) {
-                    colocar(level, new BlockPos(x, nivel + dy, z), Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, new BlockPos(x, nivel + dy, z), Blocks.AIR.defaultBlockState(), 3);
                 }
                 colocar(level, new BlockPos(x, nivel + 3, z), Blocks.OAK_PLANKS.defaultBlockState(), 3);
             }
@@ -4085,7 +4085,7 @@ public final class VillageGenerator {
                 for (int y = nivel - 1; y <= nivel + 4; y++) {
                     BlockPos p = new BlockPos(base.getX() + dx, y, base.getZ() + dz);
                     if (esDelCorral(level.getBlockState(p))) {
-                        colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                         quitados++;
                     }
                 }
@@ -4211,7 +4211,7 @@ public final class VillageGenerator {
             for (int dz = -2; dz <= 2; dz++) {
                 colocar(level, new BlockPos(x, nivel - 1, bz + dz), Blocks.STONE_BRICKS.defaultBlockState(), 3);
                 for (int dy = 0; dy <= 3; dy++) {
-                    colocar(level, new BlockPos(x, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, new BlockPos(x, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
                 }
                 colocar(level, new BlockPos(x, nivel + 3, bz + dz), Blocks.OAK_PLANKS.defaultBlockState(), 3);
             }
@@ -4809,7 +4809,7 @@ public final class VillageGenerator {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(p);
                     if (isVegetation(state)) {
-                        colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                         quitados++;
                         continue;
                     }
@@ -4925,14 +4925,14 @@ public final class VillageGenerator {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState state = level.getBlockState(p);
                     if (state.is(BlockTags.LEAVES)) {
-                        colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                         quitados++;
                         continue;
                     }
                     if (!esArbolSuelto(level, p)) {
                         continue; // ni el terreno, ni lo construido, ni el muro
                     }
-                    colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                     quitados++;
                     troncos++;
                 }
@@ -5450,7 +5450,7 @@ public final class VillageGenerator {
                     if (wallTower) {
                         colocar(level, new BlockPos(base.getX() + x, y + i, base.getZ() + z), Blocks.COBBLESTONE.defaultBlockState(), 3);
                     } else {
-                        colocar(level, new BlockPos(base.getX() + x, y + i, base.getZ() + z), Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, new BlockPos(base.getX() + x, y + i, base.getZ() + z), Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
@@ -5473,7 +5473,7 @@ public final class VillageGenerator {
         }
         // Escalera de acceso por un lateral (sube en espiral simple: una cara).
         for (int i = 0; i < height; i++) {
-            colocar(level, new BlockPos(base.getX(), y + i, base.getZ() + 1), Blocks.AIR.defaultBlockState(), 2);
+            colocar(level, new BlockPos(base.getX(), y + i, base.getZ() + 1), Blocks.AIR.defaultBlockState(), 3);
             if (i < 2) {
                 colocar(level, new BlockPos(base.getX(), y + i, base.getZ() + 2), Blocks.DIRT.defaultBlockState(), 3);
             }
@@ -5650,7 +5650,7 @@ public final class VillageGenerator {
             BlockState bs = level.getBlockState(new BlockPos(x, yy, z));
             if (bs.isAir()) continue;
             // Solo limpiar bloques que no sean estructuras (tierra/cesped de la isla o nivelado).
-            colocar(level, new BlockPos(x, yy, z), Blocks.AIR.defaultBlockState(), 2);
+            colocar(level, new BlockPos(x, yy, z), Blocks.AIR.defaultBlockState(), 3);
         }
     }
 
@@ -5759,7 +5759,7 @@ public final class VillageGenerator {
                 // Si el terreno sobresale por encima de la isla, recortarlo para dejar la superficie plana.
                 if (g > islandTop) {
                     for (int y = islandTop + 1; y < g; y++) {
-                        colocar(level, new BlockPos(top.getX(), y, top.getZ()), Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, new BlockPos(top.getX(), y, top.getZ()), Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
                 colocar(level, top, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
@@ -6345,7 +6345,7 @@ public final class VillageGenerator {
                     if (!esTerrenoRecortable(actual)) {
                         break; // aquí empieza lo construido: esta columna ya no se recorta
                     }
-                    colocar(level, columna.atY(y), Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, columna.atY(y), Blocks.AIR.defaultBlockState(), 3);
                 }
                 ponerCesped(level, columna.getX(), columna.getZ(), baseY);
             }
@@ -6733,7 +6733,7 @@ public final class VillageGenerator {
                     if (!esTerrenoRecortable(level.getBlockState(new BlockPos(px, y, pz)))) {
                         break;
                     }
-                    colocar(level, new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, new BlockPos(px, y, pz), Blocks.AIR.defaultBlockState(), 3);
                 }
                 // Capa superficial del talud (cesped), salvo que sea agua.
                 BlockPos surface = new BlockPos(px, targetY - 1, pz);
@@ -6809,7 +6809,7 @@ public final class VillageGenerator {
                     for (int y = sueloBajo - 1; y <= g; y++) {
                         BlockPos p = new BlockPos(px, y, pz);
                         if (esTerrenoRecortable(level.getBlockState(p))) {
-                            colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                            colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                             cubos++;
                         }
                     }
@@ -6944,7 +6944,7 @@ public final class VillageGenerator {
                     if (!level.getBlockState(p.below()).isAir()) {
                         continue; // apoyada: se queda (la nieve del suelo del pueblo, por ejemplo)
                     }
-                    colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                     quitados++;
                 }
             }
@@ -7434,7 +7434,7 @@ public final class VillageGenerator {
         // adoquín justo encima (a baseY+3, por encima de las tres capas del portón).
         for (BlockPos c : celdas) {
             for (int alto = 0; alto <= 2; alto++) {
-                colocar(level, new BlockPos(c.getX(), baseY + alto, c.getZ()), Blocks.AIR.defaultBlockState(), 2);
+                colocar(level, new BlockPos(c.getX(), baseY + alto, c.getZ()), Blocks.AIR.defaultBlockState(), 3);
             }
             colocar(level, new BlockPos(c.getX(), baseY + 3, c.getZ()), Blocks.COBBLESTONE.defaultBlockState(), 3);
         }
@@ -7543,7 +7543,7 @@ public final class VillageGenerator {
                     if (level.getBlockState(pos).isAir()) {
                         continue;
                     }
-                    colocar(level, pos, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, pos, Blocks.AIR.defaultBlockState(), 3);
                     quitados++;
                 }
             }
@@ -7572,7 +7572,7 @@ public final class VillageGenerator {
                     // La vegetación se va siempre (troncos y hojas incluidos, vegetación de por medio); del resto se
                     // respeta SOLO el terreno natural (el agua y la lava también: de esas se encarga el nivelado).
                     if (isVegetation(state) || !esTerrenoNatural(state)) {
-                        colocar(level, pos, Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, pos, Blocks.AIR.defaultBlockState(), 3);
                         quitados++;
                     }
                 }
@@ -8726,7 +8726,6 @@ public final class VillageGenerator {
      */
     public static int troncosBajoLaCota(ServerLevel level, BlockPos center, int cota, boolean soloContar) {
         int cuantos = 0;
-        int miradas = 0;   // I370: tope de trabajo por pasada (que una reparacion no pueda atascar el servidor)
         for (int dx = -RADIO_DEL_BARRIDO; dx <= RADIO_DEL_BARRIDO; dx++) {
             for (int dz = -RADIO_DEL_BARRIDO; dz <= RADIO_DEL_BARRIDO; dz++) {
                 if (dx * dx + dz * dz > RADIO_DEL_BARRIDO * RADIO_DEL_BARRIDO) {
@@ -8735,7 +8734,6 @@ public final class VillageGenerator {
                 // I313 · Y SE MIRA TAMBIÉN **LA PROPIA COTA**, pero solo si el tronco está FLOTANDO (aire debajo): medido
                 // en la corrida 194, quedaban 408 troncos que no bajaban de la cota y por eso el barrido no los veía ✗.
                 // Con suelo firme debajo, en cambio, es un árbol del pueblo y NO se toca ✓.
-                    if (++miradas > 3000) { return cuantos; } // I370: tope por pasada
                 for (int y = cota; y >= cota - 16; y--) {
                     BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
                     if (!level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
@@ -8766,7 +8764,7 @@ public final class VillageGenerator {
                     if (!soloContar) {
                         // lint:ok I9 porque NO es construcción nueva: es un RETROFIT idempotente en el sitio que quita
                         // los restos de una migración vieja (la muralla que quedó una capa por debajo de la cota).
-                        colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                     }
                 }
             }
@@ -8816,7 +8814,7 @@ public final class VillageGenerator {
                     }
                     // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita la mitad que quedó colgando), no
                     // construcción nueva: arregla lo ya construido sin rehacer la aldea.
-                    colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                     quitadas++;
                 }
             }
@@ -8957,7 +8955,7 @@ public final class VillageGenerator {
                     // (son "los dos bloques de tierra frente a cada compuerta" que reporto el jugador).
                     if (abajo.isSolid() && level.getBlockState(pie.below()).isSolid()) {
                         // lint:ok I9 porque es un RETROFIT idempotente en el sitio, y ademas DESHACE un bloque mio anterior.
-                        colocar(level, pie, Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, pie, Blocks.AIR.defaultBlockState(), 3);
                         // I367 · TRAZA DE LA REPARACION: asi se puede CONTAR en el registro cuantos bloques de mas quito.
                         DevilRpg.LOGGER.info("[Village] Aldea en {}: QUITO un bloque de mas en el paso de una compuerta: {} (I366)",
                                 center.toShortString(), pie.toShortString());
@@ -8972,7 +8970,7 @@ public final class VillageGenerator {
                     BlockPos hueco = pie.above();
                     BlockState arriba = level.getBlockState(hueco);
                     if (!arriba.isAir() && !arriba.getFluidState().isEmpty()) {
-                        colocar(level, hueco, Blocks.AIR.defaultBlockState(), 2); // el agua de encima, fuera
+                        colocar(level, hueco, Blocks.AIR.defaultBlockState(), 3); // el agua de encima, fuera
                     }
                 }
             }
@@ -9193,7 +9191,7 @@ public final class VillageGenerator {
                 BlockPos poste = posteLibreJuntoAlPorton(level, porton, enX);
                 // lint:ok I9 porque es una REPARACION idempotente de unas celdas (muda el farol que tapa un porton) y
                 // se llama desde el latido: no rehace nada, asi que no necesita migracion.
-                colocar(level, cabeza, Blocks.AIR.defaultBlockState(), 2);
+                colocar(level, cabeza, Blocks.AIR.defaultBlockState(), 3);
                 if (poste != null) {
                     farolSobreElPoste(level, poste);
                 }
@@ -9758,7 +9756,7 @@ public final class VillageGenerator {
                 BlockPos escalon = new BlockPos(bx + TABERNA_ESCALERA_PIE_DX - k, nivel + k, bz + dz);
                 colocar(level, escalon, Blocks.DARK_OAK_STAIRS.defaultBlockState()
                         .setValue(StairBlock.FACING, Direction.WEST).setValue(StairBlock.HALF, Half.BOTTOM), 3);
-                colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 2);
+                colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
             }
         }
         // 2) LA MESETA de la esquina (2x2, a la altura a la que llega el tramo de abajo): tablones y el aire libre
@@ -9767,7 +9765,7 @@ public final class VillageGenerator {
             for (int dz = TABERNA_ESCALERA_MESETA_Z; dz <= TABERNA_ESCALERA_MESETA_Z + 1; dz++) {
                 colocar(level, new BlockPos(bx + dx, nivel + 1, bz + dz), tablon, 3);
                 for (int dy = 2; dy <= 3; dy++) {
-                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, new BlockPos(bx + dx, nivel + dy, bz + dz), Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
@@ -9778,7 +9776,7 @@ public final class VillageGenerator {
                         bz + TABERNA_ESCALERA_MESETA_Z - 1 - i);
                 colocar(level, escalon, Blocks.DARK_OAK_STAIRS.defaultBlockState()
                         .setValue(StairBlock.FACING, Direction.NORTH).setValue(StairBlock.HALF, Half.BOTTOM), 3);
-                colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 2);
+                colocar(level, escalon.above(), Blocks.AIR.defaultBlockState(), 3);
             }
         }
         // 4) LA CAJA: el muro del ESTE del pozo (las tres filas del hueco), del suelo de la posada al techo. Sin él,
@@ -9933,8 +9931,8 @@ public final class VillageGenerator {
         }
         // El fuego, en la boca del hogar (el aire de encima deja ver la llama desde el comedor).
         colocar(level, new BlockPos(bx + hx, nivel, bz + hz), Blocks.CAMPFIRE.defaultBlockState(), 3);
-        colocar(level, new BlockPos(bx + hx, nivel + 1, bz + hz), Blocks.AIR.defaultBlockState(), 2);
-        colocar(level, new BlockPos(bx + hx, nivel + 2, bz + hz), Blocks.AIR.defaultBlockState(), 2);
+        colocar(level, new BlockPos(bx + hx, nivel + 1, bz + hz), Blocks.AIR.defaultBlockState(), 3);
+        colocar(level, new BlockPos(bx + hx, nivel + 2, bz + hz), Blocks.AIR.defaultBlockState(), 3);
         // Y el hogar se remata con su repisa de madera, a la altura de la viga del muro.
         for (int dx = hx - 2; dx <= hx + 2; dx++) {
             colocar(level, new BlockPos(bx + dx, nivel + TABERNA_PISO2 - 1, bz + hz),
@@ -9966,7 +9964,7 @@ public final class VillageGenerator {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     if (dx == 0 && dz == 0) {
-                        colocar(level, new BlockPos(bx + hx, y, bz + hz), Blocks.AIR.defaultBlockState(), 2);
+                        colocar(level, new BlockPos(bx + hx, y, bz + hz), Blocks.AIR.defaultBlockState(), 3);
                     } else if (dz != 1) { // la cara sur es la del hogar: se deja como está (ahí está la boca)
                         colocar(level, new BlockPos(bx + hx + dx, y, bz + hz + dz),
                                 Blocks.BRICKS.defaultBlockState(), 3);
@@ -10208,7 +10206,7 @@ public final class VillageGenerator {
         }
         BlockPos farolDeRepuesto = farolSuyo.offset(0, 0, 1);
         if (level.getBlockState(farolDeRepuesto).is(Blocks.LANTERN)) {
-            colocar(level, farolDeRepuesto, Blocks.AIR.defaultBlockState(), 2);
+            colocar(level, farolDeRepuesto, Blocks.AIR.defaultBlockState(), 3);
         }
         // 3) LA CAMA DEL CUARTO SUROESTE, RETIRADA (el cuarto es ahora la caja de la escalera). Se retira la cama de
         //    la aldea (la roja, que es la que pone `posadaDeLaTaberna`): lo que el jugador haya puesto ahí no se toca.
@@ -10216,7 +10214,7 @@ public final class VillageGenerator {
         for (int dz : new int[]{12, 13}) {
             BlockPos p = new BlockPos(bx + 4, y1, bz + dz);
             if (level.getBlockState(p).is(Blocks.RED_BED)) {
-                colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                 camas++;
             }
         }
@@ -10484,7 +10482,7 @@ public final class VillageGenerator {
                     if (!level.getBlockState(relleno).is(Blocks.DEEPSLATE_TILES)) {
                         continue;
                     }
-                    colocar(level, relleno, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, relleno, Blocks.AIR.defaultBlockState(), 3);
                     vaciados++;
                 }
             }
@@ -10569,7 +10567,7 @@ public final class VillageGenerator {
                 BlockPos hueco = new BlockPos(bx + c[0], y1 + c[2] + dy, bz + c[1]);
                 BlockState actual = level.getBlockState(hueco);
                 if (actual.is(Blocks.DARK_OAK_PLANKS) || actual.is(Blocks.DEEPSLATE_TILES)) {
-                    colocar(level, hueco, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, hueco, Blocks.AIR.defaultBlockState(), 3);
                     abiertos++;
                 }
             }
@@ -10947,7 +10945,7 @@ public final class VillageGenerator {
         if (level.getBlockState(farol).is(Blocks.LANTERN)) {
             // lint:ok I9 porque es una REPARACION idempotente de una celda (quita un farol que estorba para subir la
             // escalera) y se llama desde el latido: no rehace nada, asi que no necesita migracion.
-            colocar(level, farol, Blocks.AIR.defaultBlockState(), 2);
+            colocar(level, farol, Blocks.AIR.defaultBlockState(), 3);
             DevilRpg.LOGGER.info("[Village] Taberna de {}: quitado el farol de encima del primer escalon ({})",
                     center, farol.toShortString());
             return farol;
@@ -10978,7 +10976,7 @@ public final class VillageGenerator {
                     if (level.getBlockEntity(p) instanceof Container contenedor) {
                         guardarEnElAlmacen(level, center, contenedor);
                     }
-                    colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
@@ -11052,7 +11050,7 @@ public final class VillageGenerator {
             viejo.setChanged();
         }
         for (BlockPos p : viejos) {
-            colocar(level, p, Blocks.AIR.defaultBlockState(), 2);
+            colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
         }
         DevilRpg.LOGGER.info("[Village] Aldea en {}: despensa retirada del kiosco ({} objeto(s) pasados a la despensa"
                 + " de la taberna o al almacen)", center, movidos);
