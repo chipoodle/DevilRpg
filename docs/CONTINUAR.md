@@ -98,6 +98,21 @@ del que sea: zombi, esqueleto…).
 
 ### 2.0 · LO QUE ESTA ABIERTO **HOY** (puesto al dia el 9-oct-2026)
 
+**TANDA DEL 11-oct-2026 (I296-I346) — CERRADO Y MEDIDO** ✓: la **granja entera** (0 SIN SEMBRAR · 0 PISOTEADA · 0 atoros ·
+0 `pies=water`; con sus dos causas de raíz: el paso de las compuertas encharcado, **I300**, y **dos goals por la misma
+compuerta**, **I301**) · los **restos flotantes** (**408 -> 0**, I306/I329/I330, y la leccion: el barrido miraba **dentro
+del recinto** y los restos estaban **fuera**) · las **camas** (tejados **4 -> 0** y **`El obrero repuso red_bed` = 0**, con el
+arreglo del **PLAN**, I298/I323/I325) · el **muro del asedio** (guardia por el **estado real** `hayAsedio`: **1761 -> 0**
+avisos falsos, I338) y el asaltante que **no pica madera** (I297) · el **haz** (solo dentro del recinto de su aldea, I303) ·
+el **pantano** (la cota por encima del agua, I304) · el **invocador** atado a su nucleo (candado en `setTarget`, I317) · y el
+**hambre** (colchon que escala con la poblacion, I344: `pasa hambre` = 0). **El auditor del proyecto da 0 cosas mal** en las
+dos aldeas del jugador (I346). Detalle con **clase, linea y medida**: `docs/aldea-invariantes.md`.
+
+**LO QUE SIGUE ABIERTO DE VERDAD** ✗: los tres de **(a)** — que solo se cierran **jugando** (el cruce del porton del muro,
+el asedio EN VIVO con un jugador de verdad, y la barra dibujada en el cliente) ✓ — y, **dentro de un asedio**, la medida del
+muro (`muro reconstruido`) ✗, que en el arnes **no se puede ver** porque el asedio queda **EN PAUSA** (`hayAsedio=true` con
+`agresivos=0`, I345).
+
 **LO ABIERTO HOY, entero y comprobado contra el acta** (9-oct-2026; lo de mas abajo es el historial, con lo que se fue
 cerrando y **como**). Va separado por **quien puede cerrarlo**:
 
