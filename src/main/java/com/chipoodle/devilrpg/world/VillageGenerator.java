@@ -8859,8 +8859,12 @@ public final class VillageGenerator {
                 }
                 BlockState arriba = level.getBlockState(pie);
                 if (!arriba.getFluidState().isEmpty()) {
-                    // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita el agua que se pisa y afirma el piso).
-                    colocar(level, pie, Blocks.AIR.defaultBlockState(), 3);
+                    // lint:ok I9 porque es un RETROFIT idempotente en el sitio (pone piso solido donde hay agua a la altura del pueblo).
+                    // I354 (ter) - EL PISO, SOLIDO DE VERDAD. Medido en la corrida 301: dejar AIRE en la celda que se pisa NO aguanta,
+                    // porque el lago vuelve a entrar (quedaban 2822 columnas con 1 celda de agua a y=63 repartidas por TODO el recinto,
+                    // y el latido reponia 51 por vuelta sin bajar nunca). Con un bloque SOLIDO en esa celda el agua no puede volver: el
+                    // pueblo se pisa encima y queda seco, que es lo que pidio el jugador (piso solido).
+                    colocar(level, pie, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
                     puestas++;
                 }
                 BlockPos suelo = pie.below();
