@@ -953,7 +953,7 @@ public class AggressiveZombieEntity extends Zombie {
             return false;
         }
         BlockPos zPos = blockPosition();
-        if (hacia.getY() >= zPos.getY()) {
+        if (hacia.getY() >= zPos.getY() || zPos.getY() - hacia.getY() > 3) {   // I375: ni el objetivo esta debajo, NI SE CAVA MAS DE 3 HACIA ABAJO (medido: 293 cavadas hasta y=51 y solo 2 de 8 entraron: el asedio entra en la aldea, no persigue a un aldeano por la mina)
             return false; // el objetivo no está por debajo: el túnel hacia abajo no es la herramienta
         }
         BlockPos abajo = zPos.below();
