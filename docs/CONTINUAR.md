@@ -1,8 +1,13 @@
 # CONTINUAR AQUÍ — acuerdos, convenciones y pendientes (leer lo PRIMERO)
 
 Rama: **`migration-neoforge-1.21.1`** (estable, compilada, con `lint --strict` verde y **subida a GitHub**).
-Ultima actualizacion: 9-oct-2026, al cerrar los tres pendientes (I235 el nado, I236 el puente y la escalera, I237 la
-milicia) y arreglar la escalera que cavaba en vez de apilar (I238).
+Ultima actualizacion: 11-oct-2026, al cerrar la tanda de la aldea (**I296-I346**): **la granja entera** (0 SIN SEMBRAR, 0
+PISOTEADA, 0 atoros, 0 `pies=water`, con sus dos causas de raiz: el paso de las compuertas encharcado y dos goals por la
+misma compuerta), los **restos flotantes** (408 -> 0), las **camas** (tejados 4 -> 0 y `El obrero repuso red_bed` = 0, con
+el arreglo del PLAN), el **muro del asedio** (y los **1761** avisos falsos, corregidos con `hayAsedio`), el **haz** (solo
+dentro del recinto de su aldea), el **pantano** (la cota por encima del agua), el **invocador** (candado en su `setTarget`)
+y el **hambre** (colchon que escala con la poblacion; `pasa hambre` = 0). El **auditor del proyecto da 0 cosas mal** en las
+dos aldeas del jugador. El detalle, con **clase, linea y medida**, esta en `docs/aldea-invariantes.md` (I296-I346).
 
 ---
 
