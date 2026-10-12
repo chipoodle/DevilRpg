@@ -7339,6 +7339,27 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I322 · EL BARRIDO QUITA 10-11 POR VUELTA Y **VUELVEN**: EL PLAN LOS REPONE (LA ALDEA YA CONSTRUIDA TIENE PLAN VIEJO)
+
+Par **200 + 201** con el arreglo del orden (I321 ✓) y la medida dice ✓/✗, sin adornos:
+- **TRONCOS FLOTANDO: 408 → 408** ✗ — pero **las trazas sí salen** ✓: `Aldea en 566, 63, 566: 10 / 10 / 11 / 11 / 11
+  tronco(s) POR DEBAJO de la cota 63 (quitados)` ✓ → **el barrido corre y quita** ✓, y **vuelven a aparecer** ✗ (los
+  mismos ~10-11 en cada vuelta del latido ✓).
+- **CAMAS EN LA CALLE: 4 → 1** ✓ (mejora; y en la 197 llegó a **0** ✓ → sigue siendo **ruidoso** entre corridas ✗, como
+  ya quedó escrito en I320 ✓).
+
+**LA CONCLUSIÓN, ya sin dudas** ✓✓: en la aldea **ya construida** del jugador el **PLAN ES VIEJO** ✗ y **pide esas
+piezas** → el obrero las repone **en cada pasada** ✓ y el barrido las vuelve a quitar → **pelea perpetua** ✗✓ (el mismo
+bucle de las camas, I298/I320 ✓). Y el arreglo del orden (I321 ✓) sirve para las aldeas que **se capturan de nuevo** ✓,
+pero **el plano de la suya no se recaptura**: `terminarGrabacion()` **solo** se llama al final de la **construcción**
+(L400 ✓), así que su plano viejo **no se actualiza por sí solo** ✗✓.
+
+**LO QUE FALTA, y es el sitio bueno** ✓: **filtrar en la CAPTURA del plano** ✗ — o sea, que al capturar **no se apunten**
+(a) los **troncos por debajo de la cota** ✓ y (b) las **mitades de cama sueltas** ✓ (el plano es el **origen** del reparto
+del obrero ✓, y ahí está el filtro del plano, I54 ✓). Con eso, **el plano no puede pedir lo que el barrido va a quitar**
+✓ y la pelea **se acaba sola** en la siguiente captura ✓ — y la medida es la de siempre: **408 → 0** ✓ y **0 mitades en
+la calle** ✓, con **0** `El obrero repuso …` ✓.
+
 ### I300 · EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, **FIRME Y SECO**
 
 `VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, nivel)`: recorre las **cuatro compuertas de cada parcela**
