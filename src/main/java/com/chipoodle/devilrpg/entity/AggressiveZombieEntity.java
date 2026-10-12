@@ -1829,7 +1829,8 @@ public class AggressiveZombieEntity extends Zombie {
             // Y si la herramienta que le toca no puede (porque está dentro de la aldea, o le queda presupuesto),
             // se prueba la siguiente, que es lo que hace que nunca se quede sin hacer nada.
             boolean algo = false;
-            if (hacia.getY() < zombie.blockPosition().getY()) {
+            // I361 · LA MISMA TOLERANCIA AL BAJAR QUE AL SUBIR (medido en su registro: CAVA hacia abajo 43, 38, 29, 22... -lo DOMINANTE- y 0 entradas; el objetivo es la victima, L1801, y si esta UN bloque mas baja se ponia a cavar hacia el suelo del pueblo en vez de atravesar el muro). Al subir ya habia tolerancia de 1 (y+1, abajo); al bajar no habia ninguna.
+            if (hacia.getY() < zombie.blockPosition().getY() - 1) {
                 algo = zombie.cavarHaciaAbajo(hacia);
             } else if (hacia.getY() > zombie.blockPosition().getY() + 1) {
                 algo = zombie.apilarBloqueParaSubir(hacia);
