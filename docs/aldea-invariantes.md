@@ -7339,7 +7339,32 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I362 · LECTURA COMPLETA DEL REGISTRO: SOLO SE NIEGA POR MADERA (25, ya inofensiva), CAVAN A 62 Y **HACIA ARRIBA 1-3**
+### I364 · EL TRAMO ES **UNA SOLA SESIÓN** (mi aviso de «mezcla sesiones» era FALSO) Y LA BUILD ES INTERMEDIA
+
+Le puse al inspector (I360 ✓) **filtro por tramo de tiempo** (I363 ✓) porque me había mordido el mezclar sesiones ✗, y la
+primera cosa que ha dicho es que **no había mezcla** ✓✓: el asedio del registro va de **13:08:24 a 13:25:05** ✓, o sea **una
+sesión de 17 minutos** ✓. **Mi aviso era falso** ✗ y queda retirado ✓ (otra vez: comprobar antes de afirmar ✓).
+
+**Y lo que eso permite** ✓: mirar **qué instrumentación** llevaba esa build ✓, traza por traza:
+```
+'esta en ... OBJETIVO' (L432)   : 20   <- SI (I358)
+'NO pica'             (L720)    : 48   <- SI (I358)
+'ENTRO en el recinto' (L1127)   :  0   <- NO (I359 no estaba)
+'va por ... dentro='  (L1132)   :  0   <- NO (I359 no estaba)
+'CAVA hacia abajo'    (L962)    : 268  <- y esto es ANTES del arreglo de I361
+'ACABARON los 40'               :  0   <- nadie agoto los 40 (coherente con el inspector)
+```
+
+**Conclusiones que ahora sí se sostienen** ✓✓:
+1. **`ENTRARON 0` NO es una medida** ✗: esa build **no tenía** la traza de entrada (I359 ✓) -> queda **pendiente** ✓.
+2. **`CAVA hacia abajo` = 268** es una medida **de antes** del arreglo ✓✓ -> **es exactamente lo que arregla I361** ✓ (con
+   número, no con una corazonada ✓).
+3. Los arreglos **anteriores sí estaban** ✓: se pica a **62/63** (I353 ✓) y **nadie agota los 40** ✓ (I356 ✓), con la madera
+   negándose 48 veces **sin coste** ✓.
+4. Lo único que **no** se puede leer de ese registro es **cuántos entran** ✗ -> la medida definitiva es el **próximo asedio**
+   con la build completa ✓ (la que lleva I359 e I361 ✓).
+
+### I362 ·### I362 · LECTURA COMPLETA DEL REGISTRO: SOLO SE NIEGA POR MADERA (25, ya inofensiva), CAVAN A 62 Y **HACIA ARRIBA 1-3**
 
 Las tres líneas del inspector (I360 ✓) que faltaban por leer ✓, y son las que cierran el cuadro:
 ```
