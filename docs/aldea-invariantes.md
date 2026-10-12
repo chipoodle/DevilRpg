@@ -7339,6 +7339,31 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I336 · LA GUARDIA DEL ASEDIO (I296) DISPARA CON **CUALQUIER ZOMBI** Y DEJA EL MURO SIN REPONER: REGRESIÓN MÍA, MEDIDA
+
+Corrida con **mundo nuevo** (`tanda-rapida.ps1 210 -MundoNuevo` ✓), que es la que llevaba rondas debiendo ✗, y ha valido
+la pena ✓ porque **destapa una regresión mía** ✗✓:
+
+```
+el muro NO se repone : 1761     <- EN UN MUNDO NUEVO Y TRANQUILO (TRABAJO: guardia 0, minero 1)
+muro reconstruido    : 0        <- o sea: el muro NO se repone NUNCA
+sofocad|asfixiad     : 0        ✓
+POR DEBAJO de la cota: 2        ✓ (el barrido de restos SÍ corre al fundar)
+golem de hierro en   : 0        (no hubo ocasion: el pueblo nuevo no llegó a ese punto)
+la cota sube de      : 0        (no cayó en agua ni pantano: sin ocasion, no se da por medido)
+```
+
+**LA CAUSA** ✓: mi guardia de I296 es **«si hay algún `AggressiveZombieEntity` a menos de 96 bloques del centro, el muro NO
+se repone»** ✗ — y con eso **cualquier zombi que pasee por la noche** la dispara ✓✓ (1761 veces en una corrida tranquila ✓),
+dejando el reconstruido **apagado para siempre** ✗. Y el reconstruido existe para los **restos de migración** (muro a la
+cota mala ✓): apagarlo por un caminante es **justo lo contrario** de lo que buscaba ✓✗.
+
+**LO QUE TOCA** ✓ (y es el mismo patrón de siempre: **una condición buena**, no una aproximación ✗): atar la guardia al
+**estado de asedio REAL** de la aldea (el que ya lleva `VillageManager` ✓, con su traza `EN PAUSA` y su reanudación ✓),
+**no** a «hay zombis cerca» ✗. *Medida*: **0** `el muro NO se repone` **sin** asedio ✓ y **0** `muro reconstruido` **con**
+asedio ✓ (hoy: **1761** y **0** respectivamente, justo al revés ✗✓). **Y lo bueno que ya queda medido de esta corrida**
+✓: **0 sofocaciones** ✓ y **el barrido de restos corre al fundar** (2 quitados ✓).
+
 ### I335 · LAS 2 LÍNEAS DE PUERTA SON **EL CASO LEGÍTIMO** (dos aldeanos, dos puertas): EL PUNTO QUEDA CERRADO
 
 Medido con su contexto ✓ (corrida 209), que es lo que faltaba para no dar por bueno un número a ciegas ✗:
