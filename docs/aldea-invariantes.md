@@ -7339,6 +7339,34 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I341 · EL HAMBRE, CON LA CAUSA A LA VISTA: LAS RESERVAS ESTÁN DIMENSIONADAS **PARA CRIAR**, NO PARA DAR DE COMER AL PUEBLO
+
+Continuación de I307 ✓ (medido entonces: la **cadena funciona** ✓ — cosecha -> despensa, almacén -> despensa y cocina ✓ —
+y la despensa llegó a **0** comiéndose las reservas y **se recuperó sola** ✓, o sea **colchón**, no reparto ✗). Ahora, con
+el código delante y **sin suponer** ✗, la causa está escrita **en el propio `VillagePantry`** ✓:
+
+```
+L65-69 (el comentario de las reservas):
+  RESERVA_PAN: 4 hogazas (16 puntos). Son 3 las que pide VANILLA PARA CRIAR (12 puntos)…
+  RESERVA_COCIDA: 4 piezas cocinadas…   RESERVA_VEGETAL: 16 vegetales (32 puntos), que es el granero del pueblo…
+  RESERVA_CRUDA: 8 piezas crudas, para que el COCINERO tenga qué cocinar…
+L73-76:  RESERVA_PAN = 4 · RESERVA_COCIDA = 4 · RESERVA_VEGETAL = 16 · RESERVA_CRUDA = 8
+L498:     …{@link #RESERVA_PAN} y compañía) y, si no hay exceso en ninguna, del orden de siempre: la reserva es una…
+L529-535: new Grupo(s -> s.is(Items.BREAD), FOOD_PER_BREAD, RESERVA_PAN) / …COCIDA / …VEGETAL / …CRUDA
+```
+
+**O sea** ✓✓: el colchón es **una constante por grupo** ✓ — dimensionada con **la crianza de vanilla** (3 hogazas = 12
+puntos ✓) y con «la huerta da mucho» ✓ — **no con cuántas bocas hay** ✗. Con **13 aldeanos** eso es un colchón de
+**minutos** ✓, que es exactamente lo medido: llega a **0**, se come las reservas y **se recupera** cuando entra la cosecha ✓.
+
+**EL ARREGLO, y es local** ✓✓ (13 usos, **todos** dentro de `VillagePantry` ✓ — no hay que tocar ningún goal ✓): que las
+reservas de la lista de grupos (L529-535 ✓) **escalen con la población** — `reservaBase + PUNTOS_POR_ALDEANO * aldeanos` ✓
+(una función en la propia despensa ✓), de modo que el **objetivo de despensa** crezca con las bocas ✓ y el pueblo **racione
+antes** de vaciarse ✓. **El único dato que falta es la forma del `Grupo`** (qué campos tiene y quién construye la lista ✓):
+una lectura de **L490-540** ✓ y el cambio es de una línea por grupo ✓. *Medida*: la traza **`Aldea N: comida M puntos`** no
+baja del colchón ✓ (hoy baja a **0** ✗) y **0** avisos de `pasa hambre` con el pueblo comiendo ✓.
+**No se toca ninguna constante a ciegas** ✗ (regla de la casa ✓, y el aviso de I331 ✓).
+
 ### I340 · LA GRANJA: LO FUNCIONAL ESTÁ MEDIDO (**0/0/0/0**); EL «ESTADO ÚNICO CON ESCANEO» NO MEJORA NINGUNA CIFRA (y se dice)
 
 Cierre del punto que el jugador pidió **antes que nada** ✓, con las cifras delante y **diciendo lo que no se hace** ✗.
