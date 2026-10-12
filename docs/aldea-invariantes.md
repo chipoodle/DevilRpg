@@ -7339,6 +7339,43 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I330 · **408 -> 0, MEDIDO** (y la leccion de metodo que hizo falta para encontrarlo)
+
+Par **206 + 207** (centro en su aldea ✓) con el radio del barrido arreglado (I329 ✓) y la medida manda:
+`
+Aldea en 566, 63, 566: 3370 tronco(s) POR DEBAJO de la cota 63 (quitados) — restos de un trazado viejo   <- LA FIRMA
+Aldea en 566, 63, 566: 22 / 11 tronco(s) POR DEBAJO de la cota 63 (quitados)                            <- la cola
+TRONCOS FLOTANDO : 0   {}                                                                               <- CERRADO
+`
+**408 -> 0** ✓✓ en la aldea del jugador, y **la primera traza quito 3370** (no 10-11 ✓): **la firma de que ahora mira
+donde estan** ✓, la misma que habia anunciado **antes** de correr ✓.
+
+**LO QUE COSTO, y queda escrito** ✓✓ (vale mas que el arreglo): el sintoma «quita 10-11 por vuelta y el contador no baja»
+me llevo a suponer **el plano** (I298/I320 ✓), luego **el obrero** (I322 ✓) y luego **la recaptura** (I325/I326 ✓) — y me
+equivoque en las tres ✗✓, incluida **una medicion mia que no medía nada** (I327: conte como traza **mi propio
+comentario** ✗). La causa era **el AREA** ✗: los restos estan a **62-63 bloques** del centro (x=503-504 ✓) y el barrido
+miraba dentro del **recinto** (FENCE_RADIUS, el radio del muro ✓). **Leccion**: cuando un barrido «hace su trabajo y no
+se nota», lo primero que hay que medir es **DONDE mira** (su area) y **de quien son las piezas** — no el orden ni el plan
+✗✓. Y el arreglo salio **estrecho** (FENCE_RADIUS + 12, solo en los dos barridos ✓, con verificacion de que
+captureBlueprint y 
+uin quedan en **0** ✓) despues de **retirar** el cambio ancho que se me fue a 8 sitios (I328 ✓).
+
+**LO QUE QUEDA DE ESTE HILO** ✗: **las camas de la calle** siguen bailando (**4** aqui; 0/1/3 en otras ✓) pero
+**El obrero repuso red_bed = 0** ✓ -> **nadie las repone** ✓, luego falla **la regla que las quita**: **4 mitades = 2
+camas ENTERAS** ✓ (tienen pareja, por eso el quitador de huerfanas no las toca ✓) y a la **capa 63** (la cota = la calle ✓)
+la que decide es la de **cielo abierto** (I272 ✓) — si estan **bajo la copa de la arboleda** ✗ (la zona de x=531 esta
+junto al arbolado ✓), **no dispara** ✓✓. **Siguiente**: que la regla de la calle no dependa de **ver el cielo** sino de
+**estar fuera de una casa**, con el plano delante ✓.
+
+### I329 · EL RADIO DEL BARRIDO, **SOLO EN LOS DOS BARRIDOS DE RESTOS** (la causa del 408)
+
+RADIO_DEL_BARRIDO = FENCE_RADIUS + 12 ✓ (el margen del talud y del despeje: un resto del trazado viejo no respeta el
+muro ✓) aplicado **solo** a 	roncosBajoLaCota y quitarMitadesDeCamaHuerfanas ✓. El reemplazo va **con alcance por
+metodo** (se corta el cuerpo de cada uno ✓) y con **verificacion propia**: **6** usos sustituidos en cada barrido ✓ y
+**captureBlueprint = 0 · 
+uin = 0** ✓✓ (el plano y el ruin **intactos** ✓: asi no se repite el exceso retirado en
+I328 ✓). Compila (BUILD SUCCESSFUL ✓) y lint --strict verde ✓. *Medida*: **408 -> 0** ✓ (I330 ✓).
+
 ### I328 · LA CAUSA DEL 408: **EL RADIO DE LOS BARRIDOS** (y yo me pase con el cambio ancho: retirado y dicho)
 
 **Encontrada, y cuadra con todos los numeros** ✓✓. Los 408 troncos de la aldea del jugador estan en **x=503-504**, o sea a
