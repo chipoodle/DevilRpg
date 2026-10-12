@@ -2426,6 +2426,9 @@ public final class VillageManager {
         VillageGenerator.troncosBajoLaCota(level, center, cotaParaElPlano, false);
         VillageGenerator.quitarMitadesDeCamaHuerfanas(level, center);
         VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, cotaParaElPlano);
+        // I354 - Y EL PISO, donde el agua se puso a la altura del pueblo (su segundo reporte): la aldea de lago quedo
+        // inundada a su propia cota. Va aqui, ANTES de recapturar el plano, para que el plano nuevo nazca con el piso seco.
+        VillageGenerator.ponerPisoDondeHayAgua(level, center, cotaParaElPlano);
         VillageGenerator.captureBlueprint(level, center); // el plano vuelve a ser lo que el pueblo es ahora
         saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
         saved.setLayout(objectiveIndex, CURRENT_LAYOUT);

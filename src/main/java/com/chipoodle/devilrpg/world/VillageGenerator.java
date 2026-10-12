@@ -8838,6 +8838,44 @@ public final class VillageGenerator {
      * `captureBlueprint` (que es EL PLANO: ampliarlo haría que el obrero mantuviera el anillo de fuera ✗), ni para
      * `ruin`, ni para el cimiento (así se retiró el cambio ancho de I328 ✓).
      */
+    /**
+     * PISO SOLIDO DONDE HAY AGUA A LA ALTURA DEL PUEBLO (I354, medido el 12-oct-2026). El jugador: la aldea como esta en
+     * pantano tiene en vez de piso agua, deberia de tener un piso solido (con captura). Medido en su guardado: la aldea 1
+     * tiene su cota a 63 y 7192 celdas de agua a y=63 DENTRO del recinto. Aqui se pone el piso como el resto del pueblo (el
+     * suelo se pisa a la cota y la tierra va una por debajo): el agua de la celda que se pisa se quita y la de debajo se
+     * vuelve tierra firme, SALVO el agua prevista (esCeldaDelLago: el lago y la darsena de la pesquera) y sin tocar nada
+     * construido. Es idempotente.
+     */
+    public static int ponerPisoDondeHayAgua(ServerLevel level, BlockPos center, int cota) {
+        int puestas = 0;
+        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                    continue;
+                }
+                BlockPos pie = new BlockPos(center.getX() + dx, cota, center.getZ() + dz);
+                if (esCeldaDelLago(center, cota, pie)) {
+                    continue;
+                }
+                BlockState arriba = level.getBlockState(pie);
+                if (!arriba.getFluidState().isEmpty()) {
+                    // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita el agua que se pisa y afirma el piso).
+                    colocar(level, pie, Blocks.AIR.defaultBlockState(), 3);
+                    puestas++;
+                }
+                BlockPos suelo = pie.below();
+                if (!level.getBlockState(suelo).getFluidState().isEmpty()) {
+                    colocar(level, suelo, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+                    puestas++;
+                }
+            }
+        }
+        if (puestas > 0) {
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: {} celda(s) de PISO puestas donde habia agua a la altura del pueblo (I354)", center.toShortString(), puestas);
+        }
+        return puestas;
+    }
+
     private static final int RADIO_DEL_BARRIDO = FENCE_RADIUS + 12;
 
     /**
