@@ -3014,12 +3014,17 @@ public final class VillageManager {
         // aldeas -> en la del jugador quedaban 398 troncos ✗; y las mitades de cama huérfanas (I311) se quedaban
         // colgando ✗. Aquí van las dos, que el latido sí corre para cada aldea: idempotentes y baratas (si no hay nada
         // que hacer, no escriben ni una celda).
+        // I368 · CADA 30 s, NO CADA LATIDO. Estos barridos recorren 124x124 columnas con varias consultas por celda (el del
+        // piso, cinco vecinos por celda): hacerlo en cada tick es demasiado trabajo y explica que el juego dejara de
+        // responder y se quedara guardando. Cada 600 ticks sobra: es una reparacion, no una urgencia.
+        if (level.getGameTime() % 600L == 0L) {
         VillageGenerator.troncosBajoLaCota(level, center, VillageGenerator.cotaDeLaPlaza(level, center), false);
         VillageGenerator.quitarMitadesDeCamaHuerfanas(level, center);
         // I354 (bis) - Y EL PISO, DONDE EL AGUA SE PUSO A LA ALTURA DEL PUEBLO. Medido en la corrida 300: puesto en la pasada
         // de mantenimiento NO se ejecuto (0 trazas y 7192 celdas de agua igual), asi que va en el LATIDO, que es el sitio que SI
         // corre para cada aldea (alli los barridos dieron 64 trazas). Idempotente: si el piso esta seco, no escribe ni una celda.
         VillageGenerator.ponerPisoDondeHayAgua(level, center, VillageGenerator.cotaDeLaPlaza(level, center));
+        }
         for (BlockPos[] par : VillageGenerator.asentarLosComposterosALaCota(level, center)) {
                 for (Villager granjero : aldeanos) {
                     Optional<GlobalPos> suyo = granjero.getBrain().getMemory(MemoryModuleType.JOB_SITE);

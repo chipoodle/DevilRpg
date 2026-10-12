@@ -8873,8 +8873,10 @@ public final class VillageGenerator {
                         }
                     }
                     if (vecinosDeAgua >= 2 && cercaDelLago(center, pie, 24)) {
+                        // I368 · SIN ACTUALIZAR VECINOS (2 = solo al cliente): con 3 el agua empieza a FLUIR y
+                        // eso multiplica las actualizaciones (parte del colgon). Asi queda puesta, sin avalancha.
                         // lint:ok I9 porque es un RETROFIT idempotente en el sitio, y ademas DEVUELVE el agua que tape yo.
-                        colocar(level, pie, Blocks.WATER.defaultBlockState(), 3);
+                        colocar(level, pie, Blocks.WATER.defaultBlockState(), 2);
                         // I367 · TRAZA DE LA REPARACION: asi se puede CONTAR en el registro cuanta agua devuelvo al lago.
                         DevilRpg.LOGGER.info("[Village] Aldea en {}: DEVUELVO agua al lago del pescador en {} (I366)",
                                 center.toShortString(), pie.toShortString());
