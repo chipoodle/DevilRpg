@@ -147,12 +147,18 @@ public class AggressiveZombieEntity extends Zombie {
 
     /** Bloques de túnel/puente que le quedan a este zombie en la marcha actual. */
     private int tunelRestante = TUNEL_PRESUPUESTO;
+
+    /** I358 · Enfriamiento de las trazas del asedio: sin esto, un "no pica" sale cada tick y llena el registro. */
+    private long ultimoAvisoDelAsedio = 0L;
     private int tunelEspera;
     private int puenteEspera;
 
     /** Vuelve a darle presupuesto de túnel (al empezar una marcha nueva a la aldea). */
     public void recargarTunel() {
         this.tunelRestante = TUNEL_PRESUPUESTO;
+        // I358 · RENUEVA LA MARCHA: queda en el registro (con su altura) para poder seguirle la pista a un asaltante concreto.
+        DevilRpg.LOGGER.info("[Siege] asaltante #{} RENUEVA la marcha en {} (y={}): tunel {} de nuevo", getId(),
+                blockPosition().toShortString(), blockPosition().getY(), TUNEL_PRESUPUESTO);
         this.tunelEspera = 0;
         this.puenteEspera = 0;
         recargarAtravesadores();
@@ -319,6 +325,7 @@ public class AggressiveZombieEntity extends Zombie {
 
     private boolean breakBlockAt(BlockPos pos) {   // I356: dice si DE VERDAD rompio algo (el presupuesto solo se cobra entonces)
         if (REGLA_DEL_MURO_ACTIVA && protegidoPorLaAldea(pos)) {
+            avisoDeQueNoPica("esta protegido por la aldea (dentro no se pica)", null, pos);
             return false; // dentro de la aldea no se pica; el muro perimetral sí (es la brecha)
         }
         // Y LA OBRA DEL PROPIO ASEDIO NO SE PICA (I239, medido el 9-oct-2026): los tablones que tiende el puente son su
@@ -326,6 +333,7 @@ public class AggressiveZombieEntity extends Zombie {
         // la ÚNICA puerta que rompe, para que valga para los tres caminos que pican (el romper, el abridor de huecos y
         // el taladro del túnel) y no solo para el que me acordé de mirar.
         if (esTablonDelAsalto(pos)) {
+            avisoDeQueNoPica("es obra del propio asedio (el puente)", null, pos);
             return false;
         }
         BlockState bs = level().getBlockState(pos);
@@ -336,12 +344,15 @@ public class AggressiveZombieEntity extends Zombie {
         // NADA de la muralla. La madera no es lo que cierra el pueblo, así que se ignora (troncos y hojas, con las
         // ETIQUETAS del juego, que cubren cualquier madera) y el asaltante sigue con lo que sí cuenta.
         if (bs.is(net.minecraft.tags.BlockTags.LOGS) || bs.is(net.minecraft.tags.BlockTags.LEAVES)) {
+            avisoDeQueNoPica("es MADERA, y la madera no es lo que cierra el pueblo (I297)", b, pos);
             return false;
         }
         if (b.defaultDestroyTime() < 0.0F) {
+            avisoDeQueNoPica("es inquebrantable", b, pos);
             return false; // inquebrantable
         }
         if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !canBreakObsidian()) {
+            avisoDeQueNoPica("es obsidiana y este asaltante no puede con ella", b, pos);
             return false;
         }
         // Queda en el log (INFO, una línea por bloque): es lo que permite comprobar que la horda se abre paso DE
@@ -367,6 +378,10 @@ public class AggressiveZombieEntity extends Zombie {
         // TÚNEL LENTO Y CON PRESUPUESTO: un bloque cada TUNEL_ENTRE_BLOQUES (2 s) y como mucho TUNEL_PRESUPUESTO por
         // marcha. Una montaña grande aguanta y la aldea se salva (lo pidió el jugador).
         if (tunelRestante <= 0 || tunelEspera > 0) {
+            if (tunelRestante <= 0) {
+                // I358 · SE LE ACABARON LOS 40: antes esto era mudo y parecia que el asaltante no hacia nada.
+                avisoDeQueNoPica("se le ACABARON los 40 bloques de esta marcha", null, blockPosition());
+            }
             return;
         }
         BlockPos zPos = blockPosition();
@@ -400,7 +415,18 @@ public class AggressiveZombieEntity extends Zombie {
             }
         }
         if (best == null) {
+            avisoDeQueNoPica("no tiene nada rompible alrededor", null, blockPosition());
             return;
+        }
+        // I358 · LA TRAZA QUE HACE FALTA PARA DEDUCIRLO DEL REGISTRO: donde esta y a que altura, donde esta el OBJETIVO y a
+        // que altura, el desnivel, hasta que dy va a cavar (la alturaQueCavar de I353) y el tunel que le queda. Con
+        // enfriamiento. Con esto se puede ver si cava A LA ALTURA DEL SUELO o a ras de lago, que es el fallo de I353.
+        if (level().getGameTime() - ultimoAvisoDelAsedio > 40L) {
+            ultimoAvisoDelAsedio = level().getGameTime();
+            DevilRpg.LOGGER.info("[Siege] asaltante #{} esta en {} (y={}) · OBJETIVO {} (y={}) · desnivel {} · va a cavar"
+                            + " hasta dy={} · tunel {}/{}", getId(), blockPosition().toShortString(), blockPosition().getY(),
+                    towards.toShortString(), towards.getY(), towards.getY() - blockPosition().getY(),
+                    Math.max(1, Math.min(3, towards.getY() - blockPosition().getY() + 1)), tunelRestante, TUNEL_PRESUPUESTO);
         }
         // Destruir el bloque principal.
         // I356 · EL PRESUPUESTO SOLO SE COBRA SI SE ROMPIO DE VERDAD. Antes se cobraba siempre, asi que cada tronco que la
@@ -672,6 +698,21 @@ public class AggressiveZombieEntity extends Zombie {
             return true;
         }
         return false;
+    }
+
+    /**
+     * I358 · <b>DEJA EN EL REGISTRO POR QUE NO SE PICA</b> (lo pidió el jugador: *«haz las anotaciones necesarias en el
+     * código con log para que tú mismo deduzcas si esto se cumple»*). Antes esto era <b>mudo</b> y por eso costó tanto ver
+     * que el presupuesto se cobraba igual (I356) ✗: el asaltante se negaba a picar y no dejaba ni una línea. Con
+     * <b>enfriamiento</b> (2 s) para no llenar el registro.
+     */
+    private void avisoDeQueNoPica(String motivo, Block b, BlockPos pos) {
+        if (level().getGameTime() - ultimoAvisoDelAsedio <= 40L) {
+            return;
+        }
+        ultimoAvisoDelAsedio = level().getGameTime();
+        DevilRpg.LOGGER.info("[Siege] asaltante #{} NO pica {} en {} porque {} (tunel {}/{})", getId(),
+                b == null ? "(ese bloque)" : b, pos.toShortString(), motivo, tunelRestante, TUNEL_PRESUPUESTO);
     }
 
     /** Partículas del sitio donde el zombie rompe o construye, para que el jugador lo vea desde lejos. */

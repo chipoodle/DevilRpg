@@ -7339,7 +7339,29 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I357 · PRUEBA DE HUMO DESPUES DE LOS DOS ARREGLOS: NADA DE LO CERRADO SE HA MOVIDO
+### I358 · TRAZAS DEL ASEDIO, PARA DEDUCRILO DEL REGISTRO (lo pidio el jugador)
+
+Peticion directa: *«haz las anotaciones necesarias en el codigo con log para que tu mismo deduzcas si esto se cumple. Voy a
+correr el juego con un asedio y cuando acabe te dire para que inspecciones el log»* ✓. Se han anadido **solo trazas** (no cambia
+el comportamiento ✓) con **enfriamiento de 2 s** (campo `ultimoAvisoDelAsedio` ✓) para no llenar el registro ✓:
+
+- **`NO pica <bloque> en <pos> porque <motivo> (tunel N/40)`** (**L714** ✓, ayudante `avisoDeQueNoPica` ✓): sale en los
+  **cinco** «no se pica» — **madera/hojas** ✓, tablon del asalto ✓, protegido de la aldea ✓, inquebrantable ✓ y obsidiana ✓.
+  **Esto era MUDO** ✗ y por eso costo tanto ver que el presupuesto se cobraba igual (I356 ✓).
+- **`esta en <pos> (y=..) · OBJETIVO <pos> (y=..) · desnivel N · va a cavar hasta dy=N · tunel N/40`** (**L426** ✓): el dato que
+  dice **si cava a la altura del suelo o a ras de lago** ✓ (el fallo de I353 ✓).
+- **`se le ACABARON los 40 bloques de esta marcha`** ✓ (mismo ayudante ✓) y **`RENUEVA la marcha en <pos> (y=..)`** (**L160** ✓):
+  antes, agotar el tunel era **mudo** ✗ y parecia que el asaltante no hacia nada ✓.
+- Y las que ya estaban: `pica ...` (**L364** ✓), `empieza a TALADRAR` (**L440** ✓), `empieza a PONER UN PUENTE` (**L694** ✓),
+  `pone un ESCALON` (**L862** ✓) y `CAVA hacia abajo` (**L956** ✓).
+
+**LA RECETA DE INSPECCION** ✓ (para cuando avise, con su registro): contar **por asaltante** **(a)** cuantos `pica` hay y **a que
+y** salen ✓ (debe ser **y=63**, la altura del suelo ✓, no 60-61 ✗); **(b)** cuantos `NO pica ... porque es MADERA` hay ✓ (si son
+muchos y los `pica` son pocos ✗, la arboleda sigue comiendo la marcha ✓); **(c)** cuantos llegan a **`se le ACABARON los 40`**
+sin brecha ✓; **(d)** y con las posiciones del informe de altura, **la distancia de cada asaltante al centro** ((566,566) y
+(990,990) ✓) para saber **cuantos entran de verdad** ✓ — que es la medida que pide el objetivo ✓.
+
+### I357 ·### I357 · PRUEBA DE HUMO DESPUES DE LOS DOS ARREGLOS: NADA DE LO CERRADO SE HA MOVIDO
 
 Con reakBlockAt cambiado a oolean (I356 ✓) y el piso anadido (I354 ✓), corrida **303** sobre una copia de su partida:
 `
