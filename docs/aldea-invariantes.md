@@ -7339,6 +7339,28 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I347 · EL INVARIANTE DEL AGUA, CORREGIDO: NO ES «0 AGUA DENTRO DEL RECINTO» (la pesquera y la aldea de lago la tienen a proposito)
+
+Medido en las dos aldeas del jugador (uild/agua_dentro_del_recinto.py ✓, solo lectura ✓):
+`
+aldea 0 (566,566) cota 63 : 117 celdas de agua dentro del recinto -> 71 columnas, caja x 537..614 z 535..613,
+                            TODAS a y=63 (su cota), la mas honda 2 celdas -> es la DARSENA de la pesquera
+aldea 1 (990,990) cota 71 : 7192 celdas (la sonda uso cota 63 -> el agua esta POR DEBAJO de su suelo):
+                            es el LAGO de la aldea de mar, por diseno
+`
+**LO QUE ESO ENSENA** ✓✓: **«0 celdas de agua dentro del recinto» NO es la regla buena** ✗ — la **pesquera** y la **aldea de
+lago** tienen agua **a proposito** (el mod la conoce: sCeldaDelLago ✓ y la mantiene: 
+epararLagoDeLaPesquera ✓). La regla
+buena, y es la del reporte del jugador (*«aparecen regiones inundadas»* ✗), es: **no tener agua a la altura de los PIES
+fuera de la darsena prevista** ✓ — o sea, **la cota del pueblo por encima del agua de su zona** (I304 ✓), no la ausencia de
+agua ✓.
+**Y lo que la medida SI dice, a favor del arreglo** ✓: el agua de la aldea 0 esta **acotada y a su cota** (117 celdas
+pegadas, de 2 de fondo ✓ = la darsena ✓) y **no hay manchas dispersas por las calles** ✓ (que es la firma de una
+inundacion ✗); y la de la aldea 1 esta **por debajo de su suelo** ✓ (cota 71 sobre agua a 63 ✓). **Ninguna de las dos
+inunda** ✓.
+**Nota de la sonda** ✗: hay que darle **la cota de cada aldea** (71 para la 1, no 63 ✗) — queda dicho para no volver a
+medir mal ✓.
+
 ### I346 · VEREDICTO GLOBAL DEL AUDITOR: **0 COSAS MAL** EN LAS DOS ALDEAS
 
 Cierre con **la herramienta del propio proyecto** (	ools/audita_aldea.py ✓, **solo lectura**: nunca toca 
