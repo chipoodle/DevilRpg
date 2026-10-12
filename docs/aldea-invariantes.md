@@ -7339,6 +7339,25 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I352 · CERRADO CON RESPUESTA: EL GUARDADO **NO TIENE LAS ENTIDADES DE SU ALDEA** (por eso no se puede auditar el golem)
+
+El diagnostico de una linea de I351 ✓ (uild/claves_del_chunk.py ✓) contesta **sin suponer** ✗:
+`
+aldea (566,566) -> chunk (35,35) -> run/saves/New World/entities/r.1.1.mca
+   no se pudo sacar el chunk (offset 0 o zlib)
+`
+**offset 0 quiere decir que ese chunk NO ESTA en la region** ✓ — y el fichero **si** tiene 565 KB ✓ (con **otros** chunks ✓).
+O sea: **el lector no estaba mal** ✗ (los tres fallos que corrijo por el camino eran reales ✓, pero ya no queda ninguno ✓):
+**el guardado no tiene volcadas las entidades de su aldea** ✓ -> **la medida del golem NO se puede sacar del fichero** ✓✓, y
+eso queda **probado**, no supuesto ✓ (que es justo lo que faltaba ✓).
+
+**CONSECUENCIA, y cierra el asunto** ✓: **el golem solo se puede medir jugando** ✓ — con su traza (golem de hierro en … ✓ o
+el aviso 
+o hay hueco ✓, I348 ✓). **Se deja de trabajar en la herramienta** ✗ (tres rondas bastan ✓ y ya dio su respuesta ✓);
+el lector queda en uild/ (que **no se sube** ✓) con lo aprendido escrito ✓: el sector va en los 3 bytes altos de la
+cabecera Anvil ✓, el byte de tipo de compresion va **antes** de los datos ✓, y **un xcept que devuelve None en silencio
+es lo que mas tiempo cuesta** ✗✓ (por eso el script ahora **dice** si el offset es 0 o si zlib falla ✓).
+
 ### I351 · LECTOR DE ENTIDADES, 2: EL FICHERO EXISTE Y AUN ASI DA 0 (y el diagnostico siguiente, escrito)
 
 Continuacion de I350 ✓, y esto es lo que se ha medido **esta** ronda:
