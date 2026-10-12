@@ -7339,6 +7339,31 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I353 · EL ASEDIO NO ENTRA: CAVAN A SU PROPIA ALTURA (medido en su asedio del 12-oct-2026)
+
+Reporte del jugador: *«ya comenzo el asedio y ningun zombie agresivo rompe la muralla para entrar a la aldea e ir al
+centro matando a su paso. Solo se quedan afuera saltando»* ✗. **Medido en su registro en vivo** ✓ (403 lineas [Siege], 228
+pica Block con le quedan N de tunel):
+`
+asaltante #3405 pone un ESCALON en 1051, 60, 1003 para subir al objetivo (1051, 63, 1013)
+asaltante #3405 pica dirt en 1053, 61, 1005 (le quedan 32) · pica dirt en 1053, 60, 1005
+asaltante #3413 pica cobblestone en 1031, 63, 1038 (le quedan 40)
+muro reconstruido 0 · el muro NO se repone 0 · no consigue llegar 0 · brecha 0
+`
+**Lo que dice** ✓✓: **no** es el bucle de reponer el muro (aquel ya no pasa: **0** ✓) — es que cavan **a y=60-61, POR
+DEBAJO del suelo del pueblo (63)**, abren a lo sumo 2 de alto y **agotan los 40** sin entrar ✓. Y el codigo lo explica:
+AggressiveZombieEntity.breakBlockTowards (**L365-413**) mira candidatos **solo con dy = 0..1** (**L376**) — su propia
+altura — aunque sabe que el objetivo esta arriba (	argetAbove, **L411**). Con el pueblo **3 bloques por encima** (el lago
+esta a 60-62 y su suelo a 63 ✓), el tunel nace **a ras de lago** y no llega nunca ✗✓.
+**ARREGLO** ✓ (una linea, sin inventar): que mire **tambien hacia arriba**, hasta **la altura del objetivo** (tope 3 ✓), con
+la penalizacion de dy que ya tenia (prefiere lo bajo ✓). *Medida*: en su proximo asedio, los pica Block salen **a la
+altura del suelo (y=63)** y hay **brecha/entrada** ✓ (hoy: 228 picados a 60-61 y **0** brechas ✗).
+
+**Y RETIRO LO QUE DIJE EN I347** ✗✓: alli escribi que la aldea 1 «no inunda» porque **supuse** que su cota era 71 ✗ — el
+**auditor dice cota 63** para las dos aldeas ✓ y hay **7192 celdas de agua a y=63 dentro de su recinto** ✗ -> **esta
+inundada a la altura del pueblo** ✓ (es el segundo reporte, *«tiene en vez de piso agua»* ✓). **Suponer me hizo escribir
+una conclusion falsa en el acta** ✗; queda retirada y con el dato bueno ✓ (el arreglo del piso, siguiente ✓).
+
 ### I352 · CERRADO CON RESPUESTA: EL GUARDADO **NO TIENE LAS ENTIDADES DE SU ALDEA** (por eso no se puede auditar el golem)
 
 El diagnostico de una linea de I351 ✓ (uild/claves_del_chunk.py ✓) contesta **sin suponer** ✗:

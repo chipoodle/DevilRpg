@@ -373,7 +373,11 @@ public class AggressiveZombieEntity extends Zombie {
         int sz = Integer.signum(towards.getZ() - zPos.getZ());
         BlockPos best = null;
         double bestScore = Double.MAX_VALUE;
-        for (int dy = 0; dy <= 1; dy++) {
+        // I353 - TAMBIEN HACIA ARRIBA, hasta la altura del objetivo (medido en su asedio del 12-oct-2026: 228 picados a
+        // y=60-61, POR DEBAJO del suelo del pueblo a 63, con 0 brechas: cavaban a ras de lago y agotaban los 40 sin entrar).
+        // El tope es 3 y se mantiene la penalizacion de dy, que hace preferir lo bajo.
+        int altoQueCavar = Math.max(1, Math.min(3, towards.getY() - zPos.getY() + 1));
+        for (int dy = 0; dy <= altoQueCavar; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     if (dx == 0 && dz == 0) continue;
