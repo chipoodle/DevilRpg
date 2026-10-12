@@ -7339,6 +7339,26 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I348 · LA MEDIDA DEL GOLEM: **SIN OCASION** (y por que no se puede sacar del guardado)
+
+Comprobado en esta ronda ✓, sin adornos:
+- **Las herramientas de Python NO leen entidades** ✗: buscado Entities|entity|Entidades|iron_golem en 	ools/ y lo unico
+  que sale son **patrones de codigo** (lint_aldea.py L52 y L117 ✓), no el NBT de entidades del guardado ✓. O sea: **el
+  golem no se puede auditar desde el guardado** ✗ con lo que hay hoy ✓ (habria que ensenarle a leer la lista Entities de
+  los chunks ✓, que es trabajo de herramienta, no de arreglo ✓).
+- **Y la traza es el camino** ✓: el mod escribe **donde nace** (golem de hierro en … ✓) o **avisa si no hay hueco**
+  (
+o hay hueco ✓). Buscada en **su registro** (
+un/logs/latest.log ✓) y en las **tres ultimas corridas** (213, 214 y
+  1800 ✓): **0 y 0 en las cuatro** ✗ -> **no ha nacido ningun golem** desde el arreglo ✓, ni ha hecho falta el aviso ✓.
+
+**CONCLUSION** ✓: **sin ocasion, no hay medida** ✗ — y **no me invento un 0** ✓ (la leccion de I327 ✓). El golem nace al
+**(re)construir** una aldea ✓, y la suya **ya tiene el trazado actual** ✓, asi que la ocasion llega **cuando funde la
+siguiente** o cuando una migracion suba el trazado ✓. **Su medida, cuando llegue** ✓: golem de hierro en <pos> ✓ y que
+esa celda este **libre** (mi arreglo busca hueco y avisa si no lo hay ✓) — o el aviso 
+o hay hueco si de verdad esta
+lleno ✓.
+
 ### I347 · EL INVARIANTE DEL AGUA, CORREGIDO: NO ES «0 AGUA DENTRO DEL RECINTO» (la pesquera y la aldea de lago la tienen a proposito)
 
 Medido en las dos aldeas del jugador (uild/agua_dentro_del_recinto.py ✓, solo lectura ✓):
