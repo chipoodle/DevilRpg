@@ -7339,6 +7339,27 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I328 · LA CAUSA DEL 408: **EL RADIO DE LOS BARRIDOS** (y yo me pase con el cambio ancho: retirado y dicho)
+
+**Encontrada, y cuadra con todos los numeros** ✓✓. Los 408 troncos de la aldea del jugador estan en **x=503-504**, o sea a
+**62-63 bloques** del centro (566) ✓ — y **FENCE_RADIUS es el radio del MURO** ✓, asi que **los barridos miraban solo
+DENTRO del recinto** ✗ y **el contador miraba a radio 80** ✗✓. De ahi el sintoma exacto que llevo midiendo: **10-11 troncos
+quitados por vuelta** (los pocos que caen dentro ✓) y **~397 fuera** que nadie mira ✗✓; y por eso el contador estaba
+**clavado en 408** aunque el barrido corriera 64 veces ✓✓. **No era el plano ni el obrero**: era **el area** ✗.
+
+**Y AQUI ME PASE, Y LO DIGO** ✗: aplique el radio nuevo con un reemplazo **ancho** y salio en **8 sitios**, no en 2 ✗ —
+entre ellos **captureBlueprint (L8062)** ✗✗, que es **el plano**: ampliarle el radio habria hecho que el plano cubriera el
+anillo de **fuera** y el obrero **lo mantuviera** (regresion ✗). **Cambio RETIRADO** con git checkout ✓ (el arbol quedo
+exactamente como el ultimo commit bueno ✓) y queda **dicho** ✓, porque la regla es esa: *lo que no mejore la media se
+retira* ✓ — y un cambio que **no controlo** no entra ✗.
+
+**EL ARREGLO CORRECTO** ✓ (estrecho y a proposito): un radio de barrido **un poco mayor** que el recinto
+(FENCE_RADIUS + 12 ✓, el margen del talud y del despeje) aplicado **SOLO** a los barridos de restos
+(	roncosBajoLaCota ✓ y quitarMitadesDeCamaHuerfanas ✓) — **nunca** a captureBlueprint ✗, ni a 
+uin ✗, ni al
+cimiento ✗. *Medida*: **408 -> 0** en el par siguiente (y con la traza diciendo **~400 quitados** la primera vez ✓, que
+es la firma de que ahora si mira donde estan ✓).
+
 ### I327 · CORRECCION MIA: «plano vuelve a ser = 0» ERA **MI COMENTARIO**, NO UNA TRAZA (y el orden dentro de la pasada lo explica)
 
 Me corrijo ✗✓ porque la regla de la casa es no fiarse de nada que no este medido, **tambien de lo mio**. En I326 di por hecho que **la recaptura no se ejecutaba** en su aldea porque la traza plano vuelve a ser salia **0** veces ✗ — y al ir a buscar el sitio del obrero he visto que **ese texto es MI COMENTARIO** (lo escribi yo al colocar los barridos ✓), **no una linea de registro** ✗: **el mod NO imprime nada al recapturar**, asi que aquel cero **no medía nada** ✗✓. Queda **retirada** esa conclusion ✗ (lo que no mejore la media se retira y se dice ✓).
