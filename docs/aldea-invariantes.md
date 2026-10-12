@@ -7339,7 +7339,26 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I355 · EL PISO: 0 celdas de agua A LA ALTURA DEL PUEBLO en la copia (y el contador que me enganaba, arreglado)
+### I356 · LA REGRESION DEL ASEDIO ERA MIA: SE COBRABA EL BLOQUE AUNQUE NO SE PICARA
+
+Buscando si lo habia roto algun cambio mio (lo pide el objetivo ✓) y **leyendo mi propio cambio** de I297 (L333-340 ✓):
+reakBlockAt paso a **negarse** a picar madera ✓ pero **seguia siendo oid** ✗, y el **presupuesto** (	unelRestante--)
+lo cobra **el que llama** (reakBlockTowards, **L407** antes del arreglo ✗) **pase lo que pase** ✗✓. O sea: desde I297,
+cada tronco o hoja que el asaltante **no** pica le **costaba un bloque de los 40** ✓ -> con la **arboleda** alrededor del
+pueblo, los 40 se iban en **arboles que no se rompen** ✗ y el asaltante se quedaba **fuera** ✓✓ = *«solo se quedan afuera
+saltando»* ✓. Y explica el «antes funcionaba» ✓: antes **si** rompia el tronco (gastaba el bloque ✓ pero **abria paso** ✓).
+
+**ARREGLO** ✓ (de raiz, y en la puerta unica ✓): reakBlockAt ahora **devuelve oolean** (rompio / no rompio ✓, con
+
+eturn false en los cinco «no se pica»: protegido de la aldea, tablon del asalto, madera, inquebrantable y obsidiana ✓) y
+el que llama **solo cobra** presupuesto, espera y particulas **si de verdad rompio** ✓. Comprobado que el **otro** sitio que
+cobra (L670 ✓, el **puente**) **si** coloca el bloque ✓, asi que cobrar ahi es correcto ✓ (no se toca ✓). BUILD SUCCESSFUL ✓
+y lint --strict verde ✓. *Medida*: en su proximo asedio, los pica Block deben salir **a la altura del suelo (y=63)** ✓ y
+aparecer **brecha/entrada** ✓ (hoy: 228 picados, casi todos a y=60-61, y **0** brechas ✗).
+**Leccion**: cuando se le pone un candado a una accion, hay que mirar **quien cobra** esa accion ✗✓ — si el cobro vive en
+el que llama, el candado **no** exime del cobro ✓ (y el sintoma sale lejos del cambio ✗).
+
+### I355 ·### I355 · EL PISO: 0 celdas de agua A LA ALTURA DEL PUEBLO en la copia (y el contador que me enganaba, arreglado)
 
 Medido en el mismo sitio y con la capa a la vista (esto cierra el punto 2):
 `

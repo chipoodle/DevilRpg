@@ -317,16 +317,16 @@ public class AggressiveZombieEntity extends Zombie {
      */
     public static final boolean REGLA_DEL_MURO_ACTIVA = true;
 
-    private void breakBlockAt(BlockPos pos) {
+    private boolean breakBlockAt(BlockPos pos) {   // I356: dice si DE VERDAD rompio algo (el presupuesto solo se cobra entonces)
         if (REGLA_DEL_MURO_ACTIVA && protegidoPorLaAldea(pos)) {
-            return; // dentro de la aldea no se pica; el muro perimetral sí (es la brecha)
+            return false; // dentro de la aldea no se pica; el muro perimetral sí (es la brecha)
         }
         // Y LA OBRA DEL PROPIO ASEDIO NO SE PICA (I239, medido el 9-oct-2026): los tablones que tiende el puente son su
         // camino, no un estorbo —el romper y el puente se peleaban y el monstruo se destruía su propio puente—. Va AQUÍ, en
         // la ÚNICA puerta que rompe, para que valga para los tres caminos que pican (el romper, el abridor de huecos y
         // el taladro del túnel) y no solo para el que me acordé de mirar.
         if (esTablonDelAsalto(pos)) {
-            return;
+            return false;
         }
         BlockState bs = level().getBlockState(pos);
         Block b = bs.getBlock();
@@ -336,13 +336,13 @@ public class AggressiveZombieEntity extends Zombie {
         // NADA de la muralla. La madera no es lo que cierra el pueblo, así que se ignora (troncos y hojas, con las
         // ETIQUETAS del juego, que cubren cualquier madera) y el asaltante sigue con lo que sí cuenta.
         if (bs.is(net.minecraft.tags.BlockTags.LOGS) || bs.is(net.minecraft.tags.BlockTags.LEAVES)) {
-            return;
+            return false;
         }
         if (b.defaultDestroyTime() < 0.0F) {
-            return; // inquebrantable
+            return false; // inquebrantable
         }
         if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !canBreakObsidian()) {
-            return;
+            return false;
         }
         // Queda en el log (INFO, una línea por bloque): es lo que permite comprobar que la horda se abre paso DE
         // VERDAD. Medido con el arnés, sin esta línea no se podía distinguir "no pica" de "pica y el pueblo lo repone".
@@ -353,6 +353,7 @@ public class AggressiveZombieEntity extends Zombie {
         DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} pica {} en {} (le quedan {} de tunel)", getId(),
                 worldSiegeIndex, b, pos.toShortString(), tunelRestante);
         level().destroyBlock(pos, true);
+        return true;
     }
 
     /**
@@ -402,15 +403,21 @@ public class AggressiveZombieEntity extends Zombie {
             return;
         }
         // Destruir el bloque principal.
-        breakBlockAt(best);
-        if (tunelRestante == TUNEL_PRESUPUESTO) {
-            // Primer bloque de esta marcha: queda en el log (INFO) para poder comprobar que la horda se abre paso.
-            DevilRpg.LOGGER.info("[Siege] asaltante #{} empieza a TALADRAR hacia la aldea en {} (presupuesto {} bloques)",
-                    getId(), best, TUNEL_PRESUPUESTO);
+        // I356 · EL PRESUPUESTO SOLO SE COBRA SI SE ROMPIO DE VERDAD. Antes se cobraba siempre, asi que cada tronco que la
+        // regla de I297 se NIEGA a picar le costaba un bloque de los 40: con la arboleda alrededor del pueblo, los 40 se iban
+        // en arboles que no se rompian y el asaltante se quedaba fuera (medido en su registro: 228 picados, casi todos a
+        // y=60-61, con 0 brechas). Ahora, si no rompe, NO gasta: sigue buscando por donde entrar.
+        boolean roto = breakBlockAt(best);
+        if (roto) {
+            if (tunelRestante == TUNEL_PRESUPUESTO) {
+                // Primer bloque de esta marcha: queda en el log (INFO) para poder comprobar que la horda se abre paso.
+                DevilRpg.LOGGER.info("[Siege] asaltante #{} empieza a TALADRAR hacia la aldea en {} (presupuesto {} bloques)",
+                        getId(), best, TUNEL_PRESUPUESTO);
+            }
+            tunelRestante--;
+            tunelEspera = TUNEL_ENTRE_BLOQUES;
+            particulasDeTrabajo(best);
         }
-        tunelRestante--;
-        tunelEspera = TUNEL_ENTRE_BLOQUES;
-        particulasDeTrabajo(best);
         // Dirección principal hacia el objetivo (para saber si el objetivo está más arriba).
         boolean targetAbove = towards.getY() > zPos.getY();
         int dirX = Integer.signum(best.getX() - zPos.getX());
