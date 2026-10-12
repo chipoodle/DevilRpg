@@ -7339,6 +7339,29 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I345 · POR QUE EL MURO NO SE REPONE EN EL BANCO: EL ASEDIO ESTA **EN PAUSA** (hayAsedio=true con agresivos=0)
+
+Explicacion del «sin ocasion» de I339 ✓, y esta **escrita en el propio banco** (	ools/arnes/GuardHarness.java, L109-132 ✓):
+*«el reloj del asedio solo corre con el jugador del asedio **en la lista del servidor** (I86), y un FakePlayer **no esta en
+ella**: distanciaAlCentro devuelve MAX_VALUE, el asedio queda **EN PAUSA**... Las dos corridas lo ensenan:
+**hayAsedio(3)=true toda la corrida, gresivos=0 siempre** y 
+evelada(4)=false»* ✓✓.
+
+**LO QUE ESO SIGNIFICA PARA MIS MEDIDAS** ✓✓ (y es importante para no volver a malinterpretar un 0 ✗):
+- **En el banco, hayAsedio puede estar en 	rue SIN asaltantes** ✓ -> mi guardia nueva (I338 ✓) **mira justo eso** ✓, asi
+  que **muro reconstruido = 0 en las corridas es lo ESPERADO** ✓, no un fallo del codigo ✗✓ (lo mismo que ya me paso al
+  contar **1761** avisos por zombis que paseaban ✗, pero al reves ✓).
+- **La medida buena del muro** (que se reponga **sin** asedio ✓ y que **no** se reponga **con** asedio ✓) necesita **un
+  jugador de verdad en la lista** ✗ — o sea, **su partida** ✓, no el banco ✗ (I86: el reloj del asedio solo corre con el
+  jugador dentro ✓, que es la misma mecanica que ya medi con la pausa ✓).
+- **Y el banco SI tiene un escenario de asedio** ✓ (L112-113: arranca el asedio del objetivo **3** a los 15 s ✓), pero se
+  enciende **editando el arnes** (el script solo tiene -Conservar y -MundoNuevo ✓) y **sigue sin correr el reloj** ✗ — o
+  sea: mide que el asedio **existe** y que el estado de la aldea lo dice ✓, **no** la pelea ✓.
+
+**CONSECUENCIA, dicha claro** ✓: **la unica medida honesta del muro** es **jugar el asedio** (su partida ✓) y mirar la traza
+muro reconstruido **dentro** de un asedio ✓; en el banco, muro reconstruido = 0 **no prueba nada** ✗ (ni bien ni mal ✓).
+Lo dejo escrito para que nadie —ni yo— lo cuente como bueno ✗.
+
 ### I344 · EL COLCHON DE COMIDA ESCALA CON LA POBLACION (y la primera medida dice que si)
 
 Diseno cerrado en I341/I342/I343 y **escrito** ✓ (todos los cambios con ancla verificada: el script **aborta** si alguna no
