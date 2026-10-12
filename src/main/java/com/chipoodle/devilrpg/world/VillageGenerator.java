@@ -8520,7 +8520,7 @@ public final class VillageGenerator {
                     }
                     // lint:ok I9 porque es retrofit idempotente (quita camas de la calle), no construcción nueva.
                     if (!level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(p)).isEmpty()) { continue; } // I376: NO se quita una cama con alguien dentro
-                    colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS); // lint:ok I9 porque es una REPARACION idempotente de una cama vacia que estorba (no construye nada) // I377: UPDATE_ALL era la cascada de luz que atasca el tick
                     quitadas++;
                 }
                 for (int y = cota + 9; y <= cota + 20; y++) {
