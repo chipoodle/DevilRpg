@@ -7339,6 +7339,23 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I339 · LA GUARDIA NUEVA, MEDIDA: 1761 -> 0 (y lo que NO se da por medido)
+
+Par **211 + 212** (centro en su aldea) con la guardia del asedio real (I338):
+`
+'el muro NO se repone' : 0     <- ERAN 1761 en la corrida 210: la regresion queda CERRADA
+'muro reconstruido'    : 0     <- SIN OCASION (no hubo restos de migracion que reponer) -> NO se da por medido
+'asedio en marcha'     : 0     <- no hubo asedio -> la medida '0 reconstrucciones CON asedio' sigue PENDIENTE
+granja: 'SIN SEMBRAR, 0 PISOTEADA' (2 de 32 lineas) · 'no consigue llegar' 0 · 'pies=water' 0
+'obrero repuso red_bed' 0 · sofocad|asfixiad 0
+`
+**Lo que SI queda medido** ✓✓: **l muro NO se repone = 1761 -> 0** ✓ (mi guardia ya no dispara con zombis que pasean ✓) y
+**nada de lo cerrado se ha movido** ✓ (la granja sigue en **0 atoros / 0 agua en los pies** ✓, **
+epuso red_bed = 0** ✓ y
+**0 sofocaciones** ✓). **Lo que NO** ✗: que el muro **se reponga** cuando toca (no hubo restos ✗) y que **no** se reponga
+**con asedio** (no hubo asedio ✗) — las dos quedan **pendientes de una corrida con asedio** ✓, y no me las apunto como
+buenas ✗ (la leccion de I327 ✓).
+
 ### I338 · EL MURO SE REPONE **SALVO ASEDIO DE VERDAD** (arregla la regresion de I296: 1761 avisos en una corrida tranquila)
 
 Corrida 210 con mundo nuevo (I336): mi guardia de I296 miraba **cualquier zombi a 96 bloques** y disparaba **1761** veces en una corrida tranquila -> el reconstruido quedaba **apagado siempre**, tambien para los **restos de migracion** que es su trabajo. **El dato bueno ya existia** (leido, no supuesto): VillageManager.hayAsedio(level, i) (**L1971**) -> isUnderAttack (**L1962**) = isUnderWorldSiege || isUnderPlayerSiege; y los que llaman al muro son **dos sitios de VillageManager** (L2380 y L2466) **dentro de la pasada donde el indice esta a mano** -> el arreglo es **pequeno**: las dos llamadas van dentro de if (!hayAsedio(level, objectiveIndex)). Y la guardia de zona de VillageGenerator (la que disparaba 1761 veces) baja de **96 a 2** bloques: queda como **ultimo recurso** (solo un agresivo pegado al centro) porque **el asedio de verdad ya se decide en el que llama**. Compila (BUILD SUCCESSFUL) y lint --strict verde. *Medida*: **0** l muro NO se repone **sin** asedio y **0** muro reconstruido **con** asedio (hoy 1761 y 0, justo al reves) -- pendiente del par de corridas.
