@@ -472,8 +472,33 @@ public final class VillageGenerator {
             List<Long> posiciones = new ArrayList<>();
             List<Integer> estados = new ArrayList<>();
             for (Map.Entry<Long, BlockState> entrada : bloques.entrySet()) {
-                if (esCeldaDelLago(center, nivel, BlockPos.of(entrada.getKey()))) {
+                BlockPos pos = BlockPos.of(entrada.getKey());
+                if (esCeldaDelLago(center, nivel, pos)) {
                     continue;
+                }
+                // I323 · EL PLANO **NO APUNTA** LO QUE EL BARRIDO VA A QUITAR (medido el 11-oct-2026, corridas 198 a 201:
+                // el retrofit quitaba 10-11 troncos por vuelta y el obrero los VOLVIA A PONER, porque el PLAN todavia los
+                // pedia -> pelea perpetua ✗). El plano es el ORIGEN del reparto del obrero, asi que el filtro va AQUI y no
+                // en el mundo: (a) un TRONCO por debajo de la cota es un resto (un arbol del pueblo nace EN la cota); (b)
+                // una MITAD DE CAMA sin pareja tampoco entra (una cama son dos celdas). Se mira el propio mapa de lo
+                // capturado, sin tocar el mundo.
+                if (pos.getY() < nivel && entrada.getValue().is(net.minecraft.tags.BlockTags.LOGS)) {
+                    continue;
+                }
+                BlockState capturado = estadoDelPlano(entrada.getValue());
+                if (capturado.is(Blocks.RED_BED) || capturado.is(Blocks.WHITE_BED)) {
+                    Direction mira = capturado.getValue(net.minecraft.world.level.block.BedBlock.FACING);
+                    boolean pareja = false;
+                    for (Direction lado : new Direction[]{mira, mira.getOpposite()}) {
+                        BlockState suya = bloques.get(pos.relative(lado).asLong());
+                        if (suya != null && (suya.is(Blocks.RED_BED) || suya.is(Blocks.WHITE_BED))) {
+                            pareja = true;
+                            break;
+                        }
+                    }
+                    if (!pareja) {
+                        continue; // mitad suelta: no entra en el plano
+                    }
                 }
                 // El estado BUENO (ver `estadoDelPlano`): una puerta de valla entra en el plano siempre cerrada.
                 BlockState state = estadoDelPlano(entrada.getValue());
