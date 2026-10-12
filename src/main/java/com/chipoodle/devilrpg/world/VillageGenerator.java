@@ -8726,6 +8726,7 @@ public final class VillageGenerator {
      */
     public static int troncosBajoLaCota(ServerLevel level, BlockPos center, int cota, boolean soloContar) {
         int cuantos = 0;
+        int miradas = 0;   // I371: tope de trabajo por pasada
         for (int dx = -RADIO_DEL_BARRIDO; dx <= RADIO_DEL_BARRIDO; dx++) {
             for (int dz = -RADIO_DEL_BARRIDO; dz <= RADIO_DEL_BARRIDO; dz++) {
                 if (dx * dx + dz * dz > RADIO_DEL_BARRIDO * RADIO_DEL_BARRIDO) {
@@ -8734,6 +8735,7 @@ public final class VillageGenerator {
                 // I313 · Y SE MIRA TAMBIÉN **LA PROPIA COTA**, pero solo si el tronco está FLOTANDO (aire debajo): medido
                 // en la corrida 194, quedaban 408 troncos que no bajaban de la cota y por eso el barrido no los veía ✗.
                 // Con suelo firme debajo, en cambio, es un árbol del pueblo y NO se toca ✓.
+                    if (++miradas > 1500) { return cuantos; } // I371: tope por pasada (que no haya cascada)
                 for (int y = cota; y >= cota - 16; y--) {
                     BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
                     if (!level.getBlockState(p).is(net.minecraft.tags.BlockTags.LOGS)) {
@@ -8788,12 +8790,14 @@ public final class VillageGenerator {
      */
     public static int quitarMitadesDeCamaHuerfanas(ServerLevel level, BlockPos center) {
         int quitadas = 0;
+        int miradas = 0;   // I371: tope de trabajo por pasada
         int cota = cotaDeLaPlaza(level, center);
         for (int dx = -RADIO_DEL_BARRIDO; dx <= RADIO_DEL_BARRIDO; dx++) {
             for (int dz = -RADIO_DEL_BARRIDO; dz <= RADIO_DEL_BARRIDO; dz++) {
                 if (dx * dx + dz * dz > RADIO_DEL_BARRIDO * RADIO_DEL_BARRIDO) {
                     continue;
                 }
+                    if (++miradas > 1500) { return quitadas; } // I371: tope por pasada (que no haya cascada)
                 for (int y = cota - 6; y <= cota + 26; y++) {
                     BlockPos p = new BlockPos(center.getX() + dx, y, center.getZ() + dz);
                     BlockState s = level.getBlockState(p);
