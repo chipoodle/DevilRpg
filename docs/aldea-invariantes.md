@@ -7339,6 +7339,17 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I324 · EL FILTRO FUNCIONA (obrero repuso red_bed = 0) PERO EL PLAN DE SU ALDEA ES VIEJO Y **NADIE LO RECAPTURA**
+
+Par **202 + 203** (centro en su aldea) con el filtro de captura (I323) y la medida, sin adornos:
+- **El obrero repuso Block{minecraft:red_bed}: 0** ✓✓ -> **la pelea de las camas ha terminado** ✓ (el filtro del plano hace su trabajo: el plano ya no las pide).
+- **HUERFANAS: 0** ✓ (no quedan mitades sueltas que quitar -> coherente con el filtro).
+- **Barrido de troncos: 64 trazas** ✓ (quita y quita, 10-11 por vuelta) y **el contador sigue en 408** ✗.
+
+**POR QUE** ✓ (y no es el filtro): el filtro actua **al CAPTURAR** el plano, y **el plano de su aldea es el VIEJO** (se capturo antes) -> el obrero sigue reponiendo los troncos desde el plano viejo, **y la traza de obrero repuso es solo de camas** (por eso no se ve el de los troncos ✗). Su aldea **no reconstruye** (su CURRENT_LAYOUT ya es el actual) asi que **	erminarGrabacion() no vuelve a correr** ✗✓.
+
+**LO QUE FALTA, y el proyecto ya tiene la receta** ✓: **recapturar el plano de una aldea YA construida** cuando los barridos cambian algo. Esta escrito en el propio codigo: **L728-729** (*«el plano de una aldea migrada es un **escaneo** del mundo…»*) y **L2258** (*«el plano **se recaptura** despues, asi que el obrero repone la posicion buena»* ✓). O sea: cuando 	roncosBajoLaCota / quitarMitadesDeCamaHuerfanas devuelven **> 0** ✓, **recapturar** el plano de esa aldea con la receta que ya existe ✓ (nada nuevo que inventar ✗). *Medida*: **408 -> 0** y **0** mitades en la calle, con **0** El obrero repuso … ✓.
+
 ### I323 · EL PLANO **NO APUNTA** LO QUE EL BARRIDO VA A QUITAR (EL FILTRO, EN LA CAPTURA: LA PIEZA QUE ROMPE EL BUCLE)
 
 Arreglo de raiz del bucle medido en I320/I322. Medido: el retrofit quitaba **10-11 troncos por vuelta del latido** y el obrero los **volvia a poner**, porque **el PLAN todavia los pedia** -> pelea perpetua. El plano es **el ORIGEN** del reparto del obrero, asi que **el filtro va en el plano y no en el mundo**: VillageGenerator.aPlano() (L469), la funcion donde las celdas grabadas se convierten en el plano, que **ya tenia** su filtro (sCeldaDelLago L475 y seDescarta L480). Ahora, ademas: (a) un **TRONCO por debajo de la cota** no entra (un arbol del pueblo nace EN la cota, asi que ahi tronco = resto); (b) una **MITAD DE CAMA sin pareja** tampoco (una cama son **dos celdas**). Se mira **el propio mapa de lo capturado** (loques), sin tocar el mundo, y con los nombres completos para no tocar imports. Medida: **408 -> 0** troncos flotando, **0** mitades en la calle y **0** El obrero repuso ..., en la captura siguiente. Y con esto **el plano no puede pedir lo que el barrido va a quitar**: la pelea se acaba sola.
