@@ -7339,6 +7339,30 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I332 · RETIRADA LA REGLA DEL TECHO DE VERDAD (I331): QUITÓ ~50 MITADES DE CAMAS **DE DENTRO** Y DEJÓ LAS 4 DE LA CALLE
+
+Retirada por su propia medida ✓, que es la regla de la casa: **lo que no mejore la media se retira y se dice** ✓. El par
+**208 + 209** con `tieneTechoDeVerdad` (I331) da:
+
+```
+mitades totales: 5   (rojas 4 / blancas 1)      <- venian siendo ~55 -> he quitado ~50 mitades
+EN LA CALLE (capa 63, x=531): 4                 <- y justo las que tenia que quitar, siguen ahi
+TRONCOS FLOTANDO : 0   {}                       <- esta SI se mantiene (I329/I330)
+El obrero repuso red_bed: 0                     <- bien
+```
+
+O sea: **quité camas DE DENTRO DE LAS CASAS** (~50 mitades ✗, que es donde duermen los aldeanos) **y dejé las 4 de la
+calle** ✗ — **lo contrario** de lo que buscaba. **Motivo**: `tieneTechoDeVerdad` da por techo **cualquier bloque sólido
+que no sea hoja** dentro de 6, y eso incluye **troncos y vallas** ✓ -> una cama de calle con una **rama encima** pasa por
+casa ✗; y al revés, un techo de casa **más alto** de 6 no cuenta ✗ -> se va la cama buena. **La idea (mirar el techo en
+vez del cielo) puede valer, pero así NO** ✗: hace falta **el dato bueno**, que es **el plano de la casa** (el sitio de cada
+edificio está en `TRAZADO`, **L120** ✓, *«el sitio de cada edificio de planta»*) — no otra heurística de bloques ✗.
+Retirado con `git revert` ✓ y compilando (`BUILD SUCCESSFUL` ✓).
+
+**Y lo que SÍ queda cerrado de esta ronda** ✓✓: **`TRONCOS FLOTANDO: 0`** se mantiene en el par siguiente (**408 -> 0**,
+I330 ✓) y **`El obrero repuso red_bed` = 0** ✓. **Las camas de la calle siguen abiertas** ✗ (4 mitades = **2 camas
+enteras** ✓) y su arreglo necesita **el plano delante** ✓, no otra heurística ✗.
+
 ### I330 · **408 -> 0, MEDIDO** (y la leccion de metodo que hizo falta para encontrarlo)
 
 Par **206 + 207** (centro en su aldea ✓) con el radio del barrido arreglado (I329 ✓) y la medida manda:
