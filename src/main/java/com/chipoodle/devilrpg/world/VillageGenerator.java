@@ -8766,7 +8766,7 @@ public final class VillageGenerator {
                     if (!soloContar) {
                         // lint:ok I9 porque NO es construcción nueva: es un RETROFIT idempotente en el sitio que quita
                         // los restos de una migración vieja (la muralla que quedó una capa por debajo de la cota).
-                        colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                        colocar(level, p, Blocks.AIR.defaultBlockState(), 2); // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita restos ya puestos; no construye nada)
                     }
                 }
             }
@@ -8818,7 +8818,7 @@ public final class VillageGenerator {
                     }
                     // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita la mitad que quedó colgando), no
                     // construcción nueva: arregla lo ya construido sin rehacer la aldea.
-                    colocar(level, p, Blocks.AIR.defaultBlockState(), 3);
+                    colocar(level, p, Blocks.AIR.defaultBlockState(), 2); // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita restos ya puestos; no construye nada)
                     quitadas++;
                 }
             }
@@ -8959,7 +8959,7 @@ public final class VillageGenerator {
                     // (son "los dos bloques de tierra frente a cada compuerta" que reporto el jugador).
                     if (abajo.isSolid() && level.getBlockState(pie.below()).isSolid()) {
                         // lint:ok I9 porque es un RETROFIT idempotente en el sitio, y ademas DESHACE un bloque mio anterior.
-                        colocar(level, pie, Blocks.AIR.defaultBlockState(), 3);
+                        colocar(level, pie, Blocks.AIR.defaultBlockState(), 2); // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita restos ya puestos; no construye nada)
                         // I367 · TRAZA DE LA REPARACION: asi se puede CONTAR en el registro cuantos bloques de mas quito.
                         DevilRpg.LOGGER.info("[Village] Aldea en {}: QUITO un bloque de mas en el paso de una compuerta: {} (I366)",
                                 center.toShortString(), pie.toShortString());
@@ -8974,7 +8974,7 @@ public final class VillageGenerator {
                     BlockPos hueco = pie.above();
                     BlockState arriba = level.getBlockState(hueco);
                     if (!arriba.isAir() && !arriba.getFluidState().isEmpty()) {
-                        colocar(level, hueco, Blocks.AIR.defaultBlockState(), 3); // el agua de encima, fuera
+                        colocar(level, hueco, Blocks.AIR.defaultBlockState(), 2); // el agua de encima, fuera // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita restos ya puestos; no construye nada)
                     }
                 }
             }
