@@ -7339,7 +7339,34 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I361 · LA ASIMETRÍA AL ELEGIR HERRAMIENTA: **AL BAJAR NO HABÍA TOLERANCIA** (la causa de que se pasaran la marcha cavando hacia abajo)
+### I362 · LECTURA COMPLETA DEL REGISTRO: SOLO SE NIEGA POR MADERA (25, ya inofensiva), CAVAN A 62 Y **HACIA ARRIBA 1-3**
+
+Las tres líneas del inspector (I360 ✓) que faltaban por leer ✓, y son las que cierran el cuadro:
+```
+NO PICA, por motivo: {'es MADERA, y la madera no es lo que cierra el pueblo (I297)': 25}
+ALTURAS a las que pican: {62: 278, 63: 13, 61: 12, 64: 11, 65: 9, 60: 5}
+VA A CAVAR HASTA dy: {2: 11, 1: 7, 3: 2}
+```
+
+**LO QUE DICE** ✓✓: **(a)** el **único** motivo de «no pica» en todo el asedio es **madera** (25 ✓, frente a **300+** picados ✓):
+no es dominante ✓ y, desde I356 ✓, **ya no cuesta presupuesto** ✓ (o sea: el arreglo del presupuesto convirtió un problema en una
+molestia ✓); **(b)** pican **casi todo a `y=62`** ✓ y algo a 63/64/65 ✓; **(c)** **cavan HACIA ARRIBA** (dy **1, 2 y 3** ✓) — el
+arreglo de subir (I353 ✓) está **trabajando** ✓.
+
+**Y LO QUE SIGNIFICA, con las capas ya medidas** ✓ (I355 ✓): **por fuera el suelo está a 61-62** ✓ y **el pueblo se pisa a 63**
+(la tierra va a 62 y la calle a 63 ✓) -> el asaltante, **de pie a 62**, pica **a su altura** = **la base del muro** ✓, y para
+entrar tiene que abrir **también el 63** (el cuerpo del muro ✓) y luego **subir uno** ✓. Sus dy de 1-3 apuntan justo a eso ✓, y
+desde **I361** ya **no se irá hacia abajo** a cavar contra el suelo del pueblo ✓ (que era lo dominante ✗).
+
+**LO QUE NO SE PUEDE DECIR TODAVÍA** ✗: **cuántos entran** — este registro **no tiene** las trazas de `ENTRO`/posición ✓ (son
+de I359 ✓, posteriores ✓) y además **mezcla sesiones** ✓. La medida definitiva es la del **próximo asedio** ✓.
+
+**ESTADO DEL ENCARGO** ✓: la instrumentación está **completa** (diez trazas ✓, I358/I359 ✓), el **inspector** hecho (I360 ✓),
+y de la lectura ya han salido **dos causas raíz arregladas** — el **presupuesto cobrado por lo que no se pica** (I356 ✓) y la
+**asimetría al elegir herramienta** (I361 ✓) — más la de **cavar a ras de lago** (I353 ✓). Queda **una sola cosa**: que juegue el
+asedio con esta build y leer el registro ✓ (que es lo que él mismo pidió ✓).
+
+### I361 ·### I361 · LA ASIMETRÍA AL ELEGIR HERRAMIENTA: **AL BAJAR NO HABÍA TOLERANCIA** (la causa de que se pasaran la marcha cavando hacia abajo)
 
 Salió de **leer mi propia traza** ✓ (lo que el jugador quería: *«para que tú mismo deduzcas si esto se cumple»* ✓): el
 inspector (I360 ✓) dijo que lo **dominante** es `CAVA hacia abajo` (**43, 38, 29, 22…** ✗) con **0 entradas** ✓, así que fui al
