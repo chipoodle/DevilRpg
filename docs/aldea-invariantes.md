@@ -7339,6 +7339,17 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I326 · LA RECAPTURA **NO SE EJECUTA** EN SU ALDEA: EL CANDADO VA **DONDE SE REPONE**
+
+Par **204 + 205** (con los barridos antes de la recaptura, I325) y la medida manda, sin adornos: **TRONCOS 408 -> 408** ✗, **CAMAS EN LA CALLE 4 -> 3** ✗, **POR DEBAJO de la cota: 64 trazas** ✓ (el barrido corre y quita 10-11 por vuelta), **obrero repuso red_bed: 0** ✓ (el filtro del plano funciona) y **plano vuelve a ser (la recaptura de VillageManager L2412): 0** ✗✓ -> **la recaptura NO se ejecuta** en su aldea (va por un camino que aqui no se da).
+
+**CONCLUSION** ✓: no se puede fiarlo todo a la recaptura ✗ (no siempre corre). **El candado va donde el obrero REPONE** ✓, con el mismo patron que ya use en el asaltante (reakBlockAt, I297), en los portones (I301) y en el guardian (I317): **una sola puerta, en el que actua**. Al **colocar desde el plano**, saltarse las celdas que el barrido quitaria (**tronco por debajo de la cota** y **mitad de cama sin pareja**) -> el obrero **no puede reponerlos ni con plano viejo** ✓✓ y **408 -> 0 sin depender de la recaptura** ✓.
+
+### I325 · LOS BARRIDOS, **ANTES DE RECAPTURAR EL PLANO** (la pieza que cierra el bucle cuando la recaptura sí corre)
+
+VillageManager, justo antes de VillageGenerator.captureBlueprint(level, center) (**L2412** ✓ — *«el plano vuelve a ser lo que el pueblo es»*, y su comentario de **L2466** lo dice: *«va ANTES de recapturar el plano para que el plano nuevo las tenga»* ✓): van los tres barridos (	roncosBajoLaCota, quitarMitadesDeCamaHuerfanas, segurarElPasoDeLasCompuertas ✓) -> el plano nuevo **nace sin los restos ni las camas sueltas** ✓ y el obrero no puede reponerlos ✓. **Causa medida** (202+203 ✓): el filtro de captura funciona (
+epuso red_bed = 0 ✓) pero el plano de una aldea **ya construida** es el viejo y nadie lo recapturaba ✗. Compila (BUILD SUCCESSFUL ✓) y lint --strict verde ✓. *Medida*: **408 -> 0** y **0** mitades en la calle, con **0** El obrero repuso … ✓ (medida en I326: la recaptura no corre en su aldea -> se anade ademas el candado en el que repone ✓).
+
 ### I324 · EL FILTRO FUNCIONA (obrero repuso red_bed = 0) PERO EL PLAN DE SU ALDEA ES VIEJO Y **NADIE LO RECAPTURA**
 
 Par **202 + 203** (centro en su aldea) con el filtro de captura (I323) y la medida, sin adornos:
