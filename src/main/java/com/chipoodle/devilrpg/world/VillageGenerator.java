@@ -314,7 +314,7 @@ public final class VillageGenerator {
                 }
             }
         }
-        if (aguaMasAlta >= nivelVilla) {
+        if (aguaMasAlta >= nivelVilla && aguaMasAlta - nivelVilla <= 2) {   // I373: solo si el agua esta A RAS (charco); un lago NO sube la cota (salia un pueblo en un pedestal con murallas de 20 m), y el texto de la traza de abajo solo sale cuando de verdad sube
             DevilRpg.LOGGER.info("[Village] Aldea en {}: la cota sube de {} a {} para quedar por ENCIMA del agua de su"
                     + " zona (pantano; I304)", center.toShortString(), nivelVilla, aguaMasAlta + 1);
             nivelVilla = aguaMasAlta + 1;
