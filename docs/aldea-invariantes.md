@@ -7339,7 +7339,32 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I364 · EL TRAMO ES **UNA SOLA SESIÓN** (mi aviso de «mezcla sesiones» era FALSO) Y LA BUILD ES INTERMEDIA
+### I365 · TRAZA DE **«ABRE BRECHA EN EL MURO»**: SE CIERRA LA INSTRUMENTACIÓN (once trazas)
+
+Último hueco ✓: con las trazas anteriores se veía que **pica a 62/63** ✓, pero **no** si ese bloque **es el muro** ✗ — y la
+medida que pide el objetivo es justo *«pican la muralla»* ✓. Ahora, **tras romper de verdad**, si el bloque está en el
+**anillo del muro** (`esLaMuralla`, **el mismo criterio que usa la regla del muro en L623** ✓) queda en el registro:
+
+```
+[Siege] asaltante #N ABRE BRECHA en el muro: <pos> (tunel N/40)          <- L377
+```
+**Sin enfriamiento** ✓: una brecha es un **suceso** y son pocas ✓ (y es el dato que cierra el asedio ✓). `BUILD SUCCESSFUL` ✓
+y `lint --strict` verde ✓.
+
+**LAS ONCE TRAZAS DEL ASEDIO** ✓ (todas con `#identificador` ✓, para aislar **un** asaltante ✓): `RENUEVA la marcha` (**L166** ✓) ·
+`pica <bloque> en <pos>` (**L370** ✓) · **`ABRE BRECHA en el muro`** (**L377** ✓) · **`esta en <pos> (y=) · OBJETIVO <pos>
+(y=) · desnivel · va a cavar hasta dy= · tunel N/40`** (**L439** ✓) · `empieza a TALADRAR` (**L453** ✓) · `empieza a PONER UN
+PUENTE` (**L707** ✓) · **`NO pica … porque …`** (**L727** ✓) · `pone un ESCALON` (**L875** ✓) · **`CAVA hacia abajo`** (**L969** ✓) ·
+**`ENTRO en el recinto`** (**L1138** ✓) · **informe de posición** cada 5 s (**L1141** ✓).
+
+### I363 · EL INSPECTOR MIRA POR TRAMO DE TIEMPO (que no se confundan dos asedios)
+
+`build/inspector_del_asedio.py` (herramienta, **no se sube** ✓) aprende **`--desde HH:MM[:SS]`** y **`--hasta`** ✓ y, **siempre**,
+**imprime el tramo que ha leído** ✓ — porque antes **ignoraba las horas** ✗ y por eso me mordió **mezclar sesiones** ✓ (y de ahí
+salió un aviso **falso** mío, retirado en I364 ✓). *Medida*: al leer su registro dijo **`tramo leido: 13:08:24 -> 13:25:05`** ✓,
+o sea **una sola sesión** ✓✓.
+
+### I364 ·### I364 · EL TRAMO ES **UNA SOLA SESIÓN** (mi aviso de «mezcla sesiones» era FALSO) Y LA BUILD ES INTERMEDIA
 
 Le puse al inspector (I360 ✓) **filtro por tramo de tiempo** (I363 ✓) porque me había mordido el mezclar sesiones ✗, y la
 primera cosa que ha dicho es que **no había mezcla** ✓✓: el asedio del registro va de **13:08:24 a 13:25:05** ✓, o sea **una
