@@ -8875,6 +8875,9 @@ public final class VillageGenerator {
                     if (vecinosDeAgua >= 2 && cercaDelLago(center, pie, 24)) {
                         // lint:ok I9 porque es un RETROFIT idempotente en el sitio, y ademas DEVUELVE el agua que tape yo.
                         colocar(level, pie, Blocks.WATER.defaultBlockState(), 3);
+                        // I367 · TRAZA DE LA REPARACION: asi se puede CONTAR en el registro cuanta agua devuelvo al lago.
+                        DevilRpg.LOGGER.info("[Village] Aldea en {}: DEVUELVO agua al lago del pescador en {} (I366)",
+                                center.toShortString(), pie.toShortString());
                         continue;
                     }
                 }
@@ -8945,6 +8948,9 @@ public final class VillageGenerator {
                     if (abajo.isSolid() && level.getBlockState(pie.below()).isSolid()) {
                         // lint:ok I9 porque es un RETROFIT idempotente en el sitio, y ademas DESHACE un bloque mio anterior.
                         colocar(level, pie, Blocks.AIR.defaultBlockState(), 3);
+                        // I367 · TRAZA DE LA REPARACION: asi se puede CONTAR en el registro cuantos bloques de mas quito.
+                        DevilRpg.LOGGER.info("[Village] Aldea en {}: QUITO un bloque de mas en el paso de una compuerta: {} (I366)",
+                                center.toShortString(), pie.toShortString());
                     }
                     // I366 · Y YA NO SE PONE CESped DONDE HABIA AIRE (eso era el fallo): aqui solo se seca AGUA.
                     if (!abajo.getFluidState().isEmpty()) {
