@@ -8853,6 +8853,10 @@ public final class VillageGenerator {
     }
 
     public static int ponerPisoDondeHayAgua(ServerLevel level, BlockPos center, int cota) {
+        // I369 · TRABAJO ACOTADO POR PASADA: una reparacion no puede atascar el servidor. Se miran como mucho 3000 columnas
+        // en cada pasada (el resto, en la siguiente, 30 s despues). Antes no habia tope: 124x124 columnas con cinco consultas
+        // por celda, en cada latido, fue lo que colgo el juego y dejo el guardado a medias.
+        int miradas = 0;
         int puestas = 0;
         for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
             for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
@@ -8860,6 +8864,9 @@ public final class VillageGenerator {
                     continue;
                 }
                 BlockPos pie = new BlockPos(center.getX() + dx, cota, center.getZ() + dz);
+                if (++miradas > 3000) {
+                    return puestas; // I369: se acabo el presupuesto de esta pasada; se sigue en la siguiente
+                }
                 if (esCeldaDelLago(center, cota, pie) || cercaDelLago(center, pie, 16)) {
                     continue; // el lago del pescador y su orilla NO se tocan (I366: antes se tapaba el lago)
                 }
