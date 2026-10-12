@@ -7339,7 +7339,20 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I356 · LA REGRESION DEL ASEDIO ERA MIA: SE COBRABA EL BLOQUE AUNQUE NO SE PICARA
+### I357 · PRUEBA DE HUMO DESPUES DE LOS DOS ARREGLOS: NADA DE LO CERRADO SE HA MOVIDO
+
+Con reakBlockAt cambiado a oolean (I356 ✓) y el piso anadido (I354 ✓), corrida **303** sobre una copia de su partida:
+`
+no consigue llegar 0 · pies=water 0 · obrero repuso red_bed 0 · pasa hambre 0
+el muro NO se repone 0 · sofocad|asfixiad 0 · POR DEBAJO de la cota (quitados) 32 · de PISO puestas 16 trazas
+aldea 1: y=63 air=10879 + oak_fence/oak_log/cobblestone/stone_bricks/wheat   <- SIN AGUA en la cota
+granja: 'SIN SEMBRAR, 0 PISOTEADA' presente
+`
+**Todo sigue en pie** ✓: las cinco cifras cerradas siguen en **0** ✓, el barrido de restos trabaja ✓, el piso se pone ✓ y en la cota
+del pueblo **no hay agua** ✓. Lo unico que **no** puede medir el arnes es el **asedio en vivo** (queda **EN PAUSA** sin jugador de
+verdad, I345 ✓): su prueba es **su partida** ✓ — que los pica Block salgan **a y=63** y que haya **brecha/entrada** ✓.
+
+### I356 ·### I356 · LA REGRESION DEL ASEDIO ERA MIA: SE COBRABA EL BLOQUE AUNQUE NO SE PICARA
 
 Buscando si lo habia roto algun cambio mio (lo pide el objetivo ✓) y **leyendo mi propio cambio** de I297 (L333-340 ✓):
 reakBlockAt paso a **negarse** a picar madera ✓ pero **seguia siendo oid** ✗, y el **presupuesto** (	unelRestante--)
