@@ -7339,7 +7339,39 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I359 · LAS DOS MEDIDAS DEL OBJETIVO, EN EL REGISTRO: `ENTRO en el recinto` y el INFORME DE POSICION
+### I360 · EL INSPECTOR DEL ASEDIO (una herramienta, para no leer a ojo) Y LO QUE YA DICE EL REGISTRO
+
+Lo pidio el jugador para poder deducirlo **yo** del registro ✓, asi que el analisis **no se improvisa** ✗: se escribe la
+herramienta **`build/inspector_del_asedio.py`** ✓ (no se sube: es de `build/` ✓) y da, **por asaltante**: cuantos bloques pica y
+**a que altura**, cuantos `NO pica` y **por que**, si **ENTRO**, la **distancia minima al centro** de su aldea ((566,566) y
+(990,990) ✓), si **agoto los 40**, cuantos escalones/puentes puso y el **desnivel** que traia; y al final el **resumen** ✓.
+
+Probado sobre su registro actual ✓ (698 lineas de asedio, **20** asaltantes ✓):
+```
+#id     pica  alturas(y)             entro minDist agoto40 escal abajo
+#2144    45   62 x45                   no      -      0     8    43
+#2140    42   62 x38,63 x3,64 x1       no      -      0     3    38
+#2146    32   62 x11,65 x9,64 x7       no      -      0     3     7
+RESUMEN: pican 18 de 20 · ENTRARON 0 · al centro 0 · agotaron los 40: 0
+ALTURAS: 62 (casi todas)   ·   lo dominante: CAVA HACIA ABAJO (43, 38, 29, 22...)
+```
+
+**LO QUE SI SE PUEDE AFIRMAR** ✓✓: **(a)** ya **no** cavan a `y=60-61` ✗ (el fallo de I353 ✓): ahora cavan **a 62-65** ✓, o
+sea **a la altura del suelo** ✓; **(b)** **nadie agota los 40** ✓✓ (el arreglo del presupuesto, I356 ✓, funciona ✓);
+**(c)** pero **nadie entra** ✗ y el trabajo dominante es **CAVAR HACIA ABAJO** ✗ (`CAVA hacia abajo`, L962 ✓) — **pista nueva y
+concreta**: se pasan la marcha **bajando** hacia el objetivo en vez de **atravesar** el muro ✓.
+
+**LO QUE NO SE PUEDE AFIRMAR, Y SE DICE** ✗: `ENTRARON 0` y `minDist -` **no son concluyentes** ✗ — ese registro **no tiene**
+las trazas de entrada/posicion (son de **I359**, posteriores a esa partida ✓), y ademas **mezcla sesiones** ✓ (los ids #2144 y
+#3405 son de momentos distintos ✗). La inspeccion **definitiva** es la del **proximo asedio con la build actual** ✓ (que ya
+lleva las diez trazas ✓).
+
+**SIGUIENTE** ✓ (ya con la pista): mirar por que el **objetivo esta POR DEBAJO** del asaltante ✓ (el camino `CAVA hacia abajo`,
+**L956-962** ✓) — es decir, **que `y` tiene el objetivo** que se le da a cada asaltante ✓ y por que, estando el suelo del pueblo
+a 63, él acaba **mas alto** y cavando hacia abajo ✓. Sin suponer: se mide con la traza `esta en <pos> (y=..) · OBJETIVO <pos>
+(y=..) · desnivel N` (L432 ✓), que ya esta puesta ✓.
+
+### I359 ·### I359 · LAS DOS MEDIDAS DEL OBJETIVO, EN EL REGISTRO: `ENTRO en el recinto` y el INFORME DE POSICION
 
 Cierra el punto (4) de la peticion ✓. En `aiStep()` (**L1113** ✓, que corre **cada tick**, para verlo **tambien cuando NO
 esta picando** —que es justo el caso bueno: el que **entra andando** ✓—), y **sin tocar logica** ✓:
