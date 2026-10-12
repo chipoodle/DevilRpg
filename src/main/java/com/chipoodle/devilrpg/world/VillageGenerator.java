@@ -8515,7 +8515,7 @@ public final class VillageGenerator {
                     if (!s.is(Blocks.RED_BED) && !s.is(Blocks.WHITE_BED)) {
                         continue;
                     }
-                    if (!tieneTechoDeVerdad(level, p)) {
+                    if (!level.canSeeSky(p.above())) {
                         continue; // tiene techo: está dentro, y una cama de dentro no se toca
                     }
                     // lint:ok I9 porque es retrofit idempotente (quita camas de la calle), no construcción nueva.
@@ -8824,25 +8824,6 @@ public final class VillageGenerator {
                     + " sin pareja; una cama son dos celdas, I311)", center.toShortString(), quitadas);
         }
         return quitadas;
-    }
-
-    /**
-     * <b>¿TIENE UN TECHO DE VERDAD ENCIMA?</b> (I331, medido el 11-oct-2026). La regla de la calle decidia con
-     * {@code canSeeSky} ✗ y asi **no distingue** una cama dentro de una casa (techo ✓) de una cama **en la calle bajo la
-     * copa de la arboleda** ✗ (que tiene hojas por encima y por eso "no ve el cielo"): medido en su aldea, quedaban
-     * **4 mitades = 2 camas ENTERAS** en la calle (`x=531`, junto al arbolado ✓) con `El obrero repuso red_bed` = **0**
-     * (nadie las reponia: fallaba **la regla** que las quita ✓). Ahora se mira lo que de verdad separa las dos cosas: un
-     * bloque **solido que NO sea hoja** en los **6** bloques de arriba ✓ -> casa; si lo que hay son **hojas** o **aire**
-     * -> calle ✓ y la cama se va ✓.
-     */
-    private static boolean tieneTechoDeVerdad(ServerLevel level, BlockPos p) {
-        for (int dy = 1; dy <= 6; dy++) {
-            BlockState arriba = level.getBlockState(p.above(dy));
-            if (arriba.isSolid() && !arriba.is(net.minecraft.tags.BlockTags.LEAVES)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
