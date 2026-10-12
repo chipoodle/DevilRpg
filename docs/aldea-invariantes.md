@@ -7339,6 +7339,10 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I338 · EL MURO SE REPONE **SALVO ASEDIO DE VERDAD** (arregla la regresion de I296: 1761 avisos en una corrida tranquila)
+
+Corrida 210 con mundo nuevo (I336): mi guardia de I296 miraba **cualquier zombi a 96 bloques** y disparaba **1761** veces en una corrida tranquila -> el reconstruido quedaba **apagado siempre**, tambien para los **restos de migracion** que es su trabajo. **El dato bueno ya existia** (leido, no supuesto): VillageManager.hayAsedio(level, i) (**L1971**) -> isUnderAttack (**L1962**) = isUnderWorldSiege || isUnderPlayerSiege; y los que llaman al muro son **dos sitios de VillageManager** (L2380 y L2466) **dentro de la pasada donde el indice esta a mano** -> el arreglo es **pequeno**: las dos llamadas van dentro de if (!hayAsedio(level, objectiveIndex)). Y la guardia de zona de VillageGenerator (la que disparaba 1761 veces) baja de **96 a 2** bloques: queda como **ultimo recurso** (solo un agresivo pegado al centro) porque **el asedio de verdad ya se decide en el que llama**. Compila (BUILD SUCCESSFUL) y lint --strict verde. *Medida*: **0** l muro NO se repone **sin** asedio y **0** muro reconstruido **con** asedio (hoy 1761 y 0, justo al reves) -- pendiente del par de corridas.
+
 ### I337 · LA GUARDIA DEL ASEDIO: LA API BUENA EXISTE (`hayAsedio`) PERO **NO HAY CENTRO -> ÍNDICE**; EL ARREGLO VA POR EL QUE LLAMA
 
 Continuación de I336 ✓, con lo medido en esta ronda (leído, no supuesto ✓):

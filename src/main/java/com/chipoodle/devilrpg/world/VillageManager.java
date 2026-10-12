@@ -2377,7 +2377,14 @@ public final class VillageManager {
         VillageGenerator.repararLaAldeaApilada(level, center);
         VillageGenerator.actualizarCasas(level, center);
         VillageGenerator.actualizarTemplo(level, center);
-        VillageGenerator.rehacerMuro(level, center);
+        // I338 · EL MURO SE REPONE **SALVO ASEDIO DE VERDAD** (medido el 11-oct-2026, corrida 210 con mundo nuevo: la
+        // guardia que puse en I296 miraba «cualquier zombi a 96 bloques» y disparaba 1761 veces en una corrida tranquila
+        // -> el reconstruido quedaba apagado SIEMPRE, tambien para los restos de migracion que es su trabajo). Aqui SI se
+        // sabe el indice, asi que se pregunta por el ESTADO REAL (`hayAsedio` -> `isUnderAttack` = asedio del mundo o del
+        // jugador, L1962/L1971), no por zombis que paseen.
+        if (!hayAsedio(level, objectiveIndex)) {
+            VillageGenerator.rehacerMuro(level, center);
+        }
         VillageGenerator.farm(level, center);
         // Y SE LEVANTA TODO LO DEMÁS AQUÍ MISMO, con las mismas funciones que usa el latido para reponer lo que
         // falta. Si se dejara al latido, la reparación quedaría a medias mientras haya un asedio en pausa, un monstruo
@@ -2463,7 +2470,14 @@ public final class VillageManager {
             }
             // El MURO se reconstruye entero: si un nivelado viejo lo enterró o se comió sus troncos, sus huecos no
             // están en ningún plano y el obrero no podría reponerlos nunca (el muro no se puede "reparar a medias").
+            // I338 · EL MURO SE REPONE **SALVO ASEDIO DE VERDAD** (medido el 11-oct-2026, corrida 210 con mundo nuevo: la
+        // guardia que puse en I296 miraba «cualquier zombi a 96 bloques» y disparaba 1761 veces en una corrida tranquila
+        // -> el reconstruido quedaba apagado SIEMPRE, tambien para los restos de migracion que es su trabajo). Aqui SI se
+        // sabe el indice, asi que se pregunta por el ESTADO REAL (`hayAsedio` -> `isUnderAttack` = asedio del mundo o del
+        // jugador, L1962/L1971), no por zombis que paseen.
+        if (!hayAsedio(level, objectiveIndex)) {
             VillageGenerator.rehacerMuro(level, center);
+        }
             // CAMINOS EN ALTO: los que el bug de la cota del kiosco dejó encima de los tejados se quitan aquí (esta
             // migración corre siempre al subir la versión, mientras que `actualizarCasas` solo corre si cambian las
             // casas: por eso la limpieza anterior no llegaba a ejecutarse en aldeas ya actualizadas).

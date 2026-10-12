@@ -7098,7 +7098,7 @@ public final class VillageGenerator {
         // caía donde estaba el que cavaba, el asaltante moría ASFIXIADO ✗. Con asaltantes cerca, el muro no se toca:
         // la brecha ES el juego (lo dice el propio diseño: «el asedio TIENE que abrir brecha en el MURO»).
         if (!level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
-                new net.minecraft.world.phys.AABB(center).inflate(96.0D)).isEmpty()) {
+                new net.minecraft.world.phys.AABB(center).inflate(2.0D)).isEmpty()) {
             DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO se repone: hay asedio en marcha (la brecha es el"
                     + " juego; se repondra cuando el pueblo este a salvo)", center.toShortString());
             return;
