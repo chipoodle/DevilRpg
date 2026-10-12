@@ -7339,7 +7339,34 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I360 · EL INSPECTOR DEL ASEDIO (una herramienta, para no leer a ojo) Y LO QUE YA DICE EL REGISTRO
+### I361 · LA ASIMETRÍA AL ELEGIR HERRAMIENTA: **AL BAJAR NO HABÍA TOLERANCIA** (la causa de que se pasaran la marcha cavando hacia abajo)
+
+Salió de **leer mi propia traza** ✓ (lo que el jugador quería: *«para que tú mismo deduzcas si esto se cumple»* ✓): el
+inspector (I360 ✓) dijo que lo **dominante** es `CAVA hacia abajo` (**43, 38, 29, 22…** ✗) con **0 entradas** ✓, así que fui al
+código de ese camino ✓ y encontré la **asimetría** en la elección de herramienta (**L1831-1835** ✓):
+
+```java
+if (hacia.getY() < zombie.blockPosition().getY()) {            // BAJAR: sin tolerancia   ✗
+    algo = zombie.cavarHaciaAbajo(hacia);
+} else if (hacia.getY() > zombie.blockPosition().getY() + 1) {  // SUBIR: tolerancia de 1  ✓
+    algo = zombie.apilarBloqueParaSubir(hacia);
+```
+
+**Y el objetivo es la VÍCTIMA** ✓ (`objetivoDeLaMarcha`, **L1800-1810**: `target.blockPosition()` ✓, o el centro del pueblo si
+no hay objetivo ✓) → si el aldeano está **un bloque más bajo** (lo normal: la calle a 63 y el asaltante sobre su propio escalón
+a 64 ✓), el asaltante **se pone a cavar hacia abajo** ✗ → contra el **suelo del pueblo** ✗ → y como cavar hacia abajo **dentro**
+de la aldea está prohibido (**L956** ✓), se queda **fuera** ✓✓ — exactamente *«solo se quedan afuera saltando»* ✓.
+
+**ARREGLO** ✓ (una línea, y es **simetría**, no un número inventado ✗): la **misma tolerancia al bajar** (`y - 1` ✓). Con un
+desnivel de **un** bloque ya no elige el taladro hacia abajo ✓ y **pasa a la herramienta siguiente** (puente/túnel **de frente** ✓),
+que es la que abre la brecha ✓. `BUILD SUCCESSFUL` ✓ y `lint --strict` verde ✓.
+*Medida* (en su próximo asedio, con las diez trazas ya puestas ✓): **`CAVA hacia abajo` casi a cero** ✓ y que aparezcan
+**`pica` a la altura del muro** y **`ENTRO en el recinto`** ✓.
+
+**Y la cadena de deducción queda escrita** ✓ (esto es lo que se pedía): **traza** (I358/I359 ✓) -> **inspector** (I360 ✓) ->
+**lo dominante** (`CAVA hacia abajo` ✗) -> **el código de ese camino** -> **la asimetría** -> **una línea** ✓✓. Sin suponer ✗.
+
+### I360 ·### I360 · EL INSPECTOR DEL ASEDIO (una herramienta, para no leer a ojo) Y LO QUE YA DICE EL REGISTRO
 
 Lo pidio el jugador para poder deducirlo **yo** del registro ✓, asi que el analisis **no se improvisa** ✗: se escribe la
 herramienta **`build/inspector_del_asedio.py`** ✓ (no se sube: es de `build/` ✓) y da, **por asaltante**: cuantos bloques pica y
