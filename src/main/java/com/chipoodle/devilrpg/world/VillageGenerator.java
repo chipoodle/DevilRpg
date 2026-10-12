@@ -8818,6 +8818,7 @@ public final class VillageGenerator {
                     }
                     // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita la mitad que quedó colgando), no
                     // construcción nueva: arregla lo ya construido sin rehacer la aldea.
+                    if (!level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(p)).isEmpty()) { continue; } // I376: NO se quita una cama con alguien dentro (salia flotando al despertar)
                     colocar(level, p, Blocks.AIR.defaultBlockState(), 2); // lint:ok I9 porque es un RETROFIT idempotente en el sitio (quita restos ya puestos; no construye nada)
                     quitadas++;
                 }
