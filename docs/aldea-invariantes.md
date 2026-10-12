@@ -7339,6 +7339,15 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I327 · CORRECCION MIA: «plano vuelve a ser = 0» ERA **MI COMENTARIO**, NO UNA TRAZA (y el orden dentro de la pasada lo explica)
+
+Me corrijo ✗✓ porque la regla de la casa es no fiarse de nada que no este medido, **tambien de lo mio**. En I326 di por hecho que **la recaptura no se ejecutaba** en su aldea porque la traza plano vuelve a ser salia **0** veces ✗ — y al ir a buscar el sitio del obrero he visto que **ese texto es MI COMENTARIO** (lo escribi yo al colocar los barridos ✓), **no una linea de registro** ✗: **el mod NO imprime nada al recapturar**, asi que aquel cero **no medía nada** ✗✓. Queda **retirada** esa conclusion ✗ (lo que no mejore la media se retira y se dice ✓).
+
+**Y el codigo, leido, dice mas** ✓✓: el sitio donde estan mis barridos es la **pasada de mantenimiento** de la aldea ✓ y **dentro de ella el obrero repone ANTES**: segurarArboleda / segurarOrilla / segurarTalud / criarRebanoInicial / 
+eponerPecesDelLago y el cimiento final (fianzarElSuelo, I166 ✓) van **primero** (L2400-2411 ✓) y **despues** mis barridos y la captura del plano (L2413+ ✓) -> en cada pasada: **el obrero repone y yo quito** = **neto cero** ✗✓✓. Eso explica los **64 barridos quitando 10-11** con el contador **clavado en 408** ✓✓, sin necesidad de la suposicion retirada ✓.
+
+**LO QUE TOCA, entonces** ✓: que el barrido **mande sobre el obrero en la MISMA pasada** — o sea, que la **supresion se aplique AL COLOCAR** (el candado donde se repone ✓, que es lo que ya decia I326 ✓ pero por el motivo bueno ✓) **o** que el obrero coloque **desde un plano que ya no los pida** ✓ (el filtro de captura, I323 ✓, aplicado en la recaptura de L2412 ✓, que **si** corre en esta pasada ✓). **La medida que lo decide, sin inventar trazas** ✗: leer **el plano guardado** de su aldea (los datos de VillageSavedData en el guardado ✓) y contar **cuantas celdas de tronco por debajo de la cota** contiene todavia ✓ — si el plano ya esta limpio y el mundo no, el que repone es el obrero ✓; si el plano sigue sucio, es la captura ✓.
+
 ### I326 · LA RECAPTURA **NO SE EJECUTA** EN SU ALDEA: EL CANDADO VA **DONDE SE REPONE**
 
 Par **204 + 205** (con los barridos antes de la recaptura, I325) y la medida manda, sin adornos: **TRONCOS 408 -> 408** ✗, **CAMAS EN LA CALLE 4 -> 3** ✗, **POR DEBAJO de la cota: 64 trazas** ✓ (el barrido corre y quita 10-11 por vuelta), **obrero repuso red_bed: 0** ✓ (el filtro del plano funciona) y **plano vuelve a ser (la recaptura de VillageManager L2412): 0** ✗✓ -> **la recaptura NO se ejecuta** en su aldea (va por un camino que aqui no se da).
