@@ -1843,10 +1843,15 @@ public class AggressiveZombieEntity extends Zombie {
                 algo = zombie.apilarBloqueParaSubir(hacia);
             }
             if (!algo) {
-                algo = zombie.puentearHacia(hacia);
-            }
-            if (!algo) {
-                algo = zombie.apilarBloqueParaSubir(hacia);
+                // I374 · EL JUEGO DEL ASEDIO, COMO LO PIDIO EL JUGADOR: a la altura del bloqueo hay DOS maneras de sortearlo
+                // (ROMPER el muro con el tunel de frente, o TREPAR con una escalera de bloques) y, cuando valen las dos,
+                // se ELIGE AL AZAR; si solo vale una, se usa esa. Antes iba en orden fijo (puente -> escalera), asi que
+                // siempre hacia lo mismo. Basta con probarlas en orden aleatorio: la que pueda, entra.
+                boolean primeroRomper = zombie.getRandom().nextBoolean();
+                for (int intento = 0; intento < 2 && !algo; intento++) {
+                    boolean romperAhora = (intento == 0) == primeroRomper;
+                    algo = romperAhora ? zombie.puentearHacia(hacia) : zombie.apilarBloqueParaSubir(hacia);
+                }
             }
             if (!algo) {
                 zombie.cavarHaciaAbajo(hacia);
@@ -1862,7 +1867,7 @@ public class AggressiveZombieEntity extends Zombie {
     static class MoveToVillageCenterGoal extends Goal {
         // Se considera "llegado" al estar a 3 bloques de radio del centro (el goal deja de apuntar ahí).
         private static final double ARRIVE_DIST = 3.0D * 3.0D;
-        private static final int BREAK_EVERY_TICKS = 60;
+        private static final int BREAK_EVERY_TICKS = 130;   // I374: 6,5 s buscando rodeo ANTES de romper o trepar (lo pidio el jugador: 6-7 s)
         private static final double IMPROVEMENT_THRESHOLD = 1.5D;
         /**
          * Cuánto se le amplía al buscador de caminos su presupuesto de nodos mientras marcha a la aldea: es lo que le
