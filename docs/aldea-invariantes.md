@@ -7339,6 +7339,37 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I343 · QUIEN DA DE COMER **YA SABE LAS BOCAS**: EL COLCHÓN SE ESCALA AHÍ (y la unidad, medida: son **piezas**, no puntos)
+
+Cierre del dato que faltaba en I342 ✓, **medido** (búsqueda de llamadas ✓) y es el bueno ✓:
+
+```
+VillageManager   L7401 : int raciones = Math.min(VillagePantry.sacarComida(despensa, bocas.size()), bocas.size());
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ YA TIENE LA POBLACION A MANO
+VillagerTavernGoal L205 : int racion = VillagePantry.sacarComida(VillagePantry.despensa(level, center), 1);
+```
+Y su propio comentario (**L7358-7359**) explica el detalle fino ✓: *«…cada aldeano se llevaría una **hogaza entera** (4 puntos:
+`sacarComida` redondea a piezas completas) y el pueblo comería cuatro veces más de lo que le toca»* ✓.
+
+**LO QUE ESO DECIDE** ✓✓:
+1. **El número de bocas está en el que da de comer** ✓ (`bocas.size()` en `VillageManager` ✓) — **no** hay que inventarse
+   ninguna conversión centro -> índice **ni** contar aldeanos dentro de la despensa ✓ (que era el problema de `sacarComida`,
+   que **no recibe el nivel** ✗, I342 ✓).
+2. **La sobrecarga es la forma natural** ✓: `sacarComida(c, puntos, aldeanos)` ✓ (el que da de comer pasa las bocas ✓) y el
+   de la taberna sigue con el de siempre ✓ (una ración, sin cambio ✓).
+3. **Y la unidad, medida**: la `reserva` de cada `Grupo` está en **PIEZAS** (`RESERVA_PAN = 4` = 4 hogazas ✓, y el
+   comentario de L7358 lo confirma: «sacarComida **redondea a piezas completas**» ✓) ✓ — así que el escalado por población
+   se hace en **puntos** y se pasa a **piezas** dividiendo por los puntos de cada pieza (`FOOD_PER_BREAD`… ✓ que la propia
+   lista ya tiene ✓): `reservaBase + (PUNTOS_POR_ALDEANO * aldeanos) / puntosPorPieza` ✓.
+4. **Y el valor del colchón NO se inventa** ✗: se pone como **primer valor a probar** ✓ y **lo fija la medida** ✓ — la traza
+   **`Aldea N: comida M puntos`** no debe **llegar a 0** en un ciclo de cosecha completo ✓ (hoy llega ✗) con **0** avisos de
+   `pasa hambre` **y el pueblo comiendo** ✓. Si con el primer valor sigue llegando a 0, **sube** ✓; y queda escrito en su
+   comentario, como el resto de constantes del proyecto ✓ (todas llevan su medida al lado ✓).
+
+**EL CAMBIO, entonces, ya está cerrado de diseño** ✓ y es **mecánico**: `gruposDeComida()` y `elQueMasSobra()` pasan a
+recibir `aldeanos` ✓ (los dos bucles de L544/L554 ✓), el escalado entra en la lista (L529-536 ✓) y `VillageManager` L7401
+pasa `bocas.size()` ✓. *Medida*: **`Aldea N: comida M puntos` no llega a 0 en un ciclo completo** ✓ y **0** `pasa hambre` ✓.
+
 ### I342 · LA RESERVA DE LA DESPENSA ES UNA **PREFERENCIA**, NO UN CANDADO: EL 0 ES POR DISEÑO, Y EL ARREGLO ES UN COLCHÓN MAYOR
 
 Leído el código (no supuesto ✓), el hambre queda explicada **entera** ✓ y **mi propio enunciado se corrige** ✗✓:
