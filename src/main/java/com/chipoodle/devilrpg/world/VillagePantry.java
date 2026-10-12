@@ -500,13 +500,18 @@ public final class VillagePantry {
      * se come y lo que queda es la reserva del cocinero y del ganadero.
      */
     public static int sacarComida(@Nullable Container c, int puntos) {
+        return sacarComida(c, puntos, 0); // sin población: la reserva de siempre (lo usa la taberna, una ración)
+    }
+
+    /** Lo mismo, con la <b>población</b> para que el colchón cubra el hueco entre cosechas (I344). */
+    public static int sacarComida(@Nullable Container c, int puntos, int aldeanos) {
         if (c == null || puntos <= 0) {
             return 0;
         }
         int sacados = 0;
         int faltan = puntos;
         while (faltan > 0) {
-            Grupo grupo = elQueMasSobra(c);
+            Grupo grupo = elQueMasSobra(c, aldeanos);
             if (grupo == null) {
                 break; // no hay nada que comer (ni exceso ni reserva)
             }
@@ -523,25 +528,47 @@ public final class VillagePantry {
     private record Grupo(Predicate<ItemStack> filtro, int puntos, int reserva) {
     }
 
+    /**
+     * <b>I344 · EL COLCHÓN DE CADA GRUPO, ESCALADO CON LA POBLACIÓN</b>. La reserva base está dimensionada <b>para criar</b>
+     * (ver L65-69) y con un pueblo de N bocas <b>no cubre el hueco entre dos cosechas</b>: medido, la despensa llegaba a
+     * <b>0</b> y el pueblo pasaba hambre (I307) — y la reserva es una <b>preferencia</b>, no un candado (L496-500), así que
+     * el arreglo es <b>tamaño</b>, no candado: se suma lo que come el pueblo en un hueco de cosecha. Las bocas las pasa
+     * <b>quien da de comer</b> (`VillageManager`: `bocas.size()`), que es quien las tiene (I343).
+     * <p>
+     * Va en <b>PIEZAS</b> (la reserva está en piezas: `RESERVA_PAN = 4` = 4 hogazas), así que los puntos se pasan a piezas
+     * dividiendo por los puntos de cada pieza. <b>El valor es el primero a probar</b> y lo <b>fija la medida</b>: que la
+     * traza `Aldea N: comida M puntos` <b>no llegue a 0</b> en un ciclo de cosecha completo, con <b>0</b> avisos de
+     * `pasa hambre` y el pueblo comiendo. Si sigue llegando a 0, sube.
+     */
+    private static final int PUNTOS_POR_ALDEANO = 8;
+
+    /** La reserva de un grupo con población: la de siempre, más lo que come el pueblo entre dos cosechas (I344). */
+    private static int reservaConPoblacion(int reservaBase, int puntosPorPieza, int aldeanos) {
+        if (aldeanos <= 0 || puntosPorPieza <= 0) {
+            return reservaBase; // sin población (o sin el dato) no cambia nada: la reserva de siempre
+        }
+        return reservaBase + (PUNTOS_POR_ALDEANO * aldeanos) / puntosPorPieza;
+    }
+
     /** Los grupos de comida <b>en el orden de siempre</b> (el que se usa cuando no hay exceso de nada). */
-    private static List<Grupo> gruposDeComida() {
+    private static List<Grupo> gruposDeComida(int aldeanos) {
         return List.of(
-                new Grupo(s -> s.is(Items.BREAD), FOOD_PER_BREAD, RESERVA_PAN),
+                new Grupo(s -> s.is(Items.BREAD), FOOD_PER_BREAD, reservaConPoblacion(RESERVA_PAN, FOOD_PER_BREAD, aldeanos)),
                 // Carne cocinada, patata asada y HUEVO ESTRELLADO: lo que cocina el cocinero (el huevo estrellado
                 // faltaba aquí: se contaba como comida y no se comía nunca).
                 new Grupo(s -> esCarneCocida(s) || s.is(Items.BAKED_POTATO) || esHuevoEstrellado(s),
-                        FOOD_PER_COOKED_MEAT, RESERVA_COCIDA),
-                new Grupo(VillagePantry::esVegetal, FOOD_PER_VEGETABLE, RESERVA_VEGETAL),
-                new Grupo(VillagePantry::esCarneCruda, FOOD_PER_RAW_MEAT, RESERVA_CRUDA),
-                new Grupo(s -> s.is(Items.WHEAT), FOOD_PER_WHEAT, RESERVA_DE_TRIGO_PARA_CRIAR));
+                        FOOD_PER_COOKED_MEAT, reservaConPoblacion(RESERVA_COCIDA, FOOD_PER_COOKED_MEAT, aldeanos)),
+                new Grupo(VillagePantry::esVegetal, FOOD_PER_VEGETABLE, reservaConPoblacion(RESERVA_VEGETAL, FOOD_PER_VEGETABLE, aldeanos)),
+                new Grupo(VillagePantry::esCarneCruda, FOOD_PER_RAW_MEAT, reservaConPoblacion(RESERVA_CRUDA, FOOD_PER_RAW_MEAT, aldeanos)),
+                new Grupo(s -> s.is(Items.WHEAT), FOOD_PER_WHEAT, reservaConPoblacion(RESERVA_DE_TRIGO_PARA_CRIAR, FOOD_PER_WHEAT, aldeanos)));
     }
 
     /** El grupo con <b>más exceso</b> (puntos por encima de su reserva) y, si ninguno tiene exceso, el primero con algo. */
     @Nullable
-    private static Grupo elQueMasSobra(@Nullable Container c) {
+    private static Grupo elQueMasSobra(@Nullable Container c, int aldeanos) {
         Grupo mejor = null;
         int mejorSobra = 0;
-        for (Grupo g : gruposDeComida()) {
+        for (Grupo g : gruposDeComida(aldeanos)) {
             int sobra = contar(c, g.filtro()) * g.puntos() - g.reserva();
             if (sobra > mejorSobra) {
                 mejorSobra = sobra;
@@ -551,7 +578,7 @@ public final class VillagePantry {
         if (mejor != null) {
             return mejor;
         }
-        for (Grupo g : gruposDeComida()) {
+        for (Grupo g : gruposDeComida(aldeanos)) {
             if (contar(c, g.filtro()) > 0) {
                 return g; // nadie tiene exceso: se come de la reserva (la aldea no se queda sin comer teniendo comida)
             }

@@ -7398,7 +7398,8 @@ public final class VillageManager {
             return 0;
         }
         bocas.sort(Comparator.comparingLong(v -> ultima.get(v)));
-        int raciones = Math.min(VillagePantry.sacarComida(despensa, bocas.size()), bocas.size());
+        // I344 · las bocas van a la despensa: el colchón de cada grupo se escala con la población (I343).
+        int raciones = Math.min(VillagePantry.sacarComida(despensa, bocas.size(), bocas.size()), bocas.size());
         for (int i = 0; i < raciones; i++) {
             marcarComida(level, bocas.get(i));
         }
