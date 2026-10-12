@@ -370,6 +370,13 @@ public class AggressiveZombieEntity extends Zombie {
         DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} pica {} en {} (le quedan {} de tunel)", getId(),
                 worldSiegeIndex, b, pos.toShortString(), tunelRestante);
         level().destroyBlock(pos, true);
+        // I365 · ABRE BRECHA: si el bloque que acaba de romper esta en el ANILLO DEL MURO (el mismo criterio que usa la
+        // regla del muro, L623), queda en el registro. Sin esto se veia que pica a 62/63 pero NO si eso era el muro, y la
+        // medida que pide el objetivo es justo "pican la muralla". Sin enfriamiento: una brecha es un suceso y son pocas.
+        if (esLaMuralla(pos, cotaParaElRecinto())) {
+            DevilRpg.LOGGER.info("[Siege] asaltante #{} ABRE BRECHA en el muro: {} (tunel {}/{})", getId(),
+                    pos.toShortString(), tunelRestante, TUNEL_PRESUPUESTO);
+        }
         return true;
     }
 
