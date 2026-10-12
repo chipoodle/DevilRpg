@@ -8846,6 +8846,12 @@ public final class VillageGenerator {
      * vuelve tierra firme, SALVO el agua prevista (esCeldaDelLago: el lago y la darsena de la pesquera) y sin tocar nada
      * construido. Es idempotente.
      */
+    /** I366 · ¿Esta a menos de {@code radio} del lago de la pesquera? El lago (y su orilla) no se toca NUNCA. */
+    private static boolean cercaDelLago(BlockPos center, BlockPos pos, int radio) {
+        BlockPos base = baseDeLaPesquera(center);
+        return Math.abs(pos.getX() - base.getX()) <= radio && Math.abs(pos.getZ() - base.getZ()) <= radio;
+    }
+
     public static int ponerPisoDondeHayAgua(ServerLevel level, BlockPos center, int cota) {
         int puestas = 0;
         for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
@@ -8854,7 +8860,36 @@ public final class VillageGenerator {
                     continue;
                 }
                 BlockPos pie = new BlockPos(center.getX() + dx, cota, center.getZ() + dz);
-                if (esCeldaDelLago(center, cota, pie)) {
+                if (esCeldaDelLago(center, cota, pie) || cercaDelLago(center, pie, 16)) {
+                    continue; // el lago del pescador y su orilla NO se tocan (I366: antes se tapaba el lago)
+                }
+                // I366 · DEVOLVER EL AGUA QUE TAPE: si en la celda que se pisa hay un bloque SOLIDO y a los lados hay AGUA
+                // (dos o mas), eso era agua y la tape yo (I354). Se devuelve. Asi vuelve el lago del pescador.
+                if (level.getBlockState(pie).isSolid()) {
+                    int vecinosDeAgua = 0;
+                    for (Direction lado : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+                        if (!level.getBlockState(pie.relative(lado)).getFluidState().isEmpty()) {
+                            vecinosDeAgua++;
+                        }
+                    }
+                    if (vecinosDeAgua >= 2 && cercaDelLago(center, pie, 24)) {
+                        // lint:ok I9 porque es un RETROFIT idempotente en el sitio, y ademas DEVUELVE el agua que tape yo.
+                        colocar(level, pie, Blocks.WATER.defaultBlockState(), 3);
+                        continue;
+                    }
+                }
+                // Y SOLO SE SECA UN CHARCO: tierra firme debajo y TRES de los cuatro lados solidos. El lago abierto (que tiene
+                // agua a los lados) NO se rellena nunca.
+                if (!level.getBlockState(pie.below()).isSolid()) {
+                    continue;
+                }
+                int ladosSolidos = 0;
+                for (Direction lado : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+                    if (level.getBlockState(pie.relative(lado)).isSolid()) {
+                        ladosSolidos++;
+                    }
+                }
+                if (ladosSolidos < 3) {
                     continue;
                 }
                 BlockState arriba = level.getBlockState(pie);
@@ -8904,7 +8939,15 @@ public final class VillageGenerator {
                 for (int paso = 1; paso <= 2; paso++) {
                     BlockPos pie = porton.relative(lado, paso);
                     BlockState abajo = level.getBlockState(pie);
-                    if (abajo.isAir() || !abajo.getFluidState().isEmpty()) {
+                    // I366 · DESHACER LO QUE PUSE: la celda que se pisa frente a una compuerta tiene que ser AIRE. Si hay
+                    // un bloque solido ahi y debajo suelo firme, lo puse yo (I300): se quita. Repara las partidas ya tocadas
+                    // (son "los dos bloques de tierra frente a cada compuerta" que reporto el jugador).
+                    if (abajo.isSolid() && level.getBlockState(pie.below()).isSolid()) {
+                        // lint:ok I9 porque es un RETROFIT idempotente en el sitio, y ademas DESHACE un bloque mio anterior.
+                        colocar(level, pie, Blocks.AIR.defaultBlockState(), 3);
+                    }
+                    // I366 · Y YA NO SE PONE CESped DONDE HABIA AIRE (eso era el fallo): aqui solo se seca AGUA.
+                    if (!abajo.getFluidState().isEmpty()) {
                         // lint:ok I9 porque NO es construcción nueva: es un RETROFIT idempotente en el sitio que
                         // arregla lo ya construido (el paso encharcado de las compuertas) y no rehace la aldea.
                         colocar(level, pie, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
