@@ -7339,7 +7339,34 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
-### I358 · TRAZAS DEL ASEDIO, PARA DEDUCRILO DEL REGISTRO (lo pidio el jugador)
+### I359 · LAS DOS MEDIDAS DEL OBJETIVO, EN EL REGISTRO: `ENTRO en el recinto` y el INFORME DE POSICION
+
+Cierra el punto (4) de la peticion ✓. En `aiStep()` (**L1113** ✓, que corre **cada tick**, para verlo **tambien cuando NO
+esta picando** —que es justo el caso bueno: el que **entra andando** ✓—), y **sin tocar logica** ✓:
+
+- **`asaltante #N de la aldea M ENTRO en el recinto por <pos>`** (**L1127** ✓), **una sola vez** por asaltante ✓ (campo
+  `aviseQueEntro` ✓), usando `protegidoPorLaAldea` (**L612** ✓) — o sea, la misma frontera que usa el asedio ✓.
+- **`asaltante #N de la aldea M va por <pos> (y=..) · dentro=<si/no> · tunel N/40`** (**L1132** ✓), **cada 5 s** ✓ (campo
+  `ultimoInformeDePosicion` ✓): con la posicion en el registro se puede **medir la distancia al centro** desde fuera ✓
+  ((566,566) y (990,990) ✓), que es lo que hacía falta para saber **cuantos llegan** ✓.
+
+**LAS DIEZ TRAZAS DEL ASEDIO, PARA LA INSPECCION** ✓ (todas con `#identificador`, para poder aislar **un** asaltante ✓):
+`RENUEVA la marcha` (L166) · `pica <bloque> en <pos>` (L370) · **`esta en … OBJETIVO … desnivel … va a cavar hasta dy=`** (L432) ·
+`empieza a TALADRAR` (L446) · `empieza a PONER UN PUENTE` (L700) · **`NO pica … porque …`** (L720) · `pone un ESCALON` (L868) ·
+`CAVA hacia abajo` (L962) · **`ENTRO en el recinto`** (L1127) · **informe de posicion** (L1132) ✓. Compila
+(`BUILD SUCCESSFUL` ✓) y `lint --strict` verde ✓.
+
+**LA RECETA DE INSPECCION COMPLETA** ✓ (cuando el jugador avise), sobre `run\logs\latest.log`:
+1. **Cuantos asaltantes hay** (por `#id` ✓) y **cuantos pican** (`pica` ✓).
+2. **A que `y` pican** ✓: tiene que ser **63** (la altura del suelo ✓); si sale 60-61 ✗, siguen cavando a ras de lago ✓.
+3. **Cuantos `NO pica … porque …`** y de qué motivo ✓: si abunda **MADERA** ✗, la arboleda sigue comiendo marcha ✓
+   (y con el arreglo de I356 ya **no** le cuesta presupuesto ✓, asi que deberia ser **inofensivo** ✓ — esta traza lo confirma ✓).
+4. **El informe de altura** (`desnivel` y `va a cavar hasta dy=`) ✓: dice si el tope de **3** es suficiente o hay que subirlo ✓.
+5. **Cuantos `ENTRO en el recinto`** ✓ y, con las posiciones del informe, **cuantos llegan al centro** (distancia < ~8 ✓) ✓.
+6. **Cuantos `se le ACABARON los 40`** sin haber entrado ✓ (los que se quedan fuera ✓).
+Con eso se deduce **sin suponer** ✗ si el asedio entra de verdad, y si falla, **con la traza delante** ✓.
+
+### I358 ·### I358 · TRAZAS DEL ASEDIO, PARA DEDUCRILO DEL REGISTRO (lo pidio el jugador)
 
 Peticion directa: *«haz las anotaciones necesarias en el codigo con log para que tu mismo deduzcas si esto se cumple. Voy a
 correr el juego con un asedio y cuando acabe te dire para que inspecciones el log»* ✓. Se han anadido **solo trazas** (no cambia
