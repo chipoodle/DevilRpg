@@ -7339,6 +7339,26 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I351 · LECTOR DE ENTIDADES, 2: EL FICHERO EXISTE Y AUN ASI DA 0 (y el diagnostico siguiente, escrito)
+
+Continuacion de I350 ✓, y esto es lo que se ha medido **esta** ronda:
+- **El fichero de entidades EXISTE** ✓ y es el de sus aldeas: 
+un/saves/New World/entities/r.1.1.mca con **565.248 bytes** ✓
+  (las dos aldeas caen en la region **1,1**: chunk 35,35 = 566>>4 ✓ y 61,61 = 990>>4 ✓, region = chunk>>5 = **1** ✓).
+- **Y el byte de compresion ya esta bien** ✓ (iba mal: leia los datos **desde** el byte de tipo de compresion y zlib
+  fallaba ✓; mi xcept devolvia None **en silencio** ✗ — el peor error de todos, y queda escrito ✗✓).
+- **AUN ASI da 0 entidades** ✗ en las dos aldeas ✓.
+
+**EL DIAGNOSTICO SIGUIENTE, y es de UNA linea** ✓ (para no volver a dar palos a ciegas ✗): volcar **las claves de arriba del
+chunk** de entidades (
+aiz.keys()) y ver **como se llama de verdad la lista** ✓ (en 1.17+ se espera Entities ✓, pero
+**no se da por hecho** ✗) y si el chunk esta **vacio** (sin lista) ✓. Con eso, o se corrige la clave ✓ o se concluye que el
+trozo de mundo de su aldea **no tiene entidades volcadas** ✓ — y en cualquiera de los dos casos **se dice**, sin adornos ✓.
+
+**ESTADO, sin adornos** ✗: llevo **tres rondas** en esta herramienta ✓ y **el golem sigue SIN medir** ✗. Lo que hay es un
+lector **a medio camino** ✓ (en uild/, que no se sube ✓) con su siguiente paso claro ✓; **el arreglo del golem esta
+puesto y compilado** ✓ (celda libre + aviso ✓) — lo que falta es **la medida**, no el arreglo ✓.
+
 ### I350 · LECTOR DE ENTIDADES: A MEDIAS (y la leccion de como NO hacer reemplazos)
 
 I348 dijo que el golem no se puede auditar porque **las herramientas solo leen bloques** ✗. Esta ronda empece ese trabajo
