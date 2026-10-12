@@ -1120,19 +1120,20 @@ public class AggressiveZombieEntity extends Zombie {
         // I359 · LAS DOS MEDIDAS DEL OBJETIVO, EN EL REGISTRO (lo pidio el jugador). Aqui, cada tick, para verlo tambien
         // cuando NO esta picando (que es justo el caso bueno: el que entra andando). "ENTRO en el recinto" sale UNA vez; el
         // informe de posicion, cada 5 s, para poder medir desde el registro la distancia al centro ((566,566) y (990,990)).
-        if (worldSiegeIndex >= 0) {
+        if (worldSiegeIndex >= 0 && level().getGameTime() - ultimoInformeDePosicion > 100L) {
+            // I359 (bis) · EL CHEQUEO VA DENTRO DEL INFORME (cada 5 s), NO CADA TICK: protegidoPorLaAldea llama a
+            // cotaParaElRecinto (L619) y no es gratis, asi que medir no puede costarle nada al servidor. La traza de "ENTRO"
+            // puede salir hasta 5 s tarde y da igual: para deducirlo del registro es de sobra.
+            ultimoInformeDePosicion = level().getGameTime();
             boolean dentroDelRecinto = protegidoPorLaAldea(blockPosition());
             if (dentroDelRecinto && !aviseQueEntro) {
                 aviseQueEntro = true;
                 DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} ENTRO en el recinto por {}", getId(), worldSiegeIndex,
                         blockPosition().toShortString());
             }
-            if (level().getGameTime() - ultimoInformeDePosicion > 100L) {
-                ultimoInformeDePosicion = level().getGameTime();
-                DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} va por {} (y={}) · dentro={} · tunel {}/{}", getId(),
-                        worldSiegeIndex, blockPosition().toShortString(), blockPosition().getY(), dentroDelRecinto,
-                        tunelRestante, TUNEL_PRESUPUESTO);
-            }
+            DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} va por {} (y={}) · dentro={} · tunel {}/{}", getId(),
+                    worldSiegeIndex, blockPosition().toShortString(), blockPosition().getY(), dentroDelRecinto,
+                    tunelRestante, TUNEL_PRESUPUESTO);
         }
         super.aiStep();
 
