@@ -7339,6 +7339,27 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I350 · LECTOR DE ENTIDADES: A MEDIAS (y la leccion de como NO hacer reemplazos)
+
+I348 dijo que el golem no se puede auditar porque **las herramientas solo leen bloques** ✗. Esta ronda empece ese trabajo
+(es **herramienta**, no arreglo ✓) y queda **a medias**, con lo andado medido ✓:
+- **Lo que SI funciona** ✓: uild/entidades_del_guardado.py lee la **region** del guardado, saca el chunk con
+  offset >> 8 (el sector va en los **3 bytes altos** de la cabecera Anvil ✓), salta el **byte de tipo de compresion** ✓,
+  descomprime con zlib ✓ y parsea el NBT reutilizando 	ools/nbtdump.py (R/payload ✓). **Tres fallos mios** corregidos
+  por el camino ✗ (struct.error por el offset ✗, el byte de compresion ✗ y la ruta ✗), y **el script corre sin errores** ✓.
+- **Lo que NO** ✗: devuelve **0 entidades** en las dos aldeas ✓. Desde la **1.17** las entidades viven en su **propia region**
+  (ntities/r.x.z.mca ✓, no en 
+egion/ ✗) y eso ya está puesto ✓ — asi que o los chunks de su aldea **no estan volcados**
+  en ntities/ ✗, o el fichero se llama de otra forma ✓. **Siguiente paso, barato** ✓: listar 
+un/saves/New World/entities/
+  y ver que hay ✓ (una linea) antes de tocar nada mas ✗.
+- **Y LA LECCION DE METODO** ✗✓ (me costo tres intentos): **los reemplazos con saltos de linea NO se hacen con PowerShell**
+  ✗ — me manglo el fichero dos veces ✓ (backticks invertidos y un salto crudo ✓). Se hacen con **la herramienta de
+  edicion** ✓ (texto exacto ✓) o con el **fichero escrito entero** ✓, nunca con un Replace de varias lineas ✗.
+
+**Estado**: **no se da por hecho nada** ✗ — el golem **sigue sin medir** ✓ y ahora hay un lector **empezado** ✓ (en uild/,
+que no se sube ✓) con su siguiente paso claro ✓.
+
 ### I349 · EL PANTANO: SEGUNDA SEMILLA, MISMA RESPUESTA (sin ocasion) — y dejo de tirar corridas
 
 Corrida **77 con -MundoNuevo** ✓ (mundo limpio, no toca 
