@@ -8726,9 +8726,9 @@ public final class VillageGenerator {
      */
     public static int troncosBajoLaCota(ServerLevel level, BlockPos center, int cota, boolean soloContar) {
         int cuantos = 0;
-        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
-            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
-                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+        for (int dx = -RADIO_DEL_BARRIDO; dx <= RADIO_DEL_BARRIDO; dx++) {
+            for (int dz = -RADIO_DEL_BARRIDO; dz <= RADIO_DEL_BARRIDO; dz++) {
+                if (dx * dx + dz * dz > RADIO_DEL_BARRIDO * RADIO_DEL_BARRIDO) {
                     continue;
                 }
                 // I313 · Y SE MIRA TAMBIÉN **LA PROPIA COTA**, pero solo si el tronco está FLOTANDO (aire debajo): medido
@@ -8789,9 +8789,9 @@ public final class VillageGenerator {
     public static int quitarMitadesDeCamaHuerfanas(ServerLevel level, BlockPos center) {
         int quitadas = 0;
         int cota = cotaDeLaPlaza(level, center);
-        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
-            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
-                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+        for (int dx = -RADIO_DEL_BARRIDO; dx <= RADIO_DEL_BARRIDO; dx++) {
+            for (int dz = -RADIO_DEL_BARRIDO; dz <= RADIO_DEL_BARRIDO; dz++) {
+                if (dx * dx + dz * dz > RADIO_DEL_BARRIDO * RADIO_DEL_BARRIDO) {
                     continue;
                 }
                 for (int y = cota - 6; y <= cota + 26; y++) {
@@ -8825,6 +8825,20 @@ public final class VillageGenerator {
         }
         return quitadas;
     }
+
+    /**
+     * <b>HASTA DONDE MIRAN LOS BARRIDOS DE RESTOS</b> (I329, medido el 11-oct-2026). Los barridos miraban dentro del
+     * <b>recinto</b> (`FENCE_RADIUS`, el radio del muro) y los <b>408</b> troncos que el jugador ve están en
+     * `x=503-504`, a <b>62-63 bloques</b> del centro: <b>en el borde y por fuera</b> ✗ -> el barrido quitaba
+     * <b>10-11 por vuelta</b> (los de dentro) y los <b>~397</b> de fuera se quedaban ✗✓, con el contador **clavado en
+     * 408** aunque el barrido corriera 64 veces ✓. Un resto del trazado viejo no respeta el muro: se mira un poco
+     * <b>más allá</b> del anillo (el margen del talud y del despeje ✓).
+     * <p>
+     * <b>SOLO para los barridos de restos</b> (`troncosBajoLaCota` y `quitarMitadesDeCamaHuerfanas`) ✗: **nunca** para
+     * `captureBlueprint` (que es EL PLANO: ampliarlo haría que el obrero mantuviera el anillo de fuera ✗), ni para
+     * `ruin`, ni para el cimiento (así se retiró el cambio ancho de I328 ✓).
+     */
+    private static final int RADIO_DEL_BARRIDO = FENCE_RADIUS + 12;
 
     /**
      * <b>EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, FIRME Y SECO</b> (I300, medido el 11-oct-2026). El granjero se
