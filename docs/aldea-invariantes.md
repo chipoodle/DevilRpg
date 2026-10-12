@@ -7339,6 +7339,35 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I334 · LA GRANJA, MEDIDA: **0 SIN SEMBRAR · 0 PISOTEADAS · 0 ATOROS · 0 AGUA EN LOS PIES**
+
+Medida **antes de tocar** el fichero más grande del mod ✗ (`VillageFarmGoal`, ~1.600 líneas ✓), en la corrida **209**
+(centro en su aldea ✓, con el agua de las compuertas y el dueño único de la compuerta ya dentro ✓):
+
+```
+[Huerta] parcelas al nivel 63: 0 celda(s) SIN SEMBRAR, 0 PISOTEADA(s)     <- x16 (la traza que ya existia, I179)
+[Huerta] OBJETO minecraft:wheat_seeds en 536, 63, 582 · sobre Dirt · parcela 0
+[Village] El granjero: Labro la huerta en BlockPos{x=536, y=62, z=582}
+no consigue llegar : 0        <- ANTES: el atoro de la granja ✗
+pies=water         : 0        <- ANTES: el agua bajo los pies ✗ (I300 ✓)
+METIDO en la puerta: 2        <- ANTES: cada segundo ✗ (I301 ✓)
+```
+
+**Lo que eso significa, y es lo que el jugador pidió** ✓✓: **plantadas las vacías** (0 `SIN SEMBRAR` ✓), **reparadas las
+rotas** (0 `PISOTEADA` ✓, que es el daño que él reportaba ✓) y **ni un granjero atorado** ✓ (`no consigue llegar` **0** ✓,
+`pies=water` **0** ✓) con la puerta pasando de «cada segundo» a **2** en toda la corrida ✓. Los dos arreglos de raíz de
+esta tanda —**el paso seco de las compuertas** (I300 ✓) y **el dueño único de la compuerta** (I301 ✓)— son justo lo que
+faltaba para eso ✓, y la faena que ya estaba (plantar, cosechar, compostar, abonar y llevar a la despensa ✓, con
+**`SEMILLAS_MAX = 8`** de reserva ✓) funciona **detrás** de ellos ✓.
+
+**LO QUE SIGUE ABIERTO DE SU PETICIÓN** ✗ (y es **forma**, no resultado ✓): **«meterse al centro y escanear la
+superficie»** — hoy `VillagerFarmGoal` trabaja **celda a celda** ✓ (de ahí que dé esos tirones de puerta ✓) en vez de
+tener un **estado único** (`yendoAlCentro → escaneando → faena` ✓) con el escaneo **cacheado** ✓. **Su medida ya está
+fijada** ✓: las mismas dos cifras de arriba (**0 SIN SEMBRAR · 0 PISOTEADA** ✓) **más** `no consigue llegar` = 0 ✓ y
+`pies=water` = 0 ✓ **más** `METIDO en la puerta` = 0 ✓ — o sea, el cambio de forma **no puede empeorar** lo que hoy ya
+sale bien ✓. **Y las 2 líneas de `METIDO en la puerta`**: hay que ver **de quién son** ✓ (si son de un granjero, es la
+pizca que queda ✓; si son del ganadero o del guardia, es otro flujo ✓) — medirlo antes de tocar ✗.
+
 ### I333 · LAS «4 CAMAS DE LA CALLE» **NO ESTÁN EN LA CALLE**: ESTÁN EN UN RECINTO CON PAREDES (etiqueta mía, medida y corregida)
 
 Antes de tocar (lección de I331 ✗), medida **su entorno** una por una (`build/camas_calle_entorno.py` ✓, solo lectura):
