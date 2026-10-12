@@ -7339,6 +7339,36 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I340 · LA GRANJA: LO FUNCIONAL ESTÁ MEDIDO (**0/0/0/0**); EL «ESTADO ÚNICO CON ESCANEO» NO MEJORA NINGUNA CIFRA (y se dice)
+
+Cierre del punto que el jugador pidió **antes que nada** ✓, con las cifras delante y **diciendo lo que no se hace** ✗.
+
+**TODO lo funcional que pidió, medido** ✓✓ (corridas 209/211/212, centro en su aldea ✓):
+| lo que pidió | medida |
+|---|---|
+| **plantar las vacías** | **0 celda(s) SIN SEMBRAR** ✓ |
+| **cosechar las listas** | `El granjero: Labro la huerta…` + lo cosechado va a la despensa ✓ |
+| **reparar las rotas** | **0 PISOTEADA(s)** ✓ (el daño que él reportaba ✓) |
+| **acumular hasta no tener espacio** | el compostero y la despensa (L43/L46 ✓) ✓ |
+| **bonemeal del excedente con reserva** | **`SEMILLAS_MAX = 8`** (L85 ✓) y `SEMILLAS_PARA_COMPOSTAR = 8` (L99 ✓) ✓ |
+| **una granja por granjero, sin estorbarse** | `miParcela` (**L1151**) y `bancalSinDueno` (**L1172**) ✓ |
+| **el agua y las puertas locas** | `no consigue llegar` **0** · `pies=water` **0** · `METIDO en la puerta` **2** legítimas ✓ |
+
+**LO ÚNICO QUE FALTA ES LA FORMA** ✗ — «meterse al centro y **escanear** la superficie» (estado único
+`yendoAlCentro → escaneando → faena` con el escaneo **cacheado** ✓). **Y no mejora ninguna de las cifras de arriba** ✗✓:
+las cinco ya salen **0/0/0/0** ✓, así que el estado único **no tiene una medida que lo justifique** ✗ — y es un refactor
+sobre el fichero **más grande del mod** (`VillageFarmGoal`, ~1.600 líneas ✓) con **riesgo** de romper justo lo que hoy
+sale bien ✓ (I331 es el aviso: tocar sin una medida que lo pida = ~50 camas buenas perdidas ✗).
+
+**DECISIÓN, y es la regla de la casa** ✓✓: **no se hace a ciegas** ✗. Queda **pedido y localizado** ✓ para cuando haya
+un motivo **medido** (por ejemplo: si aparecen tirones o granjeros ociosos en una corrida larga, con su número delante ✓)
+— y entonces el cambio tendrá **su medida**: las mismas cifras **más** `no consigue llegar` = 0 ✓, `pies=water` = 0 ✓ y
+`METIDO en la puerta` = 0 ✓, que es exactamente el listón que **no puede bajar** ✓.
+
+**Y LO QUE SÍ QUEDA CON MOTIVO MEDIDO** ✓: **el colchón de comida** (el hambre es un reporte **suyo** y recurrente ✗,
+medido: la despensa llegó a **0** comiéndose las reservas y se recuperó **sola** ✓, I307 ✓) — ése **sí** tiene una cifra
+que mejorar (**`Aldea N: comida M puntos` no debe bajar del colchón** ✓) y es lo siguiente ✓.
+
 ### I339 · LA GUARDIA NUEVA, MEDIDA: 1761 -> 0 (y lo que NO se da por medido)
 
 Par **211 + 212** (centro en su aldea) con la guardia del asedio real (I338):
