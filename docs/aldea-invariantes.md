@@ -7339,6 +7339,34 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I354 · EL PISO SOLIDO DONDE HABIA AGUA A LA ALTURA DEL PUEBLO: 7192 -> 2822 (medido, con traza)
+
+Segundo reporte del jugador: *«la aldea como esta en pantano tiene en vez de piso agua... deberia de tener un piso solido»* ✗
+(con captura, de pie EN el agua de la aldea). Medido antes de tocar ✓: la aldea **1** (990,990) tiene su **cota a 63** (lo
+dice el auditor ✓) y **7192 celdas de agua a y=63 DENTRO del recinto** ✗ -> **inundada a la altura del pueblo** ✓ (y de paso
+queda **retirada** mi conclusion de I347, que salio de **suponer** que su cota era 71 ✗).
+
+**EL ARREGLO** ✓: VillageGenerator.ponerPisoDondeHayAgua(level, center, cota) — el piso como el resto del pueblo (**el
+suelo se pisa a la cota y la tierra va una por debajo** ✓, medido en las camas: 
+ed_bed en 63 sobre grass_block en 62 ✓):
+quita el agua de la celda que se pisa y vuelve **tierra firme** la de debajo, **salvo el agua prevista** (sCeldaDelLago ✓,
+el lago y la darsena de la pesquera ✓) y sin tocar nada construido ✓. Idempotente, con traza (N celda(s) de PISO puestas ✓).
+**Y el sitio importa** ✗✓: puesto en la pasada de mantenimiento **NO se ejecuto** (corrida **300**: **0 trazas** y 7192
+igual ✗) -> va en el **LATIDO** ✓ (corrida **301** ✓), que es el sitio que **si** corre para cada aldea ✓ (alli los barridos
+dieron **64** trazas ✓).
+
+**LA MEDIDA** ✓ (corrida 301, copia de su partida, centro en la aldea inundada):
+`
+[Village] Aldea en 990, 0, 990: 4742 celda(s) de PISO puestas donde habia agua a la altura del pueblo (I354)
+[Village] Aldea en 990, 63, 990: 51 celda(s) de PISO puestas ...   (y sigue: es idempotente)
+aldea (990,990): celdas de agua DENTRO del recinto = 2822      (antes 7192)
+`
+**7192 -> 2822** ✓✓ = **4370 celdas afirmadas** ✓. **Lo que queda (2822)** esta, con toda probabilidad, **protegido a
+proposito** ✓ (sCeldaDelLago: esa aldea es la del lago ✓) — **pero no se da por bueno** ✗: hay que comprobar **donde**
+estan esas 2822 ✓ (si son el lago ✓, el punto esta cerrado ✓; si hay **calle** entre ellas ✗, la regla de sCeldaDelLago
+esta tapando de mas ✓ y se afina ✓). *Siguiente medida (barata)*: volcar las columnas que quedan y ver si caen en la zona
+del lago ✓.
+
 ### I353 · EL ASEDIO NO ENTRA: CAVAN A SU PROPIA ALTURA (medido en su asedio del 12-oct-2026)
 
 Reporte del jugador: *«ya comenzo el asedio y ningun zombie agresivo rompe la muralla para entrar a la aldea e ir al
