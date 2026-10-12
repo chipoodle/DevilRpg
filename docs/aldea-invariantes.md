@@ -7339,6 +7339,33 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I346 · VEREDICTO GLOBAL DEL AUDITOR: **0 COSAS MAL** EN LAS DOS ALDEAS
+
+Cierre con **la herramienta del propio proyecto** (	ools/audita_aldea.py ✓, **solo lectura**: nunca toca 
+un\saves ✓)
+sobre la partida del jugador:
+`
+aldea 0 (566,566) cota 63:  faroles 0 · vallas 0 · cofres tapados 0 · puertas incompletas 0 (de 19) · camas sueltas 0 (de 54) · portones tapados 0
+aldea 1 (990,990) cota 63:  faroles 0 · vallas 0 · cofres tapados 0 · puertas incompletas 0 (de 16) · camas sueltas 0 (de 50) · portones tapados 0
+TOTAL de cosas mal: 0
+`
+**Y un detalle que vale** ✓: **«camas sueltas: 0» lo dice el auditor**, que **confirma** por su cuenta lo que medi a mano (I333 ✓):
+las camas que quedan al nivel del pueblo **estan enteras y dentro de un recinto**, no son un defecto ✓.
+
+**LO QUE ESTA CERRADO CON ESTA TANDA** ✓ (13 invariantes escritas, del I296 al I346, todas con clase, linea y medida ✓):
+golem · **muro del asedio** (y **mi propia regresion de los 1761 avisos**, corregida con hayAsedio ✓) · **cama del obrero**
+(el PLAN ✓, 
+epuso red_bed = **0** ✓) · camas encima de los tejados (**4 -> 0** ✓) · **la granja entera** (**0 SIN SEMBRAR ·
+0 PISOTEADA · 0 atoros · 0 pies=water** ✓, con sus dos causas de raiz: **el paso encharcado** y **dos goals por la misma
+compuerta** ✓) · **puertas** (2 legitimas ✓) · **restos flotantes 408 -> 0** ✓ (y la leccion de metodo: cuando un barrido
+«hace su trabajo y no se nota», se mide **donde mira** ✓) · **pantano** (cota por encima del agua ✓) · **haz** (solo en el
+recinto de su aldea ✓) · **invocador** (candado en su setTarget ✓) · **hambre** (colchon que escala con la poblacion ✓,
+pasa hambre = **0** ✓).
+
+**LO QUE SOLO SE PUEDE VER EN SU PARTIDA** ✗ (y quedan dichos, no contados como buenos ✓): el muro **dentro de un asedio**
+(en el banco el asedio esta **EN PAUSA**: hayAsedio=true con gresivos=0 ✓, I345 ✓), la **cota en pantano** y el **haz**
+(necesitan caer en el sitio ✓) y el **ciclo de cosecha completo** del hambre (el banco no cubre un ciclo ✓).
+
 ### I345 · POR QUE EL MURO NO SE REPONE EN EL BANCO: EL ASEDIO ESTA **EN PAUSA** (hayAsedio=true con agresivos=0)
 
 Explicacion del «sin ocasion» de I339 ✓, y esta **escrita en el propio banco** (	ools/arnes/GuardHarness.java, L109-132 ✓):
