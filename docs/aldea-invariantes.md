@@ -7339,6 +7339,30 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I344 · EL COLCHON DE COMIDA ESCALA CON LA POBLACION (y la primera medida dice que si)
+
+Diseno cerrado en I341/I342/I343 y **escrito** ✓ (todos los cambios con ancla verificada: el script **aborta** si alguna no
+cuadra ✗): en VillagePantry, PUNTOS_POR_ALDEANO = 8 (**primer valor a probar**, y lo fija la medida ✓) y
+
+eservaConPoblacion(reservaBase, puntosPorPieza, aldeanos) = 
+eservaBase + (PUNTOS_POR_ALDEANO * aldeanos) / puntosPorPieza
+**en piezas** (que es la unidad de la reserva: RESERVA_PAN = 4 hogazas ✓); gruposDeComida(aldeanos) y
+lQueMasSobra(c, aldeanos) escalan los **cinco** grupos; sacarComida(c, puntos, aldeanos) es la de verdad y la de **dos**
+argumentos **delega con 0** (la taberna, una ración, **no cambia** ✓); y VillageManager (**L7401**) pasa **ocas.size()**,
+que ya tenía a mano ✓. Compila (BUILD SUCCESSFUL ✓) y lint --strict verde ✓.
+
+**LA MEDIDA** ✓ (par 213 + 214, centro en su aldea):
+`
+pasa hambre           : 0      <- era el reporte recurrente del jugador
+vuelve a tener comida : 0      <- ese aviso SOLO sale si antes se quedo a 0
+comida vista          : 44 / 52 / 53 / 60 (y un 11, bajo pero > 0)  -> NO llega a 0
+[Village] Aldea 0 crece: aldeano 15/19 (comida 52)   <- crecer EXIGE comida
+`
+**Lo que se puede decir** ✓: la despensa **no llega a 0** en estas corridas ✓, **0 avisos** de hambre ✓ y el pueblo
+**crece** ✓ (que es imposible sin comida ✓). **Lo que NO se da por cerrado** ✗: una corrida del arnés **no es un ciclo de
+cosecha completo** ✗, así que la medida definitiva (la despensa **no llega a 0 en un ciclo entero** ✓) queda para una
+**corrida larga** ✓ — y si allí llegara a 0, **sube PUNTOS_POR_ALDEANO** ✓ (está escrito junto a la constante ✓).
+
 ### I343 · QUIEN DA DE COMER **YA SABE LAS BOCAS**: EL COLCHÓN SE ESCALA AHÍ (y la unidad, medida: son **piezas**, no puntos)
 
 Cierre del dato que faltaba en I342 ✓, **medido** (búsqueda de llamadas ✓) y es el bueno ✓:
