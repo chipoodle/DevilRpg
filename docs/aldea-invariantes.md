@@ -7339,6 +7339,33 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I342 · LA RESERVA DE LA DESPENSA ES UNA **PREFERENCIA**, NO UN CANDADO: EL 0 ES POR DISEÑO, Y EL ARREGLO ES UN COLCHÓN MAYOR
+
+Leído el código (no supuesto ✓), el hambre queda explicada **entera** ✓ y **mi propio enunciado se corrige** ✗✓:
+
+- **`Grupo(Predicate<ItemStack> filtro, int puntos, int reserva)`** (**L523** ✓) y **`gruposDeComida()`** (**L527-537** ✓)
+  construye la lista con las **constantes** (`RESERVA_PAN`, `RESERVA_COCIDA`, `RESERVA_VEGETAL`, `RESERVA_CRUDA`,
+  `RESERVA_DE_TRIGO_PARA_CRIAR` ✓).
+- **`sacarComida(@Nullable Container c, int puntos)`** (**L502** ✓) — y aquí está la clave: **no recibe el nivel** ✗, así que
+  **no puede contar aldeanos** ✓; elige con `elQueMasSobra(c)` (**L541** ✓).
+- **Y su propia regla, escrita (L496-500)** ✓✓: *«se come un punto de la comida que **más puntos tiene por encima de su
+  reserva**… y, si no hay exceso en ninguna, **del orden de siempre**: la reserva es una **preferencia**, no un candado»* ✓.
+
+**O SEA: LA DESPENSA LLEGA A 0 POR DISEÑO** ✗✓ (los aldeanos **comen las reservas** cuando no hay exceso — y **tienen que
+comer** ✓). Por eso mi enunciado de I307 («no debe bajar del colchón» ✗) **estaba mal dicho**: la reserva **ordena** qué se
+come, **no** pone un suelo ✓. Lo que sí es un defecto real es **el tamaño** ✗: con **13 bocas** y las reservas
+dimensionadas **para criar** (I341 ✓), el colchón **no cubre el hueco entre dos cosechas** ✓ → de ahí el **0** y el aviso
+`pasa hambre` ✓.
+
+**EL ARREGLO CORREGIDO** ✓✓: el colchón **sí** debe ser un **suelo** cuando el pueblo **no** tiene exceso — o sea, **subir
+la reserva con la población** (`reservaBase + PUNTOS_POR_ALDEANO * aldeanos` ✓) para que **cubra el hueco entre cosechas** ✓
+(y, por debajo de eso, que se **racione** en vez de vaciarse ✓). Para eso `sacarComida`/`gruposDeComida` necesitan **el
+número de aldeanos** ✗ — y **su firma no lo tiene** ✓ → el cambio es: **pasar el número de aldeanos** (o el nivel y el
+centro) desde quien ya lo sabe ✓. **Un dato más y va** ✓: **quién llama a `sacarComida`** (y con qué a mano ✓) — 13 usos
+en total y **todos** en `VillagePantry` ✓, así que es una búsqueda de llamadas ✓.
+*Medida corregida* ✓: **la traza `Aldea N: comida M puntos` no llega a 0 en un ciclo de cosecha completo** ✓ (hoy llega ✗)
+y **0** avisos de `pasa hambre` **con el pueblo comiendo** ✓ — que es medible y **no** contradice que coman ✓.
+
 ### I341 · EL HAMBRE, CON LA CAUSA A LA VISTA: LAS RESERVAS ESTÁN DIMENSIONADAS **PARA CRIAR**, NO PARA DAR DE COMER AL PUEBLO
 
 Continuación de I307 ✓ (medido entonces: la **cadena funciona** ✓ — cosecha -> despensa, almacén -> despensa y cocina ✓ —
