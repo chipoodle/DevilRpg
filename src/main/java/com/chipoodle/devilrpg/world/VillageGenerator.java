@@ -8519,6 +8519,7 @@ public final class VillageGenerator {
                         continue; // tiene techo: está dentro, y una cama de dentro no se toca
                     }
                     // lint:ok I9 porque es retrofit idempotente (quita camas de la calle), no construcción nueva.
+                    if (!level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(p)).isEmpty()) { continue; } // I376: NO se quita una cama con alguien dentro
                     colocar(level, p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                     quitadas++;
                 }
