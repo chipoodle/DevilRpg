@@ -2409,6 +2409,16 @@ public final class VillageManager {
         // construido y **justo antes de capturar el plano** (que así apunta el suelo ya rellenado).
         VillageGenerator.afianzarElSuelo(level, center, VillageGenerator.FENCE_RADIUS + 24,
                 VillageGenerator.cotaDeLaPlaza(level, center));
+        // I325 · LOS BARRIDOS, **ANTES DE RECAPTURAR EL PLANO** (medido el 11-oct-2026, corridas 202+203: el filtro de
+        // captura funciona -`El obrero repuso red_bed` = 0 ✓- pero el plano de una aldea YA construida es el viejo y nadie
+        // lo recapturaba, asi que el obrero seguia reponiendo los troncos desde el ✗). El propio mod ya tiene la receta y
+        // la usa aqui mismo (`captureBlueprint`: "el plano vuelve a ser lo que el pueblo es"), y su comentario de mas
+        // abajo lo dice: "va ANTES de recapturar el plano para que el plano nuevo las tenga". Pues los tres barridos van
+        // AQUI: asi el plano nuevo nace SIN los restos ni las camas sueltas y el obrero no puede reponerlos ✓ (408 -> 0).
+        int cotaParaElPlano = VillageGenerator.cotaDeLaPlaza(level, center);
+        VillageGenerator.troncosBajoLaCota(level, center, cotaParaElPlano, false);
+        VillageGenerator.quitarMitadesDeCamaHuerfanas(level, center);
+        VillageGenerator.asegurarElPasoDeLasCompuertas(level, center, cotaParaElPlano);
         VillageGenerator.captureBlueprint(level, center); // el plano vuelve a ser lo que el pueblo es ahora
         saved.setCasasVersion(objectiveIndex, CURRENT_HOUSES);
         saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
