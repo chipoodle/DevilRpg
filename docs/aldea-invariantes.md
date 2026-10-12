@@ -7339,6 +7339,28 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I337 · LA GUARDIA DEL ASEDIO: LA API BUENA EXISTE (`hayAsedio`) PERO **NO HAY CENTRO -> ÍNDICE**; EL ARREGLO VA POR EL QUE LLAMA
+
+Continuación de I336 ✓, con lo medido en esta ronda (leído, no supuesto ✓):
+- **La API del asedio de verdad existe** ✓: **`VillageManager.hayAsedio(level, objectiveIndex)` (L1971)** -> delega en
+  **`isUnderAttack(level, objectiveIndex)`** ✓, y su propio javadoc explica para qué es (*«lo mismo, público, para el
+  **zombie asediador**…»* ✓). Es **el dato bueno** para mi guardia (I296 ✗: «cualquier zombi a 96 bloques» ✓).
+- **Pero necesita el ÍNDICE de la aldea** ✗ — y **no hay ayudante de centro -> índice**: grep de
+  `indiceDe|indicePara|indexOf|static int …[Cc]entro|aldeaEn(` en `VillageManager` y `VillageSavedData` -> **0**
+  coincidencias útiles ✓ (sólo `palette.indexOf`, que es otra cosa ✓). O sea: desde `VillageGenerator` **no se puede
+  preguntar por el asedio** sin inventarse una conversión ✗ — y no la voy a inventar ✗ (I331 ✓).
+
+**EL ARREGLO, entonces, va por el QUE LLAMA** ✓ (que **sí** sabe el índice ✓): `VillageManager` pasa a
+`rehacerMuro(...)`/a la pasada el **booleano del asedio real** (`hayAsedio(level, i)` ✓, que es una línea donde ya tiene
+`i` ✓), y la guardia usa **ese booleano** ✓ en vez de mirar zombis a 96 bloques ✗. Es **una firma y una llamada** ✓, con la
+misma medida: **0** `el muro NO se repone` **sin** asedio ✓ y **0** `muro reconstruido` **con** asedio ✓ (hoy **1761** y
+**0**, justo al revés ✗).
+
+**Y MIENTRAS TANTO, dicho claro** ✓: la guardia se queda **como está** ✗ y el defecto es **acotado**: sólo **aplaza** el
+reconstruido del muro —que existe para los **restos de migración** ✓ (estético e idempotente ✓)— mientras un zombi ande
+cerca por la noche ✓; **no** rompe el sello, ni la comida, ni la granja ✓, y **0 sofocaciones** siguen medidas ✓ (I336 ✓).
+Prefiero un defecto **conocido y acotado** a un arreglo **inventado** ✗.
+
 ### I336 · LA GUARDIA DEL ASEDIO (I296) DISPARA CON **CUALQUIER ZOMBI** Y DEJA EL MURO SIN REPONER: REGRESIÓN MÍA, MEDIDA
 
 Corrida con **mundo nuevo** (`tanda-rapida.ps1 210 -MundoNuevo` ✓), que es la que llevaba rondas debiendo ✗, y ha valido
