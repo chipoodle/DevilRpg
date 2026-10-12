@@ -7339,6 +7339,35 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I333 · LAS «4 CAMAS DE LA CALLE» **NO ESTÁN EN LA CALLE**: ESTÁN EN UN RECINTO CON PAREDES (etiqueta mía, medida y corregida)
+
+Antes de tocar (lección de I331 ✗), medida **su entorno** una por una (`build/camas_calle_entorno.py` ✓, solo lectura):
+
+```
+(531,63,560) red_bed   suelo=grass_block  encima=air x6   paredes: S=red_bed
+(531,63,561) red_bed   suelo=grass_block  encima=air x6   paredes: E=cobblestone S=cobblestone N=red_bed
+(531,63,565) red_bed   suelo=grass_block  encima=air x6   paredes: S=red_bed N=cobblestone
+(531,63,566) red_bed   suelo=grass_block  encima=air x6   paredes: N=red_bed
+(535,63,561) white_bed suelo=oak_planks  encima=[…, oak_planks a +6]  paredes: O=ladder N=oak_planks
+```
+
+**Lo que dicen los datos** ✓✓: **no** son camas sueltas tiradas en la calle ✗ — son **DOS camas ENTERAS** (las parejas están
+pegadas: `560`-`561` y `565`-`566` ✓) **dentro de un recinto con paredes de `cobblestone`** ✓, sobre **césped** ✓; y la
+quinta es una cama **blanca dentro de una casa** ✓ (techo de tablones a **+6** ✓ y una **escalera** al lado ✓). O sea: **la
+etiqueta «EN LA CALLE» era MÍA** ✗ (mi contador sólo miraba «capa 63 y `x=531`» ✓), **no** lo que hay en el mundo ✓.
+
+**Y por eso ninguna regla las quitaba — y hace bien** ✓: `quitarCamasPorEncimaDeLosTejados` (I271/I272 ✓) mira, **como su
+nombre dice**, las camas **por encima de los tejados** (`y > cota + 9` ✓) y **no** las de la capa del suelo ✓ -> una cama
+**al nivel del pueblo dentro de un recinto** es **legítima** ✓ (no es un resto flotante ni está en la calle ✓). Eso explica
+también, de paso, **por qué I331 quitó ~50 mitades** ✗✓: al endurecer el techo toqué la regla que **sí** selecciona camas
+(muchas de casas de dos plantas, `y = cota + 9` para arriba ✓) y me llevé por delante camas **buenas** ✓.
+
+**CONSECUENCIA** ✓: el punto de las camas **queda cerrado por la parte que era de verdad** ✓✓ — **«camas encima de los
+tejados»: 4 -> 0, MEDIDO** ✓ (I318 ✓) y **`El obrero repuso red_bed` = 0** ✓ — y lo que queda (las 2 camas del recinto y la
+de la casa) **no es un defecto**: es mobiliario **dentro** de estructuras ✓. **Lo que NO se toca** ✗: ni la regla del
+techo (retirada en I332 ✓) ni las camas a nivel del suelo ✓ — y si algún día se quiere una regla de «camas fuera de las
+casas», su dato bueno es **el plano** (`TRAZADO`, L120 ✓), **no** una heurística de bloques ✗ (I331 ✓).
+
 ### I332 · RETIRADA LA REGLA DEL TECHO DE VERDAD (I331): QUITÓ ~50 MITADES DE CAMAS **DE DENTRO** Y DEJÓ LAS 4 DE LA CALLE
 
 Retirada por su propia medida ✓, que es la regla de la casa: **lo que no mejore la media se retira y se dice** ✓. El par
