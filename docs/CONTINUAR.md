@@ -98,6 +98,26 @@ del que sea: zombi, esqueleto…).
 
 ### 2.0 · LO QUE ESTA ABIERTO **HOY** (puesto al dia el 9-oct-2026)
 
+**TANDA DEL 12-oct-2026 (I353-I355) — LOS DOS REPORTES CON CAPTURA, CERRADOS** ✓:
+1. **EL ASEDIO NO ENTRABA** ✓: medido en su registro en vivo — **228** `pica Block`, **todos a y=60-61**, o sea **por DEBAJO**
+   del suelo del pueblo (63), 5 escalones y **0 brechas** ✗; y **no** era el bucle de reponer el muro (`muro reconstruido` = **0**
+   ✓). La causa: `AggressiveZombieEntity.breakBlockTowards` (**L376**) miraba candidatos **solo con `dy = 0..1`** (su propia
+   altura) aunque sabe que el objetivo esta arriba (**L411**). **Arreglo**: mira **tambien hacia arriba**, hasta la altura del
+   objetivo (**tope 3**), manteniendo la preferencia por lo bajo (**e2a1cba**). **Su prueba**: en el proximo asedio los
+   `pica Block` deben salir **a y=63** y aparecer **brecha/entrada** ✓ (hoy: a 60-61 y ninguna ✗).
+2. **LA ALDEA CON PISO DE AGUA (la del lago)** ✓: medido — aldea 1, **cota 63** (lo dice el auditor ✓) con **7192 celdas de agua
+   dentro del recinto y 4503 columnas de agua a y=63** ✗. **Arreglo**: `VillageGenerator.ponerPisoDondeHayAgua` pone **bloque en
+   la cota y tierra firme debajo** (el piso como el resto del pueblo: el suelo se pisa a la cota y la tierra va una por debajo),
+   **respetando el lago de la pesquera** (`esCeldaDelLago`) y sin tocar nada construido; va en el **LATIDO** (en la pasada **NO**
+   se ejecutaba ✗, medido: 0 trazas) (**b4eb947**, **1b0a5a3**, **744e475**). **Medido en la copia despues**: `y=62
+   grass_block=5951` + piedra/barro/arenisca/arena (**piso solido** ✓) y `y=63 air=10881` + vallas/troncos/cobblestone/trigo
+   (**sin agua** ✓), **columnas con agua en la cota: NINGUNA** ✓. El agua que queda (2798) esta **debajo** del suelo: es el lago
+   bajo la aldea, por diseno ✓.
+**Y DOS ERRORES MIOS DE ESTA TANDA, DICHOS** ✗✓: **(a)** el contador de agua tenia una linea que **escribia la cota por su
+cuenta** en vez de medir la altura ✗ (de ahi salio mi falsa conclusion de I347, *«no inunda»* ✗, ya retirada ✓); **(b)** al
+escribir el acta **la trunque** (2887 lineas ✗) por olvidar la cola del fichero — restaurada con `git checkout HEAD~1` ✓ y
+reescrita ✓, y desde ahora **los scripts de documentos comprueban que el fichero CRECE** o abortan ✓.
+
 **TANDA DEL 11-oct-2026 (I296-I346) — CERRADO Y MEDIDO** ✓: la **granja entera** (0 SIN SEMBRAR · 0 PISOTEADA · 0 atoros ·
 0 `pies=water`; con sus dos causas de raíz: el paso de las compuertas encharcado, **I300**, y **dos goals por la misma
 compuerta**, **I301**) · los **restos flotantes** (**408 -> 0**, I306/I329/I330, y la leccion: el barrido miraba **dentro
