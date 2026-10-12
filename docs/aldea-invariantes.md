@@ -7339,6 +7339,25 @@ errands ✓). Por eso la medida buena no es «una corrida» sino **la traza** �
 ✓) **más** el contador **después de que el plano esté limpio** ✓; y mientras el plano siga pidiendo esas piezas, el
 contador **no puede** llegar a 0 por mucho que el barrido las quite ✗✓.
 
+### I335 · LAS 2 LÍNEAS DE PUERTA SON **EL CASO LEGÍTIMO** (dos aldeanos, dos puertas): EL PUNTO QUEDA CERRADO
+
+Medido con su contexto ✓ (corrida 209), que es lo que faltaba para no dar por bueno un número a ciegas ✗:
+
+```
+4231f6c7-… estaba METIDO en la puerta 590, 63, 587   (aldeano A, otra puerta)
+853fd829-… estaba METIDO en la puerta 595, 63, 553   (aldeano B, otra puerta)
+```
+
+**Dos aldeanos DISTINTOS en DOS puertas DISTINTAS** ✓ — ni el mismo granjero, ni la misma compuerta, ni dos goals
+peleándose ✓ (las dos puertas están en las coordenadas del **anexo/muro**, no en las parcelas ✓, que desde I301 ya **no**
+las toca `VillagerGateGoal` ✓). Es el caso **legítimo** que el propio goal documenta (I157: se le abre a quien se queda
+dentro ✓) y en **toda una corrida** pasa **2 veces** ✓ — antes pasaba **cada segundo** ✗ (medido en su registro:
+`corriendo=[VillagerFarmGoal VillagerGateGoal]` ✓).
+
+**CONSECUENCIA** ✓: el punto de las puertas **queda cerrado** ✓✓ con sus tres cifras: **`METIDO en la puerta` = 2 en toda
+una corrida** (legítimas ✓), **`no consigue llegar` = 0** ✓ y **`pies=water` = 0** ✓ — y la compuerta de las parcelas con
+**dueño único** (I301 ✓).
+
 ### I334 · LA GRANJA, MEDIDA: **0 SIN SEMBRAR · 0 PISOTEADAS · 0 ATOROS · 0 AGUA EN LOS PIES**
 
 Medida **antes de tocar** el fichero más grande del mod ✗ (`VillageFarmGoal`, ~1.600 líneas ✓), en la corrida **209**
