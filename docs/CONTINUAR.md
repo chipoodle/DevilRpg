@@ -1,13 +1,8 @@
 # CONTINUAR AQUÍ — acuerdos, convenciones y pendientes (leer lo PRIMERO)
 
-Rama: **`migration-neoforge-1.21.1`** (estable, compilada, con `lint --strict` verde y **subida a GitHub**).
-**Última actualización: 12-oct-2026 (noche) — I368→I386.** El estado VIVO es la **§2.1** (al final de este documento): ahí está lo hecho y medido y lo que falta, en orden. Las listas anteriores (§2.0 y de ahí hacia abajo) son **históricas**.
-PISOTEADA, 0 atoros, 0 `pies=water`, con sus dos causas de raiz: el paso de las compuertas encharcado y dos goals por la
-misma compuerta), los **restos flotantes** (408 -> 0), las **camas** (tejados 4 -> 0 y `El obrero repuso red_bed` = 0, con
-el arreglo del PLAN), el **muro del asedio** (y los **1761** avisos falsos, corregidos con `hayAsedio`), el **haz** (solo
-dentro del recinto de su aldea), el **pantano** (la cota por encima del agua), el **invocador** (candado en su `setTarget`)
-y el **hambre** (colchon que escala con la poblacion; `pasa hambre` = 0). El **auditor del proyecto da 0 cosas mal** en las
-dos aldeas del jugador. El detalle, con **clase, linea y medida**, esta en `docs/aldea-invariantes.md` (I296-I346).
+Rama de desarrollo: **`migration-neoforge-1.21.1`**. `feature/autonomous-village` debe mantenerse sincronizada con ella.
+**Última actualización: 12-oct-2026 (noche), I368–I386.** El estado vigente está en **§2.1**. La sección §2.0 y las listas
+anteriores conservan el historial y las mediciones de sesiones previas; no deben interpretarse como una segunda cola activa.
 
 ---
 
@@ -15,14 +10,14 @@ dos aldeas del jugador. El detalle, con **clase, linea y medida**, esta en `docs
 
 **Frase corta (recomendada):**
 
-> Lee `docs/CONTINUAR.md` y sigue por lo pendiente; mide con el arnes y no te fies de nada que no este medido.
+> Lee `docs/CONTINUAR.md` §2.1 y sigue la cola vigente; mide con el arnes y no te fies de nada que no este medido.
 
 **Variante, si quieres que empiece por algo concreto:**
 
-> Lee `docs/CONTINUAR.md` y sigue por el pendiente 1 (la regla del muro perimetral).
+> Lee `docs/CONTINUAR.md` §2.1 y empieza por A1 (los cuatro guardias equipados desde la fundación).
 
-Con eso basta: el documento tiene los pendientes **con clase y numero de linea**, la forma de medir y las reglas de la
-casa, asi que no hace falta repetir contexto ni volver a explicar lo ya andado.
+Con eso basta: §2.1 contiene la cola vigente; §2.0 conserva el historial detallado. El documento también contiene las
+reglas de trabajo y las herramientas de medida.
 
 ---
 
@@ -543,7 +538,7 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 7. El centro de la aldea tomado de la caja de lo construido **desplazo y duplico** la aldea del jugador (mundo perdido).
 
 
-## §2.1 · ESTADO AL 12-oct-2026 (noche) — LO QUE ESTÁ HECHO Y LO QUE FALTA
+## §2.1 · ESTADO AL 12-oct-2026 (noche) — RESUMEN Y COLA VIGENTE
 
 **Lo que está hecho y MEDIDO** (todos con `BUILD SUCCESSFUL` y `lint --strict` verde, en `ed937ff`..`cf09b3b`):
 
@@ -566,19 +561,6 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 
 **COLA DIFERIDA** (necesita un dato del jugador antes de tocar código): **(B1)** el **haz** (mirar desde dentro si sale en el kiosco); **(B2)** el **minero** (confirmar si anda o pasar su línea); **(B3)** verificar el **orden de objetivos** con un asedio real.
 
-
-1. **El acta** — hecho con este mismo cambio ✓ (I368→I386 arriba).
-2. **A1 · Los 4 guardias** al fundar la aldea, **rondando** y **con armadura, arco y espada** desde el principio. Lo que YA
-   existe: `VillageGuardGoal` (ronda dentro del muro ✓ y **equiparse del almacén** ✓). Lo que falta: **4 desde el inicio** y
-   **sembrar el almacén con 4 juegos** (si nace vacío, salen **desarmados**). Hoy **no hay traza** de guardias: habría que
-   añadirla para poder medirlo.
-3. **A2 · Que los asaltantes LLEGUEN AL CENTRO** ✗ (entran 9, al centro **0**). Traza para medirlo: la del informe de posición
-   (`AggressiveZombieEntity` L1141, cada 5 s, coste cero).
-4. **B1 · El haz de luz**: el código ya lo dibuja en el centro guardado y **solo si estás dentro** (I303). **Falta que el
-   jugador mire desde dentro**: si lo ve a un costado, el centro guardado **no** es el del kiosco y hay que anclarlo al kiosco.
-5. **B2 · El minero**: en la copia del arnés **trabajó** (`minero 56`) y su paso ya está despejado (I366), pero **falta
-   confirmarlo** en su mundo (o una traza propia).
-6. **B3 · Verificar el orden de objetivos** (jugador/minions primero, I379) con un asedio real.
 
 **Reglas de trabajo que evitarn desastres** (aprendidas a golpes hoy, y están en el historial):
 
