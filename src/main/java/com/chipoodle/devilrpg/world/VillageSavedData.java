@@ -74,6 +74,20 @@ public final class VillageSavedData extends SavedData {
     private final Map<Integer, Integer> food = new HashMap<>();
     /** Desde cuándo la aldea pasa hambre (0 = tiene comida). Sirve para las consecuencias del hambre. */
     private final Map<Integer, Long> starvingSince = new HashMap<>();
+    /**
+     * Aldeas a las que <b>ya se les dio su guardia de fundación</b> (los cuatro guardias que nacen con el pueblo,
+     * ver {@code VillageManager.repartirGuardia} y {@code VillageGenerator.spawnGuardiasDeFundacion}).
+     * <p>
+     * Es estado <b>persistente</b> a propósito: los cuatro guardias son de la <b>fundación</b>, no de la población,
+     * así que <b>no se vuelven a convocar</b> —ni al cargar el mundo, ni al repoblar una aldea vacía
+     * ({@code VillageGenerator.spawnVillagers})—. Sin esta marca, cargar el mundo volvería a soltar cuatro aldeanos
+     * nuevos cada vez ({@code preGenerate} solo mira {@code isGenerated}, y ése se marca para siempre).
+     * <p>
+     * En un guardado <b>viejo</b> esta lista viene vacía: esas aldeas ya están construidas y
+     * {@code preGenerate} no vuelve a pasar por ellas, así que no se les añaden guardias (sus guardias siguen siendo
+     * los dinámicos de siempre).
+     */
+    private final Set<Integer> guardiaFundada = new HashSet<>();
 
     /**
      * Planos de las aldeas: qué bloque debería haber en cada sitio (fuera del suelo natural). Los usa el
@@ -186,6 +200,9 @@ public final class VillageSavedData extends SavedData {
             data.fallen.add(index);
             data.resolved.add(index); // una aldea caída no vuelve a asediarse
         }
+        for (int index : tag.getIntArray("GuardiaFundada")) {
+            data.guardiaFundada.add(index);
+        }
         for (Tag element : tag.getList("Pressure", Tag.TAG_COMPOUND)) {
             CompoundTag entry = (CompoundTag) element;
             int index = entry.getInt("Index");
@@ -243,6 +260,7 @@ public final class VillageSavedData extends SavedData {
         }
         tag.put("Noticed", noticedTag);
         tag.putIntArray("Fallen", toArray(fallen));
+        tag.putIntArray("GuardiaFundada", toArray(guardiaFundada));
         ListTag pressureTag = new ListTag();
         // SE GUARDA LA UNIÓN, no solo las que ya tienen presión (I98): una aldea que acaba de empezar a contar
         // tiene `Since` (su punto de partida) y `Ticks` todavía en 0, y con el recorrido viejo —solo `pressureTicks`—
@@ -408,8 +426,21 @@ public final class VillageSavedData extends SavedData {
         }
     }
 
-    // --- Salud del asentamiento (Iteración 3, paso 2) ---------------------------------------------
+    // --- La guardia de fundación (A1) ---------------------------------------------------------------
 
+    /** ¿A esta aldea <b>ya se le dio su guardia de fundación</b> (los cuatro guardias que nacen con el pueblo)? */
+    public boolean tieneGuardiaDeFundacion(int objectiveIndex) {
+        return guardiaFundada.contains(objectiveIndex);
+    }
+
+    /** Apunta que a la aldea ya se le dio su guardia de fundación (para no volver a convocarla nunca). */
+    public void markGuardiaDeFundacion(int objectiveIndex) {
+        if (guardiaFundada.add(objectiveIndex)) {
+            setDirty();
+        }
+    }
+
+    // --- Salud del asentamiento (Iteración 3, paso 2) ---------------------------------------------
     /**
      * Aldeanos vivos la última vez que se pudo contar ({@link #HEALTH_UNKNOWN} si nunca se ha mirado, p. ej.
      * porque el chunk está descargado). No se cuenta en vivo a propósito: cuando el jugador está lejos el

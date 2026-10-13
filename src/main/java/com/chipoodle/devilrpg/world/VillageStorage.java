@@ -258,10 +258,13 @@ public final class VillageStorage {
                 // --- LA MILICIA DE ARRANQUE (2 espadachines + 2 arqueros): CUERO Y MADERA, como pidió el jugador.
                 // Con esto los cuatro primeros guardias salen equipados del almacén (VillagerGuardGoal L50-51) y,
                 // cuando el herrero forje hierro, ellos solos irán mejorando: la remesa no hay que tocarla.
-                new Entrega(Items.LEATHER_HELMET, 2, "milicia: casco de cuero"),
-                new Entrega(Items.LEATHER_CHESTPLATE, 2, "milicia: peto de cuero"),
-                new Entrega(Items.LEATHER_LEGGINGS, 2, "milicia: grebas de cuero"),
-                new Entrega(Items.LEATHER_BOOTS, 2, "milicia: botas de cuero"),
+                // CUATRO JUEGOS DE ARMADURA, no dos (medido el 13-oct-2026, corrida 609): con dos, el que llegaba el
+                // tercero se quedaba sin peto ni botas ✗ (el equipamiento es pieza a pieza y el cuarto guardia llegó
+                // cuando ya no había). Son CUATRO guardias, así que son cuatro juegos.
+                new Entrega(Items.LEATHER_HELMET, 4, "milicia: casco de cuero (los cuatro guardias de fundacion)"),
+                new Entrega(Items.LEATHER_CHESTPLATE, 4, "milicia: peto de cuero"),
+                new Entrega(Items.LEATHER_LEGGINGS, 4, "milicia: grebas de cuero"),
+                new Entrega(Items.LEATHER_BOOTS, 4, "milicia: botas de cuero"),
                 new Entrega(Items.WOODEN_SWORD, 2, "milicia: espada de madera del espadachín"),
                 new Entrega(Items.SHIELD, 2, "milicia: escudo del espadachín"),
                 new Entrega(Items.BOW, 2, "milicia: arco del arquero"),

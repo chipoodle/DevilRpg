@@ -241,10 +241,28 @@ public final class VillageManager {
      */
     public static final String GUARD_INDEX_TAG = "DevilRpgGuardiaPuesto";
     /**
+     * <b>Marca de la GUARDIA DE FUNDACIÓN</b> (A1): el aldeano que nació con la aldea como guardia. Es lo que lo
+     * distingue de un <b>reclutado dinámico</b> (el que sale de los sobrantes del pueblo), y va en los datos
+     * persistentes del aldeano para que la marca sobreviva al guardado y a la recarga.
+     * <p>
+     * <b>Se marca con esto y no con la profesión, el equipo ni el sitio de la lista</b>, que es lo que pidió el
+     * jugador y es lo único seguro: el guardia pierde el oficio al alistarse ({@code alistarGuardia}), su equipo
+     * cambia con lo que forje el herrero, y el orden de la lista de aldeanos cambia entre latidos. La marca, en
+     * cambio, es suya y no se toca.
+     */
+    public static final String GUARD_FOUNDING_TAG = "DevilRpgGuardiaDeFundacion";
+    /**
      * Tamaño de la milicia: <b>4 espadachines y 3 arqueros</b>, que es la formación con la que el jugador quiere que
      * marchen a la guarida. Si la aldea cría más gente que eso, los demás siguen con lo suyo (y pueden ser obreros).
      */
     public static final int MILICIA_MAX = 7;
+    /**
+     * <b>Cuántos de esos puestos son de la GUARDIA DE FUNDACIÓN</b> (A1): los cuatro guardias que trae la aldea de
+     * fábrica (dos espadachines y dos arqueros), <b>adicionales</b> a los doce puestos de oficio del pueblo. Ocupan
+     * los índices <b>0..3</b>, o sea que de la milicia completa (7) solo quedan <b>3 puestos dinámicos</b> (índices
+     * 4, 5 y 6) para los aldeanos que sobran.
+     */
+    public static final int GUARDIA_DE_FUNDACION = 4;
     private static final int MILICIA_ESPADACHINES = 4;
     /** Marca (en los datos persistentes del aldeano) de <b>cuántos enemigos ha matado</b> ese guardia (I62). */
     public static final String GUARD_KILLS_TAG = "DevilRpgGuardiaMatanzas";
@@ -913,6 +931,50 @@ public final class VillageManager {
         // estado se encontrara la aldea después.
         VillageSavedData.Blueprint plano = VillageGenerator.generate(level, target);
         saved.markGenerated(objectiveIndex);
+        // Y LA GUARDIA DE FUNDACIÓN (A1), en la MISMA pasada en que el pueblo nace: cuatro aldeanos ADICIONALES
+        // —sin oficio, para no ocupar ninguno de los doce puestos— que el reparto de la milicia alista como fijos.
+        // Se convoca AQUÍ, con una marca PERSISTENTE (`tieneGuardiaDeFundacion`), y no dentro de
+        // `VillageGenerator.generate`: así se puede comprobar que no se repite en una recarga (medido: `isGenerated`
+        // ya está puesto y `preGenerate` no vuelve a entrar, y con la marca tampoco se convocan dos veces).
+        if (!saved.tieneGuardiaDeFundacion(objectiveIndex)) {
+            VillageGenerator.spawnGuardiasDeFundacion(level, target);
+            // Y SE MARCAN, uno a uno, con la marca PERSISTENTE de la cohorte (ver `GUARD_FOUNDING_TAG`). Se cogen los
+            // CUATRO ADULTOS SIN OFICIO más nuevos de la aldea, en orden de UUID (estable), y ese orden decide su
+            // índice (0..3) y su tipo (par = espadachín, impar = arquero: dos y dos). Los doce aldeanos de los puestos
+            // tienen oficio, así que no pueden colarse aquí; y si la aldea estuviera vacía (no es el caso: se acaba de
+            // generar) simplemente no se marca a nadie. Los índices se escriben YA para que el reparto de la milicia
+            // no tenga que inventarlos después.
+            List<Villager> recienLlegados = new ArrayList<>();
+            for (Villager villager : level.getEntitiesOfClass(Villager.class,
+                    new AABB(target).inflate(VillageGenerator.FENCE_RADIUS + 44))) {
+                if (!villager.isBaby() && villager.getVillagerData().getProfession() == VillagerProfession.NONE) {
+                    recienLlegados.add(villager);
+                }
+            }
+            recienLlegados.sort(Comparator.comparing(v -> v.getUUID().toString()));
+            int marcados = 0;
+            for (Villager villager : recienLlegados) {
+                if (marcados >= GUARDIA_DE_FUNDACION) {
+                    break;
+                }
+                villager.getPersistentData().putBoolean(GUARD_FOUNDING_TAG, true);
+                villager.getPersistentData().putInt(GUARD_INDEX_TAG, marcados);
+                // Y SU TIPO, escrito YA (medido en la corrida 610): el índice no basta, porque `tipoDe` lee su propia
+                // marca (`GUARD_TYPE_TAG`) y sin ella los cuatro salían como espadachines aunque los arqueros
+                // llevaran arco. Par = espadachín, impar = arquero, igual que en el reparto de la milicia.
+                villager.getPersistentData().putInt(GUARD_TYPE_TAG,
+                        marcados % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO);
+                // Y CON SU EQUIPO PUESTO desde el primer tick (ver `equiparAlGuardiaDeFundacion`): el tipo sale del
+                // índice (par = espadachín, impar = arquero), igual que en el reparto de la milicia, así que la
+                // guardia nace armada y visible sin esperar a que el pueblo le lleve la remesa al almacén.
+                VillageGenerator.equiparAlGuardiaDeFundacion(villager, marcados % 2);
+                DevilRpg.LOGGER.info("[Village] Aldea {}: guardia de fundacion #{} ({}), marcado {} en {}",
+                        objectiveIndex, marcados, marcados % 2 == 0 ? "espadachin" : "arquero",
+                        villager.getUUID(), villager.blockPosition().toShortString());
+                marcados++;
+            }
+            saved.markGuardiaDeFundacion(objectiveIndex);
+        }
         if (plano != null) {
             saved.setBlueprint(objectiveIndex, plano);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
@@ -3278,25 +3340,40 @@ public final class VillageManager {
     }
 
     /**
-     * Alista en la <b>guardia</b> a los aldeanos adultos que <b>sobran</b> (lo pidió el jugador: la milicia se forma
-     * solo cuando están cubiertos los oficios del pueblo) y desalista a los que ya no sobran.
-     * <p>
-     * <b>Quién sobra</b>: se reparten los <b>puestos fijos</b> (1 granjero, 1 herrero de armas, 1 de herramientas,
-     * 1 clérigo, 1 recolector, 1 ganadero y 1 cocinero) en orden <b>estable</b> (por UUID): los primeros de cada
-     * oficio se quedan con su
-     * puesto y los demás son gente de sobra. Así la guardia no le quita el granjero ni los herreros a la aldea (que
-     * es lo que la dejaría sin comer y sin indumentaria) y con 5 aldeanos —los que tiene una aldea sana— no hay
-     * guardia: hacen falta <b>crías</b>, o sea una aldea que crece.
-     * <p>
-     * El <b>tipo</b> va por número: los primeros son espadachines y el resto arqueros, en la proporción que el
-     * jugador quiere para la marcha a la guarida (4 espadachines y 3 arqueros).
-     */
-    /**
-     * El último reparto de milicia que se ha escrito en el registro (ver {@link #repartirGuardia}): sirve para escribir
-     * la línea <b>solo cuando cambia</b>, porque el latido reparte cada 10 s y repetirla sería ruido.
+     * <b>El último reparto de milicia que se ha escrito en el registro</b> (ver {@link #repartirGuardia}): sirve para
+     * escribir la línea <b>solo cuando cambia</b>, porque el latido reparte cada 10 s y repetirla sería ruido.
      */
     private static String ultimoRepartoDeLaMilicia = "";
 
+    /**
+     * <b>¿Ese aldeano es de la GUARDIA DE FUNDACIÓN?</b> (A1): nació con la aldea como guardia, no se reclutó por
+     * sobrar. La marca vive en sus datos persistentes ({@link #GUARD_FOUNDING_TAG}), así que sobrevive al guardado y
+     * a la recarga.
+     */
+    public static boolean esGuardiaDeFundacion(Villager villager) {
+        return villager.getPersistentData().getBoolean(GUARD_FOUNDING_TAG);
+    }
+
+    /**
+     * Reparte la <b>guardia</b>: alista a la <b>cohorte de fundación</b> (los cuatro guardias que nacen con el
+     * pueblo) y, con lo que <b>sobra</b> del pueblo, llena la milicia hasta {@link #MILICIA_MAX}; a los que ya no
+     * sobran los da de baja.
+     * <p>
+     * <b>Quién sobra</b>: se reparten los <b>puestos fijos</b> del pueblo (los de
+     * {@code VillageGenerator.puestosPorOficio()}) en orden <b>estable</b> (por UUID): los primeros de cada oficio se
+     * quedan con su puesto y los demás son gente de sobra. Así la milicia no le quita el granjero ni los herreros a
+     * la aldea (que es lo que la dejaría sin comer y sin indumentaria).
+     * <p>
+     * <b>A1 · LOS CUATRO GUARDIAS DE FUNDACIÓN</b> (lo pidió el jugador: *«ya debiste haber agregado 4 cuando inició
+     * la aldea»*). Antes la milicia salía <b>solo</b> de los sobrantes, así que una aldea recién fundada (doce
+     * adultos, uno por puesto) <b>no tenía ni un guardia</b>. La solución anterior (I389) los sacaba de los que
+     * cubrían puestos fijos, y eso dejaba al pueblo <b>sin cuatro de sus doce oficios</b> —medido en el código: la
+     * aldea nacía con 12 adultos, entraba aquí con 12 y salía con 8 trabajadores y 4 guardias—. Ahora los cuatro son
+     * <b>ADICIONALES</b> ({@code VillageGenerator.spawnGuardiasDeFundacion} los convoca al fundar la aldea, sin
+     * oficio), de modo que los doce puestos quedan <b>intactos</b> y la milicia tiene su formación desde el primer
+     * día. El reparto dinámico <b>no los toca</b>: la cohorte de fundación no se da de baja, no se reasigna y no
+     * consume puestos dinámicos.
+     */
     private static void repartirGuardia(ServerLevel level, List<Villager> aldeanos, BlockPos center,
                                         int objectiveIndex) {
         // Puestos fijos que NO pueden quedarse sin cubrir (cupo por oficio). Lo que sobre de cada oficio, o los
@@ -3310,59 +3387,117 @@ public final class VillageManager {
         // PESCADORES, el SEGUNDO GRANJERO (la guardia Bibiana, `9036d1d0`) y un aldeano sin oficio.
         Map<VillagerProfession, Integer> cupo = VillageGenerator.puestosPorOficio();
 
-        List<Villager> adultos = new ArrayList<>();
+        // LA COHORTE DE FUNDACIÓN, SEPARADA PRIMERO (A1): son guardias por nacimiento, no por sobrar. No entran en
+        // el reparto de puestos (no tienen oficio) ni en la lista de candidatos dinámicos, y ocupan los índices
+        // 0..{@link #GUARDIA_DE_FUNDACION}-1, que es lo que deja LIBRES los tres índices dinámicos.
+        List<Villager> fundacion = new ArrayList<>();
+        List<Villager> resto = new ArrayList<>();
         for (Villager villager : aldeanos) {
-            if (puedeSerGuardia(villager)) {
-                adultos.add(villager);
+            if (esGuardiaDeFundacion(villager)) {
+                fundacion.add(villager);
+            } else {
+                resto.add(villager);
             }
         }
-        adultos.sort(Comparator.comparing(v -> v.getUUID().toString())); // orden ESTABLE entre latidos
+        // ORDEN ESTABLE por UUID entre latidos: el índice dinámico y el tipo salen de aquí, así que no puede bailar.
+        fundacion.sort(Comparator.comparing(v -> v.getUUID().toString()));
+        resto.sort(Comparator.comparing(v -> v.getUUID().toString()));
+
+        // Los índices que la fundación tiene COGIDOS (se lee su marca, no se recalcula): los dinámicos no pueden
+        // pisarlos. Si un guardia de fundación murió, su índice queda libre para un dinámico, y cuando los cuatro
+        // están vivos los índices 0..3 son suyos.
+        java.util.Set<Integer> indicesCogidos = new java.util.HashSet<>();
+        for (Villager guardia : fundacion) {
+            int indice = guardia.getPersistentData().getInt(GUARD_INDEX_TAG);
+            if (indice >= 0 && indice < GUARDIA_DE_FUNDACION) {
+                indicesCogidos.add(indice);
+            }
+        }
+        // Y LA COHORTE DE FUNDACIÓN SE ASEGURA EN CADA LATIDO (aunque se llame a esto con un asedio dentro): su
+        // marca, su índice, su tipo y su goal. El índice se CONSERVA si ya lo tenía y es de la fundación (0..3); si
+        // nació antes de que se le diera (no tiene marca de puesto), se le da el PRIMER índice de la fundación que
+        // esté libre, en orden de UUID, y el tipo sale del índice: par = espadachín, impar = arquero, así que los
+        // cuatro salen DOS y DOS. `asegurarGoalDeGuardia` solo añade el goal si le falta, así que NUNCA hay dos
+        // goals por entidad (ni al recargar el mundo, ni con asedio en curso).
+        for (Villager guardia : fundacion) {
+            int indice = guardia.getPersistentData().getInt(GUARD_INDEX_TAG);
+            if (indice < 0 || indice >= GUARDIA_DE_FUNDACION || !indicesCogidos.contains(indice)) {
+                for (int libre = 0; libre < GUARDIA_DE_FUNDACION; libre++) {
+                    if (!indicesCogidos.contains(libre)) {
+                        indice = libre;
+                        break;
+                    }
+                }
+            }
+            indicesCogidos.add(indice);
+            guardia.getPersistentData().putInt(GUARD_INDEX_TAG, indice);
+            int tipo = indice % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO;
+            alistarGuardia(level, guardia, center, objectiveIndex, indice, tipo);
+        }
+        List<Villager> candidatos = new ArrayList<>(resto);
 
         Map<VillagerProfession, Integer> usados = new HashMap<>();
         List<Villager> sobrantes = new ArrayList<>();
-        // I389: los que CUBREN un puesto fijo, para poder sacar de ahi la milicia minima si no hay sobrantes.
-        List<Villager> cubrenPuestos = new ArrayList<>();
-        for (Villager villager : adultos) {
+        for (Villager villager : candidatos) {
             VillagerProfession profesion = villager.getVillagerData().getProfession();
             int yaHay = usados.getOrDefault(profesion, 0);
             if (yaHay < cupo.getOrDefault(profesion, 0)) {
                 usados.put(profesion, yaHay + 1);
-            cubrenPuestos.add(villager);
                 continue; // cubre un puesto fijo del pueblo
             }
             sobrantes.add(villager);
         }
-
-        // I389 · CUATRO GUARDIAS DESDE EL PRINCIPIO (lo pidio el jugador: "ya debiste haber agregado 4 cuando inicio
-        // la aldea"). Hasta ahora la milicia salia SOLO de los sobrantes (los que no cubrian un puesto fijo del pueblo),
-        // asi que una aldea recien fundada, con pocos aldeanos, NO TENIA NI UN GUARDIA. Ahora la milicia se lleva sus 4
-        // PRIMERO: si no hay sobrantes suficientes, se sacan de los que cubren puestos fijos (la defensa manda). El resto
-        // sigue igual: hasta MILICIA_MAX y alternando espadachin/arquero.
-        final int MILICIA_MINIMA = 4;
-        while (sobrantes.size() < MILICIA_MINIMA && !cubrenPuestos.isEmpty()) {
-            sobrantes.add(cubrenPuestos.remove(cubrenPuestos.size() - 1));
+        // LOS QUE YA ERAN GUARDIA DINÁMICA VAN PRIMERO: el reparto tiene que ser ESTABLE (si el aldeano A es
+        // guardia hoy, sigue siéndolo mañana aunque el UUID de B sea menor). Sin esto, al morir un aldeano del pueblo
+        // los puestos se recolocan y la milicia entera cambiaría de dueño en cada latido.
+        List<Villager> preferidos = new ArrayList<>();
+        for (Villager villager : sobrantes) {
+            if (VillagerGuardGoal.esGuardia(villager)) {
+                preferidos.add(villager);
+            }
         }
-        // Los primeros se alistan (hasta el tope de la milicia); el resto vuelve a la vida civil.
+        // Y ninguno de la fundación: sus puestos NO son dinámicos (ésta es la protección de la cohorte).
+        preferidos.removeAll(fundacion);
+
+        // LOS PUESTOS LIBRES DE LA MILICIA: los índices que no tiene cogidos la fundación, de menor a mayor.
+        List<Integer> libres = new ArrayList<>();
+        for (int i = 0; i < MILICIA_MAX; i++) {
+            if (!indicesCogidos.contains(i)) {
+                libres.add(i);
+            }
+        }
+        // Se alistan hasta el TOPE, sesgando el reparto a los que YA eran guardia (estabilidad).
+        List<Villager> alistados = new ArrayList<>(preferidos);
+        for (Villager villager : sobrantes) {
+            if (alistados.size() >= libres.size()) {
+                break;
+            }
+            if (!alistados.contains(villager)) {
+                alistados.add(villager);
+            }
+        }
+        // El resto vuelve a la vida civil (si era guardia dinámica, deja la guardia). A los de FUNDACIÓN no se les
+        // toca aquí: su baja no la decide este reparto.
+        for (Villager villager : candidatos) {
+            if (!alistados.contains(villager) && VillagerGuardGoal.esGuardia(villager)) {
+                desalistarGuardia(villager);
+            }
+        }
         int espadachines = 0;
         int arqueros = 0;
-        for (int i = 0; i < sobrantes.size(); i++) {
-            Villager villager = sobrantes.get(i);
-            if (i >= MILICIA_MAX) {
-                desalistarGuardia(villager);
-                continue;
-            }
-            int tipo = i % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO;
+        for (int i = 0; i < alistados.size(); i++) {
+            Villager villager = alistados.get(i);
+            // EL ÍNDICE ES SU PUESTO (y de él sale el tipo): par = espadachín, impar = arquero. Con los cuatro de
+            // fundación (2 y 2) y los tres dinámicos (4 = espadachín, 5 = arquero, 6 = espadachín) la milicia llena
+            // sale en la formación del jugador: CUATRO espadachines y TRES arqueros.
+            int indice = libres.get(i);
+            int tipo = indice % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO;
             if (tipo == VillagerGuardGoal.ESPADACHIN) {
                 espadachines++;
             } else {
                 arqueros++;
             }
-            alistarGuardia(level, villager, center, objectiveIndex, i,
-                    // SE ALTERNAN (lo pidió el jugador: "tampoco he visto ningún arquero; al crearse deberían alternarse"): con el
-                    // corte por número, los cuatro primeros eran espadachines y en milicias pequeñas NO HABÍA NI UN
-                    // ARQUERO. Alternando salen 4 espadachines y 3 arqueros con la milicia llena (la formación de
-                    // siempre) y con dos guardias ya hay uno de cada.
-                    tipo);
+            alistarGuardia(level, villager, center, objectiveIndex, indice, tipo);
         }
         // LA TRAZA DEL REPARTO (25-oct-2026, lo pidió el jugador): que el registro lo DIGA, para poder CONTAR la milicia
         // en vez de deducirla del equipo que se les ve. Se escribe solo cuando CAMBIA el reparto (el latido reparte cada
@@ -3379,20 +3514,14 @@ public final class VillageManager {
                 }
             }
         }
-        String reparto = espadachines + " espadachin(es) y " + arqueros + " arquero(s) de " + sobrantes.size()
-                + " sobrante(s) de " + aldeanos.size() + " aldeano(s), milicia hasta " + MILICIA_MAX
+        String reparto = "fundacion " + fundacion.size() + " + " + espadachines + " espadachin(es) y " + arqueros
+                + " arquero(s) dinamicos de " + sobrantes.size() + " sobrante(s) de " + aldeanos.size()
+                + " aldeano(s), milicia hasta " + MILICIA_MAX
                 + " | alistados DE VERDAD: " + guardiasDeVerdad + " (" + espadachinesDeVerdad + " espadachin(es), "
                 + (guardiasDeVerdad - espadachinesDeVerdad) + " arquero(s))";
         if (!reparto.equals(ultimoRepartoDeLaMilicia)) {
             ultimoRepartoDeLaMilicia = reparto;
             DevilRpg.LOGGER.info("[Milicia] aldea {}: {}", objectiveIndex, reparto);
-        }
-        // Y los que YA no sobran (murió gente, la aldea necesita su oficio) dejan la guardia: si no, la aldea se
-        // quedaría sin granjero o sin herreros por tener milicia.
-        for (Villager villager : aldeanos) {
-            if (VillagerGuardGoal.esGuardia(villager) && !sobrantes.contains(villager)) {
-                desalistarGuardia(villager);
-            }
         }
     }
 
@@ -3740,8 +3869,12 @@ public final class VillageManager {
                 continue;
             }
             // LA GUARDIA NO CUENTA COMO TITULAR DE UN OFICIO (ver `alistarGuardia`): su plaza está libre para un
-            // trabajador de verdad, así que no se apunta en la lista de "oficios cubiertos".
-            if (VillagerGuardGoal.esGuardia(villager)) {
+            // trabajador de verdad, así que no se apunta en la lista de "oficios cubiertos". Y LA DE FUNDACIÓN
+            // TAMPOCO (A1), y hay que decirla APARTE porque este reparto corre ANTES que el de la milicia: el guardia
+            // de fundación nace SIN oficio, así que sin esta comprobación entraría en la lista de `sinOficio` y el
+            // pueblo le daría la plaza de un oficio del pueblo (con su estación y su faena), que es justo lo que no
+            // puede pasar: su puesto es la guardia.
+            if (VillagerGuardGoal.esGuardia(villager) || esGuardiaDeFundacion(villager)) {
                 continue;
             }
             VillagerProfession profesion = villager.getVillagerData().getProfession();

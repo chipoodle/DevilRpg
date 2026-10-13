@@ -55,6 +55,106 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > de línea **se desplazan** con cada cambio, así que **antes de tocar hay que verificar la línea actual del fichero** (y, si no
 > cuadra, **abortar sin tocar nada**, que es lo que hacen los scripts de `.migration-tools/`).
 
+### I390 · LOS CUATRO GUARDIAS DE FUNDACIÓN: la aldea nace con ellos, armados y sin tocar los 12 puestos **[MEDIDO]**
+
+**Lo que pidió el jugador** ✓: *«ya debiste haber agregado 4 cuando inició la aldea»*, con **dos espadachines y dos
+arqueros** y con **armadura, arco y espada** desde el principio, **sin quitarle al pueblo sus oficios** (los 12 puestos
+de `VILLAGER_SPOTS` intactos). Va en **este** repositorio y en la rama **`migration-neoforge-1.21.1`** (lo pidió así,
+porque en `DevilRpg-autonomous`/`feature/autonomous-village` hay otro checkout con su propio trabajo) ✓.
+
+**Lo que había (causa raíz, leída en el código y luego medida)** ✗: el reparto de la milicia
+(`VillageManager.repartirGuardia`, **L3377**) repartía primero los **puestos fijos** del pueblo y sacaba la guardia
+**solo de los sobrantes**. Una aldea **recién fundada** nace con **12 adultos, uno por puesto**
+(`VillageGenerator.spawnVillagers`, L8055: un `spawnOneVillager` por sitio de `VILLAGER_SPOTS`, L7901) ⇒ **cero
+sobrantes** ⇒ **ni un guardia** ✗. El arreglo anterior (**I389**, commit `35d539e`) forzaba 4 sacándolos **de los que
+cubrían puestos fijos**: la aldea entraba en el reparto con 12 trabajadores y salía con **8 trabajadores y 4
+guardias** ✗ (cuatro oficios del pueblo sin titular), que es justo lo que el encargo prohíbe. **Se retira I389** y se
+sustituye por el **modelo de fundación** ✓.
+
+**Qué se implementó**
+
+| Dónde | Qué |
+|---|---|
+| `VillageGenerator` **L7815** `SITIOS_DE_LA_GUARDIA_DE_FUNDACION` | los **cuatro sitios** donde nacen (a ±4 del centro, fuera del kiosco): `(-4,-4) (4,-4) (-4,4) (4,4)` |
+| `VillageGenerator` **L7839** `spawnGuardiasDeFundacion` | los convoca: **cuatro aldeanos ADICIONALES**, `profession = null` (sin oficio, para NO ocupar puesto) y con `huecoLibre` (la misma red que los demás) |
+| `VillageManager` **L940** (dentro de `preGenerate`) | se convoca **al fundar** la aldea, con la marca **persistente** `tieneGuardiaDeFundacion` (no se repite nunca) |
+| `VillageManager` **L953-974** | se marcan los cuatro: `GUARD_FOUNDING_TAG` (**L253**), `GUARD_INDEX_TAG` (0..3), `GUARD_TYPE_TAG` (par = espadachín, impar = arquero) y **su equipo puesto** |
+| `VillageGenerator` **L7865** `equiparAlGuardiaDeFundacion` | el kit de arranque: **4 piezas de cuero** para los cuatro, **espada de madera + escudo** para los espadachines, **arco + 16 flechas** para los arqueros (las mismas piezas que la remesa del almacén) |
+| `VillageManager` **L3377** `repartirGuardia` | **la cohorte va primero y aparte**: se leen sus índices (0..3), se asegura su marca/tipo/goal **en cada latido**, y los **índices dinámicos** son los que quedan libres (4, 5, 6) ⇒ **tope 7 = 4 fijos + 3 dinámicos** |
+| `VillageManager` **L3353** `esGuardiaDeFundacion` | la pregunta que separa **fijo de reclutado**, por la **marca persistente** (no por profesión, ni equipo, ni sitio en la lista) |
+| `VillageManager` **L3877** (`reponerProfesiones`) | la cohorte **no cuenta como titular de un oficio** ni recibe uno del reparto (corre **antes** que el de la milicia, así que hay que decirla aparte) |
+| `VillageManager` **L3755** `asegurarGoalDeGuardia` | idempotente: **añade el goal solo si falta** ⇒ **UN goal por entidad**, también al recargar y con asedio |
+| `VillageSavedData` **L90/L203/L263/L432** | `guardiaFundada`: la marca **persistente** de "a esta aldea ya se le dio su guardia de fundación" (en un guardado viejo la lista llega vacía y esas aldeas conservan su milicia dinámica) |
+| `VillageStorage` **L264-267** `remesaInicialDelAlmacen` | la remesa pasa de **2 a 4 juegos de armadura de cuero** (medido: con 2, el tercero que llegaba se quedaba sin peto ni botas ✗) |
+
+**Invariantes**
+
+1. **Los 12 puestos del pueblo quedan intactos**: los cuatro guardias son **aldeanos de más** (nacen sin oficio), así
+   que `puestosPorOficio()` sigue con sus 12 plazas y **ninguna** se queda sin titular por tener milicia.
+2. **La cohorte es intocable**: el reparto dinámico **no la da de baja, no la reasigna y no le quita el puesto**; su
+   índice (0..3) y su tipo (par/impar) son **estables** (se conservan si ya los tenía).
+3. **Un goal por entidad**: `asegurarGoalDeGuardia` (L3755) solo añade si falta, y se llama desde el latido y desde el
+   alistamiento ⇒ ni al guardar/cargar, ni con asedio, ni en ticks repetidos hay dos.
+4. **El tope 7 manda**: 4 fijos dejan **como mucho 3 dinámicos** (`MILICIA_MAX` **L260**, `GUARDIA_DE_FUNDACION` **L265**).
+5. **El equipo se da UNA vez** (al fundar). Después manda el almacén: revisión diaria y cambio a lo mejor, con la
+   pieza vieja de vuelta al almacén (**I94**). No hay grifo: no se repone en cada tick ni al recargar.
+
+**Medidas (registro del arnés; se dice el número de corrida y lo que decía antes)**
+
+- **ANTES, con I389 (código)**: una aldea nueva entraba al reparto con **12 aldeanos que cubrían los 12 puestos** y la
+  milicia se llevaba **4 de ellos** ⇒ **8 trabajadores y 4 guardias** ✗. *(Evidencia de código, no de corrida: en las
+  corridas 601-608 el reparto no llegó a correr por el asedio inicial, ver el hallazgo de instrumento más abajo.)*
+- **ANTES, el equipo (corrida 609, mundo conservado)**: los cuatro se alistaban ✓ pero **tardaban 40 s o más** en
+  armarse y **uno se quedaba sin peto ni botas** ✗ (`mano=[Wooden Sword] escudo=[Shield] casco=[-] peto=[-] grebas=[-]
+  botas=[-]`). Y con **mundo nuevo** los cuatro pasaban el primer asedio **desarmados** ✗ (la remesa del almacén vive
+  en el latido de la paz, que no corre durante el asedio).
+- **DESPUÉS, los cuatro y su equipo (corrida 611, mundo nuevo, a los 10 s)** ✓:
+  `guardia de fundacion #0 (espadachin)` … `#3 (arquero)`, y en el volcado del arnés los cuatro con
+  `marca=SI indice=0/1/2/3 tipo=espadachin/arquero (esperado …)` y
+  `mano=[Wooden Sword] escudo=[Shield] casco=[Leather Cap] peto=[Leather Tunic] grebas=[Leather Pants] botas=[Leather Boots]`
+  (los arqueros, `mano=[Bow] escudo=[Arrow]`).
+- **DESPUÉS, el reparto y el tope (corrida 612, mundo conservado)** ✓:
+  `[Milicia] aldea 0: fundacion 4 + 0 espadachin(es) y 0 arquero(s) dinamicos de 0 sobrante(s) de 16 aldeano(s),
+  milicia hasta 7 | alistados DE VERDAD: 4 (2 espadachin(es), 2 arquero(s))` y, cuando el pueblo creció,
+  `fundacion 4 + 1 espadachin(es) y 0 arquero(s) dinamicos de 1 sobrante(s) de 17 aldeano(s) … alistados DE VERDAD: 5
+  (3 espadachin(es), 2 arquero(s))` ✓ (el dinámico entra **sin** tocar a los cuatro).
+- **DESPUÉS, los puestos intactos (corrida 612, t=3200)** ✓:
+  `PUESTOS DEL PUEBLO: 12/12 cubiertos (los guardias NO cuentan) | toolsmith=1/1 nitwit=1/1 cleric=1/1 fletcher=1/1
+  mason=1/1 fisherman=1/1 shepherd=1/1 weaponsmith=1/1 butcher=1/1 farmer=3/3`.
+- **DESPUÉS, guardar y recargar (corrida 611 → 612, `-Conservar`)** ✓: los cuatro se vuelven a alistar con **los mismos
+  índices y tipos** (`se alista en la guardia como espadachin/arquero`, los cuatro UUID) y en el volcado final los
+  cuatro con **`goals=1`** ✓ (`los cuatro puestos: 0=vivo 1=vivo 2=vivo 3=vivo`) y su equipo puesto.
+
+**Hallazgo de instrumento (y por qué la primera medida salió a cero)** ✓: en un **mundo nuevo** la aldea queda
+**`bajoAtaque=true` durante toda la corrida** (asedio del jugador de pega, que queda **EN PAUSA**, + la horda del
+mundo), y el reparto de la milicia vive en **`tickVillageLife`**, que **solo corre con la aldea en paz**
+(`manageNearby` L1093) ⇒ **ni una línea `[Milicia]` en tres minutos** ✗ (corridas 601-608, con un diagnóstico
+temporal que lo dejó escrito: `aldea 0: fallen=false bajoAtaque=true … defensas=1 asediosDelMundo=1`). La medida buena
+es la **receta que ya usaba el arnés**: **una corrida con `-MundoNuevo`** (funda la aldea y convoca la cohorte) y
+**otra con `-Conservar`** (el mundo se carga sin asedio en memoria y el latido de la paz corre) ✓. La escena nueva es
+`MEDIR_GUARDIA_DE_FUNDACION` en `tools/arnes/GuardHarness.java`.
+
+**Lo que NO se ha tocado, a propósito** ✓: `MILICIA_MAX = 7` y la proporción 4+3 de la formación de marcha
+(`comprobarMarcha`, L3795) **siguen igual**; el tope de crecimiento (`VillageManager` L1145) sigue siendo
+`puestosDelPueblo() + MILICIA_MAX`, que es lo que permite los tres dinámicos; el reparto de puestos fijos, el
+alistamiento por sobrantes y el equipo del almacén (revisión diaria, I94) **no se cambian**.
+
+**Límite conocido, dicho a propósito** ✗: si un guardia **de fundación muere**, su índice (0..3) queda libre y lo
+ocupa un **dinámico**, que hereda el tipo de ese índice (par = espadachín, impar = arquero). Con dos bajas del mismo
+par, la milicia llena puede salir **3+4** en vez de 4+3 y la **formación de marcha** (`comprobarMarcha`, L3795, que
+pide 4 espadachines y 3 arqueros) esperaría a más gente. **No se toca ahora**: es una aldea que acaba de perder
+guarnición, el número se recupera solo cuando el pueblo crece, y forzar el tipo por necesidad haría que un guardia
+**cambiara de arma** de un latido a otro (peor: es lo que el jugador ya corrigió con el «baile»). Queda apuntado para
+cuando el jugador quiera milicias que se recompongan solas.
+
+**Lo que necesita un JUGADOR de verdad** **[PENDIENTE DE VERIFICAR]**: (1) **verlos en pantalla** con su armadura y su
+arma al llegar a una aldea **recién fundada** (el arnés mide las ranuras y el tipo, no el dibujo del cliente); (2) que
+los cuatro **patrullen y peleen** en el asedio inicial de una aldea nueva (aquí el asedio queda en pausa porque un
+jugador de pega no cuenta como jugador del servidor, I86); y (3) que **sobrevivan a guardar y recargar** en mitad de
+ese asedio (medido en el arnés con el mundo conservado ✓, pero con el asedio ya resuelto).
+
+---
+
 ### I386 · EL "GALOPE" AL ANDAR EL OSO: era `HORSE_LAND` de las CAÍDAS (leído en la fuente, no supuesto)
 
 **Reportado** ✗: *«todavía se escucha el galope de caballo cuando anda el oso»*. **Medido en la fuente de vanilla** ✓ (saqué

@@ -436,6 +436,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
             medirLaMiliciaConSobrantes(level, pega);
         } else if (MEDIR_MONTANA) {
             medirLaMontana(level, pega);
+        } else if (MEDIR_GUARDIA_DE_FUNDACION) {
+            // A1 · LA GUARDIA DE FUNDACION (aldea nueva): cohorte, puestos del pueblo y equipo. Ver el metodo.
+            medirLaGuardiaDeFundacion(level);
         } else if (MEDIR_ANILLO) {
             medirElAnilloDelMuro(level);
         } else if (MEDIR_CRUCE_DEL_PORTON) {
@@ -3775,7 +3778,215 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      * `[Siege] … pica Block{…} en …` (el taladro) y `CAVA hacia abajo` / `pone un ESCALON` (las otras dos, que aquí
      * serían interferencia: la aldea NO está arriba, está al mismo nivel).
      */
-    private static final boolean MEDIR_MONTANA = true;
+    private static final boolean MEDIR_MONTANA = false;
+
+    /**
+     * <b>LA GUARDIA DE FUNDACIÓN (A1): ¿nace la aldea con sus cuatro guardias y con los doce puestos intactos?</b>
+     * <p>
+     * Es la medida del encargo: el jugador pidió <b>cuatro guardias ADICIONALES</b> (dos espadachines y dos arqueros)
+     * desde la fundación, <b>sin tocar los doce puestos de oficio</b> del pueblo, con su marca persistente, su índice y
+     * su tipo estables, <b>UN</b> goal por entidad y su equipo puesto desde el almacén.
+     * <p>
+     * <b>Cómo se mide</b>: con <b>mundo nuevo</b> ({@code tanda-rapida.ps1 N -MundoNuevo}), porque la guardia de
+     * fundación solo se convoca al <b>fundar</b> la aldea. El arnés no monta nada: deja correr el latido de verdad con
+     * el jugador de pega en la plaza (que es lo que descubre y pre-genera la aldea) y, a los 20 s y a los 2 y 3
+     * minutos, escribe:
+     * <ul>
+     *   <li>la <b>cohorte</b> tal como la ve el mod: cada guardia con su marca de fundación, su índice, su tipo, su
+     *       <b>goal contado</b> (tiene que ser 1, ni 0 ni 2) y su <b>equipo en las ranuras de verdad</b> (mano, escudo,
+     *       casco, peto, grebas, botas);</li>
+     *   <li>los <b>doce puestos del pueblo</b>, uno a uno: qué oficio cubre cada uno y si están <b>todos</b> cubiertos
+     *       (la prueba de que los guardias NO salen de los puestos);</li>
+     *   <li>el <b>reparto</b> de la milicia tal cual lo escribe el mod ({@code [Milicia]}), que es donde se ve la
+     *       formación (4 espadachines y 3 arqueros).</li>
+     * </ul>
+     */
+    private static final boolean MEDIR_GUARDIA_DE_FUNDACION = true;
+
+    /** Si ya se ha avisado de que la aldea NO se acaba de fundar (mundo conservado): la medida no vale. */
+    private static boolean fundacionAvisada = false;
+    /** La última vida vista de cada guardia de fundación (para no repetir el aviso en cada tick). */
+    private static final java.util.Map<java.util.UUID, Float> vidaDeLosMarcados = new java.util.HashMap<>();
+
+    private static void medirLaGuardiaDeFundacion(ServerLevel level) {
+        // LA VIDA DE LOS MARCADOS, TICK A TICK AL PRINCIPIO (13-oct-2026): los cuatro se convocan al fundar y hay que
+        // ver SI VIVEN (en las corridas 601 y 602 a los 10 s ya no estaban). Se sigue su vida y su celda los primeros
+        // 400 ticks; el aviso sale cuando la vida cambia, no cada tick.
+        if (ticks <= 400) {
+            java.util.Map<java.util.UUID, Float> vidas = new java.util.HashMap<>();
+            for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+                if (!v.getPersistentData().getBoolean(com.chipoodle.devilrpg.world.VillageManager.GUARD_FOUNDING_TAG)) {
+                    continue;
+                }
+                vidas.put(v.getUUID(), v.getHealth());
+                Float antes = vidaDeLosMarcados.get(v.getUUID());
+                if (antes == null || Math.abs(antes - v.getHealth()) > 0.5F) {
+                    DevilRpg.LOGGER.info("[Arnes] FUNDACION t={} el marcado {} vida={}/{} pos={} aire={} enSuelo={}",
+                            ticks, v.getUUID().toString().substring(0, 8), v.getHealth(), v.getMaxHealth(),
+                            v.blockPosition().toShortString(), v.getAirSupply(), v.onGround());
+                }
+            }
+            vidaDeLosMarcados.clear();
+            vidaDeLosMarcados.putAll(vidas);
+        }
+        // A LOS 20 s (t=400) YA tiene que estar la aldea generada y convocada la cohorte: el jugador de pega esta en la
+        // plaza desde el primer tick, asi que `preGenerate` corre en el primer latido.
+        if (!fundacionAvisada && ticks == 100) {
+            fundacionAvisada = true;
+            com.chipoodle.devilrpg.world.VillageSavedData datos =
+                    com.chipoodle.devilrpg.world.VillageSavedData.get(level);
+            DevilRpg.LOGGER.info("[Arnes] FUNDACION: aldea {} generada={} guardiaDeFundacionConvocada={} (con MUNDO"
+                            + " NUEVO las dos tienen que ser true; con un mundo conservado la cohorte NO se convoca y"
+                            + " esta medida no vale)", INDICE, datos.isGenerated(INDICE),
+                    datos.tieneGuardiaDeFundacion(INDICE));
+        }
+        // EL ASEDIO INICIAL SE DA POR RESUELTO, que es lo que hace falta para medir el REPARTO DE LA MILICIA (medido
+        // en la corrida 601, y es la misma leccion de I237): una aldea NUEVA nace con su asedio, y el reparto vive en
+        // `tickVillageLife`, que solo corre con la aldea EN PAZ (`manageNearby` L1040). Con un jugador de pega ese
+        // asedio no se resuelve nunca (el reloj queda EN PAUSA), asi que en la corrida 601 el pueblo salio con 16
+        // aldeanos y 12/12 puestos... y NI UNA linea `[Milicia]` en tres minutos. Se marca resuelto EN CUANTO la aldea
+        // existe: a partir de ahi el latido de la paz corre y el reparto de la guardia se ve.
+        //
+        // Y NO SE TOCA EL NUMERO DE ALDEANOS: no se convoca a nadie desde el arnes (la cohorte la convoca el mod al
+        // fundar, con su marca persistente). El arnes solo MIRA.
+        com.chipoodle.devilrpg.world.VillageSavedData datos =
+                com.chipoodle.devilrpg.world.VillageSavedData.get(level);
+        if (datos.isGenerated(INDICE) && !datos.isSiegeResolved(INDICE)) {
+            datos.markSiegeResolved(INDICE);
+            DevilRpg.LOGGER.info("[Arnes] FUNDACION: la aldea {} ya esta generada, asi que su asedio inicial se da por"
+                    + " RESUELTO para que corra el latido de la paz (el reparto de la milicia vive ahi). No se toca"
+                    + " ningun aldeano: la cohorte la convoca el mod al fundar", INDICE);
+        }
+        // Y LA HORDA DEL MUNDO SE DESPEJA (corrida 603: `guardia=false` los tres minutos con los cuatro marcados
+        // VIVOS). La guarda que corta el latido del pueblo es `isUnderAttack`, y con ella el REPARTO: la aldea queda
+        // "en asedio" mientras la horda del mundo siga viva (`WORLD_SIEGES`, VillageManager L1964), y con un jugador de
+        // pega la ola no muere sola. El arnes los retira, que es lo mismo que hace un jugador al matarlos: la horda se
+        // da por rechazada (`[Horda] la aldea N resistio el ataque`) y el latido de la paz arranca.
+        if (ticks > 60 && ticks % 20 == 0) {
+            for (net.minecraft.world.entity.Mob m : level.getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                    new AABB(CENTRO).inflate(200))) {
+                if (m instanceof net.minecraft.world.entity.monster.Monster) {
+                    m.discard();
+                }
+            }
+        }
+        if (ticks % 200 != 0 || ticks < 200) {
+            return;
+        }
+        // LA MUERTE DE UN MARCADO, DICHA (el 13-oct-2026, y es lo que faltaba): en las corridas 601 y 602 los cuatro
+        // marcados se convocaron y a los 10 s NO estaban. Si a un marcado se le ve con la vida bajando, la traza lo
+        // dice con su vida y su celda, para no quedarse en la sospecha.
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            if (!v.getPersistentData().getBoolean(com.chipoodle.devilrpg.world.VillageManager.GUARD_FOUNDING_TAG)) {
+                continue;
+            }
+            if (v.getHealth() < 17.0F) {
+                DevilRpg.LOGGER.warn("[Arnes] FUNDACION el marcado {} esta HERIDO: vida={}/{} pos={} aire={}",
+                        v.getUUID().toString().substring(0, 8), v.getHealth(), v.getMaxHealth(),
+                        v.blockPosition().toShortString(), v.getAirSupply());
+            }
+        }
+        // EL VOLCADO DE TODOS LOS ALDEANOS DEL PUEBLO (uuid corto, si lleva la marca de fundacion, si es guardia y su
+        // oficio): es lo que permite seguir a los CUATRO marcados aunque pierdan la marca, y ver si los 12 puestos
+        // siguen en manos de los 12 de siempre. Se dice TAMBIEN su distancia al centro: si un marcado se ha ido lejos,
+        // el reparto de la milicia NO lo ve (`tickVillageLife` recorre un radio alrededor del centro) y eso hay que
+        // verlo en el numero, no suponerlo.
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            boolean marca = v.getPersistentData().getBoolean(com.chipoodle.devilrpg.world.VillageManager.GUARD_FOUNDING_TAG);
+            if (marca || ticks == 200) {
+                DevilRpg.LOGGER.info("[Arnes] FUNDACION ALDEANO {} fundacion={} guardia={} indice={} oficio={} goals={}"
+                                + " dist={} pos={}",
+                        v.getUUID().toString().substring(0, 8), marca,
+                        com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v),
+                        v.getPersistentData().getInt(com.chipoodle.devilrpg.world.VillageManager.GUARD_INDEX_TAG),
+                        v.getVillagerData().getProfession(), cuantosGoalsDeGuardia(v),
+                        redondo((float) Math.sqrt(v.blockPosition().distSqr(CENTRO))), v.blockPosition().toShortString());
+            }
+        }
+        // LA COHORTE: los que llevan la marca persistente del mod (se lee la marca DIRECTA, no la de guardia: lo que se
+        // mide es la cohorte, y con `esGuardia` por delante un marcado sin guardia no se veria).
+        java.util.List<Villager> fundacion = new java.util.ArrayList<>();
+        java.util.List<Villager> otrosGuardias = new java.util.ArrayList<>();
+        int marcadosSinGuardia = 0;
+        boolean[] vistos = new boolean[com.chipoodle.devilrpg.world.VillageManager.GUARDIA_DE_FUNDACION];
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            boolean marca = v.getPersistentData().getBoolean(com.chipoodle.devilrpg.world.VillageManager.GUARD_FOUNDING_TAG);
+            if (!marca) {
+                if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                    otrosGuardias.add(v);
+                }
+                continue;
+            }
+            fundacion.add(v);
+            int suIndice = v.getPersistentData().getInt(com.chipoodle.devilrpg.world.VillageManager.GUARD_INDEX_TAG);
+            if (suIndice >= 0 && suIndice < vistos.length) {
+                vistos[suIndice] = true;
+            }
+            if (!com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                marcadosSinGuardia++;
+            }
+        }
+        StringBuilder vivos = new StringBuilder();
+        for (int i = 0; i < vistos.length; i++) {
+            vivos.append(i).append(vistos[i] ? "=vivo " : "=PERDIDO ");
+        }
+        DevilRpg.LOGGER.info("[Arnes] FUNDACION t={} COHORTE={} (marcados sin guardia={}, dinamicos={}) de {} aldeano(s)"
+                        + " en el pueblo | los cuatro puestos: {}", ticks, fundacion.size(), marcadosSinGuardia,
+                otrosGuardias.size(), level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140)).size(),
+                vivos.toString().trim());
+        for (Villager v : fundacion) {
+            int indice = v.getPersistentData().getInt(com.chipoodle.devilrpg.world.VillageManager.GUARD_INDEX_TAG);
+            int tipo = com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.tipoDe(v);
+            DevilRpg.LOGGER.info("[Arnes] FUNDACION GUARDIA {} marca=SI indice={} tipo={} (esperado {}) goals={} |"
+                            + " mano=[{}] escudo=[{}] casco=[{}] peto=[{}] grebas=[{}] botas=[{}] | oficio={} pos={}",
+                    v.getUUID().toString().substring(0, 8), indice, tipo == 1 ? "arquero" : "espadachin",
+                    indice % 2 == 0 ? "espadachin" : "arquero", cuantosGoalsDeGuardia(v), comoSeVe(v.getMainHandItem()),
+                    comoSeVe(v.getOffhandItem()),
+                    comoSeVe(v.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD)),
+                    comoSeVe(v.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST)),
+                    comoSeVe(v.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS)),
+                    comoSeVe(v.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET)),
+                    v.getVillagerData().getProfession(), v.blockPosition().toShortString());
+        }
+        // LA PRUEBA DE QUE LOS DOCE PUESTOS ESTAN INTACTOS: se cuentan los TITULARES por oficio (sin contar guardias) y
+        // se comparan con las plazas que el pueblo declara. Si los guardias se hubieran sacado de los puestos, aqui
+        // saldrian menos titulares que plazas.
+        java.util.Map<net.minecraft.world.entity.npc.VillagerProfession, Integer> cupo =
+                com.chipoodle.devilrpg.world.VillageGenerator.puestosPorOficio();
+        java.util.Map<net.minecraft.world.entity.npc.VillagerProfession, Integer> titulares = new java.util.HashMap<>();
+        for (Villager v : level.getEntitiesOfClass(Villager.class, new AABB(CENTRO).inflate(140))) {
+            if (v.isBaby() || com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                continue;
+            }
+            titulares.merge(v.getVillagerData().getProfession(), 1, Integer::sum);
+        }
+        int plazas = 0;
+        int cubiertas = 0;
+        StringBuilder detalle = new StringBuilder();
+        for (var entrada : cupo.entrySet()) {
+            plazas += entrada.getValue();
+            int hay = titulares.getOrDefault(entrada.getKey(), 0);
+            cubiertas += Math.min(hay, entrada.getValue());
+            detalle.append(entrada.getKey()).append('=').append(hay).append('/').append(entrada.getValue()).append(' ');
+        }
+        DevilRpg.LOGGER.info("[Arnes] FUNDACION t={} PUESTOS DEL PUEBLO: {}/{} cubiertos (los guardias NO cuentan) | {}",
+                ticks, cubiertas, plazas, detalle.toString().trim());
+        // Y EL REPARTO DE LA MILICIA, tal cual lo escribe el mod (formacion 4 espadachines + 3 arqueros).
+        DevilRpg.LOGGER.info("[Arnes] FUNDACION t={} (la formacion la dice la linea [Milicia] del mod: 4 espadachines"
+                + " y 3 arqueros con la milicia llena)", ticks);
+    }
+
+    /** Cuantos goals de guardia tiene ESE aldeano en su selector (tiene que ser EXACTAMENTE 1). */
+    private static int cuantosGoalsDeGuardia(Villager villager) {
+        int cuantos = 0;
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal wrapped
+                : java.util.List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal) {
+                cuantos++;
+            }
+        }
+        return cuantos;
+    }
 
     /** El asaltante de la montaña (uno solo: se le sigue paso a paso). */
     private static com.chipoodle.devilrpg.entity.AggressiveZombieEntity montanero = null;

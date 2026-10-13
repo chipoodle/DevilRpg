@@ -557,7 +557,26 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 
 **LO QUE FALTA** (en este orden):
 
-**COLA ACTIVA** (lo que se hace ahora, en este orden): **(A1)** los **4 guardias** con armadura, arco y espada desde el inicio; **(A0)** **ENSILLAR EL OSO** para que la **carga del salto** llegue (medido: `carga=0.0` siempre con jugador de verdad; la carga del caballo solo funciona ensillado) — el jugador dice que el oso **ya le funciona**, así que esto es el resto del salto montado; **(A2)** que los asaltantes **lleguen al centro** (entran 9, al centro 0).
+> ✅ **CERRADO Y MEDIDO (13-oct-2026) — A1, los cuatro guardias de fundación.** Entrada **I390** del acta
+> (`docs/aldea-invariantes.md`). Lo que se hizo y con qué número: la aldea **funda cuatro aldeanos ADICIONALES**
+> (`VillageGenerator.spawnGuardiasDeFundacion` L7839, sitios L7815) **sin oficio**, se les marca con la marca
+> **persistente** `GUARD_FOUNDING_TAG` (`VillageManager` L253), índice 0..3 y tipo (par = espadachín, impar = arquero)
+> al fundar la aldea (`preGenerate` L940-974, con la marca persistente `guardiaFundada` en `VillageSavedData` L90), y
+> se les pone **su equipo puesto** desde el primer tick (`VillageGenerator.equiparAlGuardiaDeFundacion` L7865: cuero
+> para los cuatro, espada+escudo para dos, arco+flechas para dos). El reparto de la milicia (`repartirGuardia` L3377)
+> los trata **como cohorte aparte**: sus índices 0..3 quedan cogidos y los **dinámicos** usan los que quedan libres
+> (4, 5, 6) ⇒ **tope 7 = 4 fijos + 3 dinámicos**; y `reponerProfesiones` (L3877) no les da oficio. **I389 queda
+> RETIRADO** (forzaba los 4 sacándolos de los puestos fijos: 12 aldeanos entraban, 8 trabajadores + 4 guardias
+> salían). Medido con el arnés: **corrida 611** (mundo nuevo) los cuatro con `marca=SI`, índice y tipo **correctos**,
+> **equipo completo en las ranuras reales** y `mano=[Wooden Sword]+escudo` / `mano=[Bow]+flechas`; **corrida 612**
+> (mundo conservado, o sea **guardado y recargado**) `[Milicia] … fundacion 4 + 0 dinámicos … alistados DE VERDAD: 4
+> (2 espadachines, 2 arqueros)`, **`PUESTOS DEL PUEBLO: 12/12 cubiertos`**, los cuatro con **`goals=1`** y, cuando el
+> pueblo creció, `fundacion 4 + 1 dinámico … alistados DE VERDAD: 5`. `lint --strict` verde y `compileJava`
+> **BUILD SUCCESSFUL**. Queda **[PENDIENTE DE VERIFICAR]** solo lo que necesita **jugador real**: verlos dibujados en
+> el cliente y que peleen el asedio inicial de una aldea nueva (el asedio del arnés queda **en pausa**, I86).
+> **Siguiente acción: (A0) ENSILLAR EL OSO.**
+
+**COLA ACTIVA** (lo que se hace ahora, en este orden): ✅ **(A1) los 4 guardias ADICIONALES con armadura, arco y espada desde la fundación — CERRADO Y MEDIDO (I390)**; **(A0)** **ENSILLAR EL OSO** para que la **carga del salto** llegue (medido: `carga=0.0` siempre con jugador de verdad; la carga del caballo solo funciona ensillado) — el jugador dice que el oso **ya le funciona**, así que esto es el resto del salto montado; **(A2)** que los asaltantes **lleguen al centro** (entran 9, al centro 0).
 
 #### A1 · ENCARGO COMPLETO (leer y ejecutar tal cual) — CUATRO GUARDIAS DE FUNDACIÓN
 
@@ -583,6 +602,13 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 **Validación (en secuencia, sin procesos concurrentes)**: (1) `python tools\lint_aldea.py --strict`; (2) `.\gradlew.bat compileJava` **una vez** si el entorno está libre — si vuelve el fallo de conexión loopback, registrarlo y **NO** decir que compiló; si el jar está bloqueado por el cliente (`neoforge-…jar is locked by`), el dueño **autorizó** matar el `java.exe` del cliente (`-Dfml.modfolders=devilrpg`) y reintentar; (3) tests/arnés disponibles (`pwsh -NoProfile -File tools\arnes\tanda-rapida.ps1 <N>`; el número es **etiqueta** de corrida, no duración ni semilla; log en `build/rapida-<N>.log`; el asedio del arnés queda **EN PAUSA** porque un FakePlayer no está en la lista de jugadores del servidor), con comandos y resultados **exactos**; (4) revisar el **diff completo**, espacios en blanco, y que **no** cambien ficheros no relacionados. **NUNCA** escribir ni borrar `run\saves`; el arnés va **fuera de git** (`.gitignore`): no commitearlo. **NO commitear** hasta que `lint --strict` **y** `compileJava` pasen y el diff esté revisado; si Gradle no arranca, **no** commitear: informar del bloqueo con el diff y los comandos exactos.
 
 **Criterios de aceptación (A1 sigue ABIERTO hasta que haya evidencia)**: cuatro guardias de fundación distintos, dos de cada rol; los **12 puestos esenciales intactos**; los cuatro con **armadura y equipo de su rol**; **guardar y recargar durante el asedio inicial** conserva los mismos cuatro, sus índices y **UN goal por entidad**; el roster dinámico crece **hasta 7** sin quitar esenciales ni reemplazar a los de fundación; **el stock inicial NO se repone** repetidamente; lint y compilación **reportados por separado y con verdad**; y un test con **mundo nuevo o jugador real** queda marcado **PENDIENTE** si no se ha corrido. **Devolver**: resumen, ficheros y líneas, resultados exactos y bloqueos restantes.
+
+> ✅ **CERRADO (comprobado el 13-oct-2026)**: los criterios de arriba se cumplen **con medida** — ver **I390** en
+> `docs/aldea-invariantes.md` (allí están la causa raíz, las líneas, las invariantes, las medidas ANTES/DESPUÉS y lo
+> único que sigue **[PENDIENTE DE VERIFICAR]**: verlos dibujados en el cliente y su pelea en el asedio inicial con un
+> jugador de verdad). **El encargo de abajo NO se borra**: cuenta el camino (I389 y por qué se retiró) y sigue siendo
+> la referencia de lo que se pidió. Lo ejecutado, en corto: cuatro guardias **adicionales** (`spawnGuardiasDeFundacion`),
+> marca persistente de cohorte, índices 0..3 estables, **equipo puesto al fundar**, y los **12 puestos intactos**.
 
 **COLA DIFERIDA** (necesita un dato del jugador antes de tocar código): **(B1)** el **haz** (mirar desde dentro si sale en el kiosco); **(B2)** el **minero** (confirmar si anda o pasar su línea); **(B3)** verificar el **orden de objetivos** con un asedio real.
 

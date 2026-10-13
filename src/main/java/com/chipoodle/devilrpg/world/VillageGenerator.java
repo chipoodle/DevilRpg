@@ -31,6 +31,7 @@ import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.BushBlock;
@@ -7795,6 +7796,85 @@ public final class VillageGenerator {
             p = p.above();
         }
         return pos;
+    }
+
+    /**
+     * <b>Los cuatro GUARDIAS DE FUNDACIÓN</b> (A1): los sitios donde nacen los guardias que trae la aldea <b>de
+     * fábrica</b>, uno por esquina de la plaza y a <b>4 bloques</b> del centro (fuera del kiosco, que ocupa radio 3).
+     * <p>
+     * Son <b>ADICIONALES</b> a propósito: no salen de los puestos de oficio (ver
+     * {@link #VILLAGER_SPOTS}), así que los doce puestos del pueblo quedan <b>intactos</b> — que es lo que pidió el
+     * jugador (*«que no quite a los granjeros ni a los herreros»*): la aldea nace con su gente de trabajo <b>y</b> con
+     * su guardia. Antes la milicia salía <b>solo</b> de los sobrantes, y una aldea recién fundada (doce adultos, uno
+     * por puesto) no tenía <b>ni un guardia</b>.
+     * <p>
+     * Los sitios van por <b>par</b> (dos al oeste, dos al este) en vez de en fila: así el reparto de la milicia
+     * —que va por <b>UUID</b>— no los deja apilados en la misma esquina y su plaza de guardia (que sale del índice)
+     * los manda a puertas distintas.
+     */
+    private static final BlockPos[] SITIOS_DE_LA_GUARDIA_DE_FUNDACION = {
+            new BlockPos(-4, 0, -4), new BlockPos(4, 0, -4),
+            new BlockPos(-4, 0, 4), new BlockPos(4, 0, 4)
+    };
+
+    /** Cuántos guardias de fundación trae una aldea nueva: dos espadachines y dos arqueros (ver el reparto). */
+    public static int guardiasDeFundacion() {
+        return SITIOS_DE_LA_GUARDIA_DE_FUNDACION.length;
+    }
+
+    /**
+     * <b>Convoca la guardia de fundación</b> de una aldea recién construida (A1): los cuatro aldeanos
+     * <b>adicionales</b> de {@link #SITIOS_DE_LA_GUARDIA_DE_FUNDACION}, <b>sin oficio</b> ({@code profession = null}).
+     * <p>
+     * Nacen SIN oficio a propósito y eso es lo que los separa de los doce puestos: al no cubrir ningún puesto fijo,
+     * el reparto del pueblo ({@code VillageManager.reponerProfesiones}) <b>no les da faena</b> y la milicia los alista
+     * como <b>fijos de fundación</b> (ver {@code VillageManager.repartirGuardia}) con su índice, su tipo y su goal.
+     * El que sí les da el equipo es el <b>almacén</b>: su remesa inicial
+     * ({@code VillageStorage.remesaInicialDelAlmacen}) trae justo el de estos cuatro —cuero para todos, espada y
+     * escudo para los espadachines, arco y flechas para los arqueros— y ellos se lo ponen solos, pieza a pieza.
+     * <p>
+     * <b>Se llama UNA SOLA VEZ por aldea</b>: lo decide {@code VillageManager.preGenerate} con la marca persistente
+     * {@code VillageSavedData.tieneGuardiaDeFundacion} (si no, cada carga del mundo soltaría cuatro aldeanos más).
+     */
+    public static void spawnGuardiasDeFundacion(ServerLevel level, BlockPos center) {
+        for (BlockPos sitio : SITIOS_DE_LA_GUARDIA_DE_FUNDACION) {
+            spawnVillager(level, center.offset(sitio), null, false);
+        }
+        DevilRpg.LOGGER.info("[Village] Aldea en {}: guardia de fundacion convocada ({} guardias ADICIONALES a los"
+                        + " {} puestos del pueblo: dos espadachines y dos arqueros, que el reparto de la milicia"
+                        + " alista con su indice fijo)",
+                center.toShortString(), SITIOS_DE_LA_GUARDIA_DE_FUNDACION.length, VILLAGER_SPOTS.length);
+    }
+
+    /**
+     * <b>Le pone a un guardia de fundación su equipo de arranque</b> (A1): el que le toca por su <b>tipo</b>, con las
+     * MISMAS piezas que la remesa inicial del almacén (ver {@code VillageStorage.remesaInicialDelAlmacen}).
+     * <p>
+     * <b>Por qué se le pone a él y no se espera a que lo recoja del almacén</b> (medido el 13-oct-2026, corrida 609):
+     * el guardia se arma <b>yendo</b> al almacén, y vestirse es <b>pieza a pieza</b> —una por viaje—, así que los
+     * cuatro tardaron <b>40 s o más</b> en estar listos y uno se quedó <b>sin peto ni botas</b> ✗. Además, una aldea
+     * recién fundada <b>nace con su asedio inicial</b> y el latido de la paz no corre: la remesa del almacén no llega
+     * hasta que el pueblo gana ese asedio ✗, o sea que la guardia de fundación pasaba el primer ataque <b>desarmada</b>.
+     * Con esto la aldea nace con sus cuatro guardias <b>equipados y visibles</b> desde el primer tick ✓, que es lo que
+     * pidió el jugador (*«ya debiste haber agregado 4 cuando inició la aldea»*, con armadura, arco y espada).
+     * <p>
+     * <b>NO repone nada</b>: es un arranque de una sola vez (lo llama {@code VillageManager.preGenerate} al fundar la
+     * aldea, con su marca persistente). A partir de ahí manda el almacén: el guardia revisa <b>una vez al día</b> si hay
+     * algo mejor y se cambia, y la pieza vieja vuelve al almacén para que el herrero la recicle (I94).
+     */
+    public static void equiparAlGuardiaDeFundacion(Villager guardia, int tipo) {
+        boolean arquero = tipo == 1; // 1 = arquero; 0 = espadachín (ver `VillagerGuardGoal.ARQUERO`)
+        guardia.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(Items.LEATHER_HELMET));
+        guardia.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(Items.LEATHER_CHESTPLATE));
+        guardia.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(Items.LEATHER_LEGGINGS));
+        guardia.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
+        if (arquero) {
+            guardia.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+            guardia.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, new ItemStack(Items.ARROW, 16));
+        } else {
+            guardia.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.WOODEN_SWORD));
+            guardia.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, new ItemStack(Items.SHIELD));
+        }
     }
 
     /**
