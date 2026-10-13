@@ -91,6 +91,9 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     private int remainingPersistentAngerTime;
     private UUID persistentAngerTarget;
     private boolean orderedToSit;
+    /** I380: ultimo estado avisado al registro, para no repetir la traza en cada tick. */
+    private boolean ultimoAvisoDeSentado;
+    private boolean ultimoAvisoDeMontado;
     private int puntosAsignados = 0;
     private double saludMaxima = SALUD_INICIAL;
     private double initialArmor;
@@ -320,6 +323,24 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             //   1 punto  (montado) = 0.5
             //   sin montar           = 0.4 (sin impulso)
             boolean mounted = this.isVehicle();
+        // I380 · LAS MECANICAS DEL LOBO, EN EL OSO (lo pidio el jugador, tres veces): SENTADO se queda QUIETO hasta que
+        // lo monten o se lo digan; MONTADO se levanta y NO anda a su antojo (obedece al jinete); DOMESTICADO y suelto,
+        // anda a su antojo. Y queda en el registro, para poder comprobarlo y no tener que creerme.
+        if (mounted && this.orderedToSit) {
+            this.orderedToSit = false; // me lo han montado: se levanta
+        }
+        if (this.orderedToSit && !mounted) {
+            this.getNavigation().stop();                                          // sentado: no se mueve de ahi
+            this.setDeltaMovement(0.0D, this.getDeltaMovement().y, 0.0D);         // y no lo empuja el paseo
+        }
+        if (this.ultimoAvisoDeSentado != this.orderedToSit || this.ultimoAvisoDeMontado != mounted) {
+            this.ultimoAvisoDeSentado = this.orderedToSit;
+            this.ultimoAvisoDeMontado = mounted;
+            DevilRpg.LOGGER.info("[Oso] #{} tamed={} sentado={} montado={} -> {}", this.getId(), this.isTame(),
+                    this.orderedToSit, mounted, this.orderedToSit ? "SE QUEDA QUIETO (hasta que lo monten o se lo digan)"
+                            : (mounted ? "montado: obedece al jinete, no anda a su antojo"
+                                    : "domesticado y suelto: anda a su antojo"));
+        }
             double jump = mounted
                     ? (this.getMountBearLevel() >= 2 ? 0.7 : 0.5)
                     : 0.4;
