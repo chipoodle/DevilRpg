@@ -553,7 +553,14 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 - **Aldea caída** (I378): **no** le llegan más hordas (la contradicción que señaló el jugador).
 - **Oso** (I382, I386): los **cuatro** sonidos de monta son del **oso blanco** y el **`HORSE_LAND`** de las caídas ya no suena
   (el daño se mantiene). **El jugador dice que ya funciona** ✓. El **salto**: medido con jugador de verdad →
-  **`carga=0.0` siempre** (I384); el siguiente paso es **ENSILLAR** (la carga del caballo solo funciona ensillado).
+  **`carga=0.0` siempre** (I384), o sea que la carga del salto no se llena (el oso se encabrita y no levanta).
+  > ⚠️ **NO ES UN FALLO VERIFICADO, Y LO PREGUNTA EL JUGADOR CON RAZÓN (13-oct-2026)**: *«¿ensillar al oso? ¿por qué
+  > habría que ensillarlo si funciona bien ahorita?»*. **Tiene razón**: lo del **ENSILLAR** era una **hipótesis** mía
+  > (la carga del caballo solo funciona ensillado), **no** un diagnóstico, y **no hay ningún cambio pendiente de
+  > aplicar**: nada del oso está roto. Lo único abierto es **si el oso salta o no montado**, y eso lo decide **un dato
+  > suyo**: montado y **manteniendo la tecla de salto**, ¿salta (y más alto cuanto más la mantiene)? **Sí** → A0 se
+  > cierra y no se toca nada ✓. **Se encabrita y no levanta** → se mira lo de la silla, y solo entonces.
+  > **NADIE DEBE PONERSE A ENSILLAR NADA ANTES DE ESE DATO** ✗.
 
 **LO QUE FALTA** (en este orden):
 
@@ -574,7 +581,9 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 > pueblo creció, `fundacion 4 + 1 dinámico … alistados DE VERDAD: 5`. `lint --strict` verde y `compileJava`
 > **BUILD SUCCESSFUL**. Queda **[PENDIENTE DE VERIFICAR]** solo lo que necesita **jugador real**: verlos dibujados en
 > el cliente y que peleen el asedio inicial de una aldea nueva (el asedio del arnés queda **en pausa**, I86).
-> **Siguiente acción: (A0) ENSILLAR EL OSO.**
+> **Siguiente acción: NINGUNA de código.** Lo que queda es que el jugador pruebe la aldea y diga qué ve; y para el
+> oso, **un dato suyo** (¿salta montado manteniendo la tecla de salto?). **(A0) NO es un fallo verificado y no se
+> toca nada del oso sin ese dato** ⚠️ (ver la nota de arriba).
 
 **COLA ACTIVA** (lo que se hace ahora, en este orden): ✅ **(A1) los 4 guardias ADICIONALES con armadura, arco y espada desde la fundación — CERRADO Y MEDIDO (I390)**; **(A0)** **ENSILLAR EL OSO** para que la **carga del salto** llegue (medido: `carga=0.0` siempre con jugador de verdad; la carga del caballo solo funciona ensillado) — el jugador dice que el oso **ya le funciona**, así que esto es el resto del salto montado; **(A2)** que los asaltantes **lleguen al centro** (entran 9, al centro 0).
 
@@ -669,9 +678,12 @@ protegido a propósito) y **18 de la acequia** de la huerta ✓.
 
 **LO QUE FALTA, EN ORDEN**
 
-- **(A0) ENSILLAR EL OSO** (sigue igual: medido `carga=0.0` siempre con jugador de verdad).
-- **(A2)** que los asaltantes **lleguen al centro** (entran, pero hay que medir cuántos y hasta dónde; ahora ya
-  **entran 2-4** en la escena, ver I391).
+- **(A0) EL OSO: NO SE TOCA NADA** ⚠️ (corregido el 13-oct-2026, y lo preguntó el jugador con razón: *«¿por qué habría
+  que ensillarlo si funciona bien ahorita?»*). **No es un fallo verificado** y **no hay ningún cambio pendiente**: lo
+  de ensillar era una **hipótesis** mía. Lo único abierto es **si el oso salta montado**, y eso lo decide **su dato**
+  (mantener la tecla de salto montado). Ver la nota de arriba, en el bloque del oso.
+- **(A2)** que los asaltantes **lleguen al centro** (ahora ya **entran 2-4** en la escena, ver I391; falta medir cuántos
+  y hasta dónde, y con un asedio **en vivo**).
 - **[PENDIENTE DE VERIFICAR] las tres cosas necesitan su partida**: el asedio **en vivo** (I391), ver los guardias
   **dibujados** en una aldea nueva (I393) y el **piso** después de 2-3 minutos de paz (I392; el arreglo corre solo con
   la aldea en paz, en el latido de cada 30 s).
