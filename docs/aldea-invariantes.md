@@ -49,6 +49,12 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > trabajo de aldeano que no sea de un oficio del pueblo) tampoco: es un barrido de bloques, y se comprueba contra el
 > guardado con `build/barraca_mesa.py` y `build/barraca_mesa_repara.py`.
 
+> **CONVENCIÓN DE ESTA ACTA** (revisión externa del 12-oct-2026). Cada entrada dice en qué punto está su arreglo:
+> **[MEDIDO]** = hay un número delante (del registro del jugador o del arnés) · **[PENDIENTE DE VERIFICAR]** = el código está
+> puesto pero **falta comprobarlo en la partida** (p. ej. I379). Y **las líneas son las de la fecha de la entrada**: los números
+> de línea **se desplazan** con cada cambio, así que **antes de tocar hay que verificar la línea actual del fichero** (y, si no
+> cuadra, **abortar sin tocar nada**, que es lo que hacen los scripts de `.migration-tools/`).
+
 ### I386 · EL "GALOPE" AL ANDAR EL OSO: era `HORSE_LAND` de las CAÍDAS (leído en la fuente, no supuesto)
 
 **Reportado** ✗: *«todavía se escucha el galope de caballo cuando anda el oso»*. **Medido en la fuente de vanilla** ✓ (saqué

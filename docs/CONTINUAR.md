@@ -1,7 +1,7 @@
 # CONTINUAR AQUÍ — acuerdos, convenciones y pendientes (leer lo PRIMERO)
 
 Rama: **`migration-neoforge-1.21.1`** (estable, compilada, con `lint --strict` verde y **subida a GitHub**).
-Ultima actualizacion: 11-oct-2026, al cerrar la tanda de la aldea (**I296-I346**): **la granja entera** (0 SIN SEMBRAR, 0
+**Última actualización: 12-oct-2026 (noche) — I368→I386.** El estado VIVO es la **§2.1** (al final de este documento): ahí está lo hecho y medido y lo que falta, en orden. Las listas anteriores (§2.0 y de ahí hacia abajo) son **históricas**.
 PISOTEADA, 0 atoros, 0 `pies=water`, con sus dos causas de raiz: el paso de las compuertas encharcado y dos goals por la
 misma compuerta), los **restos flotantes** (408 -> 0), las **camas** (tejados 4 -> 0 y `El obrero repuso red_bed` = 0, con
 el arreglo del PLAN), el **muro del asedio** (y los **1761** avisos falsos, corregidos con `hayAsedio`), el **haz** (solo
@@ -559,6 +559,11 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
   **`carga=0.0` siempre** (I384); el siguiente paso es **ENSILLAR** (la carga del caballo solo funciona ensillado).
 
 **LO QUE FALTA** (en este orden):
+
+**COLA ACTIVA** (lo que se hace ahora, en este orden): **(A1)** los **4 guardias** con armadura, arco y espada desde el inicio; **(A0)** **ENSILLAR EL OSO** para que la **carga del salto** llegue (medido: `carga=0.0` siempre con jugador de verdad; la carga del caballo solo funciona ensillado) — el jugador dice que el oso **ya le funciona**, así que esto es el resto del salto montado; **(A2)** que los asaltantes **lleguen al centro** (entran 9, al centro 0).
+
+**COLA DIFERIDA** (necesita un dato del jugador antes de tocar código): **(B1)** el **haz** (mirar desde dentro si sale en el kiosco); **(B2)** el **minero** (confirmar si anda o pasar su línea); **(B3)** verificar el **orden de objetivos** con un asedio real.
+
 
 1. **El acta** — hecho con este mismo cambio ✓ (I368→I386 arriba).
 2. **A1 · Los 4 guardias** al fundar la aldea, **rondando** y **con armadura, arco y espada** desde el principio. Lo que YA
