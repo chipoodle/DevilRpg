@@ -559,6 +559,24 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         }
     }
 
+    /**
+     * I385 · EL SALTO AL PULSAR, como en 1.19 (lo pidio el jugador desde el principio). El salto CON CARGA del caballo de
+     * 1.21 nunca se carga en el oso: MEDIDO con jugador de verdad en su partida (nueve muestras: montado=true, carga=0.0,
+     * isJumping=false, dy=0.0). Así que se salta en el momento en que el jugador manda el salto, sin esperar carga, y el
+     * empuje sale de la fuerza de salto real del oso (JUMP_STRENGTH), no de un numero inventado.
+     */
+    @Override
+    public void onPlayerJump(int power) {
+        if (!this.isVehicle() || !this.onGround()) {
+            return;
+        }
+        double fuerza = this.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.JUMP_STRENGTH);
+        this.setDeltaMovement(this.getDeltaMovement().x, 0.4D + 0.2D * fuerza, this.getDeltaMovement().z);
+        this.setIsJumping(true);
+        DevilRpg.LOGGER.info("[Oso] #{} SALTO AL PULSAR (I385): power={} fuerza={} dy={} montado=true", this.getId(),
+                power, fuerza, this.getDeltaMovement().y);
+    }
+
     protected void playWarningSound() {
         if (this.warningSoundTicks <= 0) {
             this.playSound(SoundEvents.POLAR_BEAR_WARNING, 1.0F, this.getVoicePitch());
