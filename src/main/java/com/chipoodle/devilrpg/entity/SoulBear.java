@@ -320,6 +320,14 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
             //   1 punto  (montado) = 0.5
             //   sin montar           = 0.4 (sin impulso)
             boolean mounted = this.isVehicle();
+        // I384 · TRAZA DE LA CARGA DEL SALTO MIENTRAS VA MONTADO. Medido en el arnes (tanda 501): sin jinete la carga
+        // (playerJumpPendingScale) es 0.0 y el oso solo se ENCABRITA, no levanta. En su partida esta traza dice cual de las dos
+        // cosas pasa: si al pulsar salto la CARGA SUBE, el fallo esta en el empuje; si se queda en 0, el salto no se inicia y
+        // hay que darle la entrada de 1.19 (saltar al pulsar, sin carga, que es lo que el jugador pidio).
+        if (mounted && this.tickCount % 20 == 0) {
+            DevilRpg.LOGGER.info("[Oso] #{} montado={} carga={} isJumping={} dy={} enSuelo={}", this.getId(), mounted,
+                    this.playerJumpPendingScale, this.isJumping(), this.getDeltaMovement().y, this.onGround());
+        }
             double jump = mounted
                     ? (this.getMountBearLevel() >= 2 ? 0.7 : 0.5)
                     : 0.4;
