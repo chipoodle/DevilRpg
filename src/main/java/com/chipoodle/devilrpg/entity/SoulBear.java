@@ -336,7 +336,7 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         if (this.ultimoAvisoDeSentado != this.orderedToSit || this.ultimoAvisoDeMontado != mounted) {
             this.ultimoAvisoDeSentado = this.orderedToSit;
             this.ultimoAvisoDeMontado = mounted;
-            DevilRpg.LOGGER.info("[Oso] #{} dueno={} sentado={} montado={} -> {}", this.getId(), this.getOwnerUUID() != null,
+            DevilRpg.LOGGER.info("[Oso] #{} tamed={} sentado={} montado={} -> {}", this.getId(), this.isTame(),
                     this.orderedToSit, mounted, this.orderedToSit ? "SE QUEDA QUIETO (hasta que lo monten o se lo digan)"
                             : (mounted ? "montado: obedece al jinete, no anda a su antojo"
                                     : "domesticado y suelto: anda a su antojo"));
@@ -620,20 +620,6 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         DevilRpg.LOGGER.debug("----------------------->mobInteract mountBear:{}. this.isVehicle(): {}", getMountBearLevel(), this.isVehicle());
         if (getMountBearLevel() <= 0) {
             return InteractionResult.PASS;
-        }
-
-        // I381 · LA ORDEN DE SENTARSE, QUE NUNCA ESTUVO PUESTA (el jugador la pidio TRES veces y no habia forma de darla: el
-        // campo orderedToSit existia y se guardaba, pero NADIE lo cambiaba). Ahora: con la mano VACIA y agachado (shift), el
-        // DUENO del minion lo sienta o lo levanta; con algo en la mano, el shift sigue abriendo el cofre, como en el caballo
-        // con cofre de vanilla. No se "doma" nada: el oso de la skill es minion del jugador desde que lo invoca.
-        if (player.isSecondaryUseActive() && player.getItemInHand(interactionHand).isEmpty()
-                && this.getOwnerUUID() != null && this.getOwnerUUID().equals(player.getUUID())) {
-            this.orderedToSit = !this.orderedToSit;
-            DevilRpg.LOGGER.info("[Oso] #{} el dueno {} le dice {} -> {}", this.getId(), player.getName().getString(),
-                    this.orderedToSit ? "SIENTATE" : "LEVANTATE", this.orderedToSit
-                            ? "SE QUEDA QUIETO hasta que lo monten o se lo digan"
-                            : "anda a su antojo (o al jinete, si va montado)");
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
         boolean flag = !this.isBaby() && this.isTame() && player.isSecondaryUseActive();
