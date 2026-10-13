@@ -7829,9 +7829,12 @@ public final class VillageGenerator {
      * Nacen SIN oficio a propósito y eso es lo que los separa de los doce puestos: al no cubrir ningún puesto fijo,
      * el reparto del pueblo ({@code VillageManager.reponerProfesiones}) <b>no les da faena</b> y la milicia los alista
      * como <b>fijos de fundación</b> (ver {@code VillageManager.repartirGuardia}) con su índice, su tipo y su goal.
-     * El que sí les da el equipo es el <b>almacén</b>: su remesa inicial
-     * ({@code VillageStorage.remesaInicialDelAlmacen}) trae justo el de estos cuatro —cuero para todos, espada y
-     * escudo para los espadachines, arco y flechas para los arqueros— y ellos se lo ponen solos, pieza a pieza.
+     * <p>
+     * El equipo se lo pone {@code VillageManager.preGenerate} al marcarlos
+     * ({@link #equiparAlGuardiaDeFundacion}): cuero para todos, espada y escudo para los espadachines, arco y flechas
+     * para los arqueros. <b>No</b> se espera al almacén a propósito, y está medido (corrida 609): vestirse del almacén
+     * es <b>pieza a pieza</b> y tardaban 40 s o más, y como una aldea nueva <b>nace con su asedio</b> (y el latido de la
+     * paz no corre durante él) pasaban el primer ataque desarmados.
      * <p>
      * <b>Se llama UNA SOLA VEZ por aldea</b>: lo decide {@code VillageManager.preGenerate} con la marca persistente
      * {@code VillageSavedData.tieneGuardiaDeFundacion} (si no, cada carga del mundo soltaría cuatro aldeanos más).
