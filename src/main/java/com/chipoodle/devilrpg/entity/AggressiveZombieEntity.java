@@ -1012,7 +1012,7 @@ public class AggressiveZombieEntity extends Zombie {
         this.goalSelector.addGoal(7, new MoveToVillageCenterGoal(this));
         // Y si tiene un "hogar" (guarida), patrullar su radio.
         this.goalSelector.addGoal(8, new PatrolHomeGoal(this));
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // Detectar jugadores
+        this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Player.class, true)); // Detectar jugadores   // I379: PRIMERO el jugador (y sus minions, el goal de al lado): es lo que pidio el jugador
         // También ataca a las invocaciones (minions) del jugador, no solo al jugador. Usamos LivingEntity
         // (no TamableAnimal) para cubrir también al oso, que extiende AbstractChestedHorse y no TamableAnimal.
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false,
@@ -1024,7 +1024,7 @@ public class AggressiveZombieEntity extends Zombie {
         // ALDEANOS: el mundo también es hostil con los asentamientos. Es lo que hace que una horda que marcha
         // a por una aldea sea una amenaza real para sus habitantes (y no solo para el jugador): si el jugador
         // no va a defenderla, los aldeanos caen.
-        this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Villager.class, true)); // I165: el PRIMER objetivo de una horda que marcha a la aldea
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Villager.class, true)); // I165: el PRIMER objetivo de una horda que marcha a la aldea   // I379: los aldeanos DESPUES: solo si no encuentra al jugador ni a sus minions
         // Golems (defensas de la aldea) SOLO si el zombie va a por una aldea: así uno suelto no se pelea con
         // un golem que no le estaba haciendo nada.
         this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, IronGolem.class, 10, true, false,
