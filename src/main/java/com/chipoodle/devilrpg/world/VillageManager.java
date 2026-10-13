@@ -3320,16 +3320,28 @@ public final class VillageManager {
 
         Map<VillagerProfession, Integer> usados = new HashMap<>();
         List<Villager> sobrantes = new ArrayList<>();
+        // I389: los que CUBREN un puesto fijo, para poder sacar de ahi la milicia minima si no hay sobrantes.
+        List<Villager> cubrenPuestos = new ArrayList<>();
         for (Villager villager : adultos) {
             VillagerProfession profesion = villager.getVillagerData().getProfession();
             int yaHay = usados.getOrDefault(profesion, 0);
             if (yaHay < cupo.getOrDefault(profesion, 0)) {
                 usados.put(profesion, yaHay + 1);
+            cubrenPuestos.add(villager);
                 continue; // cubre un puesto fijo del pueblo
             }
             sobrantes.add(villager);
         }
 
+        // I389 · CUATRO GUARDIAS DESDE EL PRINCIPIO (lo pidio el jugador: "ya debiste haber agregado 4 cuando inicio
+        // la aldea"). Hasta ahora la milicia salia SOLO de los sobrantes (los que no cubrian un puesto fijo del pueblo),
+        // asi que una aldea recien fundada, con pocos aldeanos, NO TENIA NI UN GUARDIA. Ahora la milicia se lleva sus 4
+        // PRIMERO: si no hay sobrantes suficientes, se sacan de los que cubren puestos fijos (la defensa manda). El resto
+        // sigue igual: hasta MILICIA_MAX y alternando espadachin/arquero.
+        final int MILICIA_MINIMA = 4;
+        while (sobrantes.size() < MILICIA_MINIMA && !cubrenPuestos.isEmpty()) {
+            sobrantes.add(cubrenPuestos.remove(cubrenPuestos.size() - 1));
+        }
         // Los primeros se alistan (hasta el tope de la milicia); el resto vuelve a la vida civil.
         int espadachines = 0;
         int arqueros = 0;
