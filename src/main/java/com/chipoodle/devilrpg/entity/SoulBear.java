@@ -511,6 +511,46 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         this.playSound(SoundEvents.POLAR_BEAR_STEP, 0.15F, 1.0F);
     }
 
+    /**
+     * I382 · LOS SONIDOS DE MONTAR, DEL OSO (no del caballo). En 1.19 este fichero no necesitaba nada de esto porque el
+     * caballo de 1.19 no los pedia; el de 1.21 sí (getAngrySound, getEatingSound, playGallopSound, getAmbientStandSound).
+     * Se sobrescriben con los del OSO BLANCO, que es lo que sonaba antes de la migracion: el jugador lo pidio así.
+     */
+    @Override
+    protected SoundEvent getEatingSound() {
+        return SoundEvents.POLAR_BEAR_AMBIENT;
+    }
+
+    @Override
+    protected SoundEvent getAngrySound() {
+        return SoundEvents.POLAR_BEAR_WARNING;
+    }
+
+    @Override
+    protected void playGallopSound(net.minecraft.world.level.block.SoundType soundType) {
+        this.playSound(SoundEvents.POLAR_BEAR_STEP, 0.15F, 1.0F);
+    }
+
+    @Override
+    public SoundEvent getAmbientStandSound() {
+        return SoundEvents.POLAR_BEAR_WARNING;
+    }
+
+    /**
+     * I382 · TRAZA DEL SALTO MONTADO, para poder MEDIR por qué "solo se levanta en dos patas" en vez de saltar: se deja en
+     * el registro cada vez que el juego marca el encabritado del caballo, con la carga del salto, si va montado, su
+     * velocidad vertical y si esta en el suelo. Con eso se ve si el salto se inicia y no levanta, o si ni se inicia.
+     */
+    @Override
+    public void setIsJumping(boolean jumping) {
+        super.setIsJumping(jumping);
+        if (jumping && !this.level().isClientSide) {
+            DevilRpg.LOGGER.info("[Oso] #{} SALTO/encabritado: isJumping={} carga={} montado={} dy={} enSuelo={}",
+                    this.getId(), this.isJumping(), this.playerJumpPendingScale, this.isVehicle(),
+                    this.getDeltaMovement().y, this.onGround());
+        }
+    }
+
     protected void playWarningSound() {
         if (this.warningSoundTicks <= 0) {
             this.playSound(SoundEvents.POLAR_BEAR_WARNING, 1.0F, this.getVoicePitch());
