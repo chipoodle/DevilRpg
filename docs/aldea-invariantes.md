@@ -49,6 +49,143 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > trabajo de aldeano que no sea de un oficio del pueblo) tampoco: es un barrido de bloques, y se comprueba contra el
 > guardado con `build/barraca_mesa.py` y `build/barraca_mesa_repara.py`.
 
+### I386 · EL "GALOPE" AL ANDAR EL OSO: era `HORSE_LAND` de las CAÍDAS (leído en la fuente, no supuesto)
+
+**Reportado** ✗: *«todavía se escucha el galope de caballo cuando anda el oso»*. **Medido en la fuente de vanilla** ✓ (saqué
+`AbstractHorse.java` del **jar de fuentes** `neoforge-21.1.249-sources.jar` ✓, en vez de suponer ✗): el paso de caballo vive en
+`playStepSound` (L396-417: `HORSE_STEP_WOOD` L409/L412 y `HORSE_STEP` L414) y el galope en `playGallopSound` (L427-429:
+`HORSE_GALLOP`) — y **el oso ya sobrescribe los dos** ✓ (`SoulBear` L518 ✓ `POLAR_BEAR_STEP`, y I382 ✓). Lo que **no** estaba
+sobrescrito es **`causeFallDamage`** (L307-325 ✓), que toca **`HORSE_LAND`** en cuanto la caída pasa de **un bloque** ✓ → y
+andando por la aldea (escalones, bancales) eso es continuo ✓✓. **Arreglo**: se reimplementa la caída **igual que vanilla**
+(`calculateFallDamage` ✓, `hurt` ✓, daño a los pasajeros ✓, `playBlockFallSound` ✓) **sin `HORSE_LAND`** ✓ — **el daño se
+mantiene** ✓. *Medida*: al andar el oso **no** debe sonar a caballo ✓ (lo confirma el jugador: *«ya funciona el oso»* ✓).
+
+### I385 · **RETIRADO** · «salto al pulsar» (no era lo que había que hacer)
+
+Lo puse ✓ y el jugador lo corrigió con razón ✓: *«¿para qué sirve la carga? debe servir para algo»* ✓. La carga del caballo
+**sí sirve** ✓ (`AbstractHorse` L117 `playerJumpPendingScale` ✓, L404 `canGallop` ✓: cuanto más se mantiene, más alto salta ✓).
+**Retirado con `git revert`** ✓ y el arreglo correcto es **hacer que la carga LLEGUE** ✗→✓ (siguiente: ensillar; ver I384 ✓).
+
+### I384 · TRAZA DE LA CARGA DEL SALTO: **medido con jugador de verdad** (`SoulBear`, `aiStep` tras `boolean mounted = …`)
+
+**Medido en su partida** ✓ (9 muestras, montado ✓): **`carga=0.0` SIEMPRE** ✗, `isJumping=false` ✗, `dy=0.0` ✗ → **el input de
+salto no le llega al oso** ✓✓: el salto **con carga** del caballo de 1.21 nunca se carga ✓. *Traza*: cada 20 ticks mientras va
+montado, con `carga`, `isJumping`, `dy` y `enSuelo` ✓ (`c43930c` ✓).
+
+### I383 · SIMULACIÓN DEL OSO EN EL ARNÉS (herramienta, no se entrega)
+
+En `src/main/java/com/chipoodle/devilrpg/debug/GuardHarness.java` ✓ (fuera de git ✓, I387 ✓): se **invoca el oso igual que la
+skill** ✓ (`ModEntities.SOUL_BEAR.get().create(level, null, CENTRO, MobSpawnType.MOB_SUMMONED, true, true)` ✓, la firma real
+copiada de `SkillSummonSoulBear` L89 ✓), se monta con el jugador falso y se le manda el salto ✓. **Dos cosas medidas con ella**
+✓✓: **(1)** `updateLevel(pega)` **peta** ✗✓ (`RuntimeException`: es el camino de la skill y pide la **capacidad** del jugador,
+que un `FakePlayer` **no tiene** ✗); **(2)** con el oso invocado: `carga=0.0` ✓, `isJumping=true` (el encabritado **se puede
+marcar** ✓), y su `y` se quedó en **64.0 durante 200 ticks** con `dy=-0.0784` (**gravedad pura** ✓) → **se encabrita y no
+levanta** ✓✓. **Límite medido** ✗: en el arnés el `FakePlayer` **no se queda montado** (`montado=false` ✓), así que la carga
+solo se puede medir con un jugador de verdad ✓ (por eso I384 ✓).
+
+### I382 · LOS CUATRO SONIDOS DE MONTA DEL OSO (los que el caballo de 1.21 SÍ pide)
+
+**Comparado con `migration_1.19.3`** ✓ (como pidió el jugador ✓): los **seis** sonidos del fichero son **idénticos** ✓
+(`POLAR_BEAR_AMBIENT/HURT/DEATH/STEP/WARNING` ✓ y `HORSE_ARMOR` al poner armadura ✓) → **en el fichero no se perdió ninguno** ✗.
+Lo que suena a caballo es lo **heredado** ✓, y eso **sí** cambió ✓: el caballo de 1.21 pide `getEatingSound` ✓, `getAngrySound` ✓,
+`playGallopSound` ✓ y `getAmbientStandSound` ✓ (el de 1.19 no ✓) → **sobrescritos con el oso blanco** ✓ (firmas sacadas con
+`javap` del jar `neoforge-21.1.249-merged.jar` ✓, **no inventadas** ✗) ✓.
+
+### I380 / I381 · **RETIRADOS** · el «sentarse» del oso: **lo inventé yo** ✗
+
+Auditoría del jugador, con razón ✓: *«JAMÁS te pedí que el soulbear pudiese sentarse, eso tú lo inventaste»* ✓. Lo que él pidió
+era **el salto montado** ✓ y **quitar los sonidos de caballo** ✓. **Retirados los dos con `git revert`** ✓ (`bf36386`, `4d51b1f` ✓)
+y **comprobado** que no queda ni una línea ✓.
+
+### I379 · LOS ASALTANTES VAN PRIMERO A POR EL JUGADOR Y SUS MINIONS (`AggressiveZombieEntity` L1015 y L1027)
+
+**Estaba al revés** ✗✓: el objetivo de los **aldeanos** tenía prioridad **0** (la más alta ✓) y el del **jugador** la **1** ✓ →
+iban **primero a por los aldeanos** ✗. En Minecraft el número **menor** se prueba antes ✓. **Arreglo**: jugador (y sus minions,
+que van en el goal de al lado ✓) = **0** ✓, aldeanos = **2** ✓. Si mueren los aldeanos, **la aldea cae** ✓ (eso se queda ✓, por
+decisión del jugador ✓). **Pendiente de verificar con un asedio real** ✗.
+
+### I378 · UNA ALDEA CAÍDA NO VUELVE A SER ASEDIADA (`VillageManager.startWorldSiege`, L1897)
+
+**Contradicción señalada por el jugador** ✓✓: *«si ya había caído, ¿por qué entonces reinició el asedio?»* — y tenía razón ✓.
+El asedio **clásico** ya comprobaba `isFallen` ✓ (de ahí el aviso *«NO arranca: su asedio ya consta como resuelto»* ✓), pero la
+**horda del mundo** entraba por `startWorldSiege` **sin mirar** si la aldea estaba caída ✗✓ → a una aldea ya caída (derrota
+**definitiva** ✓, `isFallen`, ver L1000 ✓) le seguían llegando hordas de **23** enemigos ✓. **Arreglo**: se rechaza si ya cayó ✓
+o si ya tiene horda en curso ✓ (no se apilan ✓), con traza ✓.
+
+### I377 · LA CAMA DE LOS TEJADOS SIN LUZ NI VECINOS (`VillageGenerator`, borrado de `quitarCamasPorEncimaDeLosTejados`)
+
+Se vio al poner la guarda de I376 ✓: ese borrado usaba **`Block.UPDATE_ALL`** ✓ — **la misma cascada** que corté en I372 ✓ pero
+por **otra línea** ✓ (mis cuatro de entonces no la incluían ✗). Ahora `Block.UPDATE_CLIENTS` ✓ con la excepción `lint:ok I9`
+**en la misma línea** ✓ (el lint me paró **dos** intentos antes ✓: uno tocó dos líneas por heurística y **una era construcción**
+✓; el otro no llevaba la excepción ✓; los dos se **restauraron sin daño** ✓).
+
+### I376 · NO SE QUITA UNA CAMA CON ALGUIEN DENTRO (`quitarMitadesDeCamaHuerfanas` y `quitarCamasPorEncimaDeLosTejados`)
+
+**Reportado** ✗: *«un granjero sale huyendo de un enemigo y sale flotando de su cama el otro granjero mientras está dormido»*
+(con captura: Eufemia e Isidoro, granjeros, **huyendo** ✓). **Causa** ✗✓: mis barridos de camas quitaban una cama **sin mirar si
+había alguien durmiendo dentro** → el juego **expulsa** al aldeano y aparece **flotando** ✓. **Arreglo**: antes de quitar una
+cama se comprueba que **no haya ninguna entidad viva** en esa celda ✓ (`getEntitiesOfClass(LivingEntity, AABB(p))` ✓). El
+barrido sigue limpiando las **vacías** ✓ (el reporte original ✓), nunca con alguien dentro ✓.
+
+### I375 · EL ASALTANTE NO CAVA MÁS DE 3 HACIA ABAJO (`AggressiveZombieEntity.cavarHaciaAbajo`, L956)
+
+**Medido con el inspector (I360)** ✓ sobre su asedio de las **17:01-17:03** (8 asaltantes ✓): `CAVA hacia abajo` = **293** ✗
+(lo **dominante** ✓), con picados a **y=51 y 52** (24 y 13 veces ✓) — **diez bloques por debajo del suelo del pueblo** (62/63 ✓)
+—, `ABRE BRECHA` **0** ✗, `ENTRO en el recinto` **2 de 8** ✗, al centro **0** ✗, agotaron los 40 **0** ✓. **Causa** ✓: al objetivo
+que se le da está a **y≈51** ✓ (un aldeano en la **mina**, o un centro guardado con la `y` vieja ✓), y la tolerancia de I361
+solo evitaba el desnivel de **un** bloque ✗ → con **diez** se ponía a **cavar hacia abajo** ✓ y **nunca miraba la muralla** ✗✓.
+**El asedio tiene que ENTRAR EN LA ALDEA, no perseguir a nadie por la mina** ✓ → **no se cava más de 3 hacia abajo** ✓.
+*Medida (asedio siguiente, 17:33-17:38)* ✓✓: **`CAVA hacia abajo` desapareció** ✓ y pican a **63-67** (antes 51 ✓) → **entraron
+9 de 23** (antes 2 ✓). **Pendiente**: que alguno **llegue al centro** ✗ (sigue en 0 ✓).
+
+### I374 · 6,5 s DE RODEO Y, SI NO HAY PASO, **ROMPER O TREPAR AL AZAR** (diseño del jugador)
+
+**Su definición** ✓: el asaltante camina hasta que algo le bloquea el paso ✓, **busca sortearlo 6-7 s** ✓ y, si no puede,
+**rompe o trepa** ✓ — y **si las dos valen igual, elige al azar** ✓. **(1)** `BREAK_EVERY_TICKS` **60 → 130** (3 s → **6,5 s** ✓);
+el rodeo ya existía ✓ (`RODEO_MULTIPLIER = 6` ✓, repath cada 20 ticks ✓, `IMPROVEMENT_THRESHOLD` ✓). **(2)** La elección de
+herramienta iba en **orden fijo** ✗ (puente → escalera → cavar abajo ✓) → ahora se prueban **romper** y **trepar** en **orden
+aleatorio** ✓ (`getRandom().nextBoolean()` ✓): si valen las dos, **moneda al aire** ✓; si solo vale una, **se usa esa** ✓. El
+túnel sigue siendo el camino del **bloqueo grueso** ✓ y cavar hacia abajo queda de **último recurso** ✓.
+
+### I373 · LA COTA SOLO SUBE SI EL AGUA ESTÁ A RAS (`VillageGenerator`, L317)
+
+**Reportado** ✗ (en el mundo recuperado): *«la muralla tiene paredes enormes como de 20 metros de alto»* ✓. **Causa** ✗✓: mi
+I304 subía la cota **por encima del agua sin límite** ✓ → en una aldea de **lago** la subía muchísimo ✓ → el pueblo se
+reconstruía **sobre un pedestal** y el muro salía **altísimo** ✓✓. **Arreglo**: `aguaMasAlta - nivelVilla <= 2` ✓ (**charco
+sí** ✓, **lago no** ✗ — para el lago ya está el camino de la isla flotante ✓). *Nota*: en un mundo **ya construido** el terreno
+elevado **no se deshace** ✗ (por eso el jugador abre **partida nueva** ✓).
+
+### I372 · MIS CUATRO BORRADOS, SIN RECALCULAR LUZ (la causa de que no carguen chunks ni salve)
+
+`VillageGenerator` L8769 (troncos) ✓, L8821 (mitades de cama) ✓, L8962 (paso de compuertas) ✓ y L8977 (agua de encima del piso)
+✓: pasan de **`flags 3`** (actualiza **vecinos y luz** ✓) a **`flags 2`** (solo al cliente ✓) con la excepción `lint:ok I9`
+**en la misma línea** ✓. **Medido antes** ✗✓: con `flags 3`, **3.370 troncos** de golpe = 3.370 recálculos de luz ✓ → el tick se
+satura ✓ → **los chunks no cargan y el guardado no termina** ✓✓ (exactamente lo que vio el jugador ✓). *Medida*: **el jugador
+confirmó que los chunks cargan** ✓.
+
+### I371 · TOPE DE TRABAJO EN LOS TRES BARRIDOS (`troncosBajoLaCota` y `quitarMitadesDeCamaHuerfanas`, 1500 columnas/pasada)
+
+Los tres retrofits que reparan el mundo miran como mucho **1500-3000 columnas por pasada** ✓ (el del piso, I369 ✓) y siguen en
+la siguiente (30 s después ✓): cada pasada toca **unas pocas decenas** de bloques ✓ en vez de **3.370** de golpe ✓✓. Es la vía
+**segura**: **no** se tocan los flags de la construcción ✓ (el intento ancho los cambió en **57 sitios** ✗ y el lint lo paró ✓:
+`I9 se añade CONSTRUCCIÓN` ✓), y el coste por pasada queda **acotado por construcción** ✓.
+
+### I369 · TRABAJO ACOTADO POR PASADA (`VillageGenerator.ponerPisoDondeHayAgua`)
+
+**El jugador tiene razón** ✓: hay que **reparar la causa**, no recuperar el mundo ✓. Aunque ya estaba a 30 s (I368 ✓), se le
+pone **tope**: **3000 columnas miradas** por pasada ✓ (el resto, en la siguiente ✓). Así el coste de una pasada está acotado
+**pase lo que pase** ✓✓ — que es lo que hace **estructuralmente imposible** el cuelgue ✓.
+
+### I368 · EL CORTE DEL CUELGUE (era mío, y grave): 30 s y el agua sin vecinos
+
+**(a)** `ponerPisoDondeHayAgua` ✓, `troncosBajoLaCota` ✓ y `quitarMitadesDeCamaHuerfanas` ✓ corrían **EN CADA LATIDO** ✗✓ y son
+recorridos de **124×124 columnas** con varias consultas por celda ✓ (el del piso, **cinco vecinos por celda** ✓): demasiado
+trabajo por tick ✓ → **el servidor dejó de responder y se quedó guardando** ✓✓ (reporte textual: *«de repente el terreno dejó de
+generarse y ya no respondió más, al salirme se quedó salvando»* ✓). → Ahora van dentro de `if (level.getGameTime() % 600L == 0L)`
+✓ (**cada 30 s** ✓): es una **reparación**, no una urgencia ✓. **(b)** la reparación devolvía **agua** con `flags 3` ✓ → el agua
+**empieza a fluir** ✓ → **avalancha de actualizaciones** ✓ → ahora `flags 2` ✓ (sin avalancha ✓). *Medida*: **los chunks
+cargan** ✓ (confirmado por el jugador ✓).
+
 ### I1 · Toda altura se mide con `cotaDeLaPlaza`, nunca con la Y del centro
 El centro de una aldea viaja por todo el sistema (`ObjectiveTargets.targetOf`, `centroDe`) y **su Y no es la del
 pueblo**: llega la del *spawn del jugador* (101 en la partida, con las aldeas a 62-75) o directamente **0** (en el

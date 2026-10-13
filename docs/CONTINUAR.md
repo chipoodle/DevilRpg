@@ -539,3 +539,51 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
 5. Se **leyo mal la leyenda** del cortador de mapas (`C/P/B/W` eran cultivos, no cobble/planks/bricks/water).
 6. Se atribuyo a un bug el "794 bloques" (era la distancia al ancla de invocacion, por diseno).
 7. El centro de la aldea tomado de la caja de lo construido **desplazo y duplico** la aldea del jugador (mundo perdido).
+
+
+## §2.1 · ESTADO AL 12-oct-2026 (noche) — LO QUE ESTÁ HECHO Y LO QUE FALTA
+
+**Lo que está hecho y MEDIDO** (todos con `BUILD SUCCESSFUL` y `lint --strict` verde, en `ed937ff`..`cf09b3b`):
+
+- **El mundo no cargaba chunks ni salvaba** → era la **cascada de luz** de mis borrados (`flags 3` / `UPDATE_ALL`): I368, I372,
+  I377. **El jugador confirmó que los chunks cargan** ✓.
+- **Asedio**: ya no se pasan la marcha **cavando hacia abajo** (I375: 293 → **desaparece**) y pican **a la altura del muro**
+  (63-67, antes 51). **Entran 9 de 23** (antes 2). **6,5 s de rodeo** y luego **romper o trepar AL AZAR** (I374, diseño del
+  jugador). **Nadie agota los 40** (I356).
+- **Compuertas y lago** (I366/I367): medido **−22** bloques en el paso y **+86** celdas de agua devueltas al lago.
+- **Camas** (I376/I377): nadie sale **flotando** y sin cascada.
+- **Cota del lago** (I373): solo sube con agua **a ras** (≤2); en mundos ya construidos lo elevado no se deshace.
+- **Aldea caída** (I378): **no** le llegan más hordas (la contradicción que señaló el jugador).
+- **Oso** (I382, I386): los **cuatro** sonidos de monta son del **oso blanco** y el **`HORSE_LAND`** de las caídas ya no suena
+  (el daño se mantiene). **El jugador dice que ya funciona** ✓. El **salto**: medido con jugador de verdad →
+  **`carga=0.0` siempre** (I384); el siguiente paso es **ENSILLAR** (la carga del caballo solo funciona ensillado).
+
+**LO QUE FALTA** (en este orden):
+
+1. **El acta** — hecho con este mismo cambio ✓ (I368→I386 arriba).
+2. **A1 · Los 4 guardias** al fundar la aldea, **rondando** y **con armadura, arco y espada** desde el principio. Lo que YA
+   existe: `VillageGuardGoal` (ronda dentro del muro ✓ y **equiparse del almacén** ✓). Lo que falta: **4 desde el inicio** y
+   **sembrar el almacén con 4 juegos** (si nace vacío, salen **desarmados**). Hoy **no hay traza** de guardias: habría que
+   añadirla para poder medirlo.
+3. **A2 · Que los asaltantes LLEGUEN AL CENTRO** ✗ (entran 9, al centro **0**). Traza para medirlo: la del informe de posición
+   (`AggressiveZombieEntity` L1141, cada 5 s, coste cero).
+4. **B1 · El haz de luz**: el código ya lo dibuja en el centro guardado y **solo si estás dentro** (I303). **Falta que el
+   jugador mire desde dentro**: si lo ve a un costado, el centro guardado **no** es el del kiosco y hay que anclarlo al kiosco.
+5. **B2 · El minero**: en la copia del arnés **trabajó** (`minero 56`) y su paso ya está despejado (I366), pero **falta
+   confirmarlo** en su mundo (o una traza propia).
+6. **B3 · Verificar el orden de objetivos** (jugador/minions primero, I379) con un asedio real.
+
+**Reglas de trabajo que evitarn desastres** (aprendidas a golpes hoy, y están en el historial):
+
+- **Medir antes de tocar**: el registro del jugador (trazas I358/I359) y el inspector `build/inspector_del_asedio.py`
+  (`--desde/--hasta` y **dice el tramo que ha leído**).
+- **Editar por LÍNEA VERIFICADA**: los scripts buscan la línea, comprueban que es la que creen y **abortan sin tocar nada** si
+  no cuadra (pasó **6 veces** hoy). El ancla por texto falló 3 veces: no usarla.
+- **No commitear** sin `gradlew compileJava` **BUILD SUCCESSFUL** y `tools/lint_aldea.py --strict` en verde. La excepción
+  `lint:ok I9` va **en la misma línea** que el `colocar`.
+- **El acta**: anclar en la entrada más nueva **buscándola**, y **comprobar que el fichero crece**; si no crece, abortar.
+  `docs/CONTINUAR.md` **no** se toca con cortes: se le **añade** al final.
+- **NUNCA** escribir ni borrar `run\saves`. El arnés (`GuardHarness.java`) vive en
+  `src/main/java/com/chipoodle/devilrpg/debug/` y va **fuera de git** (`.gitignore`), para que **no se entregue**.
+- **El cliente del juego bloquea el jar**: si `compileJava` dice `neoforge-…jar is locked by`, matar el `java.exe` del cliente
+  (`-Dfml.modfolders=devilrpg`) y reintentar. El jugador lo autorizó expresamente.
