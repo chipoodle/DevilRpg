@@ -520,6 +520,28 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
     /**
+     * I386 · SIN SONIDO DE CABALLO AL CAER. Leido en la fuente de vanilla (AbstractHorse.causeFallDamage, L307-325): la
+     * caida hace el daño normal Y toca HORSE_LAND. Ese es el sonido que se oia "como galope" andando por la aldea, porque
+     * cada escalon de mas de un bloque lo dispara (los pasos ya son del oso: playStepSound esta sobrescrito). Se reimplementa
+     * la caida IGUAL que vanilla (mismo daño, tambien a los pasajeros, y el sonido del bloque al caer) pero sin HORSE_LAND.
+     */
+    @Override
+    public boolean causeFallDamage(float distance, float multiplier, @NotNull DamageSource source) {
+        int dano = this.calculateFallDamage(distance, multiplier);
+        if (dano <= 0) {
+            return false;
+        }
+        this.hurt(source, (float) dano);
+        if (this.isVehicle()) {
+            for (net.minecraft.world.entity.Entity pasajero : this.getIndirectPassengers()) {
+                pasajero.hurt(source, (float) dano);
+            }
+        }
+        this.playBlockFallSound();
+        return true;
+    }
+
+    /**
      * I382 · LOS SONIDOS DE MONTAR, DEL OSO (no del caballo). En 1.19 este fichero no necesitaba nada de esto porque el
      * caballo de 1.19 no los pedia; el de 1.21 sí (getAngrySound, getEatingSound, playGallopSound, getAmbientStandSound).
      * Se sobrescriben con los del OSO BLANCO, que es lo que sonaba antes de la migracion: el jugador lo pidio así.
