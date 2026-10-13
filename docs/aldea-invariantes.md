@@ -55,6 +55,134 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > de línea **se desplazan** con cada cambio, así que **antes de tocar hay que verificar la línea actual del fichero** (y, si no
 > cuadra, **abortar sin tocar nada**, que es lo que hacen los scripts de `.migration-tools/`).
 
+### I393 · LA GUARDIA DE FUNDACIÓN SE MARCABA TARDE: cinco minutos de guardias INVISIBLES **[MEDIDO]**
+
+**Reportado** ✗ (13-oct-2026, con pantallazo): *«tampoco vi los guardias adicionales»*, en una aldea **nueva** (la del
+asedio, centro 534,63,566).
+
+**Lo que decía el registro, y era verdad a medias**: los cuatro **sí** estaban —convocados a las **00:06:50** y
+**alistados a las 00:11:47** (`[Milicia] aldea 0: fundacion 4 + 0 … alistados DE VERDAD: 4 (2 espadachines, 2
+arqueros)`, con `se alista en la guardia como espadachin/arquero` para los cuatro UUID y su `nuevo puesto`) ✓—, pero
+entre una cosa y la otra pasaron **CINCO MINUTOS** ✗.
+
+**La causa, medida y del propio mod** ✗: el aldeano de vanilla **no enseña la armadura ni lo que lleva en la mano**
+(lo dice `VillagerGuardGoal` **L59-61**: por eso existe el modelo del guardia), así que hasta que no se les ponía la
+marca de guardia **espejada al cliente** (`sincronizarMarcaDeGuardia`) los cuatro —con su cuero, su espada y su arco
+puestos— se dibujaban **como aldeanos normales** ✗. Y esa marca solo se ponía en `alistarGuardia` (**L3688-3695**), que
+vive en `tickVillageLife`: **una aldea recién fundada nace con su asedio inicial** y ese latido **no corre hasta que
+la aldea está en paz**, así que el jugador miró a sus cuatro guardias durante cinco minutos y vio cuatro aldeanos.
+
+**Arreglo** ✓ (`VillageManager` **L967-979**, dentro del marcado de la cohorte al fundar la aldea): al marcar los
+cuatro se les pone **ya** `GUARD_TAG` (**L978**) y se **espeja la marca al cliente** (**L979**), de modo que nacen
+**guardias de verdad** —marca, tipo y dibujo— desde el primer tick. El **alistamiento** (que es lo que les da el
+**goal** de ronda) sigue siendo cosa del latido de la paz: es lo correcto, porque durante el asedio el pueblo no
+reparte milicia (I237).
+
+**Medida** ✓: escena `MEDIR_GUARDIA_DE_FUNDACION` del arnés, **mundo nuevo** (`tanda-rapida.ps1 620 -MundoNuevo`):
+`[Arnes] FUNDACION t=200 COHORTE=4 (marcados sin guardia=0, dinamicos=0)` ✓ — antes de este arreglo esa misma línea
+daba **`marcados sin guardia=4`** ✗ (corrida 611) y los cuatro llevaban su equipo sin ser guardias para el cliente.
+
+**Lo que sigue necesitando un JUGADOR** **[PENDIENTE DE VERIFICAR]**: verlos **dibujados** con el modelo de guardia
+(el arnés mide la marca y las ranuras, no el pixel) en una aldea **nueva**.
+
+### I392 · EL PISO DEL PUEBLO NO PUEDE SER EL LAGO HELADO (agua **y hielo**) **[MEDIDO]**
+
+**Reportado** ✗ (13-oct-2026, con pantallazo): *«el piso tenía partes con agua»*, en la misma aldea nueva.
+
+**Medido en su guardado** ✓ (`run/saves/New World`, aldea **534,63,566**, cota 63, radio 62; herramienta
+`build/agua_y_hielo_del_piso.py`, capa a capa): la capa del suelo (**y=62**) tiene **1532 celdas de AGUA y 6534 de
+HIELO** de las ~12.076 del recinto —el **67 %** ✗—, y en las capas de arriba (63, 64, 65) **no hay ni agua ni hielo**
+(así que el defecto está **solo** en esa capa, que es donde se pisa). O sea: el pueblo se asentó sobre la superficie
+de un **lago helado**.
+
+**Por qué I354 no lo arreglaba, medido en el propio código** ✗: `ponerPisoDondeHayAgua`
+(`VillageGenerator` **L8960**) tiene dos guardas que, juntas, dejan este caso **sin tocar**:
+1. exige que **debajo de la cota haya SÓLIDO** (`!getBlockState(pie.below()).isSolid()` → `continue`), y cuando el
+   agua **es** la capa del suelo esa condición manda a saltarse la celda ✗;
+2. solo mira **AGUA**: el hielo **no es un fluido** (`getFluidState()` vacío), así que las 6534 celdas heladas no se
+   tocaban nunca ✗ — y encima el hielo **se derrite con las antorchas y los faroles del pueblo**, que es de donde
+   salen los charcos que el jugador ve ✓.
+
+**Y un fallo de instrumento del propio arreglo** ✗: el tope de **3000 columnas** por pasada (I369, para no colgar el
+servidor) **volvía a empezar por la primera columna** en cada pasada, así que miraba siempre las mismas 3000 (la
+franja oeste) y el resto del recinto **no se alcanzaba nunca**.
+
+**Arreglo** ✓:
+- **`ponerPisoEnLaCapaDeAbajo`** (**L9105**), llamada desde el bucle (**L9010**): si la capa del suelo (la de debajo
+  de la cota) es **AGUA o HIELO**, se pone el suelo del pueblo (césped). Con las dos reglas de siempre: **el lago del
+  pescador y su orilla no se tocan** (`cercaDelLago` 16) y **nunca se pisa nada construido** (solo agua y hielo).
+  El lago **abierto** (agua con agua a los lados) sigue sin rellenarse; con **hielo** no se aplica esa regla a
+  propósito, porque una capa de hielo es una superficie **continua** y es justo lo que hay que pavimentar.
+- **El cursor del barrido** (**`columnasDelRecinto` L9064** y **`cursorDelPiso` L9086**, usado en **L8966**): el
+  presupuesto de 3000 columnas por pasada **reanuda donde se quedó** (y da la vuelta al llegar al final), así que el
+  recinto entero se cubre en 4-5 pasadas de 30 s **sin subir el trabajo por pasada** (que es lo que colgaba el juego).
+
+**Medida** ✓ (copia del guardado, `tanda-rapida.ps1 621`, con el latido de la paz corriendo):
+
+| capa del suelo (y=62), dentro del recinto | ANTES (su guardado) ✗ | DESPUÉS (copia tras la corrida) ✓ |
+|---|---|---|
+| agua | **1532** | **42** |
+| hielo | **6534** | **921** |
+| césped | 1889 | **8988** |
+
+Y **de lo que queda, todo está justificado** ✓ (herramienta `build/queda_agua_del_piso.py`): **24 de agua y 921 de
+hielo** caen en la **caja del lago del pescador** (la que el mod protege a propósito: 16 bloques alrededor de su
+base) y **18 de agua** son la **acequia** de la huerta (que es agua por diseño). En el registro, la pasada lo dice:
+`1830 + 2592 + 1689 + 1003 + 10 = 7124 celda(s) de PISO puestas donde había agua a la altura del pueblo (I354)`.
+
+**Lo que sigue necesitando un JUGADOR** **[PENDIENTE DE VERIFICAR]**: cargar su partida y **mirar el piso** (el
+arreglo corre **solo con la aldea EN PAZ**, en el latido de cada 30 s: en su aldea tardará 2-3 minutos en quedar
+entero, y **durante un asedio no corre**).
+
+### I391 · EL MURO SE RECONSTRUÍA **DURANTE EL ASEDIO**: la guarda miraba a 2 bloques del centro (y los asaltantes pelean a 62) **[MEDIDO]**
+
+**Reportado** ✗ (13-oct-2026, con pantallazo): *«ningún zombie pasó la muralla en el asedio. Todos se quedaron afuera
+estáticos y no rompieron nada ni escalaron»*. La aldea se dio por **salvada** sin pelea ✗.
+
+**Medido en su registro** ✓ (`run/logs/latest.log`, aldea 534,63,566, asedio de 00:09:47 a 00:11:47):
+- El muro se **reconstruyó DOS VECES** con el asedio dentro: **00:09:53** (`el muro NO esta a la cota 63 (solo **921 de
+  921** celdas del anillo lo tienen; hojas apiladas: false; **portones mal puestos: true**): se reconstruye` →
+  `muro reconstruido al nivel del pueblo 63 (**1470 restos quitados**)`) y **00:10:13** otra vez (**1468** restos) ✗.
+- Las dos veces **justo después** de que un asaltante picara una celda del portón: `#7610 pica
+  Block{devilrpg:porton_doble} en 533, 63, 504` a las **00:09:53.478** y `#7607 … en 596, 63, 567` a las
+  **00:10:13.123** ✓.
+- Y los ocho asaltantes **clavados** en el anillo: `#7604` en `574, 63, 614` desde las 00:09:47 hasta las 00:11:31
+  (el mismo sitio, repitiendo `va a cavar hasta dy=1 · tunel 40/40` cada 5 s), `#7605`/`#7608` los dos en
+  `486, 63, 526`, etc. **todos a r≈62,5** del centro ✗.
+
+**La causa, una línea** ✗: `VillageGenerator.asegurarMuro` (**L7116-7118**) tenía la guarda de I296 —«no se repone el
+muro con el asedio en marcha»— mirando en **`inflate(2.0)`**, o sea un cuadro de **±2 bloques alrededor del CENTRO
+DE LA ALDEA**, y los asaltantes pelean **pegados al anillo (r=62)**, a 60 bloques de ahí: **no disparaba nunca** ✗.
+O sea que el asaltante abría, el pueblo le tapaba el agujero **y le borraba el túnel** (`1470 restos quitados`), y
+volvía a empezar con `tunel 40/40`.
+
+**Arreglo** ✓ (**L7116-7118**): la guarda mira **todo el anillo** (`inflate(FENCE_RADIUS + 8.0D)`), que es donde de
+verdad están. Con asedio en marcha **no se toca ni el muro ni los portones**: la brecha se queda abierta y el pueblo
+solo se repara cuando la pelea ha terminado.
+
+**Medida** ✓ (escena nueva `MEDIR_ASEDIO_AL_MURO` del arnés, **su misma aldea** en una copia del guardado,
+`tanda-rapida.ps1 623`, 6 asaltantes a r=70 con el centro de la aldea puesto en el monstruo):
+
+| | ANTES (su registro) ✗ | DESPUÉS (corrida 623) ✓ |
+|---|---|---|
+| `el muro NO se repone: hay asedio en marcha` | **0** | **1319** |
+| `muro reconstruido` (con asaltantes vivos) | **2** | **0** |
+| picados de verdad sobre el muro | 0 brechas | **30**, de ellos **24 de adoquín a r=62-64** (el anillo) |
+| asaltantes **dentro** del anillo | **0** | **2-4** en cada volcado |
+| asaltantes vivos al final | 8 (estáticos) ✗ | **3** (la milicia mata a 3) ✓ |
+
+**Un hueco del instrumento, dicho** ✗: la traza del mod `ABRE BRECHA en el muro` salió **0** veces aunque los 24
+adoquines picados a r=62-64 **son** el anillo. Es un hueco de la **traza** (`esLaMuralla`, **L623**, no reconoce esas
+celdas), no del comportamiento: la prueba de que la brecha existió y **no se tapó** es que `asegurarMuro` dejó de
+devolver temprano (imprimió 1319 veces «no se repone») y que los asaltantes entraron. **Se deja apuntado** para
+arreglar la traza cuando toque, sin tocarla ahora (no se encadenan cambios sin su medida).
+
+**Lo que sigue necesitando un JUGADOR** **[PENDIENTE DE VERIFICAR]**: un asedio **en vivo** en su partida (el del
+arnés no tiene ventana ni jugador de verdad, I86), para ver que **entran de verdad** y que la aldea **puede caer** si
+no la defiende.
+
+---
+
 ### I390 · LOS CUATRO GUARDIAS DE FUNDACIÓN: la aldea nace con ellos, armados y sin tocar los 12 puestos **[MEDIDO]**
 
 **Lo que pidió el jugador** ✓: *«ya debiste haber agregado 4 cuando inició la aldea»*, con **dos espadachines y dos

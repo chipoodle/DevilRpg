@@ -964,6 +964,19 @@ public final class VillageManager {
                 // llevaran arco. Par = espadachín, impar = arquero, igual que en el reparto de la milicia.
                 villager.getPersistentData().putInt(GUARD_TYPE_TAG,
                         marcados % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO);
+                // I391 · Y SE MARCAN COMO GUARDIA DESDE EL PRIMER TICK, no cuando el pueblo esté en paz y los aliste
+                // (medido el 13-oct-2026, reporte del jugador: *«tampoco vi los guardias adicionales»*, con
+                // pantallazo). Aquí está el porqué, y es del propio mod: el aldeano de vanilla **no enseña la armadura
+                // ni lo que lleva en la mano** (lo dice `VillagerGuardGoal` L59-61: por eso existe el modelo del
+                // guardia), así que los cuatro —con su cuero y su arma puestos— se dibujaban como aldeanos normales
+                // hasta que `alistarGuardia` les espejaba la marca al cliente. Y el alistamiento vive en
+                // `tickVillageLife`, que **solo corre con la aldea EN PAZ**: en una aldea recién fundada, que nace con
+                // su asedio inicial, eso son MINUTOS (en su registro: convocados a las 00:06:50 y alistados a las
+                // 00:11:47, o sea CINCO MINUTOS de guardias invisibles ✗). Ahora la marca de guardia y su espejo al
+                // cliente se ponen al marcar la cohorte ✓, así que el jugador los ve como guardias desde el primer
+                // tick; el alistamiento (que es lo que les pone el goal) sigue siendo cosa del latido de la paz.
+                villager.getPersistentData().putBoolean(GUARD_TAG, true);
+                VillagerGuardGoal.sincronizarMarcaDeGuardia(villager);
                 // Y CON SU EQUIPO PUESTO desde el primer tick (ver `equiparAlGuardiaDeFundacion`): el tipo sale del
                 // índice (par = espadachín, impar = arquero), igual que en el reparto de la milicia, así que la
                 // guardia nace armada y visible sin esperar a que el pueblo le lleve la remesa al almacén.

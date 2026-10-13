@@ -369,7 +369,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         // lista y el asaltante de la charca se borraba en el PRIMER barrido (t=320, un segundo despues de aparecer).
         // Lo que se midio entonces ("el monstruo flota en el borde y no sale, velocidad 0,012") era ESTO: un monstruo
         // congelado por el barrido, no un pozo que lo encerrara (ver `medirElNado`).
-        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS && !MEDIR_AGUA && !MEDIR_OLA_CON_FOSO && !MEDIR_MONTANA) {
+        if (ticks % 20 == 0 && !MEDIR_MILICIA && !MEDIR_MURO && !MEDIR_ATRAVESADORES && !MEDIR_OLA_REAL && !MEDIR_VELOCIDAD && !MEDIR_HORDAS && !MEDIR_PEPITAS && !MEDIR_AGUA && !MEDIR_OLA_CON_FOSO && !MEDIR_MONTANA && !MEDIR_ASEDIO_AL_MURO) {
             if (MONSTRUO_DENTRO) {
                 // ...pero para medir EL BUG DEL LATIDO CORTADO hay que dejar UNO dentro a proposito.
                 mantenerMonstruoDentro(level);
@@ -439,6 +439,9 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         } else if (MEDIR_GUARDIA_DE_FUNDACION) {
             // A1 · LA GUARDIA DE FUNDACION (aldea nueva): cohorte, puestos del pueblo y equipo. Ver el metodo.
             medirLaGuardiaDeFundacion(level);
+        } else if (MEDIR_ASEDIO_AL_MURO) {
+            // I391 · EL ASEDIO CONTRA EL MURO DE VERDAD: el muro no se repone con asedio en marcha. Ver el metodo.
+            medirElAsedioAlMuro(level);
         } else if (MEDIR_ANILLO) {
             medirElAnilloDelMuro(level);
         } else if (MEDIR_CRUCE_DEL_PORTON) {
@@ -3486,6 +3489,116 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
         }
     }
 
+    /**
+     * <b>EL ASEDIO CONTRA EL MURO DE VERDAD DEL PUEBLO</b> (I391, 13-oct-2026). Es la medida del reporte del jugador:
+     * *«ningún zombie pasó la muralla en el asedio. Todos se quedaron afuera estáticos y no rompieron nada ni
+     * escalaron»*.
+     * <p>
+     * Lo que se mide, y por qué así: se ponen {@value #MURO_ASALTANTES} asaltantes <b>fuera del anillo del pueblo de
+     * verdad</b> (a r={@value #MURO_R}) con el centro de la aldea en {@code CENTRO} y se deja correr el latido. Lo que
+     * tiene que salir en el registro:
+     * <ul>
+     *   <li><b>`el muro NO se repone: hay asedio en marcha`</b> — la guarda de I296 que ANTES no disparaba nunca (miraba
+     *       en {@code inflate(2.0)} alrededor del centro y los asaltantes pelean a r=62) y por la que el pueblo le
+     *       tapaba la brecha al asaltante dos veces por minuto ✗;</li>
+     *   <li><b>NINGUNA</b> línea `muro reconstruido` mientras haya asaltantes vivos (eso es el arreglo);</li>
+     *   <li>y que los asaltantes <b>abran brecha</b> (`ABRE BRECHA en el muro`) y <b>entren</b>
+     *       ({@code dentro=true} en sus líneas `va por`).</li>
+     * </ul>
+     * NO se barre ningún monstruo en esta escena (el barrido del arnés los borraría y la medida no valdría).
+     */
+    private static final boolean MEDIR_ASEDIO_AL_MURO = false;
+
+    /** Cuántos asaltantes pone la escena y a qué radio del centro del pueblo (el anillo está a 62). */
+    private static final int MURO_ASALTANTES = 6;
+    private static final int MURO_R = 70;
+
+    /** Los asaltantes de la escena del muro (para poder contarlos y ver si siguen vivos). */
+    private static final java.util.List<com.chipoodle.devilrpg.entity.AggressiveZombieEntity> olaDelMuroDelPueblo =
+            new java.util.ArrayList<>();
+
+    private static void medirElAsedioAlMuro(ServerLevel level) {
+        if (ticks == 300 && olaDelMuroDelPueblo.isEmpty()) {
+            for (int i = 0; i < MURO_ASALTANTES; i++) {
+                double ang = (i / (double) MURO_ASALTANTES) * Math.PI * 2.0D;
+                int x = CENTRO.getX() + (int) Math.round(Math.cos(ang) * MURO_R);
+                int z = CENTRO.getZ() + (int) Math.round(Math.sin(ang) * MURO_R);
+                var z2 = com.chipoodle.devilrpg.init.ModEntities.AGGRESSIVE_ZOMBIE.get().create(level);
+                if (z2 == null) {
+                    continue;
+                }
+                int suelo = level.getHeight(
+                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
+                z2.moveTo(x + 0.5D, suelo, z + 0.5D, 0.0F, 0.0F);
+                // El centro de la aldea DEL MONSTRUO es el pueblo de verdad: es lo que hace que el anillo cuente como
+                // muralla (rompible) y que su interior esté vetado.
+                z2.setVillageCenter(new BlockPos(CENTRO.getX(), CENTRO.getY(), CENTRO.getZ()));
+                z2.setGoToCenterActive(true);
+                z2.recargarTunel();
+                z2.setPersistenceRequired();
+                level.addFreshEntity(z2);
+                olaDelMuroDelPueblo.add(z2);
+            }
+            DevilRpg.LOGGER.info("[Arnes] MURO DEL PUEBLO: {} asaltantes puestos fuera del anillo (r={}) con el centro"
+                    + " en {} — lo que se busca: `el muro NO se repone: hay asedio en marcha` y NINGUN `muro"
+                    + " reconstruido` mientras vivan", MURO_ASALTANTES, MURO_R, CENTRO);
+        }
+        if (ticks % 200 != 0 || ticks < 200) {
+            return;
+        }
+        // ¿Y EL MURO, EN PIE O ROTO? Se cuentan las celdas del anillo que YA no tienen firma de muro (tronco, adoquín
+        // o portón) en la banda del suelo: eso es la BRECHA. Sin esto no se distingue "no pica" de "pica y le reponen".
+        int cota = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, CENTRO);
+        int enPie = 0;
+        int brecha = 0;
+        int radio = com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS;
+        for (int dx = -radio; dx <= radio; dx++) {
+            for (int dz = -radio; dz <= radio; dz++) {
+                if (dx * dx + dz * dz > radio * radio) {
+                    continue;
+                }
+                // Solo el ANILLO (a radio del muro, no el disco entero).
+                double d = Math.sqrt(dx * dx + dz * dz);
+                if (d < radio - 1.5D) {
+                    continue;
+                }
+                boolean hay = false;
+                for (int dy = 0; dy <= 2; dy++) {
+                    BlockPos p = new BlockPos(CENTRO.getX() + dx, cota + dy, CENTRO.getZ() + dz);
+                    var s = level.getBlockState(p);
+                    if (s.is(net.minecraft.world.level.block.Blocks.OAK_LOG)
+                            || s.is(net.minecraft.world.level.block.Blocks.COBBLESTONE)
+                            || s.is(net.minecraft.world.level.block.Blocks.COBBLESTONE_STAIRS)
+                            || s.getBlock() instanceof com.chipoodle.devilrpg.block.DoubleGateBlock) {
+                        hay = true;
+                        break;
+                    }
+                }
+                if (hay) {
+                    enPie++;
+                } else {
+                    brecha++;
+                }
+            }
+        }
+        int vivos = 0;
+        int dentro = 0;
+        StringBuilder donde = new StringBuilder();
+        for (var z : olaDelMuroDelPueblo) {
+            if (z.isRemoved() || z.isDeadOrDying()) {
+                continue;
+            }
+            vivos++;
+            double r = Math.sqrt(z.blockPosition().distSqr(CENTRO));
+            if (r <= radio) {
+                dentro++;
+            }
+            donde.append(String.format(Locale.ROOT, "#%d r=%.0f ", z.getId(), r));
+        }
+        DevilRpg.LOGGER.info("[Arnes] MURO DEL PUEBLO t={}: muro en pie={} celdas · BRECHA={} · asaltantes vivos={}"
+                + " (dentro del anillo={}) | {}", ticks, enPie, brecha, vivos, dentro, donde.toString().trim());
+    }
+
     /** Coloca los ocho asaltantes alrededor, fuera del foso, con su objetivo dentro del muro (ver el centro de aldea). */
     private static void colocarLaOlaDelFoso(ServerLevel level, int bx, int bz, int ySuelo) {
         for (int i = 0; i < 8; i++) {
@@ -3801,7 +3914,7 @@ if (!MEDIR_NOCHE && !MEDIR_PUERTAS && !MEDIR_COCINA && !MEDIR_ALDEAS && !MEDIR_E
      *       formación (4 espadachines y 3 arqueros).</li>
      * </ul>
      */
-    private static final boolean MEDIR_GUARDIA_DE_FUNDACION = true;
+    private static final boolean MEDIR_GUARDIA_DE_FUNDACION = false;
 
     /** Si ya se ha avisado de que la aldea NO se acaba de fundar (mundo conservado): la medida no vale. */
     private static boolean fundacionAvisada = false;

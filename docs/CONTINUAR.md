@@ -627,3 +627,59 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
   `src/main/java/com/chipoodle/devilrpg/debug/` y va **fuera de git** (`.gitignore`), para que **no se entregue**.
 - **El cliente del juego bloquea el jar**: si `compileJava` dice `neoforge-…jar is locked by`, matar el `java.exe` del cliente
   (`-Dfml.modfolders=devilrpg`) y reintentar. El jugador lo autorizó expresamente.
+
+---
+
+## §2.1 (bis) · LOS TRES REPORTES DEL 13-oct-2026 (con pantallazo), CERRADOS Y MEDIDOS — y la cola que queda
+
+> **Se AÑADE al final, como manda la regla**: esto es lo último hecho; el historial de §2.1 no se toca. Entradas del
+> acta: **I391**, **I392** y **I393**. Todo con `lint --strict` verde y `compileJava` **BUILD SUCCESSFUL**.
+
+**1 · EL ASEDIO: los asaltantes se quedaban clavados en el muro** (el jugador: *«ningún zombie pasó la muralla en el
+asedio. Todos se quedaron afuera estáticos y no rompieron nada ni escalaron»*) — **CERRADO Y MEDIDO** ✓ (**I391**). La
+causa estaba en una línea: `VillageGenerator.asegurarMuro` (**L7116-7118**) tenía la guarda de I296 —«no se repone el
+muro con el asedio en marcha»— mirando en **`inflate(2.0)`** (±2 bloques **alrededor del CENTRO** de la aldea), y los
+asaltantes pelean **a r=62**: **no disparaba nunca** ✗. Medido en SU registro: el muro se **reconstruyó dos veces**
+con el asedio dentro (00:09:53 con **1470 restos quitados** y 00:10:13 con 1468), las dos **justo después** de que un
+asaltante picara un portón, y los ocho se quedaban repitiendo `va a cavar hasta dy=1 · tunel 40/40` en el mismo sitio
+✗. Arreglo: la guarda mira **todo el anillo** (`inflate(FENCE_RADIUS + 8.0D)`). Medida (escena nueva
+`MEDIR_ASEDIO_AL_MURO`, corrida **623**, su misma aldea en una copia): `el muro NO se repone: hay asedio en marcha`
+**0 → 1319** ✓, `muro reconstruido` **2 → 0** ✓, **24 adoquines picados a r=62-64** ✓, **2-4 asaltantes dentro del
+anillo** ✓ y **3 muertos por la milicia** ✓.
+
+**2 · LOS CUATRO GUARDIAS DE FUNDACIÓN NO SE VEÍAN** (*«tampoco vi los guardias adicionales»*) — **CERRADO Y MEDIDO**
+✓ (**I393**). Los cuatro **sí** estaban (convocados 00:06:50, alistados 00:11:47 con `[Milicia] … alistados DE
+VERDAD: 4`), pero el aldeano de vanilla **no enseña la armadura ni lo que lleva en la mano**
+(`VillagerGuardGoal` L59-61), y la marca que hace que **el cliente** los dibuje como guardias solo se ponía **al
+alistarse** — y el alistamiento vive en `tickVillageLife`, que **no corre con el asedio inicial**: **cinco minutos de
+guardias invisibles** ✗. Arreglo (`VillageManager` **L967-979**): al marcar la cohorte al fundar la aldea se les pone
+**ya** `GUARD_TAG` y se **espeja la marca al cliente**. Medida (corrida **620**, mundo nuevo):
+`COHORTE=4 (marcados sin guardia=0)` ✓ (antes `=4` ✗).
+
+**3 · EL PISO CON AGUA** (*«el piso tenía partes con agua»*) — **CERRADO Y MEDIDO** ✓ (**I392**). Medido en su
+guardado: la capa del suelo (y=62) tenía **1532 celdas de agua y 6534 de hielo** de ~12.076 (el **67 %**): el pueblo
+se asentó sobre un **lago helado**, y las capas de arriba están secas. I354 no podía arreglarlo porque exige
+**sólido debajo de la cota** (y el agua *es* esa capa) y **solo mira agua** (el hielo no es un fluido) ✗; y su tope de
+3000 columnas por pasada **volvía a empezar por el principio**, así que solo miraba la franja oeste ✗. Arreglo:
+`ponerPisoEnLaCapaDeAbajo` (**L9105**) pavimenta esa capa cuando es **agua o hielo** (respetando el lago del pescador
+y sin tocar nada construido) y el barrido lleva **cursor** (`columnasDelRecinto` **L9064**, `cursorDelPiso` **L9086**)
+para cubrir el recinto entero por pasadas. Medida (corrida **621**, copia de su guardado): agua **1532 → 42** ✓,
+hielo **6534 → 921** ✓, césped **1889 → 8988** ✓, y lo que queda es el **lago del pescador** (24 agua + 921 hielo,
+protegido a propósito) y **18 de la acequia** de la huerta ✓.
+
+**LO QUE FALTA, EN ORDEN**
+
+- **(A0) ENSILLAR EL OSO** (sigue igual: medido `carga=0.0` siempre con jugador de verdad).
+- **(A2)** que los asaltantes **lleguen al centro** (entran, pero hay que medir cuántos y hasta dónde; ahora ya
+  **entran 2-4** en la escena, ver I391).
+- **[PENDIENTE DE VERIFICAR] las tres cosas necesitan su partida**: el asedio **en vivo** (I391), ver los guardias
+  **dibujados** en una aldea nueva (I393) y el **piso** después de 2-3 minutos de paz (I392; el arreglo corre solo con
+  la aldea en paz, en el latido de cada 30 s).
+- **(I391, instrumento, sin prisa)**: la traza `ABRE BRECHA en el muro` no reconoce las celdas del anillo que los
+  asaltantes sí pican (`esLaMuralla`, **L623**): el comportamiento es correcto (la brecha no se tapa), pero la traza
+  miente por omisión. Se arregla cuando toque, **con su medida**.
+
+**Nota de instrumento (y de método)**: el sandbox de comandos de la sesión se rompió a mitad (su directorio temporal
+`%LOCALAPPDATA%\Temp` había desaparecido: *«no sandbox backend is usable… --temp is not an existing directory»*), así
+que durante un rato **no se pudo compilar ni medir**; se recuperó y todas las medidas de arriba se hicieron **después**
+de recuperarlo ✓.

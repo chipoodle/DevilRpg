@@ -7098,8 +7098,24 @@ public final class VillageGenerator {
         // cerraba sola, el túnel volvía a empezar (54 veces «le quedan 40» ✗) y la aldea no caía nunca; y si el bloque
         // caía donde estaba el que cavaba, el asaltante moría ASFIXIADO ✗. Con asaltantes cerca, el muro no se toca:
         // la brecha ES el juego (lo dice el propio diseño: «el asedio TIENE que abrir brecha en el MURO»).
+        //
+        // I391 · Y EL RADIO ESTABA MAL, ASÍ QUE LA GUARDA NO SERVÍA DE NADA (medido el 13-oct-2026, reporte del
+        // jugador: *«ningún zombie pasó la muralla en el asedio. Todos se quedaron afuera estáticos y no rompieron nada
+        // ni escalaron»*, con pantallazo). La comprobación miraba en `inflate(2.0)`, o sea un cuadro de ±2 bloques
+        // alrededor del CENTRO DE LA ALDEA, y los asaltantes pelean pegados al ANILLO (r=62), a 60 bloques de ahí: la
+        // guarda no disparaba NUNCA ✗. Su registro lo enseña línea a línea: en su aldea de 534,63,566 el muro se
+        // reconstruyó DOS VECES con el asedio dentro —
+        //   00:09:53 «el muro NO esta a la cota 63 (solo 921 de 921 celdas del anillo lo tienen; … portones mal
+        //   puestos: true): se reconstruye a su nivel» → «muro reconstruido al nivel del pueblo 63 (1470 restos
+        //   quitados)», y 00:10:13 otra vez (1468 restos)—
+        // y las dos veces justo DESPUÉS de que un asaltante picara una celda del portón (`#7610 pica
+        // Block{devilrpg:porton_doble} en 533, 63, 504` a las 00:09:53.478; `#7607 … en 596, 63, 567` a las
+        // 00:10:13.123). O sea: el asaltante abría, el pueblo le tapaba el agujero y le borraba el túnel (`1470 restos
+        // quitados`), y los ocho se quedaban clavados en r≈62,5 con el presupuesto otra vez en 40/40 ✗. Ahora se mira
+        // TODO EL ANILLO (radio del muro + 8), que es donde de verdad están: con asedio en marcha no se toca ni el
+        // muro ni los portones, la brecha se queda abierta y la aldea solo se repara cuando la pelea ha terminado ✓.
         if (!level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
-                new net.minecraft.world.phys.AABB(center).inflate(2.0D)).isEmpty()) {
+                new net.minecraft.world.phys.AABB(center).inflate(FENCE_RADIUS + 8.0D)).isEmpty()) {
             DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO se repone: hay asedio en marcha (la brecha es el"
                     + " juego; se repondra cuando el pueblo este a salvo)", center.toShortString());
             return;
@@ -8947,15 +8963,20 @@ public final class VillageGenerator {
         // por celda, en cada latido, fue lo que colgo el juego y dejo el guardado a medias.
         int miradas = 0;
         int puestas = 0;
-        for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
-            for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
-                if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
-                    continue;
-                }
-                BlockPos pie = new BlockPos(center.getX() + dx, cota, center.getZ() + dz);
-                if (++miradas > 3000) {
-                    return puestas; // I369: se acabo el presupuesto de esta pasada; se sigue en la siguiente
-                }
+        // I392 · EL PRESUPUESTO REANUDA DONDE SE QUEDÓ (medido el 13-oct-2026). El tope de 3000 columnas de I369 estaba
+        // bien para no colgar el servidor, pero el barrido **volvía a empezar por la primera columna** en cada pasada,
+        // así que solo miraba SIEMPRE las mismas 3000 (la franja oeste del recinto) y el resto no se alcanzaba
+        // NUNCA ✗: en la aldea del jugador, con el 67 % del piso inundado, se habría pavimentado un trozo y el agua
+        // se habría quedado en el resto. Con el cursor, cada pasada (30 s) sigue donde lo dejó la anterior y el
+        // recinto entero se cubre en 4-5 pasadas, sin subir el trabajo por pasada (que es lo que colgaba el juego).
+        int[] columnas = columnasDelRecinto();
+        int total = columnas.length / 2;
+        for (int n = 0; n < total && n < 3000; n++) {
+            int indice = (cursorDelPiso + n) % total;
+            int dx = columnas[2 * indice];
+            int dz = columnas[2 * indice + 1];
+            miradas++;
+            BlockPos pie = new BlockPos(center.getX() + dx, cota, center.getZ() + dz);
                 if (esCeldaDelLago(center, cota, pie) || cercaDelLago(center, pie, 16)) {
                     continue; // el lago del pescador y su orilla NO se tocan (I366: antes se tapaba el lago)
                 }
@@ -8977,6 +8998,23 @@ public final class VillageGenerator {
                                 center.toShortString(), pie.toShortString());
                         continue;
                     }
+                }
+                // I392 · EL PISO DEL PUEBLO NO PUEDE SER EL LAGO HELADO (medido el 13-oct-2026, reporte del jugador:
+                // *«el piso tenía partes con agua»*, con pantallazo). Medido en SU aldea nueva (534,63,566, cota 63,
+                // guardado `run/saves/New World`, radio 62): la capa del suelo (y=62) tiene **1532 celdas de AGUA y
+                // 6534 de HIELO** de las ~12.076 del recinto —el 67 % ✗—, o sea que el pueblo se asentó sobre la
+                // superficie de un lago helado; en las capas de arriba (63, 64, 65) no hay ni agua ni hielo, así que
+                // el defecto está SOLO en esa capa. Y I354 no podía arreglarlo por dos motivos medidos aquí mismo:
+                // (a) su guarda exige que **debajo de la cota haya SÓLIDO** (`!getBlockState(pie.below()).isSolid()`
+                // → `continue`), y justo cuando el agua ES la capa del suelo esa condición manda a saltarse la celda
+                // ✗; y (b) solo mira AGUA: el hielo no es un fluido (`getFluidState()` está vacío), así que las 6534
+                // celdas heladas no se tocaban nunca ✗ — y encima el hielo se DERRITE con las antorchas y los faroles
+                // del pueblo, que es de donde salen los charcos que el jugador ve ✓. Ahora se pavimenta esa capa con
+                // el mismo suelo del pueblo (césped) cuando es AGUA o HIELO, con las dos reglas de siempre: **el lago
+                // del pescador no se toca** (ni su orilla) y **nunca se pisa nada construido**.
+                if (ponerPisoEnLaCapaDeAbajo(level, center, pie, pie.below())) {
+                    puestas++;
+                    continue; // esta columna ya está resuelta: no hay nada que secar más arriba
                 }
                 // Y SOLO SE SECA UN CHARCO: tierra firme debajo y TRES de los cuatro lados solidos. El lago abierto (que tiene
                 // agua a los lados) NO se rellena nunca.
@@ -9007,15 +9045,94 @@ public final class VillageGenerator {
                     colocar(level, suelo, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
                     puestas++;
                 }
-            }
         }
+        // I392 · el cursor avanza EXACTAMENTE lo que se ha mirado, así que la pasada siguiente sigue por donde ésta
+        // se quedó (y da la vuelta al llegar al final).
+        cursorDelPiso = (cursorDelPiso + Math.min(total, 3000)) % total;
         if (puestas > 0) {
             DevilRpg.LOGGER.info("[Village] Aldea en {}: {} celda(s) de PISO puestas donde habia agua a la altura del pueblo (I354)", center.toShortString(), puestas);
         }
         return puestas;
     }
 
+    /**
+     * <b>Las columnas del recinto, en orden</b> (pares {@code dx, dz}), para que el barrido del piso pueda
+     * <b>reanudar</b> donde se quedó. La lista es del RADIO, así que se calcula una vez y se guarda.
+     */
+    private static int[] columnasDelRecinto;
+
+    private static int[] columnasDelRecinto() {
+        if (columnasDelRecinto == null) {
+            java.util.List<Integer> lista = new java.util.ArrayList<>();
+            for (int dx = -FENCE_RADIUS; dx <= FENCE_RADIUS; dx++) {
+                for (int dz = -FENCE_RADIUS; dz <= FENCE_RADIUS; dz++) {
+                    if (dx * dx + dz * dz > FENCE_RADIUS * FENCE_RADIUS) {
+                        continue;
+                    }
+                    lista.add(dx);
+                    lista.add(dz);
+                }
+            }
+            int[] salida = new int[lista.size()];
+            for (int i = 0; i < lista.size(); i++) {
+                salida[i] = lista.get(i);
+            }
+            columnasDelRecinto = salida;
+        }
+        return columnasDelRecinto;
+    }
+
+    /** Por qué columna del recinto va el barrido del piso (I392): es lo que hace que cubra TODO el recinto por pasadas. */
+    private static int cursorDelPiso = 0;
+
     private static final int RADIO_DEL_BARRIDO = FENCE_RADIUS + 12;
+
+    /**
+     * <b>Pavimenta la capa del suelo cuando es el lago</b> (I392): si la celda que se pisa por debajo de la cota es
+     * <b>AGUA o HIELO</b>, se pone el suelo del pueblo (césped) con las reglas de {@link #ponerPisoDondeHayAgua}.
+     * <p>
+     * Va aparte porque es <b>otro caso</b>, y medido: el arreglo de I354 mira la celda de la cota (y la de debajo solo
+     * si la de la cota tiene fluido), así que cuando el agua/el hielo <b>ES</b> la capa del suelo se quedaba sin
+     * tocar ✗ — y en una aldea de bioma frío eso es media aldea (medido en la suya: 1532 de agua y 6534 de hielo en
+     * esa capa, 67 % del recinto). El hielo cuenta igual que el agua a propósito: es el mismo lago, solo que
+     * congelado, y se derrite con las antorchas del pueblo (de ahí los charcos que el jugador ve).
+     * <p>
+     * <b>No se toca</b>: el lago del pescador ni su orilla ({@code cercaDelLago} 16), ni nada que no sea agua o hielo
+     * (una piedra, una tabla, una cama… se quedan como están: esto es para un PISO inundado, no para decorar).
+     *
+     * @return {@code true} si esta columna ya se ha resuelto (se pavimentó), o {@code false} si no había nada que hacer
+     */
+    private static boolean ponerPisoEnLaCapaDeAbajo(ServerLevel level, BlockPos center, BlockPos pie, BlockPos suelo) {
+        if (cercaDelLago(center, pie, 16)) {
+            return false; // el lago del pescador (y su orilla) no se tocan nunca
+        }
+        BlockState abajo = level.getBlockState(suelo);
+        boolean esAgua = !abajo.getFluidState().isEmpty() && abajo.getFluidState().is(net.minecraft.tags.FluidTags.WATER);
+        boolean esHielo = abajo.is(Blocks.ICE) || abajo.is(Blocks.PACKED_ICE) || abajo.is(Blocks.BLUE_ICE);
+        if (!esAgua && !esHielo) {
+            return false; // no es el lago: lo de I354 sigue decidiendo esta columna
+        }
+        // EL LAGO ABIERTO NO SE RELLENA (la misma regla de I354): si el agua tiene agua a los lados es un lago, no un
+        // charco. Con HIELO no se aplica: una capa de hielo es una superficie CONTINUA, y ahí es justo lo que hay que
+        // pavimentar (si no, la regla del lago abierto dejaría el pueblo entero helado).
+        if (esAgua && !esHielo) {
+            int ladosDeAgua = 0;
+            for (Direction lado : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+                if (!level.getBlockState(suelo.relative(lado)).getFluidState().isEmpty()) {
+                    ladosDeAgua++;
+                }
+            }
+            if (ladosDeAgua >= 3) {
+                return false;
+            }
+        }
+        // lint:ok I9 porque es un RETROFIT idempotente en el sitio (pavimenta la capa del suelo cuando es el lago).
+        // SIN TRAZA POR CELDA a proposito: son miles (medido: 8066 en su aldea), y el resumen de la pasada ya lo dice
+        // (`N celda(s) de PISO puestas donde habia agua a la altura del pueblo`). Una linea por celda taparia el
+        // registro entero, que es justo lo que no se puede hacer.
+        colocar(level, suelo, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+        return true;
+    }
 
     /**
      * <b>EL PASO DE LAS COMPUERTAS DE LAS PARCELAS, FIRME Y SECO</b> (I300, medido el 11-oct-2026). El granjero se
