@@ -87,9 +87,9 @@ del que sea: zombi, esqueleto…).
     - si **ya esta hecho/medido**, se le pone DEBAJO la marca
       `> ✅ **CERRADO (comprobado el <fecha>)**: <que lo cerro, con I### y/o `Clase` L###>`;
     - si **sigue abierto**, se le pone `> ⚠️ **SIGUE ABIERTO (comprobado el <fecha>)**: <por que> — esta en
-      `docs/CONTINUAR.md` §2.0`;
+      `docs/CONTINUAR.md` §2.1`;
     - y **el texto viejo NO se borra** (cuenta el camino y las hipotesis falsas, que son parte de la medida).
-    **El unico traspaso vivo es este fichero** (`docs/CONTINUAR.md`, su §2.0); `docs/PENDIENTE.md` es el viejo y esta
+    **El unico traspaso vivo es este fichero** (`docs/CONTINUAR.md`, su §2.1); `docs/PENDIENTE.md` es el viejo y esta
     marcado como tal; y las entradas del acta son **actas**, no listas de tareas.
 
 ---
@@ -97,6 +97,8 @@ del que sea: zombi, esqueleto…).
 ## 2 · PENDIENTES, EN ORDEN (con clase y numero de linea)
 
 ### 2.0 · LO QUE ESTA ABIERTO **HOY** (puesto al dia el 9-oct-2026)
+
+> **HISTÓRICA.** Esta lista de pendientes quedó **superada**: la lista **VIVA** es la **§2.1** (al final del documento). Se conserva como historia de lo que se estaba haciendo el 9-oct-2026.
 
 **TANDA DEL 12-oct-2026 (I353-I355) — LOS DOS REPORTES CON CAPTURA, CERRADOS** ✓:
 1. **EL ASEDIO NO ENTRABA** ✓: medido en su registro en vivo — **228** `pica Block`, **todos a y=60-61**, o sea **por DEBAJO**
@@ -502,7 +504,7 @@ todavia **no estan definidas** — hay que sentarse a decidir en que merece la p
   > ⚠️ **ESTO NO TIENE PRUEBA CITADA, y el acta dice lo contrario** (comprobado el 9-oct-2026): I86/I89 (acta L2262 y
   > L6220-6222) dicen que **el asedio en vivo NO se ha visto** — «0 lineas de `ASEDIO`/`OLEADA`» —, y **ningun registro
   > guardado** de `build/rapida-*.log` tiene la traza `OLEADA` ✗. Se deja la afirmacion porque cuenta la intencion, pero
-  > **lo que falta es verlo en la partida**: esta en **§2.0 (a), punto 2**.
+  > **lo que falta es verlo en la partida**: esta en la **§2.1** (y en §2.0 (a), punto 2, como historia).
 - **Los aldeanos no bailan**: I205 (traza + un goal sin MOVE no pisa camino ajeno + el empujon ya no para a quien anda),
   I206 (el embudo `ponerRumbo` no reescribe el destino cada tick: `[Rumbo]` = 94-96 % saltadas), I207 (puertas: se abren
   en vez de sacarlos a empujones), I208 (`parar` idempotente por tick), I209 (una celda de paso no es un encajamiento).
