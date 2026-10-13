@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.world;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.block.DoubleGateBlock;
+import com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
@@ -365,6 +366,9 @@ public final class VillageGenerator {
 
         // LA TABERNA (etapa F): el comedor del pueblo, con la cocina del cocinero abajo y la posada (camas) arriba.
         asegurarTaberna(level, center);
+        // EL ALMACÉN TAMBIÉN NACE AQUÍ: el equipo de la guardia fundadora se entrega antes del asedio inicial.
+        // Se construye mientras se graba el plano, y el latido posterior solo lo comprueba de forma idempotente.
+        asegurarAlmacen(level, center);
         // Y SU CAMINO: el que sale de la plaza y llega hasta la puerta oeste (la que da a la plaza).
         caminoALaTaberna(level, center);
         // LA PESQUERA (etapa G): el lago, la caseta del pescador y su barril (el pueblo ya usa barriles: son suyos).
@@ -6985,6 +6989,15 @@ public final class VillageGenerator {
         return ring;
     }
 
+    /** Coordenadas X/Z de las columnas que {@link #fence} construye como muro, empaquetadas con Y=0. */
+    public static Set<Long> columnasDelAnilloDelMuro(BlockPos center) {
+        Set<Long> columnas = new HashSet<>();
+        for (BlockPos p : anilloDelMuro(center)) {
+            columnas.add(p.asLong());
+        }
+        return Set.copyOf(columnas);
+    }
+
     /**
      * <b>ASEGURA EL MURO PERIMETRAL A LA COTA DE VERDAD</b> (6-oct-2026, lo pidió el jugador: *cerrar el anillo para
      * que el asedio tenga que abrir brecha*).
@@ -7735,35 +7748,48 @@ public final class VillageGenerator {
                 .setValue(DoorBlock.FACING, FRONT).setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
     }
 
-    private static void spawnVillager(ServerLevel level, BlockPos pos, @Nullable VillagerProfession profession,
-                                      boolean baby) {
+    private static @Nullable Villager spawnVillager(ServerLevel level, BlockPos pos,
+                                                    @Nullable VillagerProfession profession, boolean baby) {
         // OJO: NO se usa la Y que nos pasan (la del centro de la aldea). El terreno nivelado puede quedar a otra
         // altura en esta columna (el centro es una columna suelta y las cabañas y caminos ya usan groundY por
         // columna), así que un aldeano colocado a la Y del centro quedaba ENTERRADO: se asfixiaba y moría en
         // ~10 s (1 de daño cada 10 ticks x 20 de vida) y al llegar a la aldea no había ningún aldeano.
-        BlockPos posicion = huecoLibre(level, new BlockPos(pos.getX(), groundY(level, pos.getX(), pos.getZ()), pos.getZ()));
+        BlockPos posicion = huecoLibre(level,
+                new BlockPos(pos.getX(), groundY(level, pos.getX(), pos.getZ()), pos.getZ()));
+        return spawnVillagerAt(level, posicion, profession, baby, null);
+    }
+
+    private static @Nullable Villager spawnVillagerAt(ServerLevel level, BlockPos posicion,
+            @Nullable VillagerProfession profession, boolean baby,
+            @Nullable java.util.function.Consumer<Villager> antesDeAnadir) {
         Villager villager = EntityType.VILLAGER.create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
-        if (villager != null) {
-            if (profession != null) {
-                villager.setVillagerData(villager.getVillagerData().setProfession(profession));
-                // SIN ESTO LA PROFESIÓN SE PIERDE: el cerebro vanilla trae el comportamiento `ResetProfession`, que
-                // devuelve al aldeano a SIN OFICIO cuando no tiene `JOB_SITE` en el cerebro, su XP es 0 y su nivel es 1.
-                // Nuestros aldeanos se nombran por código (no reclaman un puesto de trabajo del juego), así que a los
-                // pocos segundos TODOS volvían a `none`: la aldea se quedaba SIN GRANJERO (nadie cosechaba, nadie
-                // horneaba pan y la despensa nunca se llenaba: la aldea pasaba hambre con la huerta llena) y sin
-                // herreros. Con 1 de XP la condición `getVillagerXp() == 0` ya no se cumple y la profesión se mantiene.
-                // (Medido en el guardado del jugador: aldea 10 con 4 aldeanos `none` + 1 holgazán a los 38 s de nacer.)
-                villager.setVillagerXp(1);
-            }
-            if (baby) {
-                // Los que llegan para repoblar una aldea debilitada nacen CRÍAS y crecen solos (vanilla).
-                villager.setBaby(true);
-            }
-            villager.moveTo(posicion.getX() + 0.5D, posicion.getY(), posicion.getZ() + 0.5D, 0.0F, 0.0F);
-            villager.setPersistenceRequired();
-            level.addFreshEntity(villager);
-            DevilRpg.LOGGER.debug("[Village] aldeano {} en {} (bebe: {})", profession, posicion, baby);
+        if (villager == null) {
+            return null;
         }
+        if (profession != null) {
+            villager.setVillagerData(villager.getVillagerData().setProfession(profession));
+            // SIN ESTO LA PROFESIÓN SE PIERDE: el cerebro vanilla trae el comportamiento ResetProfession, que
+            // devuelve al aldeano a SIN OFICIO cuando no tiene JOB_SITE en el cerebro, su XP es 0 y su nivel es 1.
+            // Nuestros aldeanos se nombran por código (no reclaman un puesto de trabajo del juego), así que a los
+            // pocos segundos TODOS volvían a none: la aldea se quedaba SIN GRANJERO (nadie cosechaba, nadie
+            // horneaba pan y la despensa nunca se llenaba: la aldea pasaba hambre con la huerta llena) y sin
+            // herreros. Con 1 de XP la condición getVillagerXp() == 0 ya no se cumple y la profesión se mantiene.
+            // (Medido en el guardado del jugador: aldea 10 con 4 aldeanos none + 1 holgazán a los 38 s de nacer.)
+            villager.setVillagerXp(1);
+        }
+        if (baby) {
+            villager.setBaby(true);
+        }
+        villager.moveTo(posicion.getX() + 0.5D, posicion.getY(), posicion.getZ() + 0.5D, 0.0F, 0.0F);
+        villager.setPersistenceRequired();
+        if (antesDeAnadir != null) {
+            antesDeAnadir.accept(villager);
+        }
+        if (!level.addFreshEntity(villager)) {
+            return null;
+        }
+        DevilRpg.LOGGER.debug("[Village] aldeano {} en {} (bebe: {})", profession, posicion, baby);
+        return villager;
     }
 
     /**
@@ -7939,10 +7965,10 @@ public final class VillageGenerator {
     }
 
     /**
-     * Cuántos <b>puestos fijos</b> tiene una aldea: uno por sitio de {@link #VILLAGER_SPOTS} (once desde la etapa H:
-     * tres granjeros, los dos herreros, el clérigo, el recolector, el ganadero, el cocinero, el pescador y el
-     * leñador). Lo usa el gestor como <b>tope de crecimiento</b> de los puestos y como <b>aldea sana</b>: a partir de
-     * ahí, los que nacen son gente de sobra (la milicia).
+     * Cuántos <b>puestos fijos</b> tiene una aldea: uno por sitio de {@link #VILLAGER_SPOTS} (doce: tres granjeros,
+     * los dos herreros, el clérigo, el recolector, el ganadero, el cocinero, el pescador, el leñador y el minero).
+     * Lo usa el gestor como <b>tope de crecimiento</b> de los puestos y como <b>aldea sana</b>: a partir de ahí, los
+     * que nacen son gente de sobra (la milicia).
      */
     public static int puestosDelPueblo() {
         return VILLAGER_SPOTS.length;
@@ -7991,6 +8017,70 @@ public final class VillageGenerator {
             spawnIronGolem(level, center.offset(4, 0, 4));
         } else {
             DevilRpg.LOGGER.debug("[Village] la aldea ya tiene golem: no se duplica");
+        }
+    }
+
+    /**
+     * Crea una sola vez las cuatro plazas fijas de la guardia dentro de la barraca. Son posiciones distintas en el
+     * suelo despejado del edificio; no se mezclan con las doce plazas de oficio ni se vuelven a crear al repoblar.
+     */
+    public static void spawnGuardiasFundadores(ServerLevel level, BlockPos center, int objectiveIndex,
+                                                VillageSavedData saved) {
+        BlockPos base = baseDeBarraca(center);
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos centroDeLaAldea = new BlockPos(center.getX(), nivel, center.getZ());
+        BlockPos[] puestos = {
+                new BlockPos(base.getX() - 1, nivel, base.getZ() - 1),
+                new BlockPos(base.getX(), nivel, base.getZ() - 1),
+                new BlockPos(base.getX() - 1, nivel, base.getZ()),
+                new BlockPos(base.getX(), nivel, base.getZ())
+        };
+        AABB zona = new AABB(centroDeLaAldea).inflate(FENCE_RADIUS + 20.0D);
+        for (int slot = 0; slot < puestos.length; slot++) {
+            Villager existente = null;
+            for (Villager villager : level.getEntitiesOfClass(Villager.class, zona)) {
+                if (VillageManager.esGuardiaFundadora(villager, objectiveIndex, slot)) {
+                    existente = villager;
+                    break;
+                }
+            }
+            if (existente != null) {
+                saved.markGuardiaFundadoraCreada(objectiveIndex, slot);
+                VillageManager.asegurarGuardiaFundadora(level, existente, centroDeLaAldea, objectiveIndex);
+                continue;
+            }
+            if (saved.isGuardiaFundadoraCreada(objectiveIndex, slot)) {
+                // La entidad puede estar descargada o haber salido de la zona: la máscara prueba que ya nació,
+                // no que esté cargada ahora. No la dupliques por no verla en esta consulta.
+                DevilRpg.LOGGER.debug("[Milicia] Aldea {}: puesto fundador {} ya creado, sin entidad cargada en la"
+                        + " zona; no se duplica", objectiveIndex, slot);
+                continue;
+            }
+            BlockPos solicitado = puestos[slot];
+            BlockPos posicion = huecoLibre(level, solicitado);
+            boolean huecoDespejado = level.getBlockState(posicion).getCollisionShape(level, posicion).isEmpty()
+                    && level.getBlockState(posicion.above()).getCollisionShape(level, posicion.above()).isEmpty();
+            if (!posicion.equals(solicitado)
+                    || !huecoDespejado
+                    || level.getBlockState(posicion.below()).getCollisionShape(level, posicion.below()).isEmpty()) {
+                DevilRpg.LOGGER.warn("[Village] Aldea {}: no se pudo crear la guardia fundadora en el puesto {} ({})",
+                        objectiveIndex, slot, solicitado);
+                continue;
+            }
+            int puesto = slot;
+            int tipo = slot % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO;
+            Villager guardia = spawnVillagerAt(level, posicion, null, false, villager ->
+                    VillageManager.registrarGuardiaFundadora(level, villager, centroDeLaAldea, objectiveIndex,
+                            puesto, tipo));
+            if (guardia == null) {
+                continue;
+            }
+            saved.markGuardiaFundadoraCreada(objectiveIndex, slot);
+            VillageManager.asegurarGuardiaFundadora(level, guardia, centroDeLaAldea, objectiveIndex);
+            boolean equipado = VillagerGuardGoal.equiparDesdeAlmacen(level, guardia, centroDeLaAldea, objectiveIndex);
+            DevilRpg.LOGGER.info("[Milicia] aldea {}: guardia fundador {} puesto={} tipo={} equipado={}",
+                    objectiveIndex, guardia.getUUID(), slot,
+                    tipo == VillagerGuardGoal.ARQUERO ? "arquero" : "espadachin", equipado);
         }
     }
 

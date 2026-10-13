@@ -165,6 +165,10 @@ public final class VillageSavedData extends SavedData {
      * {@code VillageGenerator.ANEXO_REBANO_ESPERA_TICKS} antes de reponerlo.
      */
     private final Map<Integer, Long> anexoAnimales = new HashMap<>();
+    /** Casillas de guardia fundadora ya creadas (bits 0..3); evita duplicarlas si se repite la fundación. */
+    private final Map<Integer, Integer> guardiasFundadoras = new HashMap<>();
+    /** Aldeas a las que ya se entregó la remesa inicial del almacén. */
+    private final Set<Integer> remesaInicialEntregada = new HashSet<>();
 
     public static VillageSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(
@@ -217,6 +221,12 @@ public final class VillageSavedData extends SavedData {
             if (entry.contains("AnexoAnimales")) {
                 data.anexoAnimales.put(index, entry.getLong("AnexoAnimales"));
             }
+            if (entry.contains("GuardiasFundadoras")) {
+                data.guardiasFundadoras.put(index, entry.getInt("GuardiasFundadoras"));
+            }
+            if (entry.getBoolean("RemesaInicialEntregada")) {
+                data.remesaInicialEntregada.add(index);
+            }
             data.food.put(index, entry.getInt("Food"));
         }
         // Planos de las aldeas (paleta de estados + posiciones + índices).
@@ -266,6 +276,8 @@ public final class VillageSavedData extends SavedData {
         villages.addAll(layout.keySet());
         villages.addAll(casasVersion.keySet());
         villages.addAll(anexoAnimales.keySet());
+        villages.addAll(guardiasFundadoras.keySet());
+        villages.addAll(remesaInicialEntregada);
         for (int index : villages) {
             CompoundTag one = new CompoundTag();
             one.putInt("Index", index);
@@ -286,6 +298,12 @@ public final class VillageSavedData extends SavedData {
             }
             if (anexoAnimales.containsKey(index)) {
                 one.putLong("AnexoAnimales", anexoAnimales.get(index));
+            }
+            if (guardiasFundadoras.containsKey(index)) {
+                one.putInt("GuardiasFundadoras", guardiasFundadoras.get(index));
+            }
+            if (remesaInicialEntregada.contains(index)) {
+                one.putBoolean("RemesaInicialEntregada", true);
             }
             one.putInt("Food", food.getOrDefault(index, 0));
             settlementTag.add(one);
@@ -512,6 +530,33 @@ public final class VillageSavedData extends SavedData {
     public void setCasasVersion(int objectiveIndex, int version) {
         if (casasVersion.getOrDefault(objectiveIndex, 0) != version) {
             casasVersion.put(objectiveIndex, version);
+            setDirty();
+        }
+    }
+
+    public boolean isGuardiaFundadoraCreada(int objectiveIndex, int slot) {
+        return slot >= 0 && slot < 4
+                && (guardiasFundadoras.getOrDefault(objectiveIndex, 0) & (1 << slot)) != 0;
+    }
+
+    public void markGuardiaFundadoraCreada(int objectiveIndex, int slot) {
+        if (slot < 0 || slot >= 4) {
+            return;
+        }
+        int antes = guardiasFundadoras.getOrDefault(objectiveIndex, 0);
+        int despues = antes | (1 << slot);
+        if (antes != despues) {
+            guardiasFundadoras.put(objectiveIndex, despues);
+            setDirty();
+        }
+    }
+
+    public boolean isRemesaInicialEntregada(int objectiveIndex) {
+        return remesaInicialEntregada.contains(objectiveIndex);
+    }
+
+    public void markRemesaInicialEntregada(int objectiveIndex) {
+        if (remesaInicialEntregada.add(objectiveIndex)) {
             setDirty();
         }
     }

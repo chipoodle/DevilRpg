@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -213,8 +214,8 @@ public final class VillageStorage {
     public static final int REMESA_INICIAL_TRONCOS = 128;
 
     /**
-     * <b>Remesa inicial del almacén</b>: deja {@link #REMESA_INICIAL_TRONCOS} troncos, <b>un pico de hierro</b> y
-     * {@link #REMESA_INICIAL_LINGOTES} lingotes en el almacén de una aldea que acaba de nacer.
+     * <b>Remesa inicial del almacén</b>: completa la dotación de una aldea recién fundada: madera, herramientas del
+     * minero y cuatro equipos de arranque para la milicia.
      * <p>
      * Hace falta porque la madera es <b>tres cosas</b> en este pueblo y ninguna se puede improvisar: el
      * <b>combustible</b> del ahumador del cocinero y de la fragua del herrero, la <b>materia prima</b> de la sierra
@@ -229,50 +230,108 @@ public final class VillageStorage {
      * el minero sin herramienta y el herrero sin lingotes. Con ella arranca solo: el minero pica, funde el hierro que
      * saca y el herrero le forja los picos que va gastando.
      * <p>
-     * <b>Solo se le pone al almacén VACÍO</b>, con la misma regla que la remesa de la despensa
-     * ({@link VillagePantry#remesaInicial}): así una aldea ya en marcha —con lo que ha juntado el recolector— no
-     * recibe nada, y esto no es un grifo de troncos ni de hierro. Se llama desde el bloque de "asegurar" del latido,
-     * justo después de {@link VillageGenerator#asegurarAlmacen} (que es quien coloca el primer cofre doble), así que
-     * en la misma pasada en que el almacén nace ya tiene su remesa dentro.
+     * Completa solo los faltantes de la dotación declarada, incluso si el almacén ya tiene el pico y los lingotes del
+     * minero. Un mundo que ya estaba generado antes de A1 se filtra en quien llama, para conservar su almacén. El
+     * resultado indica que todas las cantidades quedaron guardadas; quien llama persiste esa decisión por aldea.
      */
-    public static void remesaInicialDelAlmacen(ServerLevel level, BlockPos villageCenter) {
+    public static boolean remesaInicialDelAlmacen(ServerLevel level, BlockPos villageCenter) {
         Container caja = almacen(level, villageCenter);
-        if (caja == null || VillagePantry.contar(caja, s -> true) > 0) {
-            return; // sin almacén, o con cosas dentro (aldea en marcha): no se toca
+        if (caja == null) {
+            return false; // aún no está el almacén
         }
-        for (int pila = 0; pila < REMESA_INICIAL_TRONCOS / 64; pila++) {
-            ItemStack resto = VillagePantry.guardar(caja, new ItemStack(Items.OAK_LOG, 64));
-            if (!resto.isEmpty()) {
-                break; // no cupo (raro: el almacén está recién hecho): se deja lo que entró
-            }
-        }
-        // LA REMESA ES UNA TABLA A PROPÓSITO (5-oct-2026). Antes eran tres llamadas sueltas; ahora es una lista con
-        // "qué, cuánto y para qué", y AÑADIR ALGO AL FUTURO ES UNA LÍNEA MÁS aquí — sin tocar los goals, el almacén
-        // ni el equipo de la milicia (que se cambia solo cambiando esta tabla). Es el sitio donde se declara lo que
-        // el pueblo trae de fábrica.
-        record Entrega(net.minecraft.world.item.Item que, int cuantos, String paraQue) {
+        // El pico y los seis lingotes pueden haber sido sembrados antes por asegurarElPicoDelMinero. No se puede
+        // usar "cofre no vacío" como señal de que la remesa terminó: se completa solo el faltante de cada renglón.
+        // El plan se prepara en una copia para que la bandera no quede verdadera tras una entrega parcial por falta
+        // de huecos. En particular, cada pieza de armadura fundadora ocupa un hueco propio: el goal equipa unidades,
+        // y cuatro pilas de una hacen explícita la dotación independiente de los cuatro puestos.
+        record Entrega(net.minecraft.world.item.Item que, int cuantos, boolean unaPorHueco) {
         }
         java.util.List<Entrega> remesa = java.util.List.of(
-                new Entrega(Items.IRON_PICKAXE, 1, "el minero no puede ni empezar sin herramienta"),
-                new Entrega(Items.IRON_INGOT, REMESA_INICIAL_LINGOTES, "para que el minero funda y el herrero arranque"),
-                // --- LA MILICIA DE ARRANQUE (2 espadachines + 2 arqueros): CUERO Y MADERA, como pidió el jugador.
-                // Con esto los cuatro primeros guardias salen equipados del almacén (VillagerGuardGoal L50-51) y,
-                // cuando el herrero forje hierro, ellos solos irán mejorando: la remesa no hay que tocarla.
-                new Entrega(Items.LEATHER_HELMET, 2, "milicia: casco de cuero"),
-                new Entrega(Items.LEATHER_CHESTPLATE, 2, "milicia: peto de cuero"),
-                new Entrega(Items.LEATHER_LEGGINGS, 2, "milicia: grebas de cuero"),
-                new Entrega(Items.LEATHER_BOOTS, 2, "milicia: botas de cuero"),
-                new Entrega(Items.WOODEN_SWORD, 2, "milicia: espada de madera del espadachín"),
-                new Entrega(Items.SHIELD, 2, "milicia: escudo del espadachín"),
-                new Entrega(Items.BOW, 2, "milicia: arco del arquero"),
-                new Entrega(Items.ARROW, 64, "milicia: flechas del arquero"));
-        for (Entrega entrega : remesa) {
-            VillagePantry.guardar(caja, new ItemStack(entrega.que(), entrega.cuantos()));
+                new Entrega(Items.OAK_LOG, REMESA_INICIAL_TRONCOS, false),
+                new Entrega(Items.IRON_PICKAXE, 1, false),
+                new Entrega(Items.IRON_INGOT, REMESA_INICIAL_LINGOTES, false),
+                new Entrega(Items.LEATHER_HELMET, 4, true),
+                new Entrega(Items.LEATHER_CHESTPLATE, 4, true),
+                new Entrega(Items.LEATHER_LEGGINGS, 4, true),
+                new Entrega(Items.LEATHER_BOOTS, 4, true),
+                new Entrega(Items.WOODEN_SWORD, 2, false),
+                new Entrega(Items.SHIELD, 2, false),
+                new Entrega(Items.BOW, 2, false),
+                new Entrega(Items.ARROW, 64, false));
+
+        SimpleContainer plan = new SimpleContainer(caja.getContainerSize());
+        for (int i = 0; i < caja.getContainerSize(); i++) {
+            plan.setItem(i, caja.getItem(i).copy());
         }
+        for (Entrega entrega : remesa) {
+            if (entrega.unaPorHueco()) {
+                if (!separarEnHuecos(plan, entrega.que())) {
+                    return false;
+                }
+            }
+            int faltan = Math.max(0, entrega.cuantos() - VillagePantry.contar(plan,
+                    stack -> stack.is(entrega.que())));
+            while (faltan > 0) {
+                int cantidad = entrega.unaPorHueco() ? 1
+                        : Math.min(faltan, Math.min(entrega.que().getDefaultMaxStackSize(), plan.getMaxStackSize()));
+                ItemStack nuevo = new ItemStack(entrega.que(), cantidad);
+                if (entrega.unaPorHueco()) {
+                    if (!ponerEnHuecoVacio(plan, nuevo)) {
+                        return false;
+                    }
+                } else if (!VillagePantry.guardar(plan, nuevo).isEmpty()) {
+                    return false;
+                }
+                faltan -= cantidad;
+            }
+        }
+        // La bandera persistente solo se escribirá si cada renglón quedó realmente completo.
+        for (Entrega entrega : remesa) {
+            if (VillagePantry.contar(plan, stack -> stack.is(entrega.que())) < entrega.cuantos()) {
+                return false;
+            }
+        }
+        for (int i = 0; i < plan.getContainerSize(); i++) {
+            caja.setItem(i, plan.getItem(i).copy());
+        }
+        caja.setChanged();
         DevilRpg.LOGGER.info("[Village] almacen: remesa inicial ({} troncos de roble para el fuego del cocinero, la"
                 + " fragua del herrero y su sierra; 1 pico de hierro con {} lingotes para el minero; y el equipo de"
                 + " arranque de la milicia: cuero, espadas de madera, escudos, arcos y flechas)",
                 cuentaLena(level, villageCenter), REMESA_INICIAL_LINGOTES);
+        return true;
+    }
+
+    /** Separa las unidades ya presentes de un tipo en pilas de una, sin modificar el contenedor de origen. */
+    private static boolean separarEnHuecos(Container caja, net.minecraft.world.item.Item item) {
+        List<ItemStack> unidades = new ArrayList<>();
+        for (int i = 0; i < caja.getContainerSize(); i++) {
+            ItemStack stack = caja.getItem(i);
+            if (!stack.is(item)) {
+                continue;
+            }
+            for (int n = 0; n < stack.getCount(); n++) {
+                unidades.add(stack.copyWithCount(1));
+            }
+            caja.setItem(i, ItemStack.EMPTY);
+        }
+        for (ItemStack unidad : unidades) {
+            if (!ponerEnHuecoVacio(caja, unidad)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Inserta una unidad sin permitir que el contenedor la apile con otra igual. */
+    private static boolean ponerEnHuecoVacio(Container caja, ItemStack unidad) {
+        for (int i = 0; i < caja.getContainerSize(); i++) {
+            if (caja.getItem(i).isEmpty()) {
+                caja.setItem(i, unidad.copyWithCount(1));
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Lingotes de hierro de la remesa inicial: dos picos más para el herrero de herramientas (3 cada uno). */

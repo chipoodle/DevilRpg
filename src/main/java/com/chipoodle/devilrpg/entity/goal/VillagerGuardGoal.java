@@ -768,11 +768,16 @@ public class VillagerGuardGoal extends Goal {
     // --- el equipo ----------------------------------------------------------------------------------
 
     /**
-     * ¿Ya lleva lo suyo? El <b>espadachín</b> necesita espada (mano principal) y escudo (secundaria); el
-     * <b>arquero</b>, arco y flechas en la mochila. Se comprueba de verdad leyendo sus manos y su inventario, no con
-     * una marca: si le rompen el escudo o le quitan la espada, vuelve al almacén.
+     * ¿Ya lleva lo suyo? Los dos roles necesitan las cuatro piezas de armadura; el <b>espadachín</b> también necesita
+     * arma y escudo, y el <b>arquero</b>, arco y flechas. Se comprueba leyendo sus huecos y su inventario.
      */
     private boolean equipado(ServerLevel level) {
+        for (EquipmentSlot pieza : ARMADURAS) {
+            ItemStack armadura = villager.getItemBySlot(pieza);
+            if (!(armadura.getItem() instanceof ArmorItem item) || item.getEquipmentSlot() != pieza) {
+                return false;
+            }
+        }
         if (tipoDe(villager) == ARQUERO) {
             return villager.getMainHandItem().is(Items.BOW) && flechas() > 0;
         }
@@ -1015,7 +1020,9 @@ public class VillagerGuardGoal extends Goal {
             }
         }
         if (tipoDe(villager) == ARQUERO) {
-            return hayMejor(almacen, EquipmentSlot.MAINHAND, s -> s.is(Items.BOW), VillagerGuardGoal::valorDeArco);
+            return hayMejor(almacen, EquipmentSlot.MAINHAND, s -> s.is(Items.BOW), VillagerGuardGoal::valorDeArco)
+                    || (flechas() < FLECHAS_POR_VIAJE
+                    && VillagePantry.contar(almacen, s -> s.is(Items.ARROW)) > 0);
         }
         return hayMejor(almacen, EquipmentSlot.MAINHAND, VillagerGuardGoal::esUnArma, VillagerGuardGoal::valorDeArma)
                 || hayMejor(almacen, EquipmentSlot.OFFHAND, s -> s.is(Items.SHIELD),
@@ -1152,6 +1159,15 @@ public class VillagerGuardGoal extends Goal {
             return true; // ya va equipado y ya revisó hoy: no se toca
         }
         return revision.equipar(level);
+    }
+
+    /** Da la primera dotación con las mismas reglas de mejora y retirada al almacén que usa el goal en una partida. */
+    public static boolean equiparDesdeAlmacen(ServerLevel level, Villager guardia, BlockPos center,
+                                               int objectiveIndex) {
+        if (!esGuardia(guardia)) {
+            return false;
+        }
+        return new VillagerGuardGoal(guardia, center, objectiveIndex).equipar(level);
     }
 
     /** Cuántas flechas lleva encima el arquero (en su mochila de aldeano). */

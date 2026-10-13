@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.block.DoubleGateBlock;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
@@ -51,6 +52,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.Set;
 
 public class AggressiveZombieEntity extends Zombie {
 
@@ -64,6 +66,13 @@ public class AggressiveZombieEntity extends Zombie {
 
     /** Centro de la aldea objetivo (para que los zombies del asedio converjan hacia él). */
     private BlockPos villageCenter = null;
+    /** El anillo es el mismo que genera la muralla; se calcula una vez por centro y se reutiliza en cada búsqueda. */
+    private BlockPos centroAnilloCache = null;
+    private Set<Long> columnasAnilloCache = Set.of();
+    /** Una sola lectura de geometría y bloque para decidir si romper una posición abre una brecha. */
+    private record EvaluacionMuro(BlockPos centroAldea, int cota, int dy, boolean columnaAnillo,
+            boolean capaValida, boolean materialValido, boolean materialYCapaValidas, boolean esMuro) {}
+
     /** Si el asedio sigue activo (el zombie sigue marchando al centro). Se desactiva cuando la aldea cae. */
     private boolean goToCenterActive = true;
     /** "Hogar" del zombie (p. ej. el núcleo de una guarida): patrulla un radio alrededor suyo. */
@@ -116,34 +125,8 @@ public class AggressiveZombieEntity extends Zombie {
      * rompible para que el asedio abra la brecha.
      */
     private static final double NO_TOCAR_LA_ALDEA = VillageGenerator.FENCE_RADIUS + 2.0D;
-    /**
-     * <b>LA MURALLA SÍ SE ROMPE; LO DE DENTRO NO.</b> Ancho (bloques, hacia dentro y hacia fuera) del <b>anillo de la
-     * valla</b> que los asediadores <b>sí</b> pueden picar, y alto del mismo (de la cota hacia arriba).
-     * <p>
-     * Antes no se podía picar <b>nada</b> dentro de {@link #NO_TOCAR_LA_ALDEA} (el radio de la valla + 2), y la muralla
-     * está justo en el radio de la valla: resultado, un asedio <b>no tenía forma de entrar</b>. Los asediadores veían
-     * a los guardias y a los aldeanos dentro, no podían alcanzarlos y no podían picar, así que se quedaban plantados
-     * fuera y la aldea se salvaba sola. Lo preguntó el jugador: *"no entiendo por qué los zombies del asedio inicial
-     * no entran a la aldea, ¿no tratan de llegar al centro? ¿no rompen la barda para entrar?"*.
-     * <p>
-     * Con esta banda, el asedio <b>abre brecha en la muralla</b> (y el obrero la repara después, I50/3b.72), pero las
-     * casas, la plaza, la huerta y el kiosco —que están bien dentro— siguen intocables, y por debajo de la muralla
-     * tampoco se cava (la banda tiene altura, no profundidad).
-     * <p>
-     * Desde el 5-oct-2026 la banda solo tiene que cubrir la <b>cara de DENTRO</b> del anillo: la de fuera (radio 62,5)
-     * ya cae fuera del recinto y se pica por la regla general de fuera.
-     * <b>Y LA BANDA ES LA DEL ANILLO, NI UN BLOQUE MAS</b> (5-oct-2026, medido con el arnés y con
-     * `tools/arnes/verificar_recinto.py`): {@code MURALLA_ANCHO} era <b>5</b> —«hacia dentro y hacia fuera»—, o sea
-     * <b>diez bloques de grueso</b> (r=57..67) a la altura del pueblo, y con eso el asaltante del asedio inicial se
-     * metía <b>24 bloques dentro</b> (r=38..46) picando tierra y piedra que la banda contaba como «muralla». Bajó a
-     * <b>1</b>… y la verificación independiente cazó que <b>tampoco</b>: con 1 la banda es r=61..63, así que la
-     * <b>cara de DENTRO del muro (r=61,5) seguía saliendo rompible</b>. El anillo de la valla es <b>una celda</b> en
-     * r=62 (`VillageGenerator.anilloDelMuro`), así que la banda es <b>0</b>: se pica <b>el anillo</b>, y ni la celda
-     * de dentro ni la de fuera.
-     */
-    private static final int MURALLA_ANCHO = 0;
-    /** Hasta dónde llega la muralla hacia arriba (desde la cota del pueblo): es lo que se puede picar de ella. */
-    private static final int MURALLA_ALTO = 6;
+    /** Altura máxima del muro generado desde la cota: columnas, dinteles y remates llegan a cota+3. */
+    private static final int MURALLA_ALTO = 3;
 
     /** Bloques de túnel/puente que le quedan a este zombie en la marcha actual. */
     private int tunelRestante = TUNEL_PRESUPUESTO;
@@ -330,54 +313,86 @@ public class AggressiveZombieEntity extends Zombie {
     public static final boolean REGLA_DEL_MURO_ACTIVA = true;
 
     private boolean breakBlockAt(BlockPos pos) {   // I356: dice si DE VERDAD rompio algo (el presupuesto solo se cobra entonces)
-        if (REGLA_DEL_MURO_ACTIVA && protegidoPorLaAldea(pos)) {
-            avisoDeQueNoPica("esta protegido por la aldea (dentro no se pica)", null, pos);
+        BlockPos atacantePos = blockPosition().immutable();
+        BlockPos objetivo = pos.immutable();
+        BlockState bs = level().getBlockState(objetivo);
+        int cota = cotaParaElRecinto();
+        EvaluacionMuro muro = evaluarMuro(objetivo, cota, bs);
+        if (REGLA_DEL_MURO_ACTIVA && protegidoPorLaAldea(objetivo, cota, muro.esMuro())) {
+            registrarDecisionMuro(atacantePos, objetivo, bs, muro, false, null, "BLOQUEADO_PROTEGIDO");
+            avisoDeQueNoPica("esta protegido por la aldea (dentro no se pica)", null, objetivo);
             return false; // dentro de la aldea no se pica; el muro perimetral sí (es la brecha)
         }
         // Y LA OBRA DEL PROPIO ASEDIO NO SE PICA (I239, medido el 9-oct-2026): los tablones que tiende el puente son su
         // camino, no un estorbo —el romper y el puente se peleaban y el monstruo se destruía su propio puente—. Va AQUÍ, en
         // la ÚNICA puerta que rompe, para que valga para los tres caminos que pican (el romper, el abridor de huecos y
         // el taladro del túnel) y no solo para el que me acordé de mirar.
-        if (esTablonDelAsalto(pos)) {
-            avisoDeQueNoPica("es obra del propio asedio (el puente)", null, pos);
+        if (esTablonDelAsalto(objetivo)) {
+            registrarDecisionMuro(atacantePos, objetivo, bs, muro, false, null, "BLOQUEADO_OBRA_DEL_ASEDIO");
+            avisoDeQueNoPica("es obra del propio asedio (el puente)", null, objetivo);
             return false;
         }
-        BlockState bs = level().getBlockState(pos);
         Block b = bs.getBlock();
-        // I297 · Y LA MADERA NO SE PICA (medido el 11-oct-2026, reporte del jugador: «no están rompiendo la muralla y se
-        // están tardando mucho en atravesarla»). En su registro hay asaltantes gastando el presupuesto de 40 bloques en
-        // los ÁRBOLES que tocan el anillo: «pica Block{minecraft:oak_log} en 949, 63, 943 (le quedan 35)» → no abren
-        // NADA de la muralla. La madera no es lo que cierra el pueblo, así que se ignora (troncos y hojas, con las
-        // ETIQUETAS del juego, que cubren cualquier madera) y el asaltante sigue con lo que sí cuenta.
-        if (bs.is(net.minecraft.tags.BlockTags.LOGS) || bs.is(net.minecraft.tags.BlockTags.LEAVES)) {
-            avisoDeQueNoPica("es MADERA, y la madera no es lo que cierra el pueblo (I297)", b, pos);
+        // I297 · SE EVITA PICAR ÁRBOLES (medido el 11-oct-2026): los troncos y hojas del terreno no son lo que cierra
+        // el pueblo. Excepción estrecha para los troncos de la muralla: solo pasan si `esLaMuralla` verificó el anillo
+        // generado, la capa y el tipo de bloque; así no se descarta el muro de logs ni se abren árboles cercanos.
+        if ((bs.is(net.minecraft.tags.BlockTags.LOGS) && !muro.esMuro())
+                || bs.is(net.minecraft.tags.BlockTags.LEAVES)) {
+            registrarDecisionMuro(atacantePos, objetivo, bs, muro, false, null, "BLOQUEADO_MADERA_AJENA");
+            avisoDeQueNoPica("es MADERA, y la madera no es lo que cierra el pueblo (I297)", b, objetivo);
             return false;
         }
         if (b.defaultDestroyTime() < 0.0F) {
-            avisoDeQueNoPica("es inquebrantable", b, pos);
+            registrarDecisionMuro(atacantePos, objetivo, bs, muro, false, null, "BLOQUEADO_INQUEBRANTABLE");
+            avisoDeQueNoPica("es inquebrantable", b, objetivo);
             return false; // inquebrantable
         }
         if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !canBreakObsidian()) {
-            avisoDeQueNoPica("es obsidiana y este asaltante no puede con ella", b, pos);
+            registrarDecisionMuro(atacantePos, objetivo, bs, muro, false, null, "BLOQUEADO_OBSIDIANA");
+            avisoDeQueNoPica("es obsidiana y este asaltante no puede con ella", b, objetivo);
             return false;
         }
-        // Queda en el log (INFO, una línea por bloque): es lo que permite comprobar que la horda se abre paso DE
-        // VERDAD. Medido con el arnés, sin esta línea no se podía distinguir "no pica" de "pica y el pueblo lo repone".
+        // La clasificación de muro se conserva desde antes de romper: después de destroyBlock el bloque ya puede ser
+        // aire y no debe volver a evaluarse para decidir si el suceso fue una brecha.
+        boolean destruido = level().destroyBlock(objetivo, true);
+        String decisionBrecha = destruido && muro.esMuro() ? "EMITE_BRECHA"
+                : (destruido ? "SIN_BRECHA_NO_ES_MURO" : "SIN_BRECHA_NO_SE_DESTRUYO");
+        registrarDecisionMuro(atacantePos, objetivo, bs, muro, true, destruido, decisionBrecha);
+        if (!destruido) {
+            return false;
+        }
+        // Queda en el log (INFO, una línea por bloque que sí desapareció): distingue el intento de la destrucción real.
         // EL IDENTIFICADOR DEL ASALTANTE VA EN LA TRAZA (I241, 9-oct-2026): sin el, todas las lineas del asedio salen con
         // la misma aldea y NO se puede contar los bloques que lleva UN monstruo concreto (medido en la montana gruesa:
         // con mas atacantes del mundo no se podia aislar el tope de 40 bloques por marcha). `getId()` es corto y estable
         // mientras la entidad vive.
         DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} pica {} en {} (le quedan {} de tunel)", getId(),
-                worldSiegeIndex, b, pos.toShortString(), tunelRestante);
-        level().destroyBlock(pos, true);
-        // I365 · ABRE BRECHA: si el bloque que acaba de romper esta en el ANILLO DEL MURO (el mismo criterio que usa la
-        // regla del muro, L623), queda en el registro. Sin esto se veia que pica a 62/63 pero NO si eso era el muro, y la
-        // medida que pide el objetivo es justo "pican la muralla". Sin enfriamiento: una brecha es un suceso y son pocas.
-        if (esLaMuralla(pos, cotaParaElRecinto())) {
+                worldSiegeIndex, b, objetivo.toShortString(), tunelRestante);
+        // El evento depende de la destrucción válida, no de entrar al recinto: pasar por un portón abierto sin romper
+        // un bloque no genera este suceso.
+        if (muro.esMuro()) {
             DevilRpg.LOGGER.info("[Siege] asaltante #{} ABRE BRECHA en el muro: {} (tunel {}/{})", getId(),
-                    pos.toShortString(), tunelRestante, TUNEL_PRESUPUESTO);
+                    objetivo.toShortString(), tunelRestante, TUNEL_PRESUPUESTO);
         }
         return true;
+    }
+
+    private void registrarDecisionMuro(BlockPos atacantePos, BlockPos pos, BlockState state, EvaluacionMuro muro,
+            boolean intentoDestruccion, Boolean destruido, String decisionBrecha) {
+        // Solo se escribe para posiciones que parecen muro por su columna o por material/capa, no para cada bloque
+        // ajeno que el asaltante considere durante una marcha.
+        if (!muro.columnaAnillo() && !muro.materialValido()) {
+            return;
+        }
+        DevilRpg.LOGGER.info("[Siege] evaluacion muro atacante=#{} atacantePos={} objetivo={} bloque={} aldea={} "
+                        + "cota={} dy={} "
+                        + "columnaAnillo={} capaValida={} materialValido={} materialYCapaValidas={} esMuro={} "
+                        + "intentoDestruccion={} destroyBlock={} decisionBrecha={}",
+                getId(), atacantePos.toShortString(), pos.toShortString(), state,
+                muro.centroAldea() == null ? "null" : muro.centroAldea().toShortString(), muro.cota(), muro.dy(),
+                muro.columnaAnillo(), muro.capaValida(), muro.materialValido(), muro.materialYCapaValidas(),
+                muro.esMuro(), intentoDestruccion, destruido == null ? "no_intentado" : destruido,
+                decisionBrecha);
     }
 
     /**
@@ -566,32 +581,36 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
-     * ¿Esa posición es de la <b>muralla</b> (el anillo de la valla, a la altura del pueblo)? Ahí <b>sí</b> se pica:
-     * es la brecha por la que entra un asedio. Ver {@link #MURALLA_ANCHO}.
-     * <p>
-     * <b>LA ALTURA ES LA DE LA COTA DE AHORA, NO LA DEL CENTRO QUE LLEVA EL ZOMBIE</b> (5-oct-2026, medido con el
-     * arnés): el {@code villageCenter} se fija al nacer y <b>no se entera</b> de que el pueblo suba de nivel. Medido en
-     * esta ronda: la cota de la aldea era <b>83</b> y el asaltante llevaba un centro con Y <b>4 bloques por debajo</b>
-     * —se fijó cuando el cache de {@code cotaDeLaPlaza} aún devolvía la medida vieja, antes de la migración—, así que la
-     * banda de la muralla se estiraba hacia arriba y contaba como «muralla» celdas de <b>tierra y piedra a 24 bloques
-     * DENTRO</b> del pueblo: el túnel entraba en la aldea. La cota se pregunta a la misma verdad que usa todo el mod
-     * ({@code cotaDeLaPlaza}), así que la banda queda a la altura del muro y no a la de un dato viejo. Es un caso real:
-     * la migración del terreno sube el pueblo.
+     * ¿Es un bloque que realmente forma parte del muro generado? Se usa la misma lista rasterizada que {@code fence},
+     * no una banda de radio: el muro no cae exactamente sobre el círculo matemático. También se comprueban la cota
+     * actual, la capa y el material para que un bloque corriente dentro del recinto siga protegido.
      */
     private boolean esLaMuralla(BlockPos pos, int cota) {
-        if (villageCenter == null) {
-            return false;
-        }
-        double dx = pos.getX() - villageCenter.getX();
-        double dz = pos.getZ() - villageCenter.getZ();
-        double distSqr = dx * dx + dz * dz;
-        double dentro = VillageGenerator.FENCE_RADIUS - MURALLA_ANCHO;
-        double fuera = VillageGenerator.FENCE_RADIUS + MURALLA_ANCHO;
-        if (distSqr < dentro * dentro || distSqr > fuera * fuera) {
-            return false;
-        }
+        return evaluarMuro(pos, cota, level().getBlockState(pos)).esMuro();
+    }
+
+    private EvaluacionMuro evaluarMuro(BlockPos pos, int cota, BlockState state) {
         int dy = pos.getY() - cota;
-        return dy >= -1 && dy <= MURALLA_ALTO; // hacia arriba sí; por debajo no se cava
+        boolean capaValida = dy >= 0 && dy <= MURALLA_ALTO;
+        boolean materialValido = state.is(Blocks.OAK_LOG) || state.is(Blocks.COBBLESTONE)
+                || state.is(Blocks.COBBLESTONE_STAIRS) || state.getBlock() instanceof DoubleGateBlock;
+        boolean materialYCapaValidas = capaValida && ((state.is(Blocks.OAK_LOG) && dy <= 1)
+                || (state.is(Blocks.COBBLESTONE) && dy <= MURALLA_ALTO)
+                || (state.is(Blocks.COBBLESTONE_STAIRS) && dy == MURALLA_ALTO)
+                || (state.getBlock() instanceof DoubleGateBlock && dy <= 2));
+        if (villageCenter == null) {
+            return new EvaluacionMuro(null, cota, dy, false, capaValida, materialValido,
+                    materialYCapaValidas, false);
+        }
+        BlockPos centroXZ = new BlockPos(villageCenter.getX(), 0, villageCenter.getZ());
+        if (!centroXZ.equals(centroAnilloCache)) {
+            centroAnilloCache = centroXZ;
+            columnasAnilloCache = VillageGenerator.columnasDelAnilloDelMuro(centroXZ);
+        }
+        BlockPos columnaXZ = new BlockPos(pos.getX(), 0, pos.getZ());
+        boolean columnaAnillo = columnasAnilloCache.contains(columnaXZ.asLong());
+        return new EvaluacionMuro(villageCenter, cota, dy, columnaAnillo, capaValida, materialValido,
+                materialYCapaValidas, columnaAnillo && materialYCapaValidas);
     }
 
     /**
@@ -603,10 +622,10 @@ public class AggressiveZombieEntity extends Zombie {
      * romper nada"*. Traducida a esta función:
      * <ul>
      *   <li><b>Fuera del recinto</b>: campo abierto — se pica, y ahí es donde el asedio <b>abre la brecha</b> en el
-     *       muro (la cara de fuera del anillo está a radio 62,5, o sea fuera del recinto).</li>
-     *   <li><b>Dentro del recinto</b>: no se pica <b>nada</b>, y eso incluye la cara de dentro del muro: el asaltante
-     *       entra por la brecha que abrió desde fuera y, una vez dentro, ni se hace un túnel de salida ni levanta el
-     *       pueblo. Las casas, la huerta, el kiosco y la plaza están todos dentro.</li>
+     *       muro.</li>
+     *   <li><b>Dentro del recinto</b>: solo se exceptúa el bloque material del muro que coincide con una columna del
+     *       anillo generado y su capa real. Las celdas interiores vecinas, las casas, la huerta, el kiosco y la plaza
+     *       siguen protegidos.</li>
      * </ul>
      * <p>
      * <b>EL CAMPO DE FUERZA ES DE LA ALDEA YA GANADA</b> (lo corrigió el jugador: *"los zombies en el asedio inicial,
@@ -624,11 +643,16 @@ public class AggressiveZombieEntity extends Zombie {
      */
     private boolean protegidoPorLaAldea(BlockPos pos) {
         int cota = cotaParaElRecinto(); // UNA medida por tick, y la MISMA para las dos preguntas
+        EvaluacionMuro muro = evaluarMuro(pos, cota, level().getBlockState(pos));
+        return protegidoPorLaAldea(pos, cota, muro.esMuro());
+    }
+
+    private boolean protegidoPorLaAldea(BlockPos pos, int cota, boolean esMuro) {
         if (!dentroDeLaAldea(pos, cota)) {
             return false; // fuera: campo abierto (aquí se hacen las escaleras de bloques para entrar)
         }
-        if (esLaMuralla(pos, cota)) {
-            return false; // el anillo del muro: es la brecha por la que entra un asedio
+        if (esMuro) {
+            return false; // solo el bloque real del anillo generado: es la brecha por la que entra un asedio
         }
         // DENTRO: no se pica NADA, y esto NO depende del campo de fuerza (5-oct-2026, y era el fallo grande).
         // Aquí estaba `return elAsedioYaSeGano()`, así que con el ASEDIO INICIAL SIN RESOLVER esto devolvía FALSE

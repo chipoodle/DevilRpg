@@ -240,11 +240,16 @@ public final class VillageManager {
      * para que no se apelotonen ni hagan todos el mismo recorrido.
      */
     public static final String GUARD_INDEX_TAG = "DevilRpgGuardiaPuesto";
+    /** Marca persistente que separa la cohorte fija de los guardias reclutados por sobrantes. */
+    public static final String FOUNDING_GUARD_TAG = "DevilRpgGuardiaFundadora";
+    /** Aldea propietaria de una guardia fundadora, para restaurar su goal al cargarla durante un asedio. */
+    public static final String FOUNDING_GUARD_VILLAGE_TAG = "DevilRpgGuardiaFundadoraAldea";
     /**
      * Tamaño de la milicia: <b>4 espadachines y 3 arqueros</b>, que es la formación con la que el jugador quiere que
      * marchen a la guarida. Si la aldea cría más gente que eso, los demás siguen con lo suyo (y pueden ser obreros).
      */
     public static final int MILICIA_MAX = 7;
+    public static final int MILICIA_FUNDADORES = 4;
     private static final int MILICIA_ESPADACHINES = 4;
     /** Marca (en los datos persistentes del aldeano) de <b>cuántos enemigos ha matado</b> ese guardia (I62). */
     public static final String GUARD_KILLS_TAG = "DevilRpgGuardiaMatanzas";
@@ -912,6 +917,8 @@ public final class VillageManager {
         // que se guarda aquí mismo, con la aldea recién hecha: el obrero sabrá qué reponer sin depender de en qué
         // estado se encontrara la aldea después.
         VillageSavedData.Blueprint plano = VillageGenerator.generate(level, target);
+        entregarRemesaInicialSiHaceFalta(level, saved, objectiveIndex, target);
+        VillageGenerator.spawnGuardiasFundadores(level, target, objectiveIndex, saved);
         saved.markGenerated(objectiveIndex);
         if (plano != null) {
             saved.setBlueprint(objectiveIndex, plano);
@@ -922,6 +929,23 @@ public final class VillageManager {
                     objectiveIndex, target, plano.size());
         } else {
             DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, target);
+        }
+    }
+
+    private static void entregarRemesaInicialSiHaceFalta(ServerLevel level, VillageSavedData saved,
+                                                          int objectiveIndex, BlockPos center) {
+        if (saved.isRemesaInicialEntregada(objectiveIndex)) {
+            return;
+        }
+        if (saved.isGenerated(objectiveIndex)
+                && !saved.isGuardiaFundadoraCreada(objectiveIndex, 0)
+                && !saved.isGuardiaFundadoraCreada(objectiveIndex, 1)
+                && !saved.isGuardiaFundadoraCreada(objectiveIndex, 2)
+                && !saved.isGuardiaFundadoraCreada(objectiveIndex, 3)) {
+            return; // un mundo ya generado antes de A1 conserva su almacén y no recibe una remesa retroactiva
+        }
+        if (VillageStorage.remesaInicialDelAlmacen(level, center)) {
+            saved.markRemesaInicialEntregada(objectiveIndex);
         }
     }
 
@@ -958,12 +982,33 @@ public final class VillageManager {
                     target = new BlockPos(target.getX(), centro.getY(), target.getZ());
                 }
             }
+            // Los goals no se serializan con los aldeanos. Restaura la cohorte fundadora tan pronto como su chunk ya
+            // esté cargado, incluso si el jugador sigue lejos; `hasChunkAt` no carga chunks y conserva el límite de
+            // trabajo para aldeas descargadas. El resto de la gestión sigue bajo el radio de 140 bloques.
+            boolean goalsFundadoresAsegurados = false;
+            if (saved.isGenerated(i) && level.hasChunkAt(target)) {
+                int cota = VillageGenerator.cotaDeLaPlaza(level, target);
+                if (target.getY() != cota) {
+                    target = new BlockPos(target.getX(), cota, target.getZ());
+                }
+                asegurarGoalsDeGuardiasFundadores(level, target, i);
+                goalsFundadoresAsegurados = true;
+            }
             double distSqr = ObjectiveTargets.horizontalDistSqr(playerPos, target);
             if (distSqr > (double) PRE_GENERATE_RADIUS * PRE_GENERATE_RADIUS) {
                 continue;
             }
             if (!saved.isGenerated(i)) {
                 preGenerate(level, i, target);
+            }
+            if (saved.isGenerated(i) && level.hasChunkAt(target)) {
+                int cota = VillageGenerator.cotaDeLaPlaza(level, target);
+                if (target.getY() != cota) {
+                    target = new BlockPos(target.getX(), cota, target.getZ());
+                }
+                if (!goalsFundadoresAsegurados) {
+                    asegurarGoalsDeGuardiasFundadores(level, target, i);
+                }
             }
             noticeIfNear(level, player, i, target);
             if (distSqr <= (double) ARRIVE_RADIUS * ARRIVE_RADIUS) {
@@ -2788,16 +2833,12 @@ public final class VillageManager {
         // ALMACÉN del pueblo: cobertizo con cofre doble (que crece) donde el constructor recolector va dejando lo que
         // recoge. Es una construcción aparte, al lado de la plaza.
         VillageGenerator.asegurarAlmacen(level, center);
-        // Y SU REMESA INICIAL DE MADERA (128 troncos, lo pidió el jugador): el fuego del pueblo —el ahumador del
-        // cocinero y la fragua del herrero— y la sierra del herrero se pagan con troncos del almacén, y una aldea
-        // recién fundada no tiene ni uno hasta que el leñador tale los primeros árboles. Va AQUÍ, en la misma pasada
-        // en que `asegurarAlmacen` coloca el primer cofre (el almacén todavía está vacío), y solo se le pone al
-        // almacén vacío: a una aldea en marcha no se le añade nada (misma regla que la remesa de la despensa).
-        // Y EL PICO DEL MINERO VA EN LA MISMA REMESA (etapa I): la mina no se puede ni empezar sin herramienta y el
-        // herrero de herramientas necesita HIERRO para forjar más, que es justo lo que la mina produce: sin una
-        // remesa inicial de un pico y unos lingotes, el pueblo se quedaría esperándose a sí mismo para siempre (el
-        // leñador trae la madera, pero el hierro no lo trae nadie hasta que hay mina).
-        VillageStorage.remesaInicialDelAlmacen(level, center);
+        // REMESA INICIAL de madera, pico/lingotes y equipo de la milicia: se llama después de asegurar el almacén
+        // tanto al fundar como desde el latido de paz. La entrega completa faltantes de forma idempotente y guarda el
+        // testigo solo si cupo todo; una aldea anterior a A1, sin puestos fundadores guardados, queda excluida para no
+        // recibir una remesa retroactiva. El pico y los seis lingotes que `asegurarElPicoDelMinero` pudo sembrar antes
+        // cuentan para sus cantidades objetivo, así que no se duplican.
+        entregarRemesaInicialSiHaceFalta(level, saved, objectiveIndex, center);
         // GRANJA ANEXA de animales (etapa D): igual (idempotente). Si el jugador se llevó la valla, se vuelve a
         // levantar; si está, no se toca (reconstruirla borraría su cobertizo y lo que tenga dentro).
         VillageGenerator.asegurarGranjaAnexa(level, center);
@@ -3278,18 +3319,15 @@ public final class VillageManager {
     }
 
     /**
-     * Alista en la <b>guardia</b> a los aldeanos adultos que <b>sobran</b> (lo pidió el jugador: la milicia se forma
-     * solo cuando están cubiertos los oficios del pueblo) y desalista a los que ya no sobran.
+     * Conserva las cuatro plazas fijas de la guardia fundadora y alista hasta tres aldeanos adultos que <b>sobran</b>;
+     * los guardias dinámicos que dejan de sobrar vuelven a la vida civil.
      * <p>
-     * <b>Quién sobra</b>: se reparten los <b>puestos fijos</b> (1 granjero, 1 herrero de armas, 1 de herramientas,
-     * 1 clérigo, 1 recolector, 1 ganadero y 1 cocinero) en orden <b>estable</b> (por UUID): los primeros de cada
-     * oficio se quedan con su
-     * puesto y los demás son gente de sobra. Así la guardia no le quita el granjero ni los herreros a la aldea (que
-     * es lo que la dejaría sin comer y sin indumentaria) y con 5 aldeanos —los que tiene una aldea sana— no hay
-     * guardia: hacen falta <b>crías</b>, o sea una aldea que crece.
+     * <b>Quién sobra</b>: los cuatro fundadores quedan fuera del recuento; entre los demás se cubren los puestos del
+     * pueblo según {@link VillageGenerator#puestosPorOficio()}, en orden <b>estable</b> por UUID. Así los fundadores
+     * no ocupan oficios y la guardia dinámica nunca supera tres puestos.
      * <p>
-     * El <b>tipo</b> va por número: los primeros son espadachines y el resto arqueros, en la proporción que el
-     * jugador quiere para la marcha a la guarida (4 espadachines y 3 arqueros).
+     * Los cuatro fundadores son dos espadachines y dos arqueros. Los dinámicos alternan espada y arco; con siete
+     * guardias el total queda en cuatro espadachines y tres arqueros.
      */
     /**
      * El último reparto de milicia que se ha escrito en el registro (ver {@link #repartirGuardia}): sirve para escribir
@@ -3312,6 +3350,10 @@ public final class VillageManager {
 
         List<Villager> adultos = new ArrayList<>();
         for (Villager villager : aldeanos) {
+            if (esGuardiaFundadora(villager)) {
+                asegurarGuardiaFundadora(level, villager, center, objectiveIndex);
+                continue; // los cuatro puestos fundadores no cubren oficios ni entran en el reparto dinámico
+            }
             if (puedeSerGuardia(villager)) {
                 adultos.add(villager);
             }
@@ -3330,26 +3372,18 @@ public final class VillageManager {
             sobrantes.add(villager);
         }
 
-        // Los primeros se alistan (hasta el tope de la milicia); el resto vuelve a la vida civil.
-        int espadachines = 0;
-        int arqueros = 0;
+        // Los fundadores ocupan cuatro puestos fijos; solo quedan tres para reclutar sobrantes.
+        int plazasDinamicas = MILICIA_MAX - MILICIA_FUNDADORES;
         for (int i = 0; i < sobrantes.size(); i++) {
             Villager villager = sobrantes.get(i);
-            if (i >= MILICIA_MAX) {
+            if (i >= plazasDinamicas) {
                 desalistarGuardia(villager);
                 continue;
             }
             int tipo = i % 2 == 0 ? VillagerGuardGoal.ESPADACHIN : VillagerGuardGoal.ARQUERO;
-            if (tipo == VillagerGuardGoal.ESPADACHIN) {
-                espadachines++;
-            } else {
-                arqueros++;
-            }
-            alistarGuardia(level, villager, center, objectiveIndex, i,
+            alistarGuardia(level, villager, center, objectiveIndex, MILICIA_FUNDADORES + i,
                     // SE ALTERNAN (lo pidió el jugador: "tampoco he visto ningún arquero; al crearse deberían alternarse"): con el
-                    // corte por número, los cuatro primeros eran espadachines y en milicias pequeñas NO HABÍA NI UN
-                    // ARQUERO. Alternando salen 4 espadachines y 3 arqueros con la milicia llena (la formación de
-                    // siempre) y con dos guardias ya hay uno de cada.
+                    // reparto dinámico, que deja intacta la formación fundadora de dos por tipo.
                     tipo);
         }
         // LA TRAZA DEL REPARTO (25-oct-2026, lo pidió el jugador): que el registro lo DIGA, para poder CONTAR la milicia
@@ -3367,7 +3401,8 @@ public final class VillageManager {
                 }
             }
         }
-        String reparto = espadachines + " espadachin(es) y " + arqueros + " arquero(s) de " + sobrantes.size()
+        String reparto = espadachinesDeVerdad + " espadachin(es) y "
+                + (guardiasDeVerdad - espadachinesDeVerdad) + " arquero(s) de " + sobrantes.size()
                 + " sobrante(s) de " + aldeanos.size() + " aldeano(s), milicia hasta " + MILICIA_MAX
                 + " | alistados DE VERDAD: " + guardiasDeVerdad + " (" + espadachinesDeVerdad + " espadachin(es), "
                 + (guardiasDeVerdad - espadachinesDeVerdad) + " arquero(s))";
@@ -3378,7 +3413,8 @@ public final class VillageManager {
         // Y los que YA no sobran (murió gente, la aldea necesita su oficio) dejan la guardia: si no, la aldea se
         // quedaría sin granjero o sin herreros por tener milicia.
         for (Villager villager : aldeanos) {
-            if (VillagerGuardGoal.esGuardia(villager) && !sobrantes.contains(villager)) {
+            if (VillagerGuardGoal.esGuardia(villager) && !esGuardiaFundadora(villager)
+                    && !sobrantes.contains(villager)) {
                 desalistarGuardia(villager);
             }
         }
@@ -3592,7 +3628,7 @@ public final class VillageManager {
 
     /** Saca a un aldeano de la guardia y le quita su goal (vuelve a su oficio). */
     private static void desalistarGuardia(Villager villager) {
-        if (!VillagerGuardGoal.esGuardia(villager)) {
+        if (!VillagerGuardGoal.esGuardia(villager) || esGuardiaFundadora(villager)) {
             return;
         }
         villager.getPersistentData().putBoolean(GUARD_TAG, false);
@@ -3618,6 +3654,59 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(3, new VillagerGuardGoal(villager, center, objectiveIndex));
+    }
+
+    public static boolean esGuardiaFundadora(Villager villager) {
+        return villager.getPersistentData().getBoolean(FOUNDING_GUARD_TAG);
+    }
+
+    public static boolean esGuardiaFundadora(Villager villager, int objectiveIndex, int slot) {
+        return esGuardiaFundadora(villager)
+                && villager.getPersistentData().getInt(FOUNDING_GUARD_VILLAGE_TAG) == objectiveIndex
+                && villager.getPersistentData().getInt(GUARD_INDEX_TAG) == slot;
+    }
+
+    /** Marca antes de añadir la entidad al mundo para que guardia, rol y puesto ya estén en su primer guardado. */
+    public static void registrarGuardiaFundadora(ServerLevel level, Villager villager, BlockPos center,
+                                                  int objectiveIndex, int slot, int tipo) {
+        villager.getPersistentData().putBoolean(FOUNDING_GUARD_TAG, true);
+        villager.getPersistentData().putInt(FOUNDING_GUARD_VILLAGE_TAG, objectiveIndex);
+        alistarGuardia(level, villager, center, objectiveIndex, slot, tipo);
+    }
+
+    /** Repara las marcas y el goal sin cambiar el puesto fijo ni depender de que la aldea esté en paz. */
+    public static void asegurarGuardiaFundadora(ServerLevel level, Villager villager, BlockPos center,
+                                                 int objectiveIndex) {
+        if (!esGuardiaFundadora(villager, objectiveIndex,
+                villager.getPersistentData().getInt(GUARD_INDEX_TAG))) {
+            return;
+        }
+        int slot = villager.getPersistentData().getInt(GUARD_INDEX_TAG);
+        int tipo = villager.getPersistentData().getInt(GUARD_TYPE_TAG);
+        if (slot < 0 || slot >= MILICIA_FUNDADORES
+                || (tipo != VillagerGuardGoal.ESPADACHIN && tipo != VillagerGuardGoal.ARQUERO)) {
+            return;
+        }
+        boolean marcaCorrecta = villager.getPersistentData().getBoolean(GUARD_TAG)
+                && tipo == VillagerGuardGoal.tipoDe(villager)
+                && villager.getVillagerData().getProfession() == VillagerProfession.NONE;
+        if (!marcaCorrecta) {
+            alistarGuardia(level, villager, center, objectiveIndex, slot, tipo);
+            return;
+        }
+        VillagerGuardGoal.sincronizarMarcaDeGuardia(villager);
+        asegurarGoalDeGuardia(villager, center, objectiveIndex);
+    }
+
+    /** Los goals no se guardan en la partida: esta pasada los vuelve a poner también mientras sigue el asedio. */
+    private static void asegurarGoalsDeGuardiasFundadores(ServerLevel level, BlockPos center, int objectiveIndex) {
+        AABB zona = new AABB(center).inflate(VillageGenerator.FENCE_RADIUS + 20.0D);
+        for (Villager villager : level.getEntitiesOfClass(Villager.class, zona)) {
+            if (esGuardiaFundadora(villager, objectiveIndex,
+                    villager.getPersistentData().getInt(GUARD_INDEX_TAG))) {
+                asegurarGuardiaFundadora(level, villager, center, objectiveIndex);
+            }
+        }
     }
 
     // --- la marcha de la milicia contra la guarida --------------------------------------------------
@@ -3863,8 +3952,8 @@ public final class VillageManager {
         Map<VillagerProfession, Integer> cupo = VillageGenerator.puestosPorOficio();
         Map<VillagerProfession, List<Villager>> porOficio = new HashMap<>();
         for (Villager villager : aldeanos) {
-            if (villager.isBaby()) {
-                continue; // las crías no tienen oficio (y no gastan plaza)
+            if (villager.isBaby() || VillagerGuardGoal.esGuardia(villager)) {
+                continue; // ni las crías ni la guardia ocupan plazas de oficio
             }
             porOficio.computeIfAbsent(villager.getVillagerData().getProfession(), k -> new ArrayList<>()).add(villager);
         }

@@ -20,7 +20,7 @@ Se lee con `tools/nbtdump.py` (o con los scripts de `build/`). Claves del NBT:
 | `Fallen` | aldeas **caídas** (definitivo): no se repueblan ni se gestionan | `fallVillage` → `markFallen` | `isFallen(i)` |
 | `Noticed` | `"<índice>:<uuid>"`: a ese jugador ya se le avisó de esa aldea | `noticeIfNear` | `isNoticed(i, uuid)` |
 | `Pressure` | presión de horda por aldea (minutos sin atención) | `accruePressure` / `resetPressure` | — |
-| `Settlement[]` | por aldea: `Health` (aldeanos censados), `Food`, `StarvingSince`, `Layout`, `CasasVersion`, `AnexoAnimales`, `RepopulatedAt` | el latido | `VillageSavedData.get…` |
+| `Settlement[]` | por aldea: `Health` (aldeanos censados), `Food`, `StarvingSince`, `Layout`, `CasasVersion`, `AnexoAnimales`, `RepopulatedAt`, `GuardiasFundadoras` (puestos 0..3 ya creados), `RemesaInicialEntregada` | el latido y la fundación | `VillageSavedData.get…` |
 | `Blueprints[]` | el **plano** de lo construido (paleta + posiciones): es de donde salen el centro y el nivel del pueblo | `preGenerate` y las migraciones | `getBlueprint` / `VillageManager.centroDe` |
 
 **Al cargar**, una aldea de `Fallen` se añade también a `resolved` (`VillageSavedData.java:185`): una aldea caída no
@@ -223,7 +223,18 @@ líneas del asedio; el censo cada 5 min (`comida N puntos, N aldeanos`) dice có
   reloj en pausa de I86 no se pierde nada por irse, pero cerrar el juego sí borra el progreso del
   asedio.) Y el reloj solo corre si el jugador del asedio está **en la lista del servidor**
   (conectado) **y** a menos de 128 bloques: un asedio no avanza para alguien que no está.
-- **Los goals de los aldeanos**: los repone el latido (necesita un jugador cerca).
+- **Los goals de los aldeanos**: los repone el latido (necesita un jugador cerca). La excepción son los cuatro
+  guardias fundadores: `VillageManager.manageNearby` restaura sus goals cuando la aldea generada está en un chunk ya
+  cargado, antes del filtro de 140 bloques y también durante el asedio. `hasChunkAt` evita cargar chunks distantes. Su
+  identidad, papel y puesto van en los datos persistentes de la entidad; el goal no.
+  **Medición previa al arreglo, 13-oct-2026** (`docs/aldea-invariantes.md` §«A1-bis», fase 6): la reposición estaba
+  **detrás** del corte por distancia `PRE_GENERATE_RADIUS` = **140**, así que al recargar la partida los cuatro
+  fundadores se quedaban **`SIN-GOAL`** hasta que el jugador entraba en ese radio; la llamada directa y acercarse al
+  objetivo sí los reponían. La corrección de código se registró en `docs/aldea-invariantes.md` §«A1 — correcciones».
+  **Actualización, 13-oct-2026**: la ruta corregida sí se midió en un proceso nuevo, con el jugador de pega a **800,4**
+  bloques. Antes de `manageNearby`, los cuatro fundadores cargados tenían **0 goals**; después de su primera llamada,
+  los cuatro tenían uno y los cuatro estaban corriendo. Los UUID seguían iguales a los de la fundación y no había
+  duplicados. Ver §«A1 — ejecución autónoma» en `docs/aldea-invariantes.md`.
 - **Los contadores de atasco** de los goals: vuelven a empezar.
 
 ## 6. Herramientas (todas de solo lectura)
@@ -243,3 +254,121 @@ líneas del asedio; el censo cada 5 min (`comida N puntos, N aldeanos`) dice có
 sin caída), **sospecha primero del instrumento** y compruébalo por una segunda vía antes de
 tocarlo. Las tres trampas que ya nos han mordido: `region/` en vez de `entities/`, contar dos
 veces las dos carpetas, y fiarse del orden de un log mezclado.
+
+### Diagnóstico A1: muertes de fundadores y control sin objetivo forzado
+
+La repetición instrumentada con las posiciones de la fase 3 y los cuatro `devilrpg:aggressive_zombie` terminó con
+**4/4 fundadores vivos** tanto al asignar cada zombi a un fundador como al dejar actuar el targeting natural. Cada
+corrida duró 2400 ticks y usó un mundo desechable nuevo. El control natural dejó 4 zombis muertos y 3 tags de guardia;
+en la corrida forzada fueron 4 muertos y 2 tags. Las fuentes finales muestran muertes adicionales del gólem de hierro
+o de un aldeano-zombi, que no incrementan el contador de guardias. Los registros están en
+`build/a1-combat-diagnosis-20261013-092402/evidence/` y el desglose queda en `docs/aldea-invariantes.md`, «Diagnóstico
+instrumentado de supervivencia A1».
+
+El log histórico sí dice `Villager was slain by Aggressive Zombie` para las dos bajas anteriores, pero no conservó
+`DamageSource`, UUID del atacante ni proyectil. En las repeticiones instrumentadas hubo melee directo contra una
+arquera, bloqueos de escudo y fireballs que alcanzaron bloques o aldeanos ordinarios; no se registró daño mortal contra
+fundadores. Por eso la fuente exacta de las dos bajas antiguas sigue sin demostrarse y el fuego sigue sin ser su causa
+confirmada. En una corrida exploratoria con la formación generada nueva, flechas amigas sí golpearon a dos
+espadachines (6,02 de daño cada uno); no reprodujeron una muerte y no son la explicación probada de la fase 3.
+
+El gate de supervivencia de cuatro fundadores queda **aprobado** por ambas repeticiones históricas. No se cambió el
+código de combate. La causa de las dos muertes del registro anterior permanece como dato no recuperable; usar de nuevo
+los mensajes de muerte por sí solos no permitiría separar melee de proyectil.
+
+Referencias de implementación: `AggressiveZombieEntity.registerGoals` L985-1028 y `FireballAttackGoal` L2134-2202;
+`VillagerGuardGoal.tick` L374-403, `buscarEnemigo` L567-620 y ataques L670-739;
+`CommonForgeInteractionEventSubscriber.onLivingHurtEvent` L335-349, `esFuegoAmigo` L370-382 y `onGuardiaMata`
+L474-480. Los golpes melee y la fireball contra un aldeano constan en
+`build/a1-combat-diagnosis-20261013-092402/evidence/forced-historical-layout-run-console.log` L751, 807, 870, 980,
+1021 y L1646, 1649; el control final está en `natural-historical-layout-run-console.log` L3692-3701.
+
+### Muro, pozo y equipo visible — 13-oct-2026
+
+`AggressiveZombieEntity.esLaMuralla` reconoce el bloque real de la muralla mediante las columnas rasterizadas del mismo
+generador, la cota y los tipos/capas que se construyen. Solo los troncos con esa firma pasan el filtro global que
+mantiene árboles intactos; las demás celdas interiores siguen protegidas. Los vecinos no pertenecientes al anillo se
+mantienen bajo la regla de recinto existente. El presupuesto de 40 no se alteró; todavía falta medirlo con asedio
+controlado posterior a este arreglo.
+
+El hueco aproximado `(584,627)` cae 3 bloques al este del eje secundario `(581,627)`, dentro del radio 6 que
+`estaSobreElPozo` excluye de reparaciones de superficie. El minero sí puede excavar el caracol cuadrado y tres bloques
+de espacio sobre sus pasos, pero la ruta fuente no basta para atribuir el agujero desplazado de 7×7. Las funciones de
+exclusión preservan aire y no lo crean. No se modificó el terreno; falta evidencia del guardado o del historial de
+excavación para identificar el origen.
+
+Los logs locales de 13-oct muestran el minero en la boca primaria `(647,70,569)` y excavando pasos/galería cerca de
+X=651 (`run/logs/latest.log` L105, L317-352 y L1682-1764). No hay coincidencias del eje/hueco `(581/584,627)` en
+`latest.log` ni `debug.log`; es evidencia limitada a esos logs, no al estado posterior del mundo.
+
+La marca cliente del guardia se sincroniza como attachment y también forma parte del emparejamiento inicial de la
+entidad en NeoForge 21.1.249. El renderer está registrado y añade las capas de armadura y objeto en mano cuando la
+marca lo identifica. No se encontró una falla concreta ni se reprodujo el síntoma de dibujo, así que no se cambió ese
+renderer ni la entrega de equipo. El servidor puede confirmar posesión, no visibilidad en cliente.
+
+La geometría del muro se verificó por simulación estática del algoritmo: 496 columnas, radios 61,074–62,801; las caras
+adyacentes no pertenecientes al anillo quedan separadas por la condición de pertenencia exacta. No se ejecutó Minecraft
+ni se cambió ningún mundo en esta actualización. A1 permanece abierto para la prueba controlada del muro y la
+confirmación visual independiente.
+
+Los chequeos posteriores al cambio de producción dieron `compileJava` con `C:\jdk-21` exit 0,
+`python tools\lint_aldea.py --strict` exit 0 y `git diff --check` exit 0. No corrieron servidor ni Harness.
+
+### Traza de decisión de brecha — 13-oct-2026
+
+El reporte Harness indica 12 bloques de material de muro destruidos en dos corridas y ningún `ABRE BRECHA`. En
+`AggressiveZombieEntity.breakBlockAt`, el evento se comprobaba después de `destroyBlock`; `esLaMuralla` vuelve a
+consultar material y capa en el mundo y, tras destruirlo, la posición puede ser aire. También se ignoraba el booleano
+de `destroyBlock`. El resultado previo podía ser una destrucción sin evento y un retorno de éxito aunque el mundo
+no confirmara la rotura.
+
+La ruta ahora calcula `EvaluacionMuro` antes de modificar el mundo y comparte esa elegibilidad con la protección
+del recinto y la decisión del evento. Emite `ABRE BRECHA` solo si `destroyBlock` da `true` y la evaluación previa
+identifica el muro. `[Siege] evaluacion muro` registra atacante y posición, bloque objetivo y estado, centro, cota,
+altura relativa, columna, capa, material, destrucción y decisión. La traza solo aparece para columnas del anillo o
+materiales reconocidos como muro. El evento depende de una destrucción válida, no de la entrada; pasar por un
+portón abierto sin romper un bloque no debe producirlo. El presupuesto queda en 40.
+
+La lista de las doce coordenadas no está en los archivos locales inspeccionados. La diferencia entre el centro o
+la cota de sandbox y los del servidor sigue como hipótesis hasta que la traza nueva registre sus valores. No hubo
+ejecución Harness o Minecraft posterior al cambio. La siguiente corrida debe verificar bloque destruido válido,
+retorno verdadero y un evento único por posición, protección interior y que los candidatos fuera del anillo o con
+capa o material inválidos no cuenten como muro. Debe incluir el paso por un portón abierto sin romperlo. Ver
+`docs/aldea-invariantes.md`, apartado «Seguimiento — decisión de brecha antes de destruir».
+
+### Estado MEDIDO tras el Harness independiente — 13-oct-2026
+
+Actualiza la sección anterior, que era inspección de flujo de control. Cuatro mundos desechables (`muroR-*`, semilla
+4242), arnés temporal borrado y `run\saves` sin tocar:
+
+- **Brecha válida**: 2/2 casos con estado previo de muro, `destroyBlock=true` y **un** `ABRE BRECHA` por caso.
+- **Candidato inválido**: capa fuera de rango y material ajeno a la firma del muro → `esMuro=false`, sin destrucción
+  y **sin** evento.
+- **Destrucción fallida** → sin evento. **Interior**: 0 de 119 bloques destruidos.
+- **Dos asaltos reales**: 37 bloques de muro ↔ 37 eventos y 38 ↔ 38 (**77 ↔ 77** en total, sin desajustes en ningún
+  sentido). Pasar por un portón abierto sin romperlo: 1 entrada, 0 brechas.
+- `TUNEL_PRESUPUESTO=40` sigue igual y no se agotó; su suficiencia no queda demostrada.
+
+Detalle en `docs/aldea-invariantes.md` §«A1 — el evento de brecha, medido en ataques reales».
+
+### La depresión del terreno nace en la GENERACIÓN — Exp. 3, 13-oct-2026
+
+Actualiza lo escrito arriba sobre el hueco `(584,627)`, que era análisis de fuente. Mundos desechables (`run/p3-*`,
+borrados), semilla **12345**, centro real `(661,71,533)`, **cota 71**, eje del pozo 2 en `(628,71,562)`:
+
+- Línea base medida en el mismo tick en que termina `preGenerate` (ningún minero ha tenido tick propio): **11 celdas
+  de aire bajo la cota**, todas en la columna `x=624` (Δx=−4 del eje), de `y=67` a `y=61`, y **techo sellado en `y=70`**.
+- A 260, 660 y 1260 ticks la medida es **idéntica**: la actividad autónoma no la cambia en la ventana medida.
+- En el mundo del jugador la firma es la misma (depresión confinada al anillo, interior a `cota−1`) pero **abierta al
+  cielo**. Esa variante **no se reprodujo**.
+- **Mecanismo candidato, NO demostrado**: `estaSobreElPozo` no tiene test de altura y protege la columna entera en
+  radio 6; lo consultan el nivelado y `sellarSuelo`, de modo que una depresión natural ahí no se rellena.
+
+**No se aplicó corrección especulativa**: no se tocó `estaSobreElPozo`, `sellarSuelo` ni la geometría de la mina.
+Detalle en `docs/aldea-invariantes.md` §«A1 — Exp. 3».
+
+### Armas en cliente — sigue PENDIENTE, 13-oct-2026
+
+El servidor confirma el equipo y que un fundador usó su arma, pero **no se reprodujo el dibujo en un cliente real**.
+No se lanzó `runClient` porque su directorio de juego no está aislado de `run\saves`. Resultado **NOT RUN**, no PASS
+ni FAIL. No se cambió renderer, sincronización ni entrega de equipo. A1 sigue abierto solo por este criterio.
