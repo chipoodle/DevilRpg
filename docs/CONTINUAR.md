@@ -793,18 +793,24 @@ y estrecharlo sin un defecto demostrado podría reintroducir el «pozo sin ruta�
   **NOT RUN**, no PASS ni FAIL.
 - **No se aplicó ninguna corrección** de renderer, sincronización ni entrega de equipo.
 
-### Cola vigente (sin cambios de orden)
+### Cola vigente
 
-**A1 · SIGUE ABIERTO.** Falta solo el criterio no verificado: **armas visibles en un cliente real**, que exige una
-corrida de cliente con **directorio de juego aislado** (no `run\`) para no tocar `run\saves`. Todo lo demás del muro y
-de la fundación consta medido; el terreno queda documentado sin corrección. El jugador debe confirmar además el
-resultado en su partida.
+**A2 · SIGUIENTE TAREA ACTIVA — QUE LOS ASALTANTES LLEGUEN AL CENTRO.** Estado de partida **medido**: **entran 9** de
+los asaltantes y **al centro llegan 0**. Es lo siguiente que se toca.
 
-**A0 · ENSILLAR EL OSO** para que la carga del salto llegue (medido: `carga=0.0` siempre con jugador de verdad; la
-carga del caballo solo funciona ensillado) — el jugador dice que el oso **ya le funciona**, así que esto es el resto
-del salto montado.
+**A1 · sigue ABIERTO por un solo criterio.** Falta la verificación no ejecutada: **armas visibles en un cliente real**,
+que exige una corrida de cliente con **directorio de juego aislado** (no `run\`) para no tocar `run\saves`. Todo lo
+demás del muro y de la fundación consta medido; el terreno queda documentado sin corrección. El jugador debe confirmar
+además el resultado en su partida. **Esta limitación no cambia en esta actualización.**
 
-**A2 · QUE LOS ASALTANTES LLEGUEN AL CENTRO** (entran 9, al centro 0).
+**A0 · CERRADA (13-oct-2026) — el dueño confirma que el oso ya no da problemas.** El oso queda **fuera de la cola
+activa**. Historia y arreglos previos, intactos: **I382** (los cuatro sonidos de monta pasan a ser del oso blanco),
+**I386** (`HORSE_LAND` de las caídas reimplementado sin sonido de caballo, con el daño mantenido), **I384** (la carga
+del salto medida con jugador de verdad: **`carga=0.0` siempre**, `isJumping=false`, `dy=0.0`) y **I385 RETIRADO**
+(«salto al pulsar», revertido: la carga sí sirve y lo correcto es hacer que **llegue**). El propietario confirma que
+el conjunto **ya no presenta problemas**; **no hay en esta acta una medida nueva e independiente** de la corrección de
+A0 — la confirmación es del dueño, no una verificación repetida aquí. Detalle y enlaces en
+`docs/aldea-invariantes.md` §«A0 · CORREGIDA Y CERRADA POR CONFIRMACIÓN DEL DUEÑO».
 
 **COLA DIFERIDA** (necesita un dato del jugador antes de tocar código): **(B1)** el haz; **(B2)** el minero;
 **(B3)** verificar el orden de objetivos con un asedio real.
@@ -812,3 +818,7 @@ del salto montado.
 Últimos chequeos de esta fase (ver §«Validación de producción» abajo): `.\gradlew.bat compileJava` → exit 0;
 `python tools\lint_aldea.py --strict` → exit 0 con `lint aldea: OK (sin patrones peligrosos)`; `git diff --check` →
 exit 0; 9 archivos modificados, sin artefactos de harness ni mundos de prueba. No hubo commit ni push.
+
+> **Nota de orden**: las notas históricas de `## §2.1` (L563) y de las secciones de diagnóstico A1 (L631, L680) siguen
+> diciendo «A1 antes de A0 y A2». **Se conservan tal cual** como registro de lo que se decidió entonces; el orden
+> vigente es el de esta sección: **A2 primero**, A1 abierto por el criterio de cliente, **A0 cerrada**.

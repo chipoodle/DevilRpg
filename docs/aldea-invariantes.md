@@ -55,6 +55,31 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > de línea **se desplazan** con cada cambio, así que **antes de tocar hay que verificar la línea actual del fichero** (y, si no
 > cuadra, **abortar sin tocar nada**, que es lo que hacen los scripts de `.migration-tools/`).
 
+### A0 · CORREGIDA Y CERRADA POR CONFIRMACIÓN DEL DUEÑO (13-oct-2026)
+
+**Clasificación: [CONFIRMADO POR EL DUEÑO]** — no es una medida de esta acta. El propietario del proyecto confirma que
+**A0 (el salto con carga del oso y el ensillarlo) está corregido y ya no presenta problemas**.
+
+**Qué se apoya en evidencia previa, y qué no.** Lo único que cambia aquí es el **estado de la tarea**, no los números:
+
+- **I384 [MEDIDO]** sigue siendo el último dato del salto obtenido con jugador de verdad: **`carga=0.0` siempre**,
+  `isJumping=false`, `dy=0.0` → el input de salto no llegaba al oso. Esa medida es **anterior** a esta confirmación y
+  **no se repite ni se sustituye** aquí.
+- **I385 [RETIRADO]** («salto al pulsar», revertido): se conserva como está; la carga del caballo **sí sirve** y el
+  arreglo correcto es hacer que la carga **llegue**.
+- **I386 [MEDIDO]/[CONFIRMADO POR EL DUEÑO]** (`HORSE_LAND` de las caídas reimplementado sin sonido de caballo, con el
+  daño mantenido; el jugador ya lo dio por bueno) e **I382 [MEDIDO]** (los cuatro sonidos de monta pasan a ser del oso
+  blanco) quedan **intactos**.
+- **NO hay en esta acta ninguna medida nueva e independiente de la corrección de A0** (ni ensayo con jugador real, ni
+  traza de `carga`/`dy`, ni corrida de arnés posterior a este cierre). No se inventa ninguna: la confirmación es **del
+  dueño**.
+
+**Consecuencia en la cola** (`docs/CONTINUAR.md`): A0 sale de la cola activa y pasa a **cerrada**; la siguiente tarea
+activa queda **A2 — que los asaltantes lleguen al centro** (medido: entran 9, al centro 0). El orden anterior de las
+notas históricas («A1 antes de A0 y A2», `docs/CONTINUAR.md` L563/L631/L680) **se conserva tal cual** como registro de
+lo decidido entonces; el orden vigente es el de la sección «Cola vigente». **La limitación de A1 sobre el arma visible
+en cliente no se toca.**
+
 ### I386 · EL "GALOPE" AL ANDAR EL OSO: era `HORSE_LAND` de las CAÍDAS (leído en la fuente, no supuesto)
 
 **Reportado** ✗: *«todavía se escucha el galope de caballo cuando anda el oso»*. **Medido en la fuente de vanilla** ✓ (saqué

@@ -372,3 +372,16 @@ Detalle en `docs/aldea-invariantes.md` §«A1 — Exp. 3».
 El servidor confirma el equipo y que un fundador usó su arma, pero **no se reprodujo el dibujo en un cliente real**.
 No se lanzó `runClient` porque su directorio de juego no está aislado de `run\saves`. Resultado **NOT RUN**, no PASS
 ni FAIL. No se cambió renderer, sincronización ni entrega de equipo. A1 sigue abierto solo por este criterio.
+
+### A0 (oso montado) — cerrada, 13-oct-2026
+
+**Este documento no hace seguimiento de A0**: describe los **estados, relojes y rastro de la aldea** y su log
+(`[Village]`, `[Huerta]`, `[Siege]`), y el oso montado es una **entidad de habilidad**, no un estado de aldea, así que
+nunca tuvo apartado de estado aquí. Por eso **no hay aquí cifras de A0 que actualizar ni ninguna que se haya perdido**:
+la búsqueda de `A0`, `SoulBear`, `ensillar` y `HORSE`/`galope` en este fichero no devuelve nada.
+
+El estado vigente es: **A0 corregida y cerrada por confirmación del dueño** (el oso montado **ya no presenta
+problemas**). **No hay en esta actualización una medida nueva e independiente de esa corrección**; la confirmación es
+del propietario. Historia y evidencia previas, intactas: `docs/aldea-invariantes.md` §«A0 · CORREGIDA Y CERRADA POR
+CONFIRMACIÓN DEL DUEÑO», I384 (`carga=0.0` medido con jugador de verdad), I385 (retirado) e I386/I382 (sonidos).
+Cola de trabajo en `docs/CONTINUAR.md` §«Cola vigente»: **A2 es la siguiente tarea activa**.
