@@ -28,7 +28,8 @@ claims D4 efímeros y reclamados tras recarga, TTL 200 ticks para abandono sin r
 fixture D4-B retira el Goal de A tras el release de producción, `VillageNavigationGoal` sigue
 flag-gated en PROFESSION y puede empatar con un oficio, y la taberna no se activó por hambre
 (huir sí se demostró). No se describe nada no probado como probado. El checkpoint de
-integración es el commit de esta campaña (hash en el informe de cierre).
+integración es `b086193` (`feat(autonomous-village): coordinate forestry claims and goal
+priorities`), publicado en `origin/feature/autonomous-village`.
 
 ### Próximo: A8-01 y A7-12 — definiciones exactas y orden
 
