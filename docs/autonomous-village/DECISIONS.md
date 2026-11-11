@@ -42,3 +42,22 @@ predicate for a TALAR target. A planner result without a valid Step must not reu
 previous target; invalid targets are abandoned through the existing lifecycle before
 navigation authorization. A8-F03 is completed and accepted under this rule. Status:
 accepted; reopen only for a reproducible regression.
+
+## D-010 — Ephemeral world-scoped cross-worker tree claim
+A TALAR tree claim is keyed by `(dimension, tree BlockPos)`, held in memory only, and is
+separate from the per-agent navigation lease. The Goal acquires it before exposing a target,
+renews it each tick, releases it on completion/abandonment/stop/death/leave, validates
+release by owner+task, and lets unrenewed claims expire after 200 ticks. No NBT is added:
+claims are transient and a reloaded worker re-discovers/re-claims. Status: accepted; the
+runtime D4-A–E evidence is in `LUMBERJACK-PHASE-1-ACCEPTANCE.md`.
+
+## D-011 — Explicit Goal priority tiers and flag arbitration
+Village goals use `VillageGoalPriority`: EMERGENCY 0 (flee), CRITICAL 1 (tavern/eating),
+UTILITY 2 (gate, door, flag-gated dispatcher), SECURITY 3 (guard, builder repair),
+PROFESSION 4 (all profession work), SUPPORT 5 (worker repair, collection), OPPORTUNISTIC 6
+(pickup). Lower numbers are more important. NeoForge `GoalSelector` keeps insertion order,
+locks MOVE/LOOK independently, lets a lower number preempt a running higher number when the
+running goal is interruptable, and never replaces equal priority (first registered wins).
+Lumberjack is 4; tavern is 1 (not -1: it must yield to flee). Claims/leases are separate
+mechanisms. Status: accepted; D5-A–E runtime evidence in
+`LUMBERJACK-PHASE-1-ACCEPTANCE.md`.

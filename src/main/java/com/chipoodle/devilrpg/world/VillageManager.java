@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInter
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
+import com.chipoodle.devilrpg.entity.goal.VillageGoalPriority;
 import com.chipoodle.devilrpg.entity.goal.VillagerCollectGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerFarmGoal;
 import com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal;
@@ -3802,8 +3803,8 @@ public final class VillageManager {
         }
         // LA TABERNA (etapa F): el aldeano con hambre se va a la taberna a comer y a reponer energía (lo pidió el
         // jugador: "una taberna donde trabaje el cocinero y todos vayan a comer ahí cuando lo necesiten... los
-        // soldados pueden pasar cuando no estén de guardia"). Va a prioridad 6, por debajo de todos los oficios y del
-        // guardia: primero se trabaja y, cuando no hay faena (o el guardia está entre rondas), se va a la mesa.
+        // soldados pueden pasar cuando no estén de guardia"). Va a prioridad CRITICAL (1): el hambre crítica puede
+        // interrumpir la faena, pero SIEMPRE por debajo de huir (0); antes estaba en -1 y adelantaba a la huida.
         for (Villager villager : aldeanos) {
             if (!villager.isBaby()) {
                 asegurarGoalDeLaTaberna(villager, center, objectiveIndex);
@@ -4236,7 +4237,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(3, new VillagerGuardGoal(villager, center, objectiveIndex));
+        villager.goalSelector.addGoal(VillageGoalPriority.SECURITY, new VillagerGuardGoal(villager, center, objectiveIndex));
     }
 
     public static boolean esGuardiaFundadora(Villager villager) {
@@ -6088,7 +6089,8 @@ public final class VillageManager {
         // RECOLECTOR ocupa plaza del pueblo (está en VILLAGER_SPECIALTIES) pero no tiene oficio, y es EL constructor.
         // Ver `VillageGenerator.tieneFaenaPropia`.
         boolean tieneFaena = VillageGenerator.tieneFaenaPropia(villager.getVillagerData().getProfession());
-        asegurarGoalDeObrero(villager, center, objectiveIndex, tieneFaena ? 5 : 3);
+        asegurarGoalDeObrero(villager, center, objectiveIndex, tieneFaena
+                ? VillageGoalPriority.SUPPORT : VillageGoalPriority.SECURITY);
         // Y al que NO tiene faena (el holgazán, el clérigo, un aldeano sin oficio) se le quita la recogida: los dos
         // goals quedarían a prioridad 3 y el de recoger se engancha antes, así que el "constructor" se pasaba el día
         // barriendo el pueblo en vez de reparar (que es justo lo que se quiso evitar cuando se le dio el goal al
@@ -6145,7 +6147,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(5, new VillagerCollectGoal(villager, center, objectiveIndex));
+        villager.goalSelector.addGoal(VillageGoalPriority.SUPPORT, new VillagerCollectGoal(villager, center, objectiveIndex));
     }
 
     /**
@@ -6165,7 +6167,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(0, new VillagerLumberjackGoal(villager, center, objectiveIndex));
+        villager.goalSelector.addGoal(VillageGoalPriority.PROFESSION, new VillagerLumberjackGoal(villager, center, objectiveIndex));
     }
 
     /**
@@ -6179,7 +6181,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerAnimalFarmGoal(villager,
+        villager.goalSelector.addGoal(VillageGoalPriority.PROFESSION, new com.chipoodle.devilrpg.entity.goal.VillagerAnimalFarmGoal(villager,
                 center, objectiveIndex));
     }
 
@@ -6208,7 +6210,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerCookGoal(villager,
+        villager.goalSelector.addGoal(VillageGoalPriority.PROFESSION, new com.chipoodle.devilrpg.entity.goal.VillagerCookGoal(villager,
                 center, objectiveIndex));
     }
 
@@ -6223,7 +6225,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(2, new com.chipoodle.devilrpg.entity.goal.VillagerGateGoal(villager, center));
+        villager.goalSelector.addGoal(VillageGoalPriority.UTILITY, new com.chipoodle.devilrpg.entity.goal.VillagerGateGoal(villager, center));
     }
 
     /**
@@ -6237,7 +6239,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(2, new com.chipoodle.devilrpg.entity.goal.VillagerDoorGoal(villager));
+        villager.goalSelector.addGoal(VillageGoalPriority.UTILITY, new com.chipoodle.devilrpg.entity.goal.VillagerDoorGoal(villager));
     }
 
     /** Le pone al <b>herrero</b> su goal de taller (coger material, fabricar en su puesto y dejarlo en el almacén). */
@@ -6247,7 +6249,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(4, new com.chipoodle.devilrpg.entity.goal.VillagerSmithGoal(villager, center,
+        villager.goalSelector.addGoal(VillageGoalPriority.PROFESSION, new com.chipoodle.devilrpg.entity.goal.VillagerSmithGoal(villager, center,
                 objectiveIndex));
     }
 
@@ -6323,7 +6325,7 @@ public final class VillageManager {
         if (villager.level() instanceof ServerLevel nivel) {
             VillageFarmCoordinator.parcelaAsignada(nivel, center, villager);
         }
-        villager.goalSelector.addGoal(4, new VillagerFarmGoal(villager, center, objectiveIndex));
+        villager.goalSelector.addGoal(VillageGoalPriority.PROFESSION, new VillagerFarmGoal(villager, center, objectiveIndex));
     }
 
     /** ¿Esa aldea está siendo atacada ahora mismo? (el obrero no trabaja en plena refriega). */
@@ -6922,7 +6924,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(0, new com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal(villager));
+        villager.goalSelector.addGoal(VillageGoalPriority.UTILITY, new com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal(villager));
     }
 
     /** Primer controlador de navegación propio, idempotente y solo con recado vivo. */
@@ -6932,7 +6934,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(0, new com.chipoodle.devilrpg.entity.goal.VillageNavigationGoal(villager));
+        villager.goalSelector.addGoal(VillageGoalPriority.PROFESSION, new com.chipoodle.devilrpg.entity.goal.VillageNavigationGoal(villager));
         DevilRpg.LOGGER.info("[NAV] GOAL-ADD uuid={} flag={}", villager.getUUID(), NAVEGACION_ACTIVA);
     }
 
@@ -6949,7 +6951,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(0, new com.chipoodle.devilrpg.entity.goal.VillagerFleeGoal(villager));
+        villager.goalSelector.addGoal(VillageGoalPriority.EMERGENCY, new com.chipoodle.devilrpg.entity.goal.VillagerFleeGoal(villager));
     }
 
     /**

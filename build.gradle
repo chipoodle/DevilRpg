@@ -209,6 +209,8 @@ tasks.register('policyTest') {
     dependsOn tasks.named('testClasses')
     doLast {
         [
+                'com.chipoodle.devilrpg.agent.ForestryTreeClaimsTest',
+                'com.chipoodle.devilrpg.entity.goal.VillageGoalPriorityTest',
                 'com.chipoodle.devilrpg.entity.nav.MissionDestinationTest',
                 'com.chipoodle.devilrpg.entity.nav.NavRecoveryPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavArrivalPolicyTest',

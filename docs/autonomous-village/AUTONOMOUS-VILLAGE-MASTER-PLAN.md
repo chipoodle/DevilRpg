@@ -140,6 +140,8 @@ Key dependency chains:
 | Guard/raid | Implemented | Partial; A2 open | `ESTADO-ACTUAL.md`, unit tests |
 | Village navigation | Implemented | Policy test; A2 open | `VillageTaskNavigationPolicyTest` |
 | Goal scheduling | Implemented | **Runtime verified A6** | Run 81 |
+| Cross-worker same-tree claim (D4) | **Implemented** (ephemeral, world-scoped) | **Runtime verified D4-A–E** | `LUMBERJACK-PHASE-1-ACCEPTANCE.md` D4 post-fix; runs `claim-d4a…e-20261110-201309` |
+| Equal-priority profession policy (D5) | **Explicit tiers implemented** | **Runtime verified D5-A–E** | `LUMBERJACK-PHASE-1-ACCEPTANCE.md` D5 post-fix; runs `policy-d5a…e-20261110-203455` |
 | Agent-owned forestry navigation (A8-F03) | Complete | **Runtime verified post-fix** | `A8-F03-FRESH-SESSION-EXECUTION.md` §14 |
 | Persistence | Implemented | Reload scenarios partial | `xp-reload`, `multi-village-reload` scenarios |
 | Village generation/terrain | Implemented | Automated | `VillageTerrainPolicyTest`, layout test |
@@ -254,6 +256,24 @@ Each requires a bounded scenario before a production change.
 3. Audit priority/flag conflicts (D5).
 4. Reuse the Run 81 two-worker harness; do not build a new framework.
 
+**Progress 2026-11-10.** D4 was **confirmed**, then the minimal claim was **implemented and
+verified**: `ForestryTreeClaims` is an ephemeral, synchronized, `(dimension, tree)`-scoped
+registry; the Goal acquires before exposing a TALAR target, renews each tick, validates
+release by owner+task, releases on completion/abandonment/stop/death/leave, and expires
+unrenewed claims after 200 ticks. Runtime D4-A–E PASS.
+
+D5 is also **implemented and verified**: `VillageGoalPriority` defines explicit tiers
+(EMERGENCY 0, CRITICAL 1, UTILITY 2, SECURITY 3, PROFESSION 4, SUPPORT 5, OPPORTUNISTIC 6).
+Lumberjack was fixed from 0 to PROFESSION; tavern from -1 to CRITICAL (it used to outrank
+flee). Runtime D5-A–E PASS: lower number preempts a running higher number, equal priority is
+first-registered-wins, MOVE and LOOK coexist independently, dynamic eligibility stops/starts
+normally, and a real lumberjack works/delivers with utility goals coexisting.
+
+**Block 4 status: COMPLETED.** Steps 1–4 are satisfied: D4 proven and corrected, D5 audited
+and given an explicit policy, and the two-worker A5 harness (Run 81 equivalent) reused without
+a new framework. D4/D5 limitations remain documented (ephemeral claims, 200-tick TTL, D4-B
+fixture goal removal, flag-gated navigation at PROFESSION, tavern hunger not triggered).
+
 ### Block 5 — Defense and recovery
 
 1. Keep A2 as its own acceptance track.
@@ -361,3 +381,63 @@ A8-01 (resource trace) and A7-12 (OFF/AUDIT equivalence) remain open/partial and
 closed by A8-F03. Next: **A6-03 remaining runtime** (R2 blocked; R5-A/D, R6, R7 not tested;
 R4 160/200 cap not verified) and **§H Block 4** (D4 cross-worker claim, D5 priority audit).
 See `LUMBERJACK-PHASE-1-ACCEPTANCE.md` §A6-03 and the newest entry of `docs/CONTINUAR.md`.
+
+## 2026-11-10 — A6-03 runtime closed; D4 confirmed; D5 audited
+
+A6-03 is **CLOSED** for its runtime scenarios. New post-fix runs (fresh A5WALL copies):
+R2 planting priority PASS (`a6-r2-20261110-193049`: PLANTAR first, sapling 16->15, then 5
+logs delivered; blocker was fixture-only arboleda re-planting); R5-A normal threshold PASS
+(`a6-r5a-20261110-193049`: 12 logs, warehouse +12); R5-D recovery PASS
+(`a6-r5d-20261110-193049`: failure 4470, cooldown 4510, success 4558); R4 cap PASS
+(`a6-r4cap-20261110-193049`: cooldowns 40/80/120/**160**/**200**, attempt 6 at 5262); R6
+post-harvest cooldown PASS (`a6-r6-20261110-193049`: failure 5094, cooldown 5134, success
+5746); R7 save/reload recovery PASS with the timing limitation that the old deadline had
+already expired at load (`a6-r7save...`/`a6-r7load...`). R1/R3/R4 40/80/120/R5-B/C remain
+accepted from Runs 186/185/182/192.
+
+**D4 confirmed** (`a6-d4b-20261110-195518`): two lumberjacks selected the same tree
+`98,98,0` with distinct task IDs and independent per-agent leases; A harvested/delivered 5,
+B still targeted the missing tree and later recovered. No cross-worker claim exists. Block 4
+step 1 is complete; **step 2 (smallest claim consistent with farm plots) is the next
+production task**.
+
+**D5 audited** (`a6-d5b-20261110-200117`): equal-priority goals resolve by insertion order and
+MOVE/LOOK flag ownership, not priority preemption (A ran lumberjack, B ran the first-added
+competing goal); an explicit profession-priority policy is still pending.
+
+A8-01 and A7-12 remain open/partial and are not closed by this campaign. No production
+behavior changed in A6-03/Block 4; the new fixtures are test-only in the git-ignored debug
+controller.
+
+## 2026-11-10 — D4 cross-worker claim implemented and verified
+
+The confirmed D4 defect is corrected by an **ephemeral, world-scoped** claim keyed by
+`(dimension, tree BlockPos)`. The per-agent navigation lease was not the right layer: it is
+scoped to one agent and models navigation ownership, not the tree as work. The Goal now
+acquires the claim before exposing a TALAR target, discovery skips trees owned by another
+worker, and release is validated by owner+task with a 200-tick TTL and death/leave cleanup.
+
+Runtime PASS: D4-A basic contention, D4-B release/successor, D4-C owner death, D4-D two-tree
+concurrency, D4-E one-tree regression (`claim-d4a…e-20261110-201309`). The original
+duplicate-target behavior is gone. `ForestryTreeClaimsTest` covers atomic acquisition,
+denial, concurrency, validated release, stale release and expiry. D5 (priority/flag policy)
+remains open; no priority change was made.
+
+## 2026-11-10 — D5 priority policy implemented and verified
+
+The audit disproved the "all profession goals at priority 0" premise: flee was 0, tavern
+**-1**, gate/door 2, guard 3, professions mostly 4, repair/collect 5, pickup 6 — but lumberjack
+was accidentally registered at **0** and tavern at **-1** (above flee). The explicit policy is
+now centralised in `VillageGoalPriority`: EMERGENCY 0, CRITICAL 1, UTILITY 2, SECURITY 3,
+PROFESSION 4, SUPPORT 5, OPPORTUNISTIC 6. Lumberjack is 4; tavern is 1; guard 3; gate/door and
+the flag-gated dispatcher 2; repair 5 for workers / 3 for builders; collect 5; pickup 6.
+
+Actual `GoalSelector` semantics were read from the 1.21.1 sources and verified at runtime:
+insertion order, flag locks, lower number may preempt a running higher number, equal priority
+cannot replace (first registered wins), MOVE and LOOK are independent. Runtime PASS: D5-A
+lower-number preemption, D5-B equal-priority one MOVE owner, D5-C MOVE+LOOK coexistence,
+D5-D stop/start on eligibility change, D5-E real lumberjack work/delivery with flee 0,
+tavern 1 and flagless utility goals coexisting, plus a zombie-triggered flee preemption
+(`policy-d5a8…d…e3-20261110-203455`). No D4 claim,
+A8-F03, ENTREGAR or NBT change. Legacy `VillageNavigationGoal` remains flag-gated at
+PROFESSION; documented as a limitation.

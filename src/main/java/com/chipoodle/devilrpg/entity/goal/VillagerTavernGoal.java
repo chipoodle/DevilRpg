@@ -29,18 +29,17 @@ import java.util.EnumSet;
  * <b>no puede</b> ir a la taberna (no hay taberna, la aldea está siendo atacada o no hay comida), el reparto del
  * minuto le da su ración como siempre: nadie se muere de hambre por no llegar a la mesa.
  * <p>
- * Va a prioridad {@link #PRIORIDAD}, <b>por debajo</b> de la faena de cada oficio: primero se trabaja y, cuando no hay
- * nada que hacer (o el guardia está entre rondas), se va a comer.
+ * Va a prioridad {@link #PRIORIDAD} <b>CRITICAL (1)</b>: el hambre crítica puede interrumpir la faena, pero
+ * <b>siempre</b> por debajo de huir (0). No compite con la reparación ni la recogida en igualdad: está por encima
+ * porque es una necesidad, no un extra.
  */
 public class VillagerTavernGoal extends Goal {
 
     /**
-     * Prioridad: por debajo de todos los oficios (4), de la reparación del obrero (5) y de la recogida por oficio
-     * (6), para no quitarles la faena. Era <b>6</b> y la recogida por oficio pasó a 6 (etapa H): se sube a 7 para
-     * que no empaten (en un empate gana el que se engancha antes, y la recogida se le pone al aldeano antes que la
-     * taberna).
+     * Prioridad CRITICAL: por encima del oficio (4), la reparación (5/3), la recogida (5) y la recogida por oficio
+     * (6); por debajo de huir (0). Antes estaba en -1 y adelantaba incluso a la huida.
      */
-    public static final int PRIORIDAD = -1; // hambre critica puede interrumpir la faena
+    public static final int PRIORIDAD = VillageGoalPriority.CRITICAL; // hambre critica: por encima del oficio, por debajo de huir
     /** Puntos de comida que tiene que tener la despensa para que el pueblo vaya a la taberna a comer. */
     private static final int COMIDA_MINIMA = 4;
     /** Ticks que se queda comiendo en la mesa (y de charla) una vez llega. */

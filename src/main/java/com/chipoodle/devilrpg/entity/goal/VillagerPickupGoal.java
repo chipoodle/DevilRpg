@@ -60,7 +60,7 @@ public class VillagerPickupGoal extends Goal {
      * Primero se trabaja y, cuando no hay faena, se barre lo suyo del suelo: la recogida sigue ahí (el suelo no se
      * queda lleno) pero ya no le quita la faena a nadie.
      */
-    public static final int PRIORIDAD = 6;
+    public static final int PRIORIDAD = VillageGoalPriority.OPPORTUNISTIC;
     /** Distancia a la que recoge el objeto del suelo. */
     private static final double REACH = 2.5D;
     /** Radio (alrededor del ALDEANO, no del pueblo) en el que mira si hay algo suyo por el suelo. */

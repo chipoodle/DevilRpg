@@ -76,7 +76,7 @@ import java.util.function.Predicate;
 public class VillagerMinerGoal extends Goal {
 
     /** Prioridad: la de los oficios (la misma que el granjero, el pescador o los herreros). */
-    public static final int PRIORIDAD = 4;
+    public static final int PRIORIDAD = VillageGoalPriority.PROFESSION;
 
     /** Ticks que tarda en <b>picar y colocar una celda</b> del túnel (se le ve dar el pico). */
     private static final int TICKS_POR_CELDA = 25;

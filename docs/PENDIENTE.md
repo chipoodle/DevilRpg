@@ -17,8 +17,16 @@ C2 (candidato no-log), C3 (obstrucción), portón válido y portón negativo: PA
 post-fix. `compileJava`, `lint_aldea.py --strict`, `git diff --check`, `a8NavTests` y los tres
 grupos de navegación: PASS. Detalle y evidencia histórica (incluidos los FAIL pre-fix) en
 `docs/autonomous-village/A8-F03-FRESH-SESSION-EXECUTION.md`. No reabrir sin una regresión
-reproducible. El siguiente bloque vivo es A6-03/Block 4; ver la entrada más reciente de
+reproducible. El siguiente bloque vivo es A8-01/A7-12; ver la entrada más reciente de
 `docs/CONTINUAR.md`. Este fichero sigue siendo histórico, no la cola viva.
+
+## A6-03 / Block 4: CERRADOS 2026-11-10 (nota de traspaso, no cola viva)
+A6-03 runtime cerrada: R2, R5-A, R5-D, R4 (incl. topes 160/200), R6 y R7 PASS; R1/R3/R4
+40/80/120/R5-B/C ya estaban aceptados. **D4 COMPLETED / ACCEPTED** (claim efímero entre
+trabajadores, D4-A–E PASS) y **D5 COMPLETED / ACCEPTED** (política explícita de prioridades y
+flags, D5-A–E PASS). **Master Plan Block 4 COMPLETED.** La cola viva (A8-01 y A7-12, con su
+definición y orden) está en la entrada más reciente de `docs/CONTINUAR.md` y en
+`docs/autonomous-village/LUMBERJACK-PHASE-1-ACCEPTANCE.md`; este fichero no es la cola viva.
 # POR DÓNDE SEGUIR — traspaso de sesión (aldea / DevilRpg)
 
 > ## ⚠️ ESTE ES EL TRASPASO **VIEJO** (27-sep a 3-oct-2026). SE CONSERVA COMO ACTA, NO COMO LISTA DE PENDIENTES

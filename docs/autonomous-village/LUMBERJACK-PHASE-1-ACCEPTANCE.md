@@ -904,3 +904,315 @@ FAILURE tick=4981 attempts=3 cooldownUntil=5101
 No delivery began before its deadline; all 12 logs retained. R5-B/C PASS.
 R5-A normal threshold prior T1/T3; R5-D recovery not tested.
 R6/R7 not tested. R2 remains BLOCKED (arboleda/planton selection).
+
+## A6-03 R2 — planting priority PASS (2026-11-10, Run `a6-r2-20261110-193049`)
+
+**Fixture correction (not a production defect).** The historical R2 fixture coupled the
+scenario to a harvest-created hole; the grove re-planted saplings and the worker selected
+`planton=53,-17` (RECOGER_HARINA), so the controlled tree was never selected. The corrected
+fixture controls the grove: all plots are occupied so `VillageGenerator.asegurarArboleda`
+cannot re-plant, four plots are freed, and the worker carries 5 logs + 16 saplings. The
+production selection path is unchanged.
+
+```text
+[A6-R2] SETUP uuid=ba9f9f40-ef0e-4e86-b220-0638ffe5d4a7 logs=5 saplings=16 groveFree=4 warehouse=0 tick=120
+[A6-R2] PLANTAR-SELECTED target=49, 97, -38 logs=5 saplings=16 controller=TRAVELLING tick=121
+[Village] El lenador: planto un arbol en 49,97,-38 (le quedan 15 semillas)
+[A6-R2] PLANTED target=49, 97, -38 saplings=16->15 logs=5 tick=486
+[A6-R2] DELIVERED warehouse=5 base=0 delta=5 tick=1148
+[A5] FIN PASS detail=R2 plant first then delivery delta=5
+```
+
+PASS: **PLANTAR is selected before ENTREGAR**, one sapling is consumed, and the 5-log cargo
+is delivered afterwards. No production change.
+
+## A6-03 R5-A — normal threshold PASS (2026-11-10, Run `a6-r5a-20261110-193049`)
+
+Worker `0b7ba9bb-d74a-4193-9297-cef0a9f60e74`, 12 logs, normal warehouse.
+
+```text
+[A6-R5A] THRESHOLD-SELECTED target=128, 97, 21 carried=12 controller=DELIVERING tick=121
+[LENADOR-DELIVERY] carriedBefore=12 carriedAfter=0 accepted=12 warehouse 0->12
+[A6-R5A] DELIVERED warehouse=12 base=0 delta=12 tick=528
+```
+
+PASS: the >=12 threshold path delivers exactly once, inventory 12->0, warehouse +12.
+
+## A6-03 R5-D — recovery after cooldown PASS (2026-11-10, Run `a6-r5d-20261110-193049`)
+
+Worker `1a4d8ce9-66a1-420f-8fe2-5159068abf7c`, 12 logs, full warehouse; warehouse freed after
+the first failure.
+
+```text
+[DELIVERY-DIAG] FAILURE tick=4470 carried=12 attempts=1 cooldownUntil=4510
+[A6-R5D] FAILED-CLOSED tick=4470 carried=12 warehouseFreed=true
+[DELIVERY-DIAG] BEGIN tick=4558 carried=12 attempts=1 cooldownUntil=4510
+[DELIVERY-DIAG] SUCCESS tick=4558 carried=12->0
+[A6-R5D] RECOVERED after=88 ticks warehouse=12
+```
+
+PASS: no retry before the 40-tick deadline; delivery recovers after the cooldown with all
+12 logs.
+
+## A6-03 R4 — 160/200 cooldown cap PASS (2026-11-10, Run `a6-r4cap-20261110-193049`)
+
+Worker `d74cfd05-39f3-4ef0-8c8c-522f93182e95`, 12 logs, permanently full warehouse.
+
+```text
+failure tick  cooldownUntil  configured
+4470          4510           40
+4558          4638           80
+4686          4806           120
+4854          5014           160
+5062          5262           200
+[A6-R4] BEGIN n=6 tick=5262 carried=12
+[A6-R4] FINAL attempts=6 carried=12 warehouse=0
+```
+
+PASS: the two exact caps are observed (160 at attempt 4, 200 at attempt 5), and the next
+attempt begins at the deadline, never earlier. This closes the previously unverified
+R4 160/200 cap.
+
+## A6-03 R6 — post-harvest with cooldown PASS (2026-11-10, Run `a6-r6-20261110-193049`)
+
+Worker `7ccb1e42-5733-4544-b140-761bbf31620d`, empty inventory, full warehouse, controlled
+grove tree at `49,97,-38`.
+
+```text
+[A6-R6] HARVESTED tree=49,97,-38 carried=4 tick=4524
+[DELIVERY-DIAG] FAILURE tick=5094 carried=4 attempts=1 cooldownUntil=5134
+[A6-R6] POST-HARVEST-FAILED carried=4 warehouseFreed=true
+[DELIVERY-DIAG] BEGIN tick=5746 carried=4 attempts=1 cooldownUntil=5134
+[DELIVERY-DIAG] SUCCESS tick=5746 carried=4->0
+[A6-R6] DELIVERED after=652 ticks warehouse=4
+```
+
+PASS: the post-harvest delivery fails, the 40-tick cooldown is respected, the worker performs
+intermediate planting work, and the later delivery succeeds with all logs.
+
+## A6-03 R7 — save/reload recovery PASS, with timing limitation (2026-11-10)
+
+Save run `a6-r7save-20261110-193049`, worker `6bcdfa6a-b90e-4195-a6d4-9ec68dafd252`:
+
+```text
+[DELIVERY-DIAG] FAILURE tick=4530 carried=12 attempts=1 cooldownUntil=4570
+[A6-R7] SAVED-AFTER-FAILURE failureTick=4530 carried=12 warehouseFull=true
+```
+
+Load run `a6-r7load-20261110-194741` on a copy of that saved world:
+
+```text
+[A6-R7] LOAD-START uuid=6bcdfa6a-... carried=12 warehouseFullFreed=true
+[DELIVERY-DIAG] FAILURE tick=4649 carried=12 attempts=1 cooldownUntil=4689
+[DELIVERY-DIAG] SUCCESS tick=4737 carried=12->0
+[A6-R7] LOAD-DELIVERED delayTicks=87 warehouse=12
+```
+
+PASS for **delivery recovery across reload**: the restored worker keeps its 12 logs, retries,
+and delivers exactly 12 with no loss or duplication after the warehouse is freed. Limitation:
+the saved world's clock had already passed the old deadline (4570) when the load started, so
+"the transient cooldown resets on reload" is not distinguished from normal expiry; timing of
+the reset remains unproven.
+
+## Block 4 — D4/D5 runtime audit (2026-11-10)
+
+### D4 — two lumberjacks, one tree (CONFIRMED)
+
+Final run `a6-d4b-20261110-195518`; workers `02a0f5b6-b386-48b6-b2e4-93e52e6db65a` (A) and
+`ca87ea53-e0c6-4be8-891d-acdc6f383a5c` (B); tree `98,98,0`; ENFORCE mode.
+
+```text
+[A6-D4] BOTH-TARGET tree=98,98,0 taskA=49935721-... taskB=79238237-... tick=127
+[AGENT-AUTH] ACQUIRE A task=49935721... at 4149; B task=79238237... at 4150
+[A6-D4] CONTENTION-END treeGone=true carriedA=5 carriedB=0 targetB=98,98,0 tick=256
+[LENADOR-DELIVERY] A delivered 5; warehouse 0->5
+[A6-D4] RECOVERY B-target=null B-active=false warehouse=5 tick=561
+```
+
+Both workers selected the **same tree** with distinct task IDs; each acquired its own
+per-agent lease (no cross-worker claim exists). A harvested and delivered 5 logs; B, still
+targeting the now-missing tree, later recovered (target cleared, then RECOGER_HARINA/ABONAR
+work) and ended inactive. **D4 is confirmed as a missing cross-worker target claim.** No
+production change was made.
+
+### D5 — equal-priority goal audit (CONFIRMED)
+
+Run `a6-d5b-20261110-200117`; A `172e7985-f648-4b78-8eeb-fdeb2a966b6b` and B
+`b81dbf61-979b-4678-929c-2aca9bfd5827`, both with a test-only competing MOVE/LOOK goal at
+priority 0.
+
+```text
+[A6-D5] SETUP A=(lumberjack then competing) B=(competing then lumberjack)
+[A6-D5] COMPETING-START tag=B-first uuid=b81dbf61... tick=120
+[A6-D5] AUDIT tick=160 A-running=VillagerLumberjackGoal B-running=competing A-nav=true B-nav=true
+```
+
+Equal-priority goals are **not** preempted by priority: the first-added goal that owns the
+MOVE/LOOK flags runs, and the second is blocked. D5 is confirmed as an insertion/flag
+arbitration rule, not a priority policy; no explicit profession-priority policy exists yet.
+No production change was made.
+
+## D4 post-fix — ephemeral cross-worker tree claim (2026-11-10)
+
+**Status: COMPLETED / ACCEPTED.** D4-A–E PASS; the pre-fix defect evidence above is preserved.
+
+The pre-fix D4 evidence above is preserved: two workers selected `98,98,0` with different
+task IDs and independent per-agent leases; A harvested/delivered, B kept the missing target.
+**The per-agent navigation lease cannot exclude another worker**: it is scoped to one
+`VillagerAgent`, has its own TTL and represents navigation ownership, not work-target
+ownership. A cross-worker claim therefore belongs at the Goal's TALAR target-acceptance
+boundary, keyed by the resource itself.
+
+### Scope and invariants
+
+- Claim scope: `(dimension id, packed tree BlockPos)` — world-scoped, not per-village or
+  per-agent. A tree position is globally unique; the registry is a single server-side
+  in-memory map. No NBT and no persistence: claims are task-transient and a reloaded worker
+  re-discovers/re-claims.
+- At most one live claim per tree; acquisition is `synchronized` and atomic on the server
+  thread.
+- A worker keeps its own claim across normal Goal/planner ticks while it still targets the
+  same tree; the Goal renews it at the start of each tick.
+- A failed acquisition does not expose the target, does not authorize navigation and does not
+  blacklist the tree; discovery continues.
+- Release validates both owner UUID and task ID, so a stale owner cannot erase a successor.
+- Release sites: work completion, `stop()`, `abandonarObjetivoInvalido()` (stale/invalid
+  target), and `VillagerAgentRegistry` death/leave (`RELEASE-ALL`). Server stop clears all.
+- Unrenewed claims expire after `ForestryTreeClaims.CLAIM_TTL_TICKS = 200` ticks; the owner
+  logs `LOST` on the next renew and abandons normally. This bounds disappeared-owner
+  recovery without arbitrary delays.
+- Target identity is the existing `UUID(villager + ":" + objectiveIndex + ":" + tree.asLong())`
+  task ID; the claim is **not** the navigation lease.
+
+### Implementation
+
+- New `agent/ForestryTreeClaims.java` (pure Java, synchronized): `acquire`, `renew`,
+  `release` (owner+task validated), `releaseAll`, `isAvailable`, `ownerOf`, `clearAll`.
+- `VillagerLumberjackGoal`:
+  - `aceptarTalar(level, tree)` acquires the claim **before** assigning `target`; denial logs
+    `[TREE-CLAIM] event=TARGET-DENIED` and the candidate is not exposed.
+  - `canUse()` tree/rest branches and `descubrirTrabajo()` call `aceptarTalar`.
+  - `baseDeArbol()` and both hanging-log searches skip trees owned by another worker, so
+    discovery naturally chooses another target or idles.
+  - `renovarTalarClaim()` at tick start; a lost claim triggers normal invalidation.
+  - `releaseTalarClaim()` on completion, `stop()`, abandonment and delivery start.
+- `VillagerAgentRegistry`: death/leave release all claims; server stop clears the registry.
+- No change to ENTREGAR, navigation lease semantics, wall gates, A8-F03 stale-target guards,
+  other professions or NBT.
+
+### Runtime results (fresh A5WALL copies, ENFORCE)
+
+| Scenario | Run | Evidence | Result |
+|---|---|---|---|
+| D4-A basic contention | `claim-d4a-20261110-201309` | A `40bc5e1c…` claimed `98,98,0` at 4147; B `c1254e6a…` target `null` at 126; A released after harvest and delivered 5; B moved to other work | **PASS** |
+| D4-B release/successor | `claim-d4b-20261110-201309` | A `ff86a6b4…` claimed then released at tick 4309 via stuck abandonment; B `726494fe…` claimed at 4316, harvested and delivered 5; A's removed goal never touched B's claim | **PASS** |
+| D4-C owner disappearance | `claim-d4c-20261110-201309` | A `84b30361…` claimed; death triggered `RELEASE-ALL reason=death` at 128; B `bcde1078…` claimed at 4156 and delivered 5 | **PASS** |
+| D4-D multiple trees | `claim-d4d-20261110-201309` | B `0028aa91…` claimed `98,98,0` and A `a87f2b8a…` claimed `62,98,0` concurrently; both released; warehouse 0→10 | **PASS** |
+| D4-E original regression | `claim-d4e-20261110-201309` | B `d75607bb…` claimed `98,98,0` at 4147; A `bb6ac88e…` target `null`; B delivered 5; no duplicate harvest (loser later did ABONAR on the replanted sapling) | **PASS** |
+
+The duplicate-target defect is gone: only the claim owner receives the tree as work; the
+other worker does not navigate to it.
+
+### Tests
+
+`ForestryTreeClaimsTest` (registered in `policyTest`) covers atomic acquisition, same-tree
+denial, different-tree concurrency, dimension separation, owner/task-validated release, stale
+release rejection, TTL expiry and `releaseAll`.
+
+### Remaining limitations
+
+- Claims are ephemeral and intentionally reset on reload; a reloaded worker re-claims.
+- TTL recovery is time-based (200 ticks) when no death/leave event fires.
+- No priority/fairness policy yet; D5 remains open.
+- D4-E's loser later did ABONAR on the replanted sapling, not a duplicate harvest.
+
+## D5 post-fix — explicit Goal priority and flag policy (2026-11-10)
+
+**Status: COMPLETED / ACCEPTED.** D5-A–E PASS; the pre-fix audit above is preserved.
+
+The pre-fix audit above is preserved. The audit found the real registrations were not all
+priority 0, and two registrations contradicted the intended policy:
+
+- **Lumberjack was registered at 0** (the class javadoc said 4): it could outrank flee/guard.
+- **Tavern was registered at -1** (comments said 6 or "below professions"): it outranked
+  even flee (0).
+
+### Actual GoalSelector semantics (Minecraft 1.21.1 / NeoForge 21.1.249)
+
+`GoalSelector` keeps `availableGoals` in insertion order (`ObjectLinkedOpenHashSet`); it does
+**not** sort by priority. Each tick it:
+
+1. stops running goals whose `canContinueToUse()` is false;
+2. for each non-running goal in registration order, starts it only when every flag it uses is
+   free or the current flag owner `canBeReplacedBy` it;
+3. `WrappedGoal.canBeReplacedBy(new)` is `owner.isInterruptable() && new.priority < owner.priority`
+   (default `Goal.isInterruptable()` is true);
+4. equal priority (`new.priority == owner.priority`) can never replace; the first registered
+   eligible goal keeps the flag.
+
+So: lower number = higher priority; a lower number **can preempt** a running higher number;
+equal priority is deterministic by insertion order; MOVE and LOOK are independent locks, so a
+LOOK-only goal coexists with a MOVE-only goal, but two MOVE goals cannot both run.
+
+### Inventory (post-fix)
+
+| Profession / role | Goal | Priority | Flags | Registration / ordering | Intended conflicts |
+|---|---|---:|---|---|---|
+| Any non-guard adult | `VillagerFleeGoal` | **0 EMERGENCY** | MOVE | `asegurarElHuir`, once | Must beat all work/needs |
+| Any adult | `VillagerTavernGoal` | **1 CRITICAL** | MOVE, LOOK | `asegurarGoalDeLaTaberna`, once | Beats work; yields to flee |
+| Any adult | `VillagerGateGoal` | 2 UTILITY | none | `asegurarGoalDePortones`, once | Coexists (no flags) |
+| Any adult | `VillagerDoorGoal` | 2 UTILITY | none | `asegurarGoalDePuertas`, once | Coexists (no flags) |
+| Flag-gated legacy | `VillageDispatcherGoal` | 2 UTILITY | none | only when `DESPACHADOR_ACTIVO` | Coexists; no work block |
+| Guard | `VillagerGuardGoal` | **3 SECURITY** | MOVE, LOOK | `asegurarGoalDeGuardia` | Beats professions; yields to flee/tavern |
+| FLETCHER | `VillagerLumberjackGoal` | **4 PROFESSION** | MOVE, LOOK | `asegurarGoalDeLenador` | Equal with other work; no cross-worker claim conflict |
+| FARMER | `VillagerFarmGoal` | 4 PROFESSION | MOVE, LOOK | `asegurarGoalDeGranjero` | Equal work |
+| SHEPHERD | `VillagerAnimalFarmGoal` | 4 PROFESSION | MOVE, LOOK | `asegurarGoalDeGanadero` | Equal work |
+| BUTCHER | `VillagerCookGoal` | 4 PROFESSION | MOVE, LOOK | `asegurarGoalDeCocinero` | Equal work |
+| WEAPONSMITH / TOOLSMITH | `VillagerSmithGoal` | 4 PROFESSION | MOVE, LOOK | `asegurarGoalDeHerrero` | Equal work |
+| CLERIC | `VillagerClericGoal` | 4 PROFESSION | MOVE, LOOK | constant `PRIORIDAD` | Equal work |
+| FISHERMAN | `VillagerFisherGoal` | 4 PROFESSION | MOVE, LOOK | constant `PRIORIDAD` | Equal work |
+| Miner role | `VillagerMinerGoal` | 4 PROFESSION | MOVE, LOOK | constant `PRIORIDAD` | Equal work |
+| Flag-gated legacy | `VillageNavigationGoal` | 4 PROFESSION | MOVE | only when `NAVEGACION_ACTIVA` | Equal with work; documented legacy caveat |
+| NITWIT / builder | `VillagerCollectGoal` | 5 SUPPORT | MOVE, LOOK | `asegurarGoalDeRecolector` | Below work |
+| Worker with job | `VillagerRepairGoal` | 5 SUPPORT | MOVE, LOOK | `asegurarGoalDeObrero(..., SUPPORT)` | Below own profession |
+| Villager without fixed job | `VillagerRepairGoal` | 3 SECURITY | MOVE, LOOK | `asegurarGoalDeObrero(..., SECURITY)` | Builder primary; same tier as guard |
+| Profession with loose materials | `VillagerPickupGoal` | **6 OPPORTUNISTIC** | MOVE, LOOK | constant `PRIORIDAD` | Below all work |
+
+Registration is idempotent per goal class; utilities (gate/door) are added to all adults,
+profession goals only to their profession, and guard/pickup are removed/added by role. Equal
+tiers are safe because a villager normally has one profession; utilities carry no flags.
+
+### Implementation
+
+- New `VillageGoalPriority` (EMERGENCY 0, CRITICAL 1, UTILITY 2, SECURITY 3, PROFESSION 4,
+  SUPPORT 5, OPPORTUNISTIC 6).
+- `VillageManager` uses the constants for every villager registration; lumberjack 0 → 4,
+  tavern -1 → 1, guard 3, gate/door/dispatcher 2, repair 5/3, collect 5, pickup 6.
+- `VillagerClericGoal`, `VillagerFisherGoal`, `VillagerMinerGoal` use `PROFESSION`;
+  `VillagerPickupGoal` uses `OPPORTUNISTIC`; `VillagerTavernGoal` uses `CRITICAL`.
+- No D4 claim, A8-F03, ENTREGAR, NBT or OFF/ENFORCE changes.
+
+### Runtime D5-A–E (fresh A5WALL copies)
+
+| Scenario | Run | Evidence | Result |
+|---|---|---|---|
+| D5-A different priorities | `policy-d5a8-20261110-203455` | UUID `6cf8158a…`; priority 5 running first; adding priority 4 at 121 → state `5:idle \| 4:RUN` at 136 | **PASS** |
+| D5-B equal priority/MOVE | `policy-d5b-20261110-203455` | UUID `8107cb43…`; two priority-4 lumberjacks; `runningCount=1`, first RUN, second idle at 145 | **PASS** |
+| D5-C MOVE vs LOOK | `policy-d5c-20261110-203455` | UUID `a6c57c47…`; `ProbeMoveGoal` (MOVE) and `ProbeLookGoal` (LOOK) both RUN at 140 | **PASS** |
+| D5-D dynamic eligibility | `policy-d5d-20261110-203455` | UUID `2362bc61…`; first STOP 136, second START 136; `running=1` at 150 | **PASS** |
+| D5-E profession integration | `policy-d5e3-20261110-203455` | UUID `8107150d…`; lumberjack delivered 5; installed `0:flee \| 1:tavern \| 4:lumberjack \| 2:gate \| 2:door \| 5:repair \| 6:pickup`; no-AI zombie trigger → `0:flee RUN`, lumberjack idle at 507 | **PASS** |
+
+D5-A's first fixture attempts failed because the test villager had XP 0 and vanilla
+`ResetProfession` erased the FLETCHER profession before the second goal could run; the fixture
+now gives a real fletching-table POI and XP 1 (the final PASS above). D5-D used eligibility
+toggles, not manual Goal stops.
+
+**D5 status: PASS for the required A–E scenarios.** Remaining limitations: legacy
+`VillageNavigationGoal` is at PROFESSION and could equal a profession goal when its flag is
+enabled; dispatcher is flag-gated; equal-priority order is insertion order by design.
+
+## A6-03 status (2026-11-10)
+
+R1 (Run186), R2 (above), R3 (Run185), R4 40/80/120 (Run182) and 160/200 (above), R5-A/B/C/D
+(Run192 + above), R6 and R7 (above) are all covered. **A6-03 runtime acceptance is CLOSED**,
+with the R7 transient-reset timing limitation and the D4/D5 Block 4 findings recorded above.

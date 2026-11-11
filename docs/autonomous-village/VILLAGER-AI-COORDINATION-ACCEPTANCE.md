@@ -127,3 +127,12 @@ The observed lumberjack “carrying wood, standing and swaying” behavior is
 explained by the per-tick `WALK_TARGET` erase and is corrected. The runtime
 acceptance passes for harvest, delivery, and resume. Broader multi-profession
 coordination remains future work.
+
+## D5 update — explicit priority/flag policy (2026-11-10)
+
+The broader coordination gap is now covered by `VillageGoalPriority`: EMERGENCY 0 (flee),
+CRITICAL 1 (tavern), UTILITY 2 (gate/door/dispatcher), SECURITY 3 (guard/builder repair),
+PROFESSION 4 (all work), SUPPORT 5 (worker repair/collection), OPPORTUNISTIC 6 (pickup).
+`GoalSelector` uses insertion order and flag locks; lower number may preempt a running higher
+number, equal priority cannot replace. Lumberjack was corrected from 0 to 4 and tavern from -1
+to 1. D5-A–E runtime PASS; see `LUMBERJACK-PHASE-1-ACCEPTANCE.md` D5 post-fix.

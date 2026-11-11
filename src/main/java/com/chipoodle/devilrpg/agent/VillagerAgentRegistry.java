@@ -65,6 +65,11 @@ public final class VillagerAgentRegistry {
                 DevilRpg.LOGGER.info("[AGENT] leave uuid={} agents={}", villager.getUUID(), AGENTS.size());
             }
         }
+        int releasedClaims = ForestryTreeClaims.releaseAll(villager.getUUID());
+        if (releasedClaims > 0) {
+            DevilRpg.LOGGER.info("[TREE-CLAIM] event=RELEASE-ALL uuid={} claims={} reason=leave",
+                    villager.getUUID(), releasedClaims);
+        }
     }
 
     @SubscribeEvent
@@ -78,6 +83,11 @@ public final class VillagerAgentRegistry {
             if (DIAG) {
                 DevilRpg.LOGGER.info("[AGENT] death uuid={} agents={}", villager.getUUID(), AGENTS.size());
             }
+        }
+        int releasedClaims = ForestryTreeClaims.releaseAll(villager.getUUID());
+        if (releasedClaims > 0) {
+            DevilRpg.LOGGER.info("[TREE-CLAIM] event=RELEASE-ALL uuid={} claims={} reason=death",
+                    villager.getUUID(), releasedClaims);
         }
     }
 
@@ -107,6 +117,7 @@ public final class VillagerAgentRegistry {
     public static void onServerStopping(ServerStoppingEvent event) {
         AGENTS.values().forEach(VillagerAgent::invalidate);
         AGENTS.clear();
+        ForestryTreeClaims.clearAll();
     }
 
     public static Optional<VillagerAgent> agent(UUID villagerId) {

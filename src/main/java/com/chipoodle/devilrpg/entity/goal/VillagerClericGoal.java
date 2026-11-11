@@ -56,7 +56,7 @@ import java.util.Optional;
 public class VillagerClericGoal extends Goal {
 
     /** Prioridad con la que se engancha: es su oficio (la misma que el granjero y el herrero). */
-    public static final int PRIORIDAD = 4;
+    public static final int PRIORIDAD = VillageGoalPriority.PROFESSION;
 
     private static final float VELOCIDAD = 0.6F;
     /** Distancia a la que ya se considera que está en el soporte. */

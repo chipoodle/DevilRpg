@@ -41,7 +41,7 @@ import java.util.List;
 public class VillagerFisherGoal extends Goal {
 
     /** Prioridad: la de los oficios (la misma que el granjero o el ganadero). */
-    public static final int PRIORIDAD = 4;
+    public static final int PRIORIDAD = VillageGoalPriority.PROFESSION;
     /** Ticks de faena con la caña en la mano antes de sacar un pez (se le ve pescar). */
     private static final int PESCAR_TICKS = 60;
     private static final int REST_TICKS = 20;

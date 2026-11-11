@@ -1,5 +1,108 @@
 
 
+
+
+
+## 2026-11-10 — D5 CERRADO: política explícita de prioridades y flags, D5-A–E PASS
+La auditoría desmintió el supuesto "todos los oficios a prioridad 0": huir 0, taberna **-1**,
+portones/puertas 2, guardia 3, oficios 4, reparación/recogida 5, recogida por oficio 6; pero
+el **leñador estaba a 0** (su javadoc decía 4) y la **taberna a -1** (adelantaba a huir).
+Nueva política única `VillageGoalPriority`: EMERGENCY 0 (huir), CRITICAL 1 (taberna/comer),
+UTILITY 2 (portones, puertas, despachador), SECURITY 3 (guardia, reparación de constructor),
+PROFESSION 4 (todos los oficios), SUPPORT 5 (reparación de obrero, recogida), OPPORTUNISTIC 6
+(recogida por oficio). Leñador 4; taberna 1; guardia 3; reparación 5/3; recogida 5; pickup 6.
+Semántica real de `GoalSelector` (fuente 1.21.1): orden de inserción, flags MOVE/LOOK
+independientes, un número menor **puede** desbancar a uno mayor en ejecución (si es
+interrumpible), e igual prioridad **nunca** se reemplaza (gana el primero registrado).
+Runtime PASS (copias A5WALL): **D5-A** `policy-d5a8-20261110-203455` (prioridad 4 desbanca a
+5; UUID `6cf8158a…`), **D5-B** `policy-d5b-20261110-203455` (dos goals a 4: uno solo MOVE,
+primero RUN; UUID `8107cb43…`), **D5-C** `policy-d5c-20261110-203455` (MOVE y LOOK coexisten,
+2 RUN; UUID `a6c57c47…`), **D5-D** `policy-d5d-20261110-203455` (stop 136 / start 136 sin
+flags atascadas; UUID `2362bc61…`), **D5-E** `policy-d5e3-20261110-203455` (leñador 4
+trabaja/entrega 5; huir 0/taberna 1/portón 2/puerta 2/reparación 5/pickup 6 en el estado
+instalado; zombi no-AI → `flee RUN`, leñador idle; UUID `8107150d…`). Test
+`VILLAGE_GOAL_PRIORITY_TEST` en `policyTest`.
+**Estado de cierre (2026-11-10):** **A6-03 CLOSED**; **D4 COMPLETED / ACCEPTED**;
+**D5 COMPLETED / ACCEPTED**; **Master Plan Block 4 COMPLETED**. Limitaciones conservadas:
+claims D4 efímeros y reclamados tras recarga, TTL 200 ticks para abandono sin release, el
+fixture D4-B retira el Goal de A tras el release de producción, `VillageNavigationGoal` sigue
+flag-gated en PROFESSION y puede empatar con un oficio, y la taberna no se activó por hambre
+(huir sí se demostró). No se describe nada no probado como probado. El checkpoint de
+integración es el commit de esta campaña (hash en el informe de cierre).
+
+### Próximo: A8-01 y A7-12 — definiciones exactas y orden
+
+**A8-01 — End-to-End Forestry Resource Trace. Status: PARTIAL.** Objetivo: trazar cada tronco
+de la tala hasta el almacén con contabilidad **por actor**. Comportamiento requerido: ledger
+por actor de inserciones/extracciones de inventario y depósitos/retiradas de almacén, por
+ítem y tick, sin cambiar producción. Criterio de aceptación: reconciliación completa
+(inicial + talado − depositado − restante − drops) sin diferencias inexplicadas; hoy no está:
+el almacén es compartido y no existe ledger por actor, solo se explicó la dirección del
+desfase (T2/b89, Runs 209–212). Archivos: `VillagerLumberjackGoal.picarTronco`,
+`VillageStorage.guardar`, `VillagePantry.guardar`, `VillagerPickupGoal`; evidencia
+`A8-01-RESOURCE-TRACE.md`. Falta: instrumentación/ledger por actor; no hay defecto de
+producción demostrado.
+
+**A7-12 — Controlled OFF/AUDIT Reproducibility and Final Acceptance. Status: PARTIAL /
+non-equivalent.** Objetivo: comparar OFF y AUDIT con el mismo fixture y manifiestos
+equivalentes. Comportamiento requerido: misma selección de tarea/target y contabilidad de
+recursos equivalente. Criterio de aceptación: equivalencia de recursos demostrada con
+reconciliación completa y manifiesto inicial capturado; hoy no está: dos pares muestran OFF
++1 tronco, sin causalidad probada y sin manifiesto completo al tick 0. Decisión documentada:
+OFF sigue siendo el default, AUDIT solo diagnóstico, **no** transferir autoridad; recomendar
+cerrar A7 como validación-inconclusa. Evidencia: `A7-12-FINAL-ACCEPTANCE.md`,
+`A8-01-RESOURCE-TRACE.md`.
+
+**Dependencia y secuencia:** A7-12 depende del ledger por actor de A8-01 para eliminar el
+confounding del almacén compartido; hacer **A8-01 primero** y después A7-12. No repetir la
+comparación a ciegas ni implementar ninguno en esta campaña.
+
+## 2026-11-10 — D4 CORREGIDO: claim efímero entre trabajadores, D4-A–E PASS
+El defecto D4 (dos leñadores, un árbol, sin claim) queda corregido con el mecanismo más pequeño:
+`agent/ForestryTreeClaims` es un registro **en memoria, sincronizado y con alcance
+(dimensión, BlockPos del árbol)**. No es el lease de navegación (ese es por agente y modela
+navegación, no la madera): el Goal adquiere el claim **antes de exponer el target**, la
+búsqueda (`baseDeArbol`, restos colgando) salta árboles de otro trabajador, el dueño renueva
+cada tick, y la liberación valida **dueño+task** (un dueño rancio no borra un claim nuevo).
+Se libera al completar, en `stop()`, en la invalidación/abandono, y en muerte/descarga
+(`RELEASE-ALL`); sin renovación caduca a los 200 ticks. Sin NBT: efímero; al recargar se
+redescubre.
+Runtime PASS (copias A5WALL, ENFORCE): **D4-A** `claim-d4a-20261110-201309` (A `40bc5e1c…`
+reclama 98,98,0; B `c1254e6a…` target=null; A entrega 5), **D4-B**
+`claim-d4b-20261110-201309` (A libera en 4309 por atasco; B `726494fe…` reclama en 4316 y
+entrega 5), **D4-C** `claim-d4c-20261110-201309` (muerte de A → RELEASE-ALL tick 128; B
+`bcde1078…` reclama 4156 y entrega 5), **D4-D** `claim-d4d-20261110-201309` (B
+`0028aa91…`/98,0 y A `a87f2b8a…`/62,0 concurrentes; almacén +10), **D4-E**
+`claim-d4e-20261110-201309` (B `d75607bb…` único claim; A `bb6ac88e…` sin target; +5, sin
+doble tala).
+Tests: `ForestryTreeClaimsTest` en `policyTest` (adquisición atómica, denegación, árboles
+distintos, dimensiones, release validado, release rancio, expiración, releaseAll).
+**SIGUIENTE: D5** — política explícita de prioridades/flag conflicts (los goals a igual
+prioridad siguen resolviéndose por orden de inserción; no se tocó en esta campaña). A8-01 y
+A7-12 siguen abiertos. Sin commit/push en esta campaña.
+## 2026-11-10 — A6-03 CERRADA: R2/R5-A/R5-D/R4-160/200/R6/R7 PASS; D4 CONFIRMADO y D5 auditado
+La campaña runtime de A6-03 queda **CERRADA** con evidencia nueva (copias desechables de A5WALL,
+runs `a6-*`). Resultados: **R2 PASS** (primer trabajo PLANTAR, sapling 16→15, luego 5 troncos;
+la causa del bloqueo era el fixture: la arboleda replantaba plantones y el trabajador seguía
+`planton=53,-17`; se corrigió controlando la arboleda, sin tocar producción); **R5-A PASS**
+(umbral 12→almacén +12, tick 528); **R5-D PASS** (fallo tick 4470, cooldown 4510, éxito 4558);
+**R4 PASS con topes 160/200** (fallos 4470/4558/4686/4854/5062; cooldownUntil
+4510/4638/4806/5014/5262; el intento 6 empieza exactamente en 5262); **R6 PASS** (cosecha 4,
+fallo post-cosecha 5094, cooldown 5134, éxito 5746); **R7 PASS de recuperación** (save tras
+fallo 4530; load entrega 12 sin pérdida; limitación: el reloj ya había pasado el deadline, no se
+distingue el reset transitorio de la expiración normal).
+**D4 CONFIRMADO**: dos leñadores (A=02a0f5b6…, B=ca87ea53…) seleccionaron el MISMO árbol
+`98,98,0` con tasks distintas (49935721…/79238237…), cada uno con su lease de agente; A taló y
+entregó 5, B siguió apuntando al árbol ausente y luego recuperó (target=null, luego
+RECOGER_HARINA/ABONAR); no existe claim entre trabajadores. **D5 CONFIRMADO (auditoría)**:
+con dos goals a la misma prioridad, gana el primero añadido que posee MOVE/LOOK
+(A=lumberjack, B=competing), no hay preempción por prioridad ni doble navegación en el mismo
+trabajador. Sin cambios de producción; los fixtures D5/D4 son test-only en el controlador
+ignorado.
+**SIGUIENTE: Block 4 paso 2** — añadir el claim mínimo entre trabajadores para un mismo árbol
+(consistente con las parcelas; nada de registro global) y probarlo con el fixture de dos
+leñadores; después, la política explícita de prioridades/flag conflicts (D5). A8-01 y A7-12
+siguen abiertos y no se tocan.
 ## 2026-11-10 — A8-F03 CERRADA Y ACEPTADA: la navegación TALAR no reutiliza un objetivo rancio
 A8-F03 (paso de navegación TALAR propiedad del Agent) queda **COMPLETADA / ACEPTADA**.
 Evidencia runtime post-fix, toda PASS: C1 (objetivo retirado entre la selección del Step y la
@@ -181,7 +284,7 @@ iniciado implementación del Lumberjack.
 
 Rama de trabajo actual: **`feature/autonomous-village`**. La rama histórica `migration-neoforge-1.21.1` se conserva
 como referencia; no se crea una rama nueva sin cerrar los pendientes.
-**Última actualización: 10-nov-2026 (A8-F03 cerrada y aceptada; siguiente A6-03/Block 4).** La entrada más
+**Última actualización: 10-nov-2026 (D5 cerrado; siguiente A8-01/A7-12).** La entrada más
 reciente está al principio del documento; §2.1 y las listas anteriores conservan el historial; no son una segunda cola activa.
 
 ---

@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.agent.ForestryTaskSnapshot;
+import com.chipoodle.devilrpg.agent.ForestryTreeClaims;
 import com.chipoodle.devilrpg.agent.TalarStepBarrier;
 import com.chipoodle.devilrpg.agent.TalarStepPlanner;
 import com.chipoodle.devilrpg.agent.ForestryNavigationGateway;
@@ -172,6 +173,13 @@ public class VillagerLumberjackGoal extends Goal {
     /** Transient DevilRpg task identity for the navigation lease; never persisted. */
     @Nullable
     private UUID navigationTaskId;
+    /** Cross-worker claim for the TALAR tree currently assigned to this worker. */
+    @Nullable
+    private BlockPos claimedTree;
+    @Nullable
+    private UUID claimedTask;
+    @Nullable
+    private String claimedDimension;
     @Nullable
     private UUID agentTaskId;
     @Nullable
@@ -343,6 +351,9 @@ public class VillagerLumberjackGoal extends Goal {
         if (villager.isBaby() || !(villager.level() instanceof ServerLevel level)) {
             return false;
         }
+        if (target == null) {
+            releaseTalarClaim(); // a stopped/scouting Goal must not keep a tree claim
+        }
         // El leñador es el RECOLECTOR (el aldeano sin oficio): es el que tiene menos faena fija. El gestor le da el
         // goal solo al holgazán que ya hace de recolector, así que basta con mirar el oficio.
         // El oficio del LEÑADOR es flechero (su estación es la mesa de flechas del taller de la arboleda, etapa H).
@@ -424,6 +435,10 @@ public class VillagerLumberjackGoal extends Goal {
             if (holeDiag) DevilRpg.LOGGER.info("[HOLEDIAG] select=PLANTAR target={}", huecoPlantar.toShortString());
             return true;
         }        if (troncoDentro != null) {
+            if (!aceptarTalar(level, troncoDentro)) {
+                target = null;
+                return false; // contested: do not expose or navigate to it
+            }
             fase = Fase.TALAR;
             target = troncoDentro;
             return true;
@@ -433,6 +448,10 @@ public class VillagerLumberjackGoal extends Goal {
         // limpia los que quedaron flotando en el guardado del jugador SIN tener que tocar el mundo guardado.
         BlockPos resto = buscarRestoColgando(level);
         if (resto != null) {
+            if (!aceptarTalar(level, resto)) {
+                target = null;
+                return false;
+            }
             fase = Fase.TALAR;
             target = resto;
             return true;
@@ -447,6 +466,10 @@ public class VillagerLumberjackGoal extends Goal {
         // plantón que abonar, ni resto colgando), que es cuando el jugador quiere que salga: *"el ir afuera es el
         // último de los recursos"*.
         if (troncoFuera != null) {
+            if (!aceptarTalar(level, troncoFuera)) {
+                target = null;
+                return false;
+            }
             fase = Fase.TALAR;
             target = troncoFuera;
             return true;
@@ -514,6 +537,9 @@ public class VillagerLumberjackGoal extends Goal {
             return;
         }
         if (encontrado != null) {
+            if (!aceptarTalar(level, encontrado)) {
+                return; // contested: another worker owns it; keep discovering
+            }
             DevilRpg.LOGGER.info("[Village] El lenador: nueva tarea {} desde {}", encontrado,
                     villager.blockPosition());
             fase = Fase.TALAR;
@@ -531,6 +557,7 @@ public class VillagerLumberjackGoal extends Goal {
     private boolean iniciarEntrega(ServerLevel level) {
         BlockPos almacen = VillageStorage.puntoDeApoyo(level, center, villager);
         if (almacen == null) return false;
+        releaseTalarClaim();
         fase = Fase.ENTREGAR;
         target = almacen;
         taskController.assign(target.getX(), target.getY(), target.getZ());
@@ -642,6 +669,7 @@ public class VillagerLumberjackGoal extends Goal {
         BlockPos fallido = target;
         pararNavegacion(level);
         releaseNavigationLease();
+        releaseTalarClaim();
         if (fallido != null) {
             VillageManager.marcarPuntoFallido(villager, fallido);
         }
@@ -654,14 +682,98 @@ public class VillagerLumberjackGoal extends Goal {
     }
     /** Read-only snapshot of the legacy forestry task. Never mutates controller, target or inventory. */
     public ForestryTaskSnapshot snapshot() {
-        UUID id = target == null ? null : UUID.nameUUIDFromBytes(
-                (villager.getUUID() + ":" + objectiveIndex + ":" + target.asLong())
-                        .getBytes(StandardCharsets.UTF_8));
+        UUID id = target == null ? null : taskIdFor(target);
         return new ForestryTaskSnapshot(villager.getUUID(), objectiveIndex,
                 villager.level().dimension().location().toString(), id, fase.name(),
                 taskController.state().name(), target == null ? null : target.immutable(),
                 troncosEnMano(), target != null);
     }
+    /** Stable task identity for a TALAR target; shared with {@link #snapshot()}. */
+    private UUID taskIdFor(BlockPos pos) {
+        return UUID.nameUUIDFromBytes(
+                (villager.getUUID() + ":" + objectiveIndex + ":" + pos.asLong())
+                        .getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String dimId(ServerLevel level) {
+        return level.dimension().location().toString();
+    }
+
+    /**
+     * Accepts a TALAR target only after acquiring the cross-worker claim. The target is not
+     * exposed to the Goal when another worker owns it; discovery continues normally.
+     */
+    private boolean aceptarTalar(ServerLevel level, BlockPos pos) {
+        if (pos == null) return false;
+        if (!level.getBlockState(pos).is(BlockTags.LOGS)) {
+            return true; // not a claimable tree (defensive; TALAR targets are logs)
+        }
+        UUID task = taskIdFor(pos);
+        String dimension = dimId(level);
+        if (claimedTree != null && claimedTree.equals(pos) && task.equals(claimedTask)
+                && dimension.equals(claimedDimension)) {
+            ForestryTreeClaims.renew(dimension, pos.asLong(), villager.getUUID(), task,
+                    level.getGameTime());
+            return true;
+        }
+        if (!ForestryTreeClaims.acquire(dimension, pos.asLong(), villager.getUUID(), task,
+                level.getGameTime())) {
+            DevilRpg.LOGGER.info("[TREE-CLAIM] event=TARGET-DENIED uuid={} tree={} task={} owner={} tick={}",
+                    villager.getUUID(), pos.toShortString(), task,
+                    ForestryTreeClaims.ownerOf(dimension, pos.asLong(), level.getGameTime()),
+                    level.getGameTime());
+            return false;
+        }
+        releaseTalarClaim();
+        claimedTree = pos.immutable();
+        claimedTask = task;
+        claimedDimension = dimension;
+        DevilRpg.LOGGER.info("[TREE-CLAIM] event=ACQUIRE uuid={} tree={} task={} tick={}",
+                villager.getUUID(), pos.toShortString(), task, level.getGameTime());
+        return true;
+    }
+
+    /** Renews the current claim; false means it was lost and the task must be abandoned. */
+    private boolean renovarTalarClaim(ServerLevel level) {
+        if (claimedTree == null) return true;
+        if (claimedTask == null || claimedDimension == null || fase != Fase.TALAR
+                || target == null || !target.equals(claimedTree)) {
+            releaseTalarClaim();
+            return true;
+        }
+        if (!ForestryTreeClaims.renew(claimedDimension, claimedTree.asLong(), villager.getUUID(),
+                claimedTask, level.getGameTime())) {
+            DevilRpg.LOGGER.info("[TREE-CLAIM] event=LOST uuid={} tree={} task={} owner={} tick={}",
+                    villager.getUUID(), claimedTree.toShortString(), claimedTask,
+                    ForestryTreeClaims.ownerOf(claimedDimension, claimedTree.asLong(), level.getGameTime()),
+                    level.getGameTime());
+            claimedTree = null;
+            claimedTask = null;
+            claimedDimension = null;
+            return false;
+        }
+        return true;
+    }
+
+    /** Releases only this worker's exact claim; a stale owner cannot erase a newer one. */
+    private void releaseTalarClaim() {
+        if (claimedTree == null || claimedTask == null || claimedDimension == null) {
+            claimedTree = null;
+            claimedTask = null;
+            claimedDimension = null;
+            return;
+        }
+        boolean released = ForestryTreeClaims.release(claimedDimension, claimedTree.asLong(),
+                villager.getUUID(), claimedTask);
+        if (released) {
+            DevilRpg.LOGGER.info("[TREE-CLAIM] event=RELEASE uuid={} tree={} task={}",
+                    villager.getUUID(), claimedTree.toShortString(), claimedTask);
+        }
+        claimedTree = null;
+        claimedTask = null;
+        claimedDimension = null;
+    }
+
     /** Read-only diagnostic: current assigned target, if any. */
     @org.jetbrains.annotations.Nullable
     public BlockPos currentTarget() {
@@ -717,7 +829,12 @@ public class VillagerLumberjackGoal extends Goal {
         if (!(villager.level() instanceof ServerLevel level)) {
             return;
         }
+        if (!renovarTalarClaim(level)) {
+            abandonarObjetivoInvalido(level);
+            return;
+        }
         if (target == null) {
+            releaseTalarClaim();
             releaseNavigationLease();
         } else {
             syncNavigationLease(level);
@@ -863,6 +980,7 @@ public class VillagerLumberjackGoal extends Goal {
         if (!faenaCompletada) {
             return; // GROWING persists to the next tick boundary
         }
+        releaseTalarClaim();
         releaseNavigationLease();
         target = null;
         restTicks = REST_TICKS;
@@ -880,6 +998,7 @@ public class VillagerLumberjackGoal extends Goal {
         } else {
             villager.getNavigation().stop();
         }
+        releaseTalarClaim();
         target = null;
         taskController.complete(); // libera la asignación de ESTE leñador; nunca toca a otro
         restTicks = REST_TICKS;
@@ -1760,7 +1879,14 @@ public class VillagerLumberjackGoal extends Goal {
             if (!level.getBlockState(base.above()).is(BlockTags.LOGS)) {
                 return null;
             }
-            return tieneHojasCerca(level, base) ? base : null;
+            if (!tieneHojasCerca(level, base)) {
+                return null;
+            }
+            if (!ForestryTreeClaims.isAvailable(dimId(level), base.asLong(), villager.getUUID(),
+                    level.getGameTime())) {
+                return null; // another worker owns this tree; discovery must choose another
+            }
+            return base;
         }
         return null;
     }
@@ -1821,6 +1947,10 @@ public class VillagerLumberjackGoal extends Goal {
                 if (sitio == null) {
                     continue; // no hay casilla de pie desde la que se alcance: no se le manda a caminar hacia el aire
                 }
+                if (!ForestryTreeClaims.isAvailable(dimId(level), resto.asLong(), villager.getUUID(),
+                        level.getGameTime())) {
+                    continue; // another worker owns this hanging log
+                }
                 double dist = villager.distanceToSqr(resto.getX() + 0.5D, resto.getY() + 0.5D, resto.getZ() + 0.5D);
                 if (dist < mejorDist) {
                     mejorDist = dist;
@@ -1879,6 +2009,10 @@ public class VillagerLumberjackGoal extends Goal {
                 BlockPos sitio = celdaDePieParaAlcanzar(level, resto);
                 if (sitio == null) {
                     continue; // colgando donde no se alcanza desde ninguna casilla de pie: no se toca
+                }
+                if (!ForestryTreeClaims.isAvailable(dimId(level), resto.asLong(), villager.getUUID(),
+                        level.getGameTime())) {
+                    continue; // another worker owns this hanging log
                 }
                 double dist = villager.distanceToSqr(resto.getX() + 0.5D, resto.getY() + 0.5D, resto.getZ() + 0.5D);
                 if (dist < mejorDist) {
