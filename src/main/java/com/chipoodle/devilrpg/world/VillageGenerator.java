@@ -2853,17 +2853,17 @@ public final class VillageGenerator {
 
     /**
      * Caja de la <b>arboleda del pueblo</b> (relativa al centro): desde la etapa F es un <b>bosquecillo</b> de
-     * <b>22×18</b> en la esquina <b>noroeste</b> (x -46..-25, z -32..-15), con <b>doce plazas</b> de árbol, que es lo
+     * <b>22×26</b> en la esquina <b>noroeste</b> (x -46..-25, z -40..-15), con <b>veinte plazas</b> de árbol, que es lo
      * que pidió el jugador: <i>"necesitamos que se mueva el lugar donde están los árboles a un área más grande, ya que
      * tenemos más espacio, y podría ser un pequeño bosque donde el leñador pueda cortar y replantar"</i>.
      * <p>
      * Está libre de todo lo demás (los caminos radiales van por los ejes y hacia el norte, y los solares empiezan más
      * adentro) y a 56 del centro como mucho, así que cabe entero dentro de la muralla (radio 62).
      */
-    private static final int ARBOLEDA_X0 = -46;
-    private static final int ARBOLEDA_X1 = -25;
-    private static final int ARBOLEDA_Z0 = -32;
-    private static final int ARBOLEDA_Z1 = -15;
+    private static final int ARBOLEDA_X0 = VillageForestLayout.X0;
+    private static final int ARBOLEDA_X1 = VillageForestLayout.X1;
+    private static final int ARBOLEDA_Z0 = VillageForestLayout.Z0;
+    private static final int ARBOLEDA_Z1 = VillageForestLayout.Z1;
 
     /**
      * ¿Ese punto (X/Z) cae dentro de la <b>arboleda del pueblo</b>? Es la <b>única excepción</b> a la regla de "dentro
@@ -2877,13 +2877,13 @@ public final class VillageGenerator {
     }
 
     /**
-     * Las <b>doce plazas</b> del bosquecillo (rejilla de 4×3, repartidas por la caja) a la cota del pueblo. Son doce
+     * Las <b>veinte plazas</b> del bosquecillo (rejilla de 5×4, repartidas por la caja) a la cota del pueblo. Son veinte
      * porque el área da de sobra: cuanto más grande es la arboleda, más madera sostiene sin quedarse pelada, y el
      * leñador tiene donde talar y replantar sin quedarse sin árboles.
      */
     public static BlockPos[] plantonesDeLaArboleda(BlockPos center, int nivel) {
-        int[] xs = repartir(ARBOLEDA_X0 + 2, ARBOLEDA_X1 - 2, 4);
-        int[] zs = repartir(ARBOLEDA_Z0 + 2, ARBOLEDA_Z1 - 2, 3);
+        int[] xs = repartir(ARBOLEDA_X0 + 2, ARBOLEDA_X1 - 2, 5);
+        int[] zs = repartir(ARBOLEDA_Z0 + 2, ARBOLEDA_Z1 - 2, 4);
         BlockPos[] plazas = new BlockPos[xs.length * zs.length];
         int i = 0;
         for (int z : zs) {
@@ -5695,7 +5695,7 @@ public final class VillageGenerator {
      * (el golem mide dos de alto) y <b>suelo firme debajo</b> — o {@code null} si no hay ninguna en seis celdas a la
      * redonda. Se mira primero la celda pedida y luego los anillos, para no mover al golem si no hace falta.
      */
-    private static BlockPos celdaLibreParaElGolem(ServerLevel level, BlockPos alrededor) {
+    private static BlockPos celdaLibreParaElGolem(ServerLevel level, BlockPos alrededor, BlockPos kiosco) {
         for (int r = 0; r <= 6; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
@@ -5704,8 +5704,10 @@ public final class VillageGenerator {
                     }
                     for (int dy = -2; dy <= 2; dy++) {
                         BlockPos p = alrededor.offset(dx, dy, dz);
-                        if (level.isEmptyBlock(p) && level.isEmptyBlock(p.above())
-                                && level.getBlockState(p.below()).isSolid()) {
+                        if (Math.max(Math.abs(p.getX() - kiosco.getX()), Math.abs(p.getZ() - kiosco.getZ())) <= KIOSCO_RADIO) {
+                            continue; // dentro de la huella 7x7 del kiosco: fuera de la estructura
+                        }
+                        if (golemCabe(level, p)) {
                             return p;
                         }
                     }
@@ -5715,8 +5717,19 @@ public final class VillageGenerator {
         return null;
     }
 
+    /** ¿Cabe el golem completo (no solo la celda de los pies) y tiene suelo firme? */
+    private static boolean golemCabe(ServerLevel level, BlockPos p) {
+        double ancho = EntityType.IRON_GOLEM.getWidth();
+        double alto = EntityType.IRON_GOLEM.getHeight();
+        double minX = p.getX() + 0.5D - ancho / 2.0D;
+        double minZ = p.getZ() + 0.5D - ancho / 2.0D;
+        net.minecraft.world.phys.AABB caja = new net.minecraft.world.phys.AABB(minX, p.getY(), minZ,
+                minX + ancho, p.getY() + alto, minZ + ancho);
+        return level.noCollision(caja) && level.getBlockState(p.below()).isSolid();
+    }
+
     /** Spawnea un golem de hierro que defiende la aldea. */
-    private static void spawnIronGolem(ServerLevel level, BlockPos pos) {
+    private static void spawnIronGolem(ServerLevel level, BlockPos pos, BlockPos kiosco) {
         // Fijar la Y al suelo real (la isla/terreno) y comprobar que quepa, para que no spawnee bajo la aldea
         // ni se asfixie.
         int y = spawnY(level, pos.getX(), pos.getZ());
@@ -5726,7 +5739,7 @@ public final class VillageGenerator {
         // las aldeas»). La causa es que el sitio del pueblo es `center.offset(4, 0, 4)` (L7867) y las CUATRO COLUMNAS
         // del kiosco están justo a ±4 del centro → el golem nacía dentro de un pilar ✗. Aquí se comprueba que la
         // celda esté libre DE VERDAD (aire, aire encima y suelo firme debajo) y, si no, se busca alrededor.
-        posicion = celdaLibreParaElGolem(level, posicion);
+        posicion = celdaLibreParaElGolem(level, posicion, kiosco);
         if (posicion == null) {
             DevilRpg.LOGGER.warn("[Village] No hubo hueco para el golem de la aldea en {}: no se convoca (mejor eso"
                     + " que uno asfixiándose dentro de un bloque)", pos.toShortString());
@@ -6344,10 +6357,13 @@ public final class VillageGenerator {
                 // construcción devuelve SU ALTURA (el tejado), así que sin esta parada el recorte subía por dentro de
                 // la casa y se comía todo lo que fuera de un material "de terreno": los paneles de terracota de los
                 // muros Tudor desaparecían (lo reportó el jugador: "quedan incompletas las paredes").
-                for (int y = baseY; y < g; y++) {
+                for (int y = g - 1; y >= baseY; y--) {
                     BlockState actual = level.getBlockState(columna.atY(y));
+                    if (actual.isAir()) {
+                        continue; // un hueco no protege lo que quede por encima; se sigue bajando
+                    }
                     if (!esTerrenoRecortable(actual)) {
-                        break; // aquí empieza lo construido: esta columna ya no se recorta
+                        break; // estructura o árbol: no se perfora hacia abajo, pero lo de arriba ya se limpió
                     }
                     colocar(level, columna.atY(y), Blocks.AIR.defaultBlockState(), 3);
                 }
@@ -7111,7 +7127,7 @@ public final class VillageGenerator {
         // caía donde estaba el que cavaba, el asaltante moría ASFIXIADO ✗. Con asaltantes cerca, el muro no se toca:
         // la brecha ES el juego (lo dice el propio diseño: «el asedio TIENE que abrir brecha en el MURO»).
         if (!level.getEntitiesOfClass(com.chipoodle.devilrpg.entity.AggressiveZombieEntity.class,
-                new net.minecraft.world.phys.AABB(center).inflate(2.0D)).isEmpty()) {
+                new net.minecraft.world.phys.AABB(center).inflate(FENCE_RADIUS + 4.0D)).isEmpty()) {
             DevilRpg.LOGGER.info("[Village] Aldea en {}: el muro NO se repone: hay asedio en marcha (la brecha es el"
                     + " juego; se repondra cuando el pueblo este a salvo)", center.toShortString());
             return;
@@ -8014,7 +8030,7 @@ public final class VillageGenerator {
         // segundo golem (bug visto en juego). El radio va DERIVADO del tamaño de la aldea (con el recinto
         // agrandado un golem que estuviera junto al muro se quedaba fuera de un radio fijo).
         if (level.getEntitiesOfClass(IronGolem.class, new AABB(center).inflate(FENCE_RADIUS + 20.0D)).isEmpty()) {
-            spawnIronGolem(level, center.offset(4, 0, 4));
+            spawnIronGolem(level, center.offset(4, 0, 4), center);
         } else {
             DevilRpg.LOGGER.debug("[Village] la aldea ya tiene golem: no se duplica");
         }
@@ -8047,6 +8063,12 @@ public final class VillageGenerator {
             if (existente != null) {
                 saved.markGuardiaFundadoraCreada(objectiveIndex, slot);
                 VillageManager.asegurarGuardiaFundadora(level, existente, centroDeLaAldea, objectiveIndex);
+                // Los fundadores ya cargados tambien se reaprovisionan: una aldea vieja puede tenerlos sin arma
+                // (se crearon antes de la remesa o el jugador vacio el almacen y los herreros ya repusieron equipo).
+                boolean equipadoExistente = VillagerGuardGoal.equiparDesdeAlmacen(
+                        level, existente, centroDeLaAldea, objectiveIndex);
+                DevilRpg.LOGGER.info("[Milicia] aldea {}: guardia fundador existente {} puesto={} equipado={}",
+                        objectiveIndex, existente.getUUID(), slot, equipadoExistente);
                 continue;
             }
             if (saved.isGuardiaFundadoraCreada(objectiveIndex, slot)) {

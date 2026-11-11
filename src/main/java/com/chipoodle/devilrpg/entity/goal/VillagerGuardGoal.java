@@ -158,6 +158,7 @@ public class VillagerGuardGoal extends Goal {
      */
     private static final float DANO_BASE_ESPADA = 4.0F;
     private static final int CADENCIA_ARCO = 30;
+    private static final int ARCO_CARGA_TICKS = 10;
     /** Cada cuántos ticks vuelve a mirar si hay enemigo cerca (buscar entidades no se hace por tick). */
     private static final int ESCANEO_TICKS = 10;
     /** Velocidad y dispersión de la flecha del arquero, y su daño base. */
@@ -185,6 +186,9 @@ public class VillagerGuardGoal extends Goal {
     private BlockPos destino;
     @Nullable
     private Monster enemigo;
+    /** Diagnóstico de solo lectura: el objetivo de combate real de este guardia. */
+    @Nullable
+    public Monster enemigoActual() { return enemigo; }
     private int espera;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
@@ -197,6 +201,9 @@ public class VillagerGuardGoal extends Goal {
     /** Ticks que faltan para volver a buscar enemigo / para el siguiente golpe o flecha. */
     private int escanear;
     private int cadencia;
+    /** Bow draw lifecycle: the use state is active only while the archer is drawing. */
+    private boolean arcoCargando;
+    private int arcoCarga;
     /** true mientras la milicia está de asalto en la guarida (lo dice {@code VillageManager.marchaDe}). */
     private boolean marchando;
 
@@ -389,6 +396,11 @@ public class VillagerGuardGoal extends Goal {
         if (--escanear <= 0) {
             escanear = ESCANEO_TICKS;
             enemigo = buscarEnemigo(level);
+            if (Boolean.getBoolean("devilrpg.guarddiag")) {
+                DevilRpg.LOGGER.info("[GUARDDIAG] acquired guard={} enemy={} dist={} tick={}",
+                        villager.getUUID(), enemigo == null ? "-" : enemigo.getUUID(),
+                        enemigo == null ? -1.0D : Math.sqrt(villager.distanceToSqr(enemigo)), level.getGameTime());
+            }
             // Y de paso se mira si el almacén tiene ya algo suyo: mirar un cofre (54 huecos) NO se hace por tick.
             hayEquipoEnAlmacen = hayMejoraEnElAlmacen(level);
         }
@@ -403,6 +415,7 @@ public class VillagerGuardGoal extends Goal {
         // 2) Sin enemigo: el escudo se baja y, si ha perdido el arma (o se ha quedado sin flechas), vuelve al almacén
         //    aunque el goal ya esté en marcha (`canUse` solo se llama al arrancar, y este goal corre de seguido).
         bajarEscudo();
+        bajarArco();
         if (!equipado(level)) {
             sinEquipo = true;
             // SOLO SE VA AL ALMACÉN SI SE PUEDE LLEGAR Y NO ACABA DE IR. Lo reportó el jugador: *"los guardias están
@@ -553,6 +566,7 @@ public class VillagerGuardGoal extends Goal {
         // cuenta igual; si el puesto cambia, `puntoDeGuardia` reajusta el destino y el contador sigue su curso.
         restTicks = REST_TICKS;
         bajarEscudo();
+        bajarArco();
         VillageManager.parar(villager);
     }
 
@@ -566,6 +580,13 @@ public class VillagerGuardGoal extends Goal {
     @Nullable
     private Monster buscarEnemigo(ServerLevel level) {
         Monster mejor = null;
+        if (Boolean.getBoolean("devilrpg.guarddiag")) {
+            var cercanos = level.getEntitiesOfClass(Monster.class, villager.getBoundingBox().inflate(RADIO_COMBATE));
+            Monster primero = cercanos.isEmpty() ? null : cercanos.get(0);
+            DevilRpg.LOGGER.info("[GUARDDIAG] guard={} monsters={} first={} dist={} marchando={} tick={}",
+                    villager.getUUID(), cercanos.size(), primero == null ? "-" : primero.getUUID(),
+                    primero == null ? -1.0D : Math.sqrt(villager.distanceToSqr(primero)), marchando, level.getGameTime());
+        }
         double mejorDist = RADIO_COMBATE * RADIO_COMBATE;
         for (Monster monstruo : level.getEntitiesOfClass(Monster.class,
                 villager.getBoundingBox().inflate(RADIO_COMBATE))) {
@@ -692,6 +713,7 @@ public class VillagerGuardGoal extends Goal {
         // porque este goal tiene las banderas de movimiento.
         VillageManager.parar(villager);
         if (distanciaHorizontal(objetivo) > RADIO_COMBATE - 1.0D) {
+            bajarArco();
             VillageManager.caminarHacia(villager, objetivo.blockPosition(), VELOCIDAD);
             VillageManager.ponerActividad(villager, "Buscando distancia");
             return;
@@ -699,10 +721,39 @@ public class VillagerGuardGoal extends Goal {
         VillageManager.ponerActividad(villager, "Disparando");
         if (cadencia > 0) {
             cadencia--;
+            bajarArco();
             return;
         }
-        cadencia = CADENCIA_ARCO;
+        if (!arcoCargando) {
+            arcoCargando = true;
+            arcoCarga = 0;
+            if (!villager.isUsingItem()) {
+                villager.startUsingItem(InteractionHand.MAIN_HAND);
+            }
+        }
+        arcoCarga++;
+        if (arcoCarga < ARCO_CARGA_TICKS) {
+            return;
+        }
+        arcoCargando = false;
+        arcoCarga = 0;
+        if (villager.isUsingItem()) {
+            villager.stopUsingItem();
+        }
+        cadencia = CADENCIA_ARCO - ARCO_CARGA_TICKS;
         dispararFlecha(level, objetivo);
+    }
+
+    /** Stops a bow draw without touching a swordsman's shield use. */
+    private void bajarArco() {
+        if (tipoDe(villager) != ARQUERO) {
+            return;
+        }
+        if (arcoCargando || villager.isUsingItem()) {
+            villager.stopUsingItem();
+        }
+        arcoCargando = false;
+        arcoCarga = 0;
     }
 
     /**
@@ -1858,7 +1909,10 @@ public class VillagerGuardGoal extends Goal {
     }
 
     /** ¿Esa celda tiene sitio para pararse? (nada sólido en la celda ni encima, y suelo firme debajo) */
-    private boolean sePuedeEstar(ServerLevel level, BlockPos p) {
+    private boolean sePuedeEstar(ServerLevel level, @Nullable BlockPos p) {
+        if (p == null) {
+            return false; // la calle puede no existir todavía (aldea recién cargada): no hay dónde estar
+        }
         return level.getBlockState(p).getCollisionShape(level, p).isEmpty()
                 && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
                 && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty();

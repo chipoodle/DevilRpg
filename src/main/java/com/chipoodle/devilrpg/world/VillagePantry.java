@@ -11,6 +11,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.function.Predicate;
 
 /**
@@ -505,23 +507,37 @@ public final class VillagePantry {
 
     /** Lo mismo, con la <b>población</b> para que el colchón cubra el hueco entre cosechas (I344). */
     public static int sacarComida(@Nullable Container c, int puntos, int aldeanos) {
-        if (c == null || puntos <= 0) {
-            return 0;
-        }
+        return Math.min(puntos, sacarComidaFisica(c, puntos, aldeanos));
+    }
+
+    /** Retirada de producción: el crédito sobrante vive en los datos persistentes de la aldea. */
+    public static int sacarComida(ServerLevel level, BlockPos center, int puntos, int aldeanos) {
+        Container c = despensa(level, center);
+        if (c == null || puntos <= 0) return 0;
+        VillageSavedData saved = VillageSavedData.get(level);
+        int idx = saved.objectiveAt(center);
+        int credito = saved.getPantryCredit(idx);
+        int usar = Math.min(credito, puntos);
+        credito -= usar;
+        int necesidad = puntos - usar;
+        int sacados = necesidad > 0 ? sacarComidaFisica(c, necesidad, aldeanos) : 0;
+        if (sacados > necesidad) credito += sacados - necesidad;
+        saved.setPantryCredit(idx, credito);
+        return Math.min(puntos, usar + sacados);
+    }
+
+    private static int sacarComidaFisica(@Nullable Container c, int puntos, int aldeanos) {
+        if (c == null || puntos <= 0) return 0;
         int sacados = 0;
         int faltan = puntos;
         while (faltan > 0) {
             Grupo grupo = elQueMasSobra(c, aldeanos);
-            if (grupo == null) {
-                break; // no hay nada que comer (ni exceso ni reserva)
-            }
-            if (sacar(c, grupo.filtro(), 1) != 1) {
-                break; // no debería pasar (se acaba de contar), pero no se insiste
-            }
+            if (grupo == null) break;
+            if (sacar(c, grupo.filtro(), 1) != 1) break;
             faltan -= grupo.puntos();
             sacados += grupo.puntos();
         }
-        return Math.min(sacados, puntos);
+        return sacados;
     }
 
     /** Un grupo de comida de la despensa: qué es, cuántos puntos vale cada pieza y cuánto se le reserva. */

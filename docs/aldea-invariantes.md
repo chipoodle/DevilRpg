@@ -55,6 +55,21 @@ En cada cambio en `world/Village*` o en los goals de aldeano hay que:
 > de línea **se desplazan** con cada cambio, así que **antes de tocar hay que verificar la línea actual del fichero** (y, si no
 > cuadra, **abortar sin tocar nada**, que es lo que hacen los scripts de `.migration-tools/`).
 
+### A8-F03 · CERRADA: un objetivo TALAR inválido no se autoriza (10-nov-2026)
+
+**Clasificación: [MEDIDO]** — campaña runtime post-fix con cinco escenarios PASS (C1, C2, C3,
+portón válido y portón negativo) más `compileJava`, lint, diff y los tres grupos de navegación.
+Evidencia completa en `docs/autonomous-village/A8-F03-FRESH-SESSION-EXECUTION.md` §14; los FAIL
+de C1/C2 de las §§3–4 se conservan como historia medida del defecto.
+
+**Invariante:** el predicado autoritativo de un objetivo TALAR es
+`TalarStepPlanner.isValidTalarTarget()` (`BlockTags.LOGS`). Un `Step(null)` **no** puede caer al
+`target` anterior: si el objetivo ya no es un tronco, el Goal lo abandona por el ciclo normal
+(parar navegación, liberar el lease, marcar punto fallido, `target=null`, `SCOUTING`) y el
+siguiente ciclo elige un sucesor válido. `navegar()` valida justo antes de
+`ForestryNavigationGateway.moveTo()` y `syncNavigationLease()` no adquiere ni renueva un lease
+TALAR inválido. No aplica a ENTREGAR (sigue legacy), ni a la geometría del portón, ni a NBT.
+
 ### A0 · CORREGIDA Y CERRADA POR CONFIRMACIÓN DEL DUEÑO (13-oct-2026)
 
 **Clasificación: [CONFIRMADO POR EL DUEÑO]** — no es una medida de esta acta. El propietario del proyecto confirma que
@@ -2531,6 +2546,11 @@ bajando de 10 a 9. Con el código de antes, el **mismo** montaje daba `destinoDe
 **cooldown del barrido de claros**, que solo baja cuando `canUse` llega hasta él —y con el descanso de 120 ticks tardaba
 ~40 descansos (4 minutos) en volver a mirar la arboleda—; y la arboleda **no se veía** desde lejos (ver arriba).
 
+> ⚠️ **ACEPTACIÓN PENDIENTE (20-oct-2026, L2/L3):** esta entrada describe reglas ya implementadas y medidas
+> parcialmente; **no** es una aceptación end-to-end de la prioridad «dentro primero» ni de todos los casos de reposición
+> con harina (sin harina, sin plantones, crecimiento fallido, inventario lleno, tareas competidoras). El requisito vivo
+> está en `docs/CONTINUAR.md`, sección «Pendientes de aldea — leñador y bosque interior (L1–L4)». Sigue **ABIERTO**.
+
 ### I93 · El polvo de hueso: lo recoge el recolector, lo muele el granjero y lo usa el leñador
 
 El jugador: *"los granjeros tampoco nunca deben olvidar de hacer polvo de hueso además de cultivar, cosechar y entregar
@@ -3287,6 +3307,12 @@ de seguridad de lo que quede en el almacén).
 ticket del POI). Hoy conviven porque los goals aceptan el puesto que ya tienen, pero lo suyo es que el latido reparta y
 los goals solo lean.
 
+> ⚠️ **PENDIENTE L4 (20-oct-2026):** la arboleda actual es la caja **22×18** del noroeste (`ARBOLEDA_X0/X1` =
+> `-46/-25`, `ARBOLEDA_Z0/Z1` = `-32/-15` relativas al centro), con **doce plazas**. Se quiere ampliar hacia la parte
+> trasera, cerca de la muralla pero dentro del recinto; antes hay que inspeccionar la geometría real y preservar
+> caminos, portón, edificios, trabajo y defensa. **No hay coordenadas nuevas decididas.** Requisito en
+> `docs/CONTINUAR.md` (L1–L4); sigue **ABIERTO**.
+
 ### I109 · El CARBÓN VEGETAL vale como carbón (y sin carbón el minero no se queda en bucle)
 
 Lo preguntó el jugador: *"el carbón para hacer antorchas se puede hacer quemando logs en el furnace, ¿no?"*. **Sí** (1
@@ -3410,6 +3436,12 @@ El log lo enseña paso a paso: `Llevando la madera va al otro lado del muro (517
 lo suyo` y `el lenador guardo 16 cosa(s) de su oficio en el almacen`. Los **6** atascos que quedan en la corrida son de
 **otros** aldeanos y en otros sitios (parcelas y la mina), **ninguno** en el almacén. Ver
 `tools/arnes/medidas-lenador.txt`, apartado 6.
+
+> ⚠️ **PENDIENTE L1 (20-oct-2026):** esta entrada mide el cruce **de vuelta** al almacén, no la **salida a por madera**.
+> El requisito abierto observa al leñador empujando la muralla al salir; hay que comprobar si usa el mismo
+> `pasoParaCruzarElMuro`, si el destino externo o la ruta de salida lo evitan, y probar ida por el portón, recogida y
+> vuelta. No se autoriza cruzar bloques sólidos ni debilitar la navegación. Requisito en `docs/CONTINUAR.md` (L1–L4);
+> sigue **ABIERTO**.
 
 ### I113 · El APARCADO (I33) no puede dejar al minero sin pico ni a la mina sin cavar
 
@@ -7128,6 +7160,11 @@ esquivarlo (*«comprobar que quepa, para que no se asfixie»* ✓) con `spawnY` 
 libre **de verdad** (aire, aire encima, suelo firme debajo ✓) y, si no, **buscar hueco en seis celdas a la redonda** ✓;
 si no hay ninguno, **no convocarlo y avisar** ✓ (mejor eso que uno asfixiándose ✓). **Medida**: golems nacidos en una celda
 **no libre** = **0** ✓ (y su salud estable ✓).
+
+> ✅ **CERRADO (comprobado el 22-oct-2026)**: la entrada histórica se conserva, pero el arreglo **ya está aplicado**.
+> Los postes reales están a **±3**, no a ±4; el fallo era que la comprobación antigua no medía la **caja AABB** del
+> golem. Ver **I291-bis** al final: huella 7×7 excluida, `level.noCollision(...)` sobre la caja completa y apoyo sólido.
+> Evidencia `golem-fresh-20261022-1920` (semilla 9201, golem `(83,97,5)`, vivo 200 ticks).
 
 ### I292 · RESTOS DEL TERRENO VIEJO **FLOTANDO** EN LA ALDEA (reporte del jugador, 11-oct-2026)
 
@@ -11258,3 +11295,192 @@ documenta ese fallo ya medido).
 **Estado de A1 tras esta fase**: la muralla y la emisión de brecha quedan **medidas en juego**; la depresión queda
 **documentada sin corrección especulativa**; el dibujo del arma en cliente sigue **pendiente de una corrida de cliente
 aislada**. **A1 sigue ABIERTO**.
+
+## A2 — Reglas medidas sobre adquisición de objetivo y línea de vista (15-oct-2026)
+
+Estas tres reglas salen de bugs **medidos** con el arnés `build/a2n/A2NavHarness.java`, no de teoría.
+
+**1. Un zombi agresivo NO adquiere un objetivo que no ve, y eso es correcto.**
+`NearestAttackableTargetGoal` usa las condiciones por defecto, que **exigen `Sensing.hasLineOfSight`**;
+`Sensing.hasLineOfSight` consulta sus cachés `seen`/`unseen` y, si el objetivo no está en ninguna, cae a un
+**raycaste real** (`Mob.hasLineOfSight`). Consecuencia obligatoria: si un test coloca al objetivo **detrás de un
+bloque a la altura de los ojos**, no habrá adquisición, `getTarget()` será `null`, `PursueTargetGoal.canUse()` será
+`false` y el zombi se quedará quieto. **Medido** en `a2n-20261015-115326`: `vistaCruda=false`, `target=null` en
+**629 transiciones seguidas** después de reubicar al jugador de pega, porque el ayudante del arnés limpiaba el
+pasillo solo a la altura de los pies. Al despejar también por encima de la cabeza, la adquisición ocurre en ~4
+ticks. **Antes de culpar al planificador o al arbitraje de goals, comprobar `hasLineOfSight`.**
+
+**2. «Objetivo válido pero ningún goal activo» NO implica un bloqueo del selector.**
+Hay que distinguir dos cosas que se parecen: (a) `canUse()` falso porque `getTarget()` es `null`, y (b) `canUse()`
+verdadero pero el selector no deja entrar el goal por flags/prioridad. Se distinguen haciendo la **misma pregunta
+que el juego**, `WrappedGoal.canBeReplacedBy`, contra los goals que ya corren. **Medido:** en todos los atascos
+`puedeEntrar=true canUse=false`, es decir **no había conflicto de flags**; la causa era (a). Nota: cuando el goal
+**ya está corriendo**, `canBeReplacedBy` contra sí mismo da `false` — eso es lo normal y no es un bloqueo.
+
+**3. El daño NO se puede validar con un `FakePlayer` — usar un objetivo real.**
+Medido en `a2n-20261015-131854`: dentro de rango (`d2=2.565 < 4.0`), `PursueTargetGoal` corriendo (`enRango=true`,
+`attackTicks=11`), objetivo `player`, `puedeAtacar=true` e `invulnerable=false`, y sin embargo **`doHurtTarget`
+devuelve `false` en 6 llamadas forzadas, con 0 de daño y la salud clavada en 20.0**. La rama de ataque se ejecuta;
+lo que falla es el objetivo. Con un **aldeano real** el mismo camino hace daño: `a2n-20261015-132637` →
+`10.80` de daño, salud `20.0 → 9.20`; `a2n-20261015-133257` → 3 golpes, salud `20.0 → 3.70`.
+Reglas: (a) un resultado de caza con `FakePlayer` es evidencia de **IA de persecución**, nunca de login, red, ciclo
+de vida de asedio ni de daño; (b) **`attacked=true` hay que medirlo con el evento**, no inferirlo de la distancia;
+(c) llamar a `doHurtTarget` fuera del ciclo de la IA da daño reducido (0.7 frente a 7.80) porque respeta el tiempo
+de recarga, así que una cifra suelta de 0 no demuestra un fallo.
+
+**4. Los finales de línea cuentan como cambio de fichero en este repo.**
+`.gitattributes` declara `text eol=lf` para el código, así que insertar líneas con CRLF hace fallar
+`git diff --check` («trailing whitespace»). Pasó con `PlayerCapabilityForgeEventSubscriber.java` y se corrigió
+normalizando el fichero a LF: con `git diff --ignore-cr-at-eol` el cambio semántico siguió siendo **exactamente las
+5 líneas** previstas. Comprobación obligatoria antes de dar por bueno un cambio.
+
+**5. La navegacion propia no sustituye a PathNavigation a medias.**
+El paquete com.chipoodle.devilrpg.entity.nav (NavState/NavRoute/NavObstruction/NavPlanner/NavExecutor) es el
+reemplazo planificado, y su regla central es que **un solo componente llama a moveTo**. Mientras siga habiendo
+goals que navegan por su cuenta, el ejecutor unico no sirve: primero hay que quitarles MOVE o hacer que envien
+objetivos. Regla practica: si aparece un segundo moveTo en un goal, la migracion no esta hecha.
+
+**6. Un presupuesto duro de expansiones no es opcional.**
+Una version anterior del planificador gasto 9 anillos x 6x nodos en un solo tick y provoco
+ServerHangWatchdog: A single server tick took 60.00 seconds con apagado forzado. Cualquier busqueda nueva debe
+llevar tope de expansiones por busqueda y repartirse entre ticks; NavPlanner.plan lo exige como parametro.
+
+## I291-bis · El golem de la aldea cabe entero, no solo en la celda de los pies (22-oct-2026)
+
+**Regla:** el spawn del golem de producción debe validar la **caja de colisión completa** de `EntityType.IRON_GOLEM`
+(1,4 de ancho), no solo que la celda de pies y la de cabeza estén libres. Además, la celda debe quedar **fuera de la
+huella 7×7 del kiosco** (`KIOSCO_RADIO = 3`), tener **apoyo sólido** debajo y no solaparse con ningún poste.
+
+**Causa medida:** el candidato histórico `center.offset(4,0,4)` tenía aire en pies/cabeza y suelo debajo, pero la caja
+del golem se extendía hasta el poste de `center+(3,3)`. El golem nacía dentro del pilar y se asfixiaba.
+
+**Implementación:** `VillageGenerator.celdaLibreParaElGolem(level, alrededor, kiosco)` recorre anillos deterministas
+hasta 6 bloques, descarta la huella del kiosco y llama a `golemCabe(...)`; esta construye la AABB con
+`EntityType.IRON_GOLEM.getWidth()/getHeight()`, exige `level.noCollision(caja)` y `getBlockState(p.below()).isSolid()`.
+Si no hay candidato, registra un aviso y **no spawnea** en el sitio inseguro.
+
+**Evidencia:** `golem-fresh-20261022-1920`, semilla 9201, mundo desechable sin `devilrpg_villages.dat`, aldea generada
+por `VillageManager.preGenerate` en `(80,97,0)`, kiosco `x=77..83, z=-3..3`, golem `(83,97,5)`, `collision=false`,
+`support=true`, vivo 200 ticks. Los tres runs previos sobre copias de A5SMOKE dieron el mismo resultado seguro.
+
+**Límite:** no es cobertura multi-semilla exhaustiva; una aldea nueva y tres copias del fixture.
+
+## R4-bis · El asedio S5 aceptado y el falso «no hay raiders» (22-oct-2026)
+
+**Regla:** un fallo de raiders ausentes en el arnés no se atribuye a producción sin traza de inserción y retirada.
+
+**Diagnóstico:** `spawnWave` insertaba 8/8 (`present=true`), pero `Mob.checkDespawn()` los retiraba con
+`RemovalReason.DISCARDED` en el primer tick porque el mundo desechable estaba en **Peaceful**. El fixture S5 pasa a
+**Normal**; con eso la oleada sobrevive, los guardias combaten y la aldea se salva.
+
+**Fallo real corregido:** `VillagerGuardGoal.sePuedeEstar` recibía `null` desde `VillageManager.casillaDeLaCalle()` y
+lanzaba NPE. Ahora rechaza `null` antes de consultar el mundo.
+
+**Evidencia:** `r4golem-20261022-1900`, semilla 9101: 8/8 vivos, brechas, guardia arquero disparando y muriendo,
+`Aldea 0 salvada`, `TERMINAL_S5 fallen=false resolved=true tick=4237`, 200 ticks post-terminal.
+
+**Límite:** PASS del escenario S5; no se generaliza a toda configuración de asedio ni a la partida real del jugador.
+
+## A1-CLIENT · Los cuatro fundadores se ven equipados en el cliente (22-oct-2026)
+
+**Regla:** el equipo del servidor no sustituye la observación visual. La aceptación A1-CLIENT exige ver arma y
+armadura en un cliente gráfico real.
+
+**Run:** `a1client3-20261022-2040`, A5SMOKE desechable, semilla 9101, cliente aislado con `gameDirectory`.
+Evidencia: `build/a5-closure/a1client3-20261022-2040/profile.png` y `profile_zoom.png`.
+
+| Puesto | UUID | Servidor | Cliente |
+|---|---|---|---|
+| 0 espadachín | `b9d89ce2-65cd-4814-bc39-c90b5a38ab08` | wooden_sword + shield + leather x4 | armadura, escudo y espada visibles |
+| 1 arquero | `22802a3c-4a1e-43b9-b3c8-7fbe14a392f5` | bow + leather x4 | armadura y arco visibles en perfil |
+| 2 espadachín | `7b0b24ce-2e72-4652-9621-9b5bfa5f0d31` | wooden_sword + shield + leather x4 | armadura, escudo y espada visibles |
+| 3 arquero | `6838dc4b-6953-4971-b3ed-3db99739b6fb` | bow + leather x4 | armadura y arco visibles |
+
+**Diagnóstico de la primera vista:** desde el frente el arco del puesto 1 quedaba oculto por el cuerpo. La vista de
+perfil lo mostró; no era un fallo de asignación, sincronización ni renderer. No se cambió producción.
+
+**Límite:** cuatro fundadores de un mismo mundo/fixture; no se generaliza a todas las profesiones ni a todos los
+ángulos de cámara.
+
+## I388 · El nivelado limpia el terreno flotante por encima donde no hay estructura (22-oct-2026)
+
+**Regla:** dentro del footprint de la aldea (`LEVEL_RADIUS = 64`, 129×129 columnas), el recorte de nivelación debe
+retirar **todo el terreno natural** que quede por encima de la cota, aunque haya un hueco de aire debajo o una
+estructura en la base. Debe detenerse al llegar a una estructura o árbol para no perforar lo construido.
+
+**Causa:** el bucle antiguo recorría de `baseY` hacia arriba y hacía `break` en el primer bloque no recortable. Un
+hueco de aire bajo un resto flotante cortaba el recorrido; una estructura en la cota impedía limpiar lo que flotaba
+encima. Quedaban parches de tierra suspendidos.
+
+**Implementación:** `VillageGenerator.nivelar` recorre ahora de `g-1` hacia abajo hasta `baseY`, salta aire y retira
+`esTerrenoRecortable`, deteniéndose en estructura/árbol. El footprint y el talud exterior no cambian.
+
+**Evidencia:** `terrain4-20261022-2240`, A5SMOKE2 nueva, semilla 9201, centro `(80,97,0)`, cota 97. Cuatro parches de
+tierra sembrados dentro a `y=117` y uno fuera en `x=155`; pase `levelTerrain` de producción; scan completo 129×129 en
+`y=99..157`: `residual=0`, `seededGone=true`, `outsideKept=true`.
+
+**Límite:** el reto se inyectó después de generar la aldea y se repitió el pase de nivelación; no es una matriz de
+todos los relieves pre-generación.
+
+## GOLEM-MOVEMENT · La bajada al suelo también debe medir el ancho (22-oct-2026, PARCIAL)
+
+**Estado:** el defecto reportado de asfixia **al pasar junto a un pilar** sigue **NO REPRODUCIDO** en movimiento
+controlado. No se declara cerrado.
+
+**Evidencia:** `golemnav1-20261022-2340` (objetivo centro; terminó en `(81,68,2)`, salud 100, sin intersección) y
+`golemnav2-20261022-2350` (objetivo este; rodeó por `x=84-85`, salud 100, sin intersección). El tercer intento,
+`golemlower1-20261022-2320`, no ejerció `bajarElGolemAlSuelo`: el golem quedó a `y=73`, no descendió a la cota.
+
+**Hallazgo estático:** `VillageManager.casillaAlSueloDeLaPlaza` comprobaba solo pies/cabeza y empezaba en
+`kioscoRadio()+1`; con 1,4 de ancho podía solapar un poste de ±3. Se añadió la validación de la AABB completa con
+`level.noCollision(...)`.
+
+**Límite:** falta un fixture que cree un golem realmente por encima de la cota y confirme que
+`bajarElGolemAlSuelo` lo mueve a una celda sin solape. Hasta entonces, la corrección es defensiva y no una aceptación
+runtime del síntoma original.
+
+## L2 · Prioridad interior sobre exterior, verificada con el selector real (23-oct-2026)
+
+**Regla:** con un árbol interior y otro exterior válidos al mismo tiempo, el selector de producción debe iniciar
+`VillagerLumberjackGoal` y elegir el interior.
+
+**Evidencia:** `l2iso2-20261023-0600`, A5SMOKE2 semilla 9201. El jugador de prueba se aisló con índice de objetivo
+`-1` (el bucle `0..index` de `manageNearby` queda vacío); el mundo siguió con generación y flete de producción.
+`attack=false`, UUID `db378b34-...`, `[L2-CANUSE]` y `[L2] START fase=TALAR target=(36,98,-17)`, con el interior
+`(36,98,-38)` y el exterior `(145,98,0)` válidos.
+
+**Límite:** el árbol elegido no fue el `(36,-38)` nominal sino otro árbol interior de la arboleda completa.
+
+## A2-SUCESOR · Identidad A* y aceptacion (25-oct-2026)
+
+Toda arista aceptada debe conservar la misma identidad entre la celda validada, las estructuras A*, la cola, la
+meta y el nodo reconstruido. Evidencia aislada: `drop11-20261025-0020`. Un PASS de fixture aislado no sustituye
+A2. Mantener separadas: (1) tests puros, (2) fixtures A5, (3) raid A2 completo. Entrar en radio, una ruta de
+reemplazo o un DROP sin avance no prueban cruce horizontal de muralla ni llegada al interior. A2 sigue BLOCKED
+por el centro no acordado del harness protegido.
+
+## INVARIANTE I-RECOVERY (26-oct-2026)
+
+A village maintenance skip during attack/enemies-inside must schedule a bounded recovery poll. Recovery reuses
+registered goals and never forces a goal to run; it must not duplicate goals, reset cooldowns, or clear valid
+routes. Guards are excluded from ordinary profession recovery. See PROFESSION-RECOVERY.md.
+
+## INVARIANTE FORESTAL — Block 1 cerrado (05-nov-2026)
+
+La aceptación completa de silvicultura está en
+`docs/autonomous-village/FORESTRY-BLOCK-1-ACCEPTANCE.md` (A1–A7 PASS; referencias
+de runtime 62/65, 27, 57/58 y 81). Invariantes que no deben romperse:
+
+- cada `VillagerLumberjackGoal` posee su propio `ForestryTaskController`;
+  `complete()` es idempotente y `stop()` libera solo la asignación propia;
+- el planificador interior usa el centro autoritativo de la aldea, no la posición
+  del aldeano; el cursor persiste entre lotes y entregas ordinarias;
+- el progreso de navegación se mide por movimiento físico real, nunca por
+  recreación de ruta o cambios de paso; el fallo terminal marca el punto antes
+  de limpiar la asignación;
+- la entrega ordinaria no reinicia el planificador;
+- la separación interior/arboleda y el presupuesto de 256 columnas se mantienen;
+- la interrupción del GoalSelector no debe afectar el controlador de otro aldeano.
+
+Cambios futuros en estas áreas requieren la regresión mínima indicada en la
+sección J del documento de aceptación, no la campaña A1–A7 completa.

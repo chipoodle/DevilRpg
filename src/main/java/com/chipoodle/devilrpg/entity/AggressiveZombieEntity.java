@@ -34,6 +34,10 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.MoveThroughVillageGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.goal.WrappedGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.IronGolem;
@@ -59,6 +63,499 @@ public class AggressiveZombieEntity extends Zombie {
     // Los limites de distancia (200..1500) y la base/escala de atributos viven en
     // AggressiveZombieSpawnProfile (SpawnScaleProfile), compartidos con su spawnRule sin acoplamiento.
     private static final SpawnScaleProfile SPAWN_PROFILE = AggressiveZombieSpawnProfile.INSTANCE;
+    /** Planificador por pasos: los goals deciden el destino y los traversers siguen encargándose del terreno. */
+    private final AggressiveZombiePathPlanner pathPlanner = new AggressiveZombiePathPlanner(this);
+
+    /**
+     * A2 · Navegación propia (APAGADA por defecto; ver {@link NavFeature}). Cuando está encendida, es el ÚNICO
+     * dueño del movimiento. Las políticas se construyen delegando en las reglas que ya existen en esta clase
+     * ({@link #protegidoPorLaAldea(BlockPos)}) para NO duplicar ni debilitar la protección de la aldea.
+     */
+    private final com.chipoodle.devilrpg.entity.nav.NavExecutor navExecutor;
+    private final com.chipoodle.devilrpg.entity.nav.NavObstruction.Policies navPolicies;
+    /** A2 REMEDIACIÓN 2 · goal de combate real; la suspensión del ejecutor depende de si ESTE goal mueve. */
+    private PursueTargetGoal pursueTargetGoal;
+
+    /** Contador de instrumentación: cuántas veces el ejecutor propio pidió una recuperación. */
+    private int navRecoveryRequests;
+
+    private com.chipoodle.devilrpg.entity.nav.NavObstruction.Policies buildNavPolicies() {
+        return new com.chipoodle.devilrpg.entity.nav.NavObstruction.Policies() {
+            @Override
+            public boolean isProtected(BlockPos pos) {
+                // A2 FASE 1 · "PROTEGIDO" NO PUEDE SIGNIFICAR "NO SE PUEDE ANDAR".
+                // El planificador usaba `isProtected` como puerta de ENTRADA: cualquier celda del recinto se
+                // clasificaba PROTECTED y nunca se encolaba, asi que la mision exterior (radio 64) era el unico
+                // destino alcanzable y el asaltante no podia llegar NUNCA al interior real.
+                // La regla de la casa ("dentro de la aldea no se rompe ni se construye") se conserva intacta en
+                // `canBreak`/`canPlace`, que son las puertas de MODIFICACION. Caminar por el interior es
+                // justo lo que un asedio tiene que poder hacer para llegar al centro.
+                return false;
+            }
+
+            @Override
+            public boolean canBreak(BlockPos pos) {
+                return !protegidoPorLaAldea(pos);
+            }
+
+            @Override
+            public boolean canPlace(BlockPos pos) {
+                return !protegidoPorLaAldea(pos);
+            }
+
+            @Override
+            public int maxSafeDrop() {
+                return 3;
+            }
+
+            @Override
+            public int waterDepthForSafeDrop() {
+                return 2;
+            }
+        };
+    }
+
+    /**
+     * A2 · <b>Objetivo de aproximación</b> para la navegación propia.
+     * <p>
+     * MEDIDO (`a2n-20261015-175840`): el centro de la aldea sale <b>{@code PROTECTED}</b> en
+     * {@code NavObstruction.classify} (la comprobación de protección va PRIMERO, L141), y {@code PROTECTED} tiene
+     * coste {@code -1} en el planificador, así que la celda <b>nunca se encola</b> ({@code metaEncolada=false}) y el
+     * asaltante no se mueve: 0/8. No se toca la política de protección; lo que estaba mal era <b>pedir</b> una celda
+     * que la propia política prohíbe.
+     * <p>
+     * MEDIDO también (`a2n-20261015-181227`): existe celda aceptable (p.ej. {@code 741, 69, 533 = JUMP_UP}) sobre la
+     * recta de aproximación, fuera de {@code FENCE_RADIUS = 62} (con {@code LEVEL_RADIUS = 64}).
+     * <p>
+     * Por eso el destino es <b>el punto del propio rumbo del asaltante a distancia {@link #RADIO_DE_APROXIMACION}
+     * del centro</b>: queda justo por fuera del muro (radio 62), así que es no protegido y alcanzable, y es
+     * determinista (no depende de dónde esté el asaltante ni de buscar a ciegas). No se inventa una coordenada de
+     * muro concreta: se usa la geometría generada por el propio generador.
+     */
+    public static final int RADIO_DE_APROXIMACION = 64;
+
+    /** Celda de aproximación en el rumbo actual del asaltante, justo por fuera del muro. */
+    public BlockPos objetivoDeAproximacion(final BlockPos centro) {
+        return objetivoDeAproximacion(centro, RADIO_DE_APROXIMACION);
+    }
+
+    /** Punto de aproximación a un radio concreto del centro, con la Y tomada de la superficie. */
+    public BlockPos objetivoDeAproximacion(final BlockPos centro, final int radio) {
+        if (centro == null) {
+            return null;
+        }
+        BlockPos yo = blockPosition();
+        double dx = yo.getX() - centro.getX();
+        double dz = yo.getZ() - centro.getZ();
+        double len = Math.hypot(dx, dz);
+        if (len < 1.0D) {
+            return centro;
+        }
+        int x = centro.getX() + (int) Math.round(dx / len * radio);
+        int z = centro.getZ() + (int) Math.round(dz / len * radio);
+        // LA ALTURA SALE DE LA SUPERFICIE, NO DEL ASALTANTE. Medido (`a2n-20261015-190149`): tomando la Y del
+        // propio asaltante (y=63, al pie del cerro) el objetivo quedaba DENTRO de la roca (BREAKABLE, fits=false)
+        // igual que sus seis vecinos, y 6 de 8 asaltantes no conseguian ruta (moves=0, metaEncolada=false).
+        // Se usa la MISMA convencion que `NavPlanner.buildCandidates`: `MOTION_BLOCKING_NO_LEAVES.getY()` es ya la
+        // celda de los PIES (la primera celda libre por encima del bloque que bloquea el movimiento).
+        int y = level().getHeightmapPos(
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                new BlockPos(x, centro.getY(), z)).getY();
+        return new BlockPos(x, y, z);
+    }
+
+    // ================================================================================================
+    // A2 FASE 1 · DESTINO FINAL = INTERIOR REAL DE LA ALDEA.
+    // El defecto medido: la cadena de aproximacion terminaba en `RADIO_DE_APROXIMACION = 64`, es decir en el
+    // ANILLO EXTERIOR (el muro esta en 62). Un asaltante podia "llegar" a su mision sin haber entrado nunca.
+    // El destino final pasa a ser una celda PISABLE y ESTRICTAMENTE INTERIOR, derivada del centro autoritativo
+    // persistido (Incremento A) y validada con la MISMA verdad de recinto que usa la victoria del asedio.
+    // El anillo exterior se conserva como waypoint TACTICO previo (ver `cadenaDeAproximacion`).
+    // ================================================================================================
+    /** Margen interior respecto del muro: el destino nunca cae sobre el anillo (radio 62). */
+    private static final int MARGEN_INTERIOR_DE_MISION = 4;
+
+    /** Cache del destino interior: la busqueda solo se repite si cambia el centro o la cota. */
+    private BlockPos misionInteriorCache;
+    private BlockPos misionInteriorCentro;
+    private int misionInteriorCota = Integer.MIN_VALUE;
+    /** A2 FASE 1 · tambien se memoriza el resultado NEGATIVO, con reintento acotado (REMEDIACIÓN 2). */
+    private final com.chipoodle.devilrpg.entity.nav.NegativeDestinationCache misionInteriorRetry =
+            new com.chipoodle.devilrpg.entity.nav.NegativeDestinationCache();
+
+    /**
+     * ¿Es esta celda un destino de mision valido? De pie en ella: aire en pies y cuerpo, sin fluidos, con
+     * soporte con colision debajo y <b>dentro del recinto real</b> (la misma funcion que cuenta invasores).
+     */
+    public boolean esCeldaDeMisionInteriorValida(final BlockPos pos, final BlockPos centro, final int cota) {
+        if (pos == null || centro == null) {
+            return false;
+        }
+        if (!level().hasChunkAt(pos)) {
+            return false;
+        }
+        if (!level().getBlockState(pos).isAir() || !level().getBlockState(pos.above()).isAir()) {
+            return false;
+        }
+        if (!level().getFluidState(pos).isEmpty() || !level().getFluidState(pos.above()).isEmpty()) {
+            return false;
+        }
+        if (!com.chipoodle.devilrpg.entity.nav.NavObstruction.hasSolidFace(level(), pos.below())) {
+            return false;
+        }
+        // LA VERDAD UNICA DEL RECINTO: radio del muro + banda de altura de la plaza. Es la misma que decide
+        // si un asediador "ha entrado" y la que cuenta la victoria.
+        return VillageManager.dentroDelRecinto(pos, centro, cota, VillageGenerator.FENCE_RADIUS);
+    }
+
+    /**
+     * A2 FASE 1 · destino final de la mision: la celda pisable estrictamente interior mas cercana al centro
+     * autoritativo. Busqueda ACOTADA (anillos hasta radio 58 y banda de altura del recinto); si no existe,
+     * devuelve {@code null} y el llamante NO debe inventar una coordenada ni completar la mision fuera.
+     */
+    public BlockPos destinoInteriorDeLaAldea(final BlockPos centro) {
+        if (centro == null) {
+            return null;
+        }
+        final int cota = level() instanceof ServerLevel serverLevel
+                ? VillageGenerator.cotaDeLaPlaza(serverLevel, centro)
+                : centro.getY();
+        if (misionInteriorCache != null && centro.equals(misionInteriorCentro) && cota == misionInteriorCota
+                && esCeldaDeMisionInteriorValida(misionInteriorCache, centro, cota)) {
+            return misionInteriorCache;
+        }
+        // A2 REMEDIACIÓN 2 · un fallo anterior no bloquea para siempre: se reintenta cada RETRY_TICKS.
+        long ahora = level().getGameTime();
+        if (!misionInteriorRetry.puedeBuscar(ahora)) {
+            return null;
+        }
+        com.chipoodle.devilrpg.entity.nav.MissionDestination.Cell cell =
+                com.chipoodle.devilrpg.entity.nav.MissionDestination.findInterior(
+                        centro.getX(), centro.getZ(), cota,
+                        VillageGenerator.FENCE_RADIUS, MARGEN_INTERIOR_DE_MISION,
+                        VillageManager.RECINTO_DY_ABAJO, VillageManager.RECINTO_DY_ARRIBA,
+                        (x, y, z) -> esCeldaDeMisionInteriorValida(new BlockPos(x, y, z), centro, cota));
+        if (cell == null) {
+            misionInteriorCache = null;
+            misionInteriorCentro = centro.immutable();
+            misionInteriorCota = cota;
+            misionInteriorRetry.fallo(ahora);
+            int intentos = misionInteriorRetry.intentosFallidos();
+            if (intentos == 1 || intentos % 10 == 0) {
+                DevilRpg.LOGGER.info("[Siege] asaltante #{}: sin celda interior valida en {} (intento {});"
+                                + " se reintentara en {} ticks", getId(), centro.toShortString(), intentos,
+                        com.chipoodle.devilrpg.entity.nav.NegativeDestinationCache.RETRY_TICKS);
+            }
+            return null;
+        }
+        int intentosPrevios = misionInteriorRetry.intentosFallidos();
+        misionInteriorRetry.exito();
+        misionInteriorCache = new BlockPos(cell.x(), cell.y(), cell.z()).immutable();
+        misionInteriorCentro = centro.immutable();
+        misionInteriorCota = cota;
+        if (intentosPrevios > 0) {
+            DevilRpg.LOGGER.info("[Siege] asaltante #{}: destino interior recuperado en {} tras {} intentos",
+                    getId(), misionInteriorCache.toShortString(), intentosPrevios);
+        }
+        return misionInteriorCache;
+    }
+
+    /** Invalida el destino interior memorizado (centro nuevo, mundo cambiado, etc.). */
+    public void olvidarDestinoInterior() {
+        misionInteriorCache = null;
+        misionInteriorCentro = null;
+        misionInteriorCota = Integer.MIN_VALUE;
+        misionInteriorRetry.reiniciar();
+    }
+
+    /**
+     * A2 · <b>Cadena de aproximación en varias etapas</b>, para el problema VERTICAL.
+     * <p>
+     * MEDIDO (`a2n-20261015-204036`): con el objetivo de superficie 6 de 8 asaltantes ya consiguen ruta, pero
+     * <b>z3 y z4 no</b>: arrancan a y=95 y y=115 y el objetivo está a y=71, es decir 24 y 44 bloques de desnivel
+     * contra un {@code VERTICAL_RANGE = 6} del planificador. En una sola etapa ese salto es <b>inalcanzable por
+     * construccion</b>, por mucho presupuesto que se le dé.
+     * <p>
+     * La solucion NO toca el planificador: se le dan <b>etapas intermedias</b> a radios decrecientes, todas con la
+     * Y de la superficie en su propio punto. Cada etapa es un salto pequeno y legal, y el ejecutor va avanzando a la
+     * siguiente al llegar. No se cambia el rango vertical, ni la heuristica, ni los costes, ni la seguridad de caida.
+     */
+    public java.util.List<BlockPos> cadenaDeAproximacion(final BlockPos centro) {
+        java.util.List<BlockPos> etapas = new java.util.ArrayList<>();
+        if (centro == null) {
+            return etapas;
+        }
+        // A2 FASE 1 · EL DESTINO FINAL ES EL INTERIOR REAL, no el anillo exterior.
+        BlockPos destinoInterior = destinoInteriorDeLaAldea(centro);
+        if (destinoInterior == null) {
+            // FAIL-CLOSED: sin celda interior valida no se entrega una cadena que pudiera "completarse" fuera
+            // del recinto. Se deja constancia y el goal no envia objetivo (no se finge una llegada).
+            // El aviso se limita: la cache negativa puede estar en espera y no debe llenar el log cada tick.
+            long ahora = level().getGameTime();
+            if (ultimoAvisoSinDestino == Long.MIN_VALUE || ahora - ultimoAvisoSinDestino >= 200L) {
+                ultimoAvisoSinDestino = ahora;
+                DevilRpg.LOGGER.warn("[Siege] asaltante #{}: la aldea {} no tiene celda interior pisable valida;"
+                                + " NO se envia cadena de mision (no se puede completar fuera del recinto)",
+                        getId(), centro.toShortString());
+            }
+            return etapas;
+        }
+        // SI YA ESTA DENTRO (o en el anillo de aproximacion), no se le manda volver a salir: el unico destino
+        // que queda es el interior. Esto evita la cadena [waypoint exterior -> interior] cuando el asaltante
+        // ya ha cruzado el muro.
+        int cota = level() instanceof ServerLevel serverLevel
+                ? VillageGenerator.cotaDeLaPlaza(serverLevel, centro)
+                : centro.getY();
+        double dx = blockPosition().getX() - centro.getX();
+        double dz = blockPosition().getZ() - centro.getZ();
+        if (Math.hypot(dx, dz) <= RADIO_DE_APROXIMACION
+                || VillageManager.dentroDelRecinto(blockPosition(), centro, cota, VillageGenerator.FENCE_RADIUS)) {
+            etapas = com.chipoodle.devilrpg.entity.nav.MissionDestination.conDestinoFinal(etapas, destinoInterior);
+            registrarCadena(centro, destinoInterior, etapas);
+            return etapas;
+        }
+        // ETAPA TACTICA PREVIA: el punto de aproximacion de superficie, justo por fuera del muro. Sigue siendo
+        // un waypoint SEPARADO: llegar aqui solo avanza de etapa, NUNCA completa la mision.
+        BlockPos finalAprox = objetivoDeAproximacion(centro, RADIO_DE_APROXIMACION);
+        // CAUSA CONFIRMADA (Stage 4F -> 4G): la escalera se sembraba con `alturaPrevia = desde.getY()`, donde
+        // `desde` era la ULTIMA etapa ya generada, cuya Y es la del objetivo final (71). Con alturaPrevia=71, la
+        // guarda `y >= alturaPrevia` rechazaba TODAS las columnas y la cadena se quedaba en 3 etapas
+        // (`de 3` en todas las transiciones de `a2n-20261015-215325`).
+        // La escalera tiene que bajar desde la ALTURA REAL DEL ASALTANTE hasta el objetivo, no desde el objetivo.
+        etapas.addAll(escaleraDescendente(centro, finalAprox));
+        if (finalAprox != null && (etapas.isEmpty() || !etapas.get(etapas.size() - 1).equals(finalAprox))) {
+            etapas.add(finalAprox);
+        }
+        // Y SIEMPRE, al final, el interior. Si el waypoint exterior ya fuera el interior, no se duplica.
+        etapas = com.chipoodle.devilrpg.entity.nav.MissionDestination.conDestinoFinal(etapas, destinoInterior);
+        // DIAGNOSTICO: solo se registra cuando la cadena normalizada CAMBIA (no por tick).
+        registrarCadena(centro, destinoInterior, etapas);
+        return etapas;
+    }
+
+    /** Firma de la ultima cadena diagnosticada, para no registrar en cada tick. */
+    private int firmaCadenaDiagnosticada;
+    /** A2 FASE 8 · la cadena puede cambiar al moverse; el log se limita a una linea cada 2 s. */
+    private long ultimoCadenaLogTick = Long.MIN_VALUE;
+    /** A2 REMEDIACIÓN 2 · el aviso de "sin destino interior" no puede salir en cada tick de espera. */
+    private long ultimoAvisoSinDestino = Long.MIN_VALUE;
+
+    /** Registra la cadena generada SOLO si su contenido normalizado ha cambiado. */
+    private void registrarCadena(final BlockPos centro, final BlockPos finalAprox,
+                                 final java.util.List<BlockPos> etapas) {
+        int firma = 1;
+        for (BlockPos p : etapas) {
+            firma = 31 * firma + p.hashCode();
+        }
+        if (firma == firmaCadenaDiagnosticada) {
+            return;
+        }
+        firmaCadenaDiagnosticada = firma;
+        long ahora = level().getGameTime();
+        if (ultimoCadenaLogTick != Long.MIN_VALUE && ahora - ultimoCadenaLogTick < 40L) {
+            return; // el diagnostico no puede convertirse en un log por tick
+        }
+        ultimoCadenaLogTick = ahora;
+        StringBuilder sb = new StringBuilder();
+        sb.append("CADENA-DIAG yo=").append(blockPosition().toShortString())
+                .append(" miY=").append(blockPosition().getY())
+                .append(" centro=").append(centro.toShortString())
+                .append(" final=").append(finalAprox == null ? "-" : finalAprox.toShortString())
+                .append(" etapas=").append(etapas.size())
+                .append(" firma=").append(firma);
+        for (int i = 0; i < etapas.size() && i < 16; i++) {
+            BlockPos p = etapas.get(i);
+            int ySup = level().getHeightmapPos(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    new BlockPos(p.getX(), centro.getY(), p.getZ())).getY();
+            sb.append(" | e").append(i).append('=').append(p.toShortString())
+                    .append("(sup=").append(ySup)
+                    .append(protegidoPorLaAldea(p) ? ",PROTEGIDA" : "")
+                    .append(')');
+        }
+        // VALIDACION GEOMETRICA DE CADA ETAPA: soporte real, hueco, proteccion y caida respecto a la anterior.
+        for (int i = 0; i < etapas.size() && i < 16; i++) {
+            BlockPos p = etapas.get(i);
+            boolean soporte = soporteRealYHueco(p);
+            String caida = i == 0 ? "n/a" : String.valueOf(etapas.get(i - 1).getY() - p.getY());
+            sb.append(" | v").append(i).append(" soporte=").append(soporte)
+                    .append(" caida=").append(caida)
+                    .append(soporte ? "" : " INVALIDA-SIN-SOPORTE");
+        }
+        sb.append(" | necesidadConstruccion=").append(ultimaNecesidadDeConstruccion)
+                .append(" | ajusteAterrizaje=").append(ultimoAjusteDeAterrizaje)
+                .append(" | rechazoAterrizaje=").append(ultimoRechazoDeAterrizaje);
+        DevilRpg.LOGGER.info("[Siege] {}", sb);
+    }
+
+    /**
+     * ESCALERA DESCENDENTE de etapas: baja desde la ALTURA ACTUAL del asaltante hasta {@code objetivo}, avanzando
+     * por columnas hacia el centro y emitiendo un escalon cada vez que la superficie real baja, partiendo cualquier
+     * salto mayor que {@code VERTICAL_RANGE_POR_ESCALON} (para que cada etapa siga siendo visible al planificador,
+     * cuyo VERTICAL_RANGE no se toca). Solo celdas no protegidas.
+     */
+    private java.util.List<BlockPos> escaleraDescendente(final BlockPos centro, final BlockPos objetivo) {
+        java.util.List<BlockPos> salida = new java.util.ArrayList<>();
+        if (centro == null || objetivo == null) {
+            return salida;
+        }
+        BlockPos yo = blockPosition();
+        double dx = yo.getX() - centro.getX();
+        double dz = yo.getZ() - centro.getZ();
+        double len = Math.hypot(dx, dz);
+        if (len < 1.0D) {
+            return salida;
+        }
+        int radioInicial = (int) Math.round(len);
+        // ALTURA DE PARTIDA = la del asaltante (el error de 4F era usar aqui la del objetivo).
+        int alturaPrevia = yo.getY();
+        int emitidas = 0;
+        // CAUSA CONFIRMADA (4G -> 4H): las etapas se emitian a ALTURAS INTERPOLADAS por encima de la superficie real
+        // (`e0=597,90,597` con `sup=71`), es decir puntos FLOTANDO 19 bloques sobre el suelo: no son ocupables y por
+        // eso ningun asaltante avanzaba de la etapa 0. Ahora cada etapa se emite EN LA SUPERFICIE muestreada, y el
+        // descenso entre etapas consecutivas se limita al MAXIMO DE CAIDA SEGURA (3). Si el terreno cae mas de 3
+        // bloques de golpe, la etapa intermedia se emite a `alturaPrevia - 3` SOLO si esa celda tiene soporte real;
+        // si no lo tiene, NO se inventa la coordenada: se anota como decision de CONSTRUCCION y se corta la escalera.
+        for (int radio = radioInicial; radio > RADIO_DE_APROXIMACION && emitidas < MAX_ETAPAS_DE_ESCALERA;
+                radio -= 2) {
+            int x = centro.getX() + (int) Math.round(dx / len * radio);
+            int z = centro.getZ() + (int) Math.round(dz / len * radio);
+            int y = level().getHeightmapPos(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    new BlockPos(x, centro.getY(), z)).getY();
+            BlockPos muestreada = new BlockPos(x, y, z);
+            if (protegidoPorLaAldea(muestreada)) {
+                continue; // dentro de la aldea no se construye ni se pisa: la politica no se toca
+            }
+            // VALIDACION DEL ATERRIZAJE (Stage 4I): la Y de la heightmap puede ser una celda de borde de
+            // acantilado SIN soporte debajo. Si no vale, se busca hacia abajo en rango acotado un aterrizaje real.
+            BlockPos cand = validarAterrizaje(muestreada);
+            if (cand == null) {
+                ultimoRechazoDeAterrizaje = muestreada.toShortString()
+                        + " (heightmap sup=" + y + "): sin aterrizaje con soporte real en "
+                        + BUSQUEDA_DE_ATERRIZAJE_MAXIMA + " bloques hacia abajo";
+                continue;
+            }
+            if (y != cand.getY()) {
+                ultimoAjusteDeAterrizaje = muestreada.toShortString() + " -> " + cand.toShortString()
+                        + " (heightmap sin soporte; bajado " + (y - cand.getY()) + ")";
+            }
+            if (cand.getY() >= alturaPrevia) {
+                continue; // solo interesa donde el terreno BAJA
+            }
+            int caida = alturaPrevia - cand.getY();
+            if (caida <= CAIDA_SEGURA_MAXIMA) {
+                salida.add(cand);
+                emitidas++;
+                alturaPrevia = cand.getY();
+                continue;
+            }
+            // Caida mayor que el maximo seguro: se intenta un escalon intermedio a alturaPrevia - 3 con soporte real.
+            BlockPos intermedio = new BlockPos(cand.getX(), alturaPrevia - CAIDA_SEGURA_MAXIMA, cand.getZ());
+            if (!soporteRealYHueco(intermedio)) {
+                // NO se inventa: se registra la decision de construccion y se corta (el terreno no da mas).
+                ultimaNecesidadDeConstruccion = "caida de " + caida + " bloques en " + cand.toShortString()
+                        + " desde " + new BlockPos(x, alturaPrevia, z).toShortString()
+                        + ": hace falta escalon construido (ponerEscalon) porque la celda intermedia "
+                        + intermedio.toShortString() + " no tiene soporte";
+                break;
+            }
+            salida.add(intermedio);
+            emitidas++;
+            salida.add(cand);
+            emitidas++;
+            alturaPrevia = cand.getY();
+        }
+        return salida;
+    }
+
+    /** Ultima decision de construccion registrada (diagnostico): vacio si el terreno basto. */
+    private String ultimaNecesidadDeConstruccion = "-";
+
+    /** ¿La celda tiene bloque con colision justo debajo Y hueco libre para el cuerpo? (convencion del planificador) */
+    private boolean soporteRealYHueco(final BlockPos celda) {
+        net.minecraft.world.level.block.state.BlockState debajo = level().getBlockState(celda.below());
+        if (debajo.isAir() || debajo.getCollisionShape(level(), celda.below()).isEmpty()) {
+            return false;
+        }
+        return level().getBlockState(celda).isAir() && level().getBlockState(celda.above()).isAir();
+    }
+    /** Maximo de caida segura por etapa: el mismo limite que respeta la recuperacion. */
+    private static final int CAIDA_SEGURA_MAXIMA = 3;
+
+    /** Rango ACOTADO de busqueda hacia abajo para encontrar un aterrizaje con soporte real. */
+    private static final int BUSQUEDA_DE_ATERRIZAJE_MAXIMA = 6;
+
+    /**
+     * A2 Stage 4I - VALIDACION DEL ATERRIZAJE. La Y de la heightmap NO garantiza suelo debajo: medido en
+     * a2n-20261015-234056, e1=574,113,533(sup=113) salia con soporte=false (celda de borde de acantilado).
+     * Si la celda muestreada no vale, se busca HACIA ABAJO en rango acotado el primer aterrizaje soportado y
+     * despejado. Devuelve null si no hay ninguno: se RECHAZA, no se inventa la coordenada.
+     */
+    private BlockPos validarAterrizaje(final BlockPos muestreada) {
+        if (soporteRealYHueco(muestreada) && !protegidoPorLaAldea(muestreada)) {
+            return muestreada;
+        }
+        for (int dy = 1; dy <= BUSQUEDA_DE_ATERRIZAJE_MAXIMA; dy++) {
+            BlockPos abajo = muestreada.below(dy);
+            if (soporteRealYHueco(abajo) && !protegidoPorLaAldea(abajo)) {
+                return abajo;
+            }
+        }
+        return null;
+    }
+
+    /** Diagnostico: ultimo ajuste y ultimo rechazo de aterrizaje. */
+    private String ultimoAjusteDeAterrizaje = "-";
+    private String ultimoRechazoDeAterrizaje = "-";
+    /** Tope de etapas de descenso: mantiene la cadena acotada. */
+    private static final int MAX_ETAPAS_DE_ESCALERA = 14;
+
+    /** Radios de las etapas de aproximación, de fuera hacia dentro. */
+    private static final int[] RADIOS_DE_APROXIMACION = {96, 80, RADIO_DE_APROXIMACION};
+
+    /** El ejecutor propio, para instrumentación. */
+    public com.chipoodle.devilrpg.entity.nav.NavExecutor navExecutor() {
+        return navExecutor;
+    }
+
+    /** Las políticas de obstrucción del ejecutor, para poder fotografiar una celda igual que lo hace el planner. */
+    public com.chipoodle.devilrpg.entity.nav.NavObstruction.Policies navPolicies() {
+        return navPolicies;
+    }
+
+    /** Recuperaciones pedidas por el ejecutor propio (instrumentación). */
+    public int navRecoveryRequests() {
+        return navRecoveryRequests;
+    }
+
+    /**
+     * Punto de entrada ÚNICO de la navegación propia: los goals envían un objetivo, no navegan ellos. Devuelve
+     * {@code true} si el ejecutor propio está al mando (y por tanto el goal NO debe llamar a su planner).
+     */
+    public boolean navegarConEjecutorPropio(final BlockPos destino) {
+        if (!com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation()) {
+            return false;
+        }
+        navExecutor.setObjective(destino);
+        // A2 Stage 6A · la MISION del plan de construccion es el destino original; el plan solo produce
+        // sub-objetivos temporales y al terminar se vuelve a planificar hacia esta misma mision.
+        navExecutor.setPlanMision(destino);
+        return true;
+    }
+
+    /**
+     * A2 FASE 4 · OBJETIVO TACTICO (orilla, escape, reposicionamiento). NO toca la mision: el ejecutor
+     * conserva {@code misionFinal} y, al llegar al destino tactico, vuelve a ella en vez de declarar ARRIVED.
+     * Es la separacion que faltaba: {@link #navegarConEjecutorPropio(BlockPos)} hacia que la orilla pasara a
+     * ser la mision y el asedio se "completara" en el agua.
+     */
+    public boolean navegarTacticamente(final BlockPos destino) {
+        if (!com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation()) {
+            return false;
+        }
+        return navExecutor.setTacticalObjective(destino);
+    }
 
     private double spawnDistance = 0;  // Se guarda al spawnear el zombie
     private double spawnThreat = 1.0;  // Amenaza global al spawnear (combina con la distancia)
@@ -85,6 +582,8 @@ public class AggressiveZombieEntity extends Zombie {
      * muerte de la ola, de forma que la recompensa solo se pague si de verdad se limpió la horda.
      */
     private int worldSiegeIndex = -1;
+    /** A2 REMEDIACIÓN 2 · una sola notificación de baja confirmada por entidad. */
+    private boolean bajaDeAsedioNotificada;
     /** Umbral de distancia para que el zombie pueda romper obsidiana (más lejos = más nivel). */
     private static final double OBSIDIAN_THRESHOLD = 700;
     /**
@@ -97,10 +596,45 @@ public class AggressiveZombieEntity extends Zombie {
 
     public AggressiveZombieEntity(EntityType<? extends Zombie> type, Level world) {
         super(type, world);
+        this.navPolicies = buildNavPolicies();
+        this.navExecutor = new com.chipoodle.devilrpg.entity.nav.NavExecutor(this, this.navPolicies);
+        // La recuperación del ejecutor propio REUTILIZA la que ya existe (romper/puentear/apilar/cavar), para no
+        // duplicar lógica ni reglas de protección.
+        // A2 Stage 6E · FIX B · si la ruta actual pide ROMPER/PUENTEAR una celda CONCRETA, se actúa sobre ESA celda
+        // (el nodo llega en `nodoDeRuta`); en cualquier otro caso se sigue trabajando hacia la misión.
+        this.navExecutor.setRecoveryAction((towards, nodoDeRuta, transicionDeRuta) -> {
+            navRecoveryRequests++;
+            if (nodoDeRuta != null
+                    && transicionDeRuta == com.chipoodle.devilrpg.entity.nav.NavRoute.Transition.BREAK) {
+                return romperNodoDeRuta(nodoDeRuta);
+            }
+            if (nodoDeRuta != null
+                    && transicionDeRuta == com.chipoodle.devilrpg.entity.nav.NavRoute.Transition.BRIDGE) {
+                return ponerEscalonConSoporteLateral(nodoDeRuta, towards);
+            }
+            return recoverNavigation(towards);
+        });
+        // A2 Stage 4Q · primitiva de COLOCACION para la transicion BUILD de la ruta. Reutiliza el camino de la casa
+        // (`ponerEscalon`), que ya valida celda vacia, dos huecos, soporte con colision y proteccion. No se relaja.
+        // A2 Stage 6E · FIX A · el plan de construccion del ejecutor usa ademas la variante ADHERIDA A UNA CARA, que
+        // es la que permite bajar por una cara vertical; la primitiva de la casa queda intacta para el resto de usos.
+        this.navExecutor.setPlacement(cell -> {
+            if (protegidoPorLaAldea(cell)) {
+                return false;
+            }
+            boolean ok = ponerEscalonConSoporteLateral(cell, villageCenter != null ? villageCenter : cell);
+            // Verificacion REAL: solo se acepta si el bloque quedo colocado.
+            return ok && !level().getBlockState(cell).isAir();
+        });
     }
 
     /** Asigna el centro de la aldea a la que apunta este zombie. */
     public void setVillageCenter(BlockPos center) {
+        if (center == null || !center.equals(this.villageCenter)) {
+            olvidarDestinoInterior();
+            // El centro cambio: la cadena de aproximacion ya no describe la misma aldea.
+            firmaCadenaDiagnosticada = 0;
+        }
         this.villageCenter = center;
     }
 
@@ -141,6 +675,14 @@ public class AggressiveZombieEntity extends Zombie {
     private boolean aviseQueEntro = false;
     private int tunelEspera;
     private int puenteEspera;
+    private long siguienteIntentoDeRecuperacion;
+    private int fallosDeRecuperacion;
+    /** A5.32/IMPLEMENT-01 · último bloque que se intentó romper y su veto temporal para replanificar un desvío. */
+    private BlockPos ultimoIntentoDeRotura;
+    private long evitarRoturaHasta;
+    private int roturasFallidas;
+    /** A5.32/IMPLEMENT-02 · límite compartido de 3 roturas por intento de recuperación. */
+    private int roturasEnIntento;
 
     /** Vuelve a darle presupuesto de túnel (al empezar una marcha nueva a la aldea). */
     public void recargarTunel() {
@@ -202,8 +744,30 @@ public class AggressiveZombieEntity extends Zombie {
         return goToCenterActive;
     }
 
+    /** Diagnóstico de aceptación N4: si el goal de persecución posee MOVE ahora. */
+    public boolean pursueTargetActiveDiag() {
+        return pursueTargetGoal != null && pursueTargetGoal.estaActivo();
+    }
+
+    /** Diagnóstico de aceptación N4: goals actualmente en ejecución. */
+    public String runningGoalsDiag() {
+        StringBuilder sb = new StringBuilder();
+        for (WrappedGoal wrapped : goalSelector.getAvailableGoals()) {
+            if (wrapped.isRunning()) {
+                if (!sb.isEmpty()) {
+                    sb.append(',');
+                }
+                sb.append(wrapped.getGoal().getClass().getSimpleName());
+            }
+        }
+        return sb.isEmpty() ? "-" : sb.toString();
+    }
+
     /** Marca este zombie como parte de una horda del mundo que va a por la aldea de ese objetivo. */
     public void setWorldSiegeIndex(int objectiveIndex) {
+        if (this.worldSiegeIndex != objectiveIndex) {
+            this.bajaDeAsedioNotificada = false;
+        }
         this.worldSiegeIndex = objectiveIndex;
     }
 
@@ -231,10 +795,22 @@ public class AggressiveZombieEntity extends Zombie {
      */
     @Override
     public void die(@NotNull DamageSource cause) {
-        if (worldSiegeIndex >= 0 && !level().isClientSide && level() instanceof ServerLevel serverLevel) {
-            VillageManager.onSiegeAttackerKilled(serverLevel, getUUID());
-        }
+        // A2 REMEDIACIÓN 2 · la baja se confirma DESPUÉS de `super.die`: si otro mod cancela la muerte
+        // (LivingDeathEvent) el raider sigue vivo y NO puede desaparecer del libro mayor.
         super.die(cause);
+        if (isDeadOrDying()) {
+            notificarBajaDeAsedioConfirmada();
+        }
+    }
+
+    /** A2 REMEDIACIÓN 2 · una sola notificación de baja confirmada por entidad. */
+    private void notificarBajaDeAsedioConfirmada() {
+        if (bajaDeAsedioNotificada || worldSiegeIndex < 0 || level().isClientSide
+                || !(level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        bajaDeAsedioNotificada = true;
+        VillageManager.onSiegeAttackerKilled(serverLevel, getUUID());
     }
 
     /**
@@ -262,12 +838,21 @@ public class AggressiveZombieEntity extends Zombie {
      * otro mod...), se le saca de la lista de atacantes vivos. Así un asedio no se queda <b>imposible de cobrar</b>
      * por un enemigo que ya no existe y que nadie puede matar.
      */
+    /** A2: diagnostico de retirada, APAGADO por defecto. Se enciende con -Ddevilrpg.a2n.diagRetirada=true. */
+    private static final boolean DIAGNOSTICO_DE_RETIRADA =
+            Boolean.getBoolean("devilrpg.a2n.diagRetirada");
+
     @Override
     public void remove(@NotNull RemovalReason motivo) {
-        if (motivo == RemovalReason.DISCARDED && worldSiegeIndex >= 0 && !level().isClientSide
-                && level() instanceof ServerLevel serverLevel) {
-            VillageManager.onSiegeAttackerKilled(serverLevel, getUUID());
+        if (DIAGNOSTICO_DE_RETIRADA && !level().isClientSide) {
+            // Diagnostico A2: causa AUTORITATIVA de retirada de una entidad (no implica muerte).
+            DevilRpg.LOGGER.info("[A2N] RETIRADA uuid={} motivo={} pos={} salud={} indiceAsedio={}",
+                    getUUID(), motivo, blockPosition().toShortString(), getHealth(), worldSiegeIndex);
+            DevilRpg.LOGGER.info("[A2N] RETIRADA-STACK", new Exception("retirada " + motivo));
         }
+        // A2 REMEDIACIÓN 2 · KILLED/DISCARDED NO son muertes de combate confirmadas: `/kill` o un descarte
+        // externo dejan el UUID en el libro mayor como DESCONOCIDO y el asedio se cierra por plazo, sin
+        // recompensa. La única baja confirmada es la que pasa por `die()` y sobrevive a `super.die()`.
         super.remove(motivo);
     }
 
@@ -288,7 +873,7 @@ public class AggressiveZombieEntity extends Zombie {
             return false;
         }
         if (b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) {
-            return canBreakObsidian();
+            return false; // IMPLEMENT-06: ordinary recovery never breaks obsidian
         }
         return true; // madera, tierra, grava, arena, lana...
     }
@@ -312,10 +897,20 @@ public class AggressiveZombieEntity extends Zombie {
      */
     public static final boolean REGLA_DEL_MURO_ACTIVA = true;
 
+    private static final boolean DIAG_BREAK = Boolean.getBoolean("devilrpg.a2n.diagBreak");
+
     private boolean breakBlockAt(BlockPos pos) {   // I356: dice si DE VERDAD rompio algo (el presupuesto solo se cobra entonces)
+        if (DIAG_BREAK && !level().isClientSide && pos.getX() == 305 && pos.getY() == 120 && pos.getZ() == 300) {
+            DevilRpg.LOGGER.info("[BREAKDBG] CALLER target={} estado={}", pos.toShortString(),
+                    navExecutor.describe());
+            DevilRpg.LOGGER.info("[BREAKDBG] STACK", new Exception("breakBlockAt caller"));
+        }
         BlockPos atacantePos = blockPosition().immutable();
         BlockPos objetivo = pos.immutable();
         BlockState bs = level().getBlockState(objetivo);
+        if (bs.hasBlockEntity()) {
+            return false; // IMPLEMENT-06: block entities are never destroyed by recovery
+        }
         int cota = cotaParaElRecinto();
         EvaluacionMuro muro = evaluarMuro(objetivo, cota, bs);
         if (REGLA_DEL_MURO_ACTIVA && protegidoPorLaAldea(objetivo, cota, muro.esMuro())) {
@@ -347,14 +942,28 @@ public class AggressiveZombieEntity extends Zombie {
             avisoDeQueNoPica("es inquebrantable", b, objetivo);
             return false; // inquebrantable
         }
-        if ((b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) && !canBreakObsidian()) {
+        if (b == Blocks.OBSIDIAN || b == Blocks.CRYING_OBSIDIAN) {
             registrarDecisionMuro(atacantePos, objetivo, bs, muro, false, null, "BLOQUEADO_OBSIDIANA");
-            avisoDeQueNoPica("es obsidiana y este asaltante no puede con ella", b, objetivo);
+            avisoDeQueNoPica("obsidiana fuera del alcance de la recuperacion ordinaria", b, objetivo);
             return false;
+        }
+        // IMPLEMENT-08 · acquire the exact breach target immediately before destruction. This is an
+        // atomic first-claim-wins on the server thread; it does not replace the village objective.
+        boolean claimed = false;
+        ServerLevel claimedLevel = null;
+        if (worldSiegeIndex >= 0 && level() instanceof ServerLevel serverLevel) {
+            if (!VillageManager.tryClaimBreach(serverLevel, worldSiegeIndex, getUUID(), objetivo)) {
+                return false;
+            }
+            claimed = true;
+            claimedLevel = serverLevel;
         }
         // La clasificación de muro se conserva desde antes de romper: después de destroyBlock el bloque ya puede ser
         // aire y no debe volver a evaluarse para decidir si el suceso fue una brecha.
         boolean destruido = level().destroyBlock(objetivo, true);
+        if (claimed) {
+            VillageManager.releaseBreach(claimedLevel, worldSiegeIndex, getUUID(), objetivo);
+        }
         String decisionBrecha = destruido && muro.esMuro() ? "EMITE_BRECHA"
                 : (destruido ? "SIN_BRECHA_NO_ES_MURO" : "SIN_BRECHA_NO_SE_DESTRUYO");
         registrarDecisionMuro(atacantePos, objetivo, bs, muro, true, destruido, decisionBrecha);
@@ -397,12 +1006,52 @@ public class AggressiveZombieEntity extends Zombie {
 
     /**
      * Busca el bloque sólido rompible más cercano en la dirección de {@code towards} y lo rompe de forma
-     * AGRESIVA: destruye el bloque del cuerpo (+1) y, si el objetivo está arriba (necesita saltar en
-     * diagonal), también el de arriba (+2) para abrir un hueco de 2 bloques por el que pueda subir.
+     * AGRESIVA: destruye el bloque del cuerpo (+1) y el de encima para abrir un hueco de dos bloques; si el objetivo
+     * está arriba (necesita saltar en diagonal), también limpia el siguiente bloque para dejar espacio al escalón.
      * Además, aleatoriamente destruye bloques contiguos al central (misma fila, +1/+2 pegados) para
      * ensanchar el paso. Usado al ir al centro cuando el zombie está bloqueado por el muro.
      */
-    private void breakBlockTowards(BlockPos towards) {
+    /**
+     * A5.32 · recuperación acotada de agua: rompe como máximo tres bloques que estorban en la dirección
+     * hacia la orilla, reutilizando la única puerta segura ({@link #breakBlockAt}). No crea una ruta de
+     * destrucción nueva ni salta protecciones.
+     */
+    public int romperRecuperacionHacia(BlockPos towards) {
+        if (towards == null) {
+            return 0;
+        }
+        BlockPos zPos = blockPosition();
+        int sx = Integer.signum(towards.getX() - zPos.getX());
+        int sz = Integer.signum(towards.getZ() - zPos.getZ());
+        int rotos = 0;
+        for (int dy = 0; dy <= 2 && rotos < 3; dy++) {
+            for (int dx = -1; dx <= 1 && rotos < 3; dx++) {
+                for (int dz = -1; dz <= 1 && rotos < 3; dz++) {
+                    if (dx == 0 && dz == 0) {
+                        continue;
+                    }
+                    if (dx * sx + dz * sz < 0) {
+                        continue; // no romper hacia atrás
+                    }
+                    BlockPos candidate = new BlockPos(zPos.getX() + dx, zPos.getY() + dy, zPos.getZ() + dz);
+                    if (protegidoPorLaAldea(candidate)) {
+                        continue;
+                    }
+                    BlockState state = level().getBlockState(candidate);
+                    if (state.isAir() || state.getCollisionShape(level(), candidate).isEmpty()
+                            || !canBreakBlock(state)) {
+                        continue;
+                    }
+                    if (breakBlockAt(candidate)) {
+                        rotos++;
+                    }
+                }
+            }
+        }
+        return rotos;
+    }
+
+    private boolean breakBlockTowards(BlockPos towards) {
         // TÚNEL LENTO Y CON PRESUPUESTO: un bloque cada TUNEL_ENTRE_BLOQUES (2 s) y como mucho TUNEL_PRESUPUESTO por
         // marcha. Una montaña grande aguanta y la aldea se salva (lo pidió el jugador).
         if (tunelRestante <= 0 || tunelEspera > 0) {
@@ -410,7 +1059,12 @@ public class AggressiveZombieEntity extends Zombie {
                 // I358 · SE LE ACABARON LOS 40: antes esto era mudo y parecia que el asaltante no hacia nada.
                 avisoDeQueNoPica("se le ACABARON los 40 bloques de esta marcha", null, blockPosition());
             }
-            return;
+            return false;
+        }
+        roturasEnIntento = 0;
+        if (Boolean.getBoolean("n4.trace")) {
+            DevilRpg.LOGGER.info("[RECOVERY] attempt-start towards={} pos={}", towards.toShortString(),
+                    blockPosition().toShortString());
         }
         BlockPos zPos = blockPosition();
         int sx = Integer.signum(towards.getX() - zPos.getX());
@@ -444,7 +1098,7 @@ public class AggressiveZombieEntity extends Zombie {
         }
         if (best == null) {
             avisoDeQueNoPica("no tiene nada rompible alrededor", null, blockPosition());
-            return;
+            return false;
         }
         // I358 · LA TRAZA QUE HACE FALTA PARA DEDUCIRLO DEL REGISTRO: donde esta y a que altura, donde esta el OBJETIVO y a
         // que altura, el desnivel, hasta que dy va a cavar (la alturaQueCavar de I353) y el tunel que le queda. Con
@@ -461,7 +1115,8 @@ public class AggressiveZombieEntity extends Zombie {
         // regla de I297 se NIEGA a picar le costaba un bloque de los 40: con la arboleda alrededor del pueblo, los 40 se iban
         // en arboles que no se rompian y el asaltante se quedaba fuera (medido en su registro: 228 picados, casi todos a
         // y=60-61, con 0 brechas). Ahora, si no rompe, NO gasta: sigue buscando por donde entrar.
-        boolean roto = breakBlockAt(best);
+        ultimoIntentoDeRotura = best.immutable();
+        boolean roto = romperAcotado(best);
         if (roto) {
             if (tunelRestante == TUNEL_PRESUPUESTO) {
                 // Primer bloque de esta marcha: queda en el log (INFO) para poder comprobar que la horda se abre paso.
@@ -472,15 +1127,23 @@ public class AggressiveZombieEntity extends Zombie {
             tunelEspera = TUNEL_ENTRE_BLOQUES;
             particulasDeTrabajo(best);
         }
+        // Un bloque del cuerpo sin el espacio libre encima no abre paso por un muro de dos bloques, aunque el destino
+        // esté a la misma altura. Romper ambos niveles conserva el hueco transitable y aplica la regla del recinto a
+        // cada celda por separado.
+        BlockPos above = best.above();
+        boolean trabajoRealizado = roto;
+        if (canBreakBlock(level().getBlockState(above)) && !protegidoPorLaAldea(above)) {
+            trabajoRealizado |= romperAcotado(above);
+        }
         // Dirección principal hacia el objetivo (para saber si el objetivo está más arriba).
         boolean targetAbove = towards.getY() > zPos.getY();
         int dirX = Integer.signum(best.getX() - zPos.getX());
         int dirZ = Integer.signum(best.getZ() - zPos.getZ());
-        // Si el objetivo está arriba, destruir también el bloque +2 (arriba del principal) para poder saltar.
+        // Si el objetivo está arriba, destruir también el bloque +2 para dejar espacio al salto/escalón.
         if (targetAbove) {
-            BlockPos above = best.above();
-            if (canBreakBlock(level().getBlockState(above)) && !protegidoPorLaAldea(above)) {
-                breakBlockAt(above);
+            BlockPos higher = above.above();
+            if (canBreakBlock(level().getBlockState(higher)) && !protegidoPorLaAldea(higher)) {
+                trabajoRealizado |= romperAcotado(higher);
             }
         }
         // Aleatoriamente destruir un bloque contiguo al central (misma fila +1, o +1/+2 al lado) para
@@ -495,16 +1158,108 @@ public class AggressiveZombieEntity extends Zombie {
                 adjacent = new BlockPos(best.getX() + side, best.getY(), best.getZ());
             }
             if (canBreakBlock(level().getBlockState(adjacent)) && !protegidoPorLaAldea(adjacent)) {
-                breakBlockAt(adjacent);
+                trabajoRealizado |= romperAcotado(adjacent);
             }
             // Si objetivo arriba, también el +2 del contiguo.
             if (targetAbove) {
                 BlockPos adjacentAbove = adjacent.above();
                 if (canBreakBlock(level().getBlockState(adjacentAbove)) && !protegidoPorLaAldea(adjacentAbove)) {
-                    breakBlockAt(adjacentAbove);
+                    trabajoRealizado |= romperAcotado(adjacentAbove);
                 }
             }
         }
+        return trabajoRealizado;
+    }
+
+    /**
+     * Recuperación física cuando el planner no encuentra ruta o se atasca. Hace una acción acotada por llamada y
+     * aumenta la espera tras cada fallo para no repetir el picado en el mismo sitio bloqueado.
+     */
+    private boolean romperAcotado(BlockPos pos) {
+        if (!com.chipoodle.devilrpg.entity.nav.ObstructionRecoveryPolicy.puedeRomper(roturasEnIntento)) {
+            return false;
+        }
+        BlockState state = level().getBlockState(pos);
+        boolean protectedTarget = protegidoPorLaAldea(pos);
+        boolean wall = esLaMuralla(pos, cotaParaElRecinto());
+        com.chipoodle.devilrpg.entity.nav.BlockInteractionPolicy.Decision decision =
+                com.chipoodle.devilrpg.entity.nav.BlockInteractionPolicy.decide(
+                        new com.chipoodle.devilrpg.entity.nav.BlockInteractionPolicy.Candidate(
+                                protectedTarget, wall, esTablonDelAsalto(pos), state.hasBlockEntity(),
+                                state.getBlock() == Blocks.BEDROCK || state.getBlock().defaultDestroyTime() < 0.0F,
+                                state.is(Blocks.OBSIDIAN) || state.is(Blocks.CRYING_OBSIDIAN), false,
+                                !state.isAir() && !state.getCollisionShape(level(), pos).isEmpty(), false, false,
+                                roturasEnIntento, level().getGameTime(), evitarRoturaHasta));
+        if (decision.action() != com.chipoodle.devilrpg.entity.nav.BlockInteractionPolicy.Action.BREAK) {
+            return false;
+        }
+        if (breakBlockAt(pos)) {
+            roturasEnIntento++;
+            if (Boolean.getBoolean("n4.trace")) {
+                DevilRpg.LOGGER.info("[RECOVERY] removed target={} attemptCount={}/3", pos.toShortString(),
+                        roturasEnIntento);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    boolean recoverNavigation(BlockPos destination) {
+        // A2 Stage 4J/4K: si el descenso esta bloqueado por un salto mayor que la caida segura, la recuperacion
+        // que toca es CONSTRUIR un escalon descendente.
+        // CAUSA CONFIRMADA (Stage 4J -> 4K): la guarda anterior era `&& escaleraPisada()`, y `escaleraPisada()`
+        // exige `escaleraUltimoColocado != null`, campo que SOLO se inicializa DENTRO del constructor de escalera.
+        // Las dos condiciones eran mutuamente excluyentes en la primera llamada, asi que la construccion NUNCA
+        // empezaba (`colocados=0`, `rechazo=-` en `a2n-20261016-004834`). Aqui la guarda se limita a "este descenso
+        // exige construir"; el ancla la siembra el propio constructor desde una posicion VALIDADA.
+        if (descensoExigeConstruir(destination)) {
+            boolean actuado = construirEscalonDescendente(destination);
+            if (actuado) {
+                return true;
+            }
+            // Si no pudo colocar, se sigue con la recuperacion normal (no se bloquea el resto de la recuperacion).
+        }
+        long now = level().getGameTime();
+        if (now < siguienteIntentoDeRecuperacion) {
+            return false;
+        }
+        boolean evitarRotura = ultimoIntentoDeRotura != null
+                && !com.chipoodle.devilrpg.entity.nav.ObstructionRecoveryPolicy.shouldAttemptBreach(
+                        roturasFallidas, now, evitarRoturaHasta);
+        ultimoIntentoDeRotura = null;
+        boolean acted = false;
+        if (!evitarRotura) {
+            acted = breakBlockTowards(destination);
+            if (!acted && ultimoIntentoDeRotura != null
+                    && !level().getBlockState(ultimoIntentoDeRotura).isAir()) {
+                roturasFallidas++;
+                evitarRoturaHasta = now + (roturasFallidas >= 3 ? 400L : 200L);
+                com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{}: rotura fallida en {} ({}/3);"
+                                + " se replanifica un desvío", getId(), ultimoIntentoDeRotura.toShortString(),
+                        roturasFallidas);
+            }
+        }
+        if (!acted) {
+            acted = puentearHacia(destination);
+        }
+        if (!acted && destination.getY() > blockPosition().getY() + 1) {
+            acted = apilarBloqueParaSubir(destination);
+        }
+        if (!acted && destination.getY() < blockPosition().getY() - 1) {
+            acted = cavarHaciaAbajo(destination);
+        }
+        if (acted) {
+            fallosDeRecuperacion = 0;
+            roturasFallidas = 0;
+            ultimoIntentoDeRotura = null;
+            siguienteIntentoDeRecuperacion = now + 40L;
+            pathPlanner.terrainChanged();
+        } else {
+            fallosDeRecuperacion++;
+            int backoff = Math.min(200, 20 << Math.min(fallosDeRecuperacion, 3));
+            siguienteIntentoDeRecuperacion = now + backoff;
+        }
+        return acted;
     }
 
     // No es sensible al sol: puede patrullar tanto de dia como de noche sin quemarse.
@@ -654,13 +1409,17 @@ public class AggressiveZombieEntity extends Zombie {
         if (esMuro) {
             return false; // solo el bloque real del anillo generado: es la brecha por la que entra un asedio
         }
-        // DENTRO: no se pica NADA, y esto NO depende del campo de fuerza (5-oct-2026, y era el fallo grande).
-        // Aquí estaba `return elAsedioYaSeGano()`, así que con el ASEDIO INICIAL SIN RESOLVER esto devolvía FALSE
-        // para TODA la aldea: medido con el arnés, el asaltante se abrió un túnel de 36 bloques dentro del término
-        // (49 de piedra, 23 de tierra) y el veto no lo paró nunca. El campo de fuerza del jugador ("cuando se gana el
-        // asedio la aldea genera un campo de fuerza …") sigue donde le toca —expulsar monstruos y negar spawneo—, pero
-        // para decidir SI SE ROMPE la regla es la del jugador y es de GEOMETRÍA: muro perimetral sí, dentro no.
-        return true;
+        boolean saved = false;
+        boolean siege = false;
+        boolean uncertain = true;
+        if (level() instanceof ServerLevel serverLevel) {
+            saved = com.chipoodle.devilrpg.world.VillageManager.estaProtegida(serverLevel, pos);
+            siege = worldSiegeIndex >= 0
+                    && com.chipoodle.devilrpg.world.VillageManager.isVillageUnderAttack(serverLevel, worldSiegeIndex);
+            uncertain = worldSiegeIndex < 0 && !saved;
+        }
+        return !com.chipoodle.devilrpg.world.VillageTerrainPolicy.allowsModification(
+                true, saved, saved, siege, uncertain, esMuro);
     }
 
     /**
@@ -688,6 +1447,10 @@ public class AggressiveZombieEntity extends Zombie {
      * @return {@code true} si ha puesto algo (entonces no hace falta taladrar)
      */
     private boolean puentearHacia(BlockPos towards) {
+        // A2 Stage 7F · una accion GENERICA no puede tocar la ruta activa.
+        if (celdaBloqueadaPorRutaActiva(towards)) {
+            return false;
+        }
         if (tunelRestante <= 0 || puenteEspera > 0) {
             return false;
         }
@@ -707,7 +1470,7 @@ public class AggressiveZombieEntity extends Zombie {
             BlockPos delante = new BlockPos(zPos.getX() + d[0], zPos.getY(), zPos.getZ() + d[1]);
             // OJO: el puente sigue usando el disco horizontal con sus 2 bloques de margen (NO_TOCAR_LA_ALDEA), NO el
             // recinto con altura: lo que se veta aquí es TENDER TABLONES sobre la aldea y su muro, y el muro es grueso.
-            if (dentroDelDiscoDeLaAldea(delante) || !level().getBlockState(delante).isAir()
+            if (protegidoPorLaAldea(delante) || !level().getBlockState(delante).isAir()
                     || !level().getBlockState(delante.above()).isAir()) {
                 continue;
             }
@@ -825,6 +1588,9 @@ public class AggressiveZombieEntity extends Zombie {
      * @return {@code true} si ha hecho algo (apilado o abierto el hueco)
      */
     private boolean apilarBloqueParaSubir(BlockPos hacia) {
+        if (celdaBloqueadaPorRutaActiva(hacia)) {
+            return false;
+        }
         if (apilarRestante <= 0 || apilarEspera > 0) {
             return false;
         }
@@ -886,6 +1652,9 @@ public class AggressiveZombieEntity extends Zombie {
      * @return {@code true} si lo ha puesto
      */
     private boolean ponerEscalon(BlockPos escalon, BlockPos hacia) {
+        if (celdaBloqueadaPorRutaActiva(escalon)) {
+            return false;
+        }
         boolean huecoLibre = level().getBlockState(escalon.above()).isAir()
                 && level().getBlockState(escalon.above(2)).isAir();
         if (!huecoLibre || !level().getBlockState(escalon).isAir()
@@ -901,6 +1670,413 @@ public class AggressiveZombieEntity extends Zombie {
         apilarEspera = APILAR_ENTRE_BLOQUES;
         apilarRestante--;
         return true;
+    }
+
+    /**
+     * A2 Stage 6E · FIX A · <b>COLOCACIÓN ADHERIDA A UNA CARA.</b>
+     * <p>
+     * La primitiva de la casa ({@link #ponerEscalon}) exige suelo firme <b>justo debajo</b>, y esa es exactamente la
+     * limitación medida en `a2n-20261016-170218`: en una cara vertical la única celda colocable es la que pisa el
+     * suelo de la llanura, 5 bloques por debajo del borde de la meseta (&gt; caída segura), así que el descenso no
+     * podía empezar. Minecraft <b>sí</b> permite colocar un bloque <b>adherido a una cara sólida</b> ya existente;
+     * esta variante añade esa cara lateral <b>sin tocar la primitiva de la casa</b> (apilar/puentear/escalera siguen
+     * exactamente igual, con su regla de suelo debajo).
+     * <p>
+     * No admite nada flotante: exige una cara lateral <b>real</b> (bloque presente y con forma de colisión), la celda
+     * vacía, dos huecos encima, permiso de la aldea y que el bloque no caiga dentro del cuerpo del ente.
+     */
+    private boolean ponerEscalonConSoporteLateral(BlockPos escalon, BlockPos hacia) {
+        boolean huecoLibre = level().getBlockState(escalon.above()).isAir()
+                && level().getBlockState(escalon.above(2)).isAir();
+        if (!huecoLibre || !level().getBlockState(escalon).isAir() || protegidoPorLaAldea(escalon)) {
+            return false;
+        }
+        boolean soporteDebajo = com.chipoodle.devilrpg.entity.nav.NavObstruction
+                .hasSolidFace(level(), escalon.below());
+        boolean soporteLateral = false;
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            if (com.chipoodle.devilrpg.entity.nav.NavObstruction.hasSolidFace(level(), escalon.relative(d))) {
+                soporteLateral = true;
+                break;
+            }
+        }
+        if (!soporteDebajo && !soporteLateral) {
+            return false; // ni suelo ni cara: sería un bloque flotante
+        }
+        if (new net.minecraft.world.phys.AABB(escalon).intersects(getBoundingBox().inflate(0.05D))) {
+            return false; // nunca dentro del cuerpo del ente
+        }
+        level().setBlock(escalon, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+        level().playSound(null, escalon, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+        particulasDeTrabajo(escalon);
+        DevilRpg.LOGGER.info("[Siege] asaltante #{} pone un ESCALON ADHERIDO A UNA CARA en {} (soporteDebajo={}"
+                        + " soporteLateral={}, hacia {})",
+                getId(), escalon.toShortString(), soporteDebajo, soporteLateral, hacia.toShortString());
+        apilarEspera = APILAR_ENTRE_BLOQUES;
+        apilarRestante--;
+        return true;
+    }
+
+    /**
+     * A2 Stage 6E · FIX B · <b>ROMPER EL NODO DE LA RUTA.</b>
+     * <p>
+     * La recuperación genérica solo recibía el OBJETIVO, así que un nodo {@code BREAK} de la ruta nunca se ejecutaba
+     * (medido en `a2n-20261016-170218`: `0:BREAK@120,84,-9` con 10 {@code moveTo} y 0 avance). Aquí se rompe
+     * <b>exactamente</b> la celda que pide la transición, con las MISMAS puertas y el MISMO presupuesto que el túnel
+     * (todo pasa por {@link #breakBlockAt}, que ya aplica protección, veto de obra propia y veto de árboles) y solo
+     * si la celda está dentro del alcance acotado del ente.
+     */
+    /**
+     * A2 Stage 7F · ¿esta celda pertenece a la ruta ACTIVA? Solo la consultan las acciones GENERICAS de
+     * recuperacion (puente/escalera/cavado/escalon heredado). Las acciones legitimas de la ruta (BUILD via
+     * `ponerEscalonConSoporteLateral` y BREAK via `romperNodoDeRuta`) NO la consultan: siguen funcionando.
+     */
+    /**
+     * A2 Stage 7G · FUENTE DE DECISION INYECTABLE (solo pruebas). Por defecto es `getRandom().nextBoolean()`, es
+     * decir el comportamiento de juego NO cambia; el arnes instala una secuencia fija para que el fixture controlado
+     * sea reproducible. Medido en Stage 7F: dos corridas del mismo fixture dieron 2/24 y 24/24 porque esta decision
+     * cambia el orden (romper/escalar) de la recuperacion generica.
+     */
+    private static java.util.function.BooleanSupplier fuenteDeDecisionParaPruebas;
+
+    /** A2 Stage 7G · instala (o retira con `null`) la fuente de decision de pruebas. */
+    public static void setFuenteDeDecisionParaPruebas(final java.util.function.BooleanSupplier fuente) {
+        fuenteDeDecisionParaPruebas = fuente;
+    }
+
+    /** A2 Stage 7G · decision romper-vs-escalar: determinista si hay fuente de pruebas, aleatoria si no. */
+    private boolean primeroRomperDecidido() {
+        java.util.function.BooleanSupplier fuente = fuenteDeDecisionParaPruebas;
+        return fuente != null ? fuente.getAsBoolean() : getRandom().nextBoolean();
+    }
+
+    private boolean celdaBloqueadaPorRutaActiva(final BlockPos celda) {
+        if (celda == null || navExecutor == null) {
+            return false;
+        }
+        return navExecutor.celdaDeRutaActiva(celda);
+    }
+
+    private boolean romperNodoDeRuta(final BlockPos nodo) {
+        if (nodo == null) {
+            return false;
+        }
+        BlockState bs = level().getBlockState(nodo);
+        if (bs.isAir() || bs.getCollisionShape(level(), nodo).isEmpty()) {
+            return false; // ya no hay nada que romper en el nodo
+        }
+        if (!alAlcanceDeRotura(nodo)) {
+            return false; // no se pica a distancia
+        }
+        if (tunelRestante <= 0 || tunelEspera > 0) {
+            return false; // mismo presupuesto y misma cadencia que el túnel
+        }
+        boolean roto = breakBlockAt(nodo);
+        if (roto) {
+            tunelRestante--;
+            tunelEspera = TUNEL_ENTRE_BLOQUES;
+        }
+        return roto;
+    }
+
+    /**
+     * A2 Stage 6E · alcance ACOTADO para romper el nodo de una ruta: su celda o la contigua (dx/dz ≤ 2, es decir como
+     * mucho UNA celda vacía de separación) y dentro de la misma envolvente que la caída segura (hasta 3 por debajo,
+     * 2 por encima de los pies). No se pica a distancia.
+     * <p>
+     * Medido en `a2n-20261016-172821`: el ejecutor da por alcanzado un nodo a 1,5 bloques (su radio de llegada), así
+     * que un alcance de 1 bloque dejaba el nodo de la ruta a 2 bloques del ente y el `BREAK` no se ejecutaba nunca.
+     */
+    private boolean alAlcanceDeRotura(final BlockPos nodo) {
+        BlockPos pies = blockPosition();
+        int dx = Math.abs(nodo.getX() - pies.getX());
+        int dz = Math.abs(nodo.getZ() - pies.getZ());
+        int dy = nodo.getY() - pies.getY();
+        return dx <= 2 && dz <= 2 && dy >= -3 && dy <= 2;
+    }
+
+    // ================= A2 Stage 4J: CONSTRUCCION DE ESCALERA DESCENDENTE (acotada y persistente) =========
+    /** Bloques que puede colocar por intento y presupuesto total de la escalera en curso. */
+    private static final int ESCALERA_MAX_BLOQUES = 24;
+    /** Cadencia: ticks minimos entre colocaciones (reutiliza el ritmo de la casa). */
+    private static final int ESCALERA_ENTRE_BLOQUES = 10;
+
+    /** Estado persistente de la escalera en curso. */
+    /** A2 Stage 4O · ANCLA validada: el suelo del que parte la escalera. NUNCA cuenta como escalon construido. */
+    private BlockPos escaleraAncla;
+    /**
+     * A2 Stage 4O · Coordenada del ULTIMO escalon COLOCADO Y VERIFICADO. Solo se asigna tras leer el estado real
+     * del bloque; el ancla no puede poblarlo. Es el unico valor que puede contar como "travesado".
+     */
+    private BlockPos escaleraUltimoColocado;
+    /** Tick en que se verifico la colocacion del escalon actual (la travesia debe ser POSTERIOR). */
+    private long escaleraTickDeColocacion = -1L;
+    private int escaleraColocados;
+    private int escaleraRetraso;
+    private String escaleraMotivo = "-";
+    private String escaleraUltimoRechazo = "-";
+
+    /** Diagnostico de la construccion, para el arnes. */
+    public String escaleraDiag() {
+        return "colocados=" + escaleraColocados + "/" + ESCALERA_MAX_BLOQUES
+                + " ultimo=" + (escaleraUltimoColocado == null ? "-" : escaleraUltimoColocado.toShortString())
+                + " motivo=" + escaleraMotivo + " rechazo=" + escaleraUltimoRechazo;
+    }
+
+    /**
+     * A2 Stage 4J - ESCALERA DESCENDENTE. Un paso por llamada, con cadencia y presupuesto acotados.
+     * <p>
+     * Dispara solo cuando el descenso esta bloqueado por un salto mayor que la caida segura (el caso medido
+     * de z3 y z4: 24 y 41 bloques). La geometria la fija `ponerEscalon`: coloca el bloque en una celda VACIA
+     * con DOS de aire encima y BLOQUE debajo, fuera de la aldea. El bloque colocado se VERIFICA leyendo el
+     * estado real, y el progreso de la escalera NO avanza por haber intentado: solo cuando el asaltante pisa
+     * de verdad el escalon (comprobado en `escaleraPisada`).
+     *
+     * @return true si coloco y verifico un bloque en esta llamada
+     */
+    private boolean construirEscalonDescendente(final BlockPos centro) {
+        if (centro == null) {
+            return false;
+        }
+        if (escaleraRetraso > 0) {
+            escaleraRetraso--;
+            return false;
+        }
+        if (escaleraColocados >= ESCALERA_MAX_BLOQUES) {
+            escaleraUltimoRechazo = "presupuesto agotado (" + ESCALERA_MAX_BLOQUES + ")";
+            return false;
+        }
+        // A2 Stage 4O: el ancla se guarda en su PROPIO campo y jamas se asigna a `escaleraUltimoColocado`.
+        // El fallo medido en `a2n-20261016-022229` fue exactamente esto: al sembrar `escaleraUltimoColocado` con
+        // el suelo que el asaltante ya pisaba, `escaleraPisada()` daba true de inmediato (tick 200) y se registraba
+        // como "escalon travesado" un bloque que nunca se habia construido.
+        if (escaleraAncla == null) {
+            escaleraAncla = blockPosition().below();
+        }
+        BlockPos base = escaleraAncla;
+        int pasoX = Integer.signum(centro.getX() - base.getX());
+        int pasoZ = Integer.signum(centro.getZ() - base.getZ());
+        if (pasoX == 0 && pasoZ == 0) {
+            escaleraUltimoRechazo = "ya estamos sobre el centro";
+            return false;
+        }
+        // A2 Stage 4M - BUSQUEDA ACOTADA Y DETERMINISTA DE CELDA VALIDA.
+        // Motivo medido (a2n-20261016-014427): el candidato diagonal 594,93,599 estaba DENTRO del terreno
+        // (celdaAire=false, hueco1=false, hueco2=false, soporteSolido=true, permitido=true), asi que ponerEscalon
+        // lo rechazaba con razon. En vez de un unico candidato, se recorre un conjunto acotado y ordenado de
+        // posiciones alrededor del rumbo de descenso y se coloca en la PRIMERA que cumpla las cinco precondiciones
+        // y ademas sea geometricamente apropiada (a la altura de descenso, no dentro del terreno, no protegida).
+        StringBuilder intentos = new StringBuilder();
+        int probados = 0;
+        // A2 Stage 4N: se AMPLIA el alcance horizontal de 2 a ALCANCE_HORIZONTAL_DE_ESCALON (8) bloques.
+        // Motivo medido (`a2n-20261016-015724`): los 18 candidatos dentro de 2 bloques eran TODOS roca
+        // (`celdaAire=false`), asi que la busqueda agotaba su radio sin alcanzar nunca el aire. El alcance queda
+        // ACOTADO y documentado, y el orden sigue siendo determinista (dy creciente, luego dx, luego dz).
+        for (int dy = 1; dy <= CAIDA_SEGURA_MAXIMA && probados < MAX_CANDIDATOS_DE_ESCALON; dy++) {
+            for (int dx = 0; dx <= ALCANCE_HORIZONTAL_DE_ESCALON && probados < MAX_CANDIDATOS_DE_ESCALON; dx++) {
+                for (int dz = 0; dz <= ALCANCE_HORIZONTAL_DE_ESCALON && probados < MAX_CANDIDATOS_DE_ESCALON; dz++) {
+                    // Orden determinista: primero el paso recto/diagonal hacia el centro, luego los ensanchamientos.
+                    int sx = pasoX * dx;
+                    int sz = pasoZ * dz;
+                    BlockPos objetivo = new BlockPos(base.getX() + sx, base.getY() - dy, base.getZ() + sz);
+                    probados++;
+                    String r = evaluarCeldaDeEscalon(objetivo, base, dy);
+                    if (r == null) {
+                        if (!ponerEscalon(objetivo, centro)) {
+                            escaleraUltimoRechazo = objetivo.toShortString() + " ponerEscalon=false";
+                            intentos.append(' ').append(objetivo.toShortString()).append("(primitiva=false)");
+                            continue;
+                        }
+                        if (level().getBlockState(objetivo).isAir()) {
+                            escaleraUltimoRechazo = objetivo.toShortString() + " NO verificado tras colocar";
+                            return false;
+                        }
+                        escaleraUltimoColocado = objetivo;
+                        escaleraTickDeColocacion = level().getGameTime();
+                        escaleraColocados++;
+                        escaleraRetraso = ESCALERA_ENTRE_BLOQUES;
+                        escaleraMotivo = "escalon verificado tras " + probados + " candidatos (dy=" + dy + ")";
+                        escaleraUltimoRechazo = "-";
+                        DevilRpg.LOGGER.info("[Siege] CONSTRUCCION-ESCALERA #{} bloque {} verificado"
+                                        + " ({} de {}) dy={} candidatos={} hacia {}",
+                                getId(), objetivo.toShortString(), escaleraColocados,
+                                ESCALERA_MAX_BLOQUES, dy, probados, centro.toShortString());
+                        return true;
+                    }
+                    intentos.append(' ').append(objetivo.toShortString()).append('(').append(r).append(')');
+                }
+            }
+        }
+        escaleraUltimoRechazo = "ningun candidato valido de " + probados + ":" + intentos;
+        escaleraRetraso = ESCALERA_ENTRE_BLOQUES;
+        return false;
+    }
+
+    /** Tope DURO de candidatos que se prueban por intento de construccion (mantiene el coste acotado). */
+    private static final int MAX_CANDIDATOS_DE_ESCALON = 60;
+    /** Alcance HORIZONTAL de la busqueda de celda de escalon, en bloques (acotado y documentado). */
+    private static final int ALCANCE_HORIZONTAL_DE_ESCALON = 8;
+
+    /**
+     * Evalua UNA celda de escalon y devuelve null si es valida, o el motivo exacto del rechazo.
+     * Informa por separado las cinco precondiciones y ademas la coherencia geometrica con el descenso.
+     */
+    private String evaluarCeldaDeEscalon(final BlockPos objetivo, final BlockPos base, final int dy) {
+        boolean celdaAire = level().getBlockState(objetivo).isAir();
+        boolean hueco1 = level().getBlockState(objetivo.above()).isAir();
+        boolean hueco2 = level().getBlockState(objetivo.above(2)).isAir();
+        boolean soporteSolido = !level().getBlockState(objetivo.below()).isAir()
+                && !level().getBlockState(objetivo.below())
+                        .getCollisionShape(level(), objetivo.below()).isEmpty();
+        boolean permitido = !protegidoPorLaAldea(objetivo);
+        if (!celdaAire || !hueco1 || !hueco2 || !soporteSolido || !permitido) {
+            return "celdaAire=" + celdaAire + " hueco1=" + hueco1 + " hueco2=" + hueco2
+                    + " soporte=" + soporteSolido + " permitido=" + permitido;
+        }
+        // Coherencia geometrica: la celda debe estar POR DEBAJO del ancla y como mucho la caida segura.
+        if (objetivo.getY() >= base.getY() || dy > CAIDA_SEGURA_MAXIMA) {
+            return "altura no descendente";
+        }
+        // Y no puede ser una celda flotante: debe tener el bloque de apoyo justo debajo (ya comprobado) y el
+        // propio escalon debe quedar a la altura del primer bloque de aire sobre el suelo real.
+        int superficie = level().getHeightmapPos(
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, objetivo).getY();
+        if (objetivo.getY() != superficie) {
+            return "no esta sobre la superficie (sup=" + superficie + ")";
+        }
+        return null;
+    }
+
+
+    /** ¿El asaltante esta pisando el ultimo escalon construido? (progreso solo por travesia REAL) */
+    /**
+     * A2 Stage 4N - TRAVESIA REAL de un escalon construido. Solo cuenta cuando la posicion real de la entidad
+     * demuestra que ha OCUPADO el escalon: o esta de pie encima (`blockPosition().below()` == escalon) o su celda
+     * actual es la de encima del escalon. No se infiere de proximidad, ni de una colocacion, ni de una ruta.
+     */
+    private boolean escaleraPisada() {
+        // A2 Stage 4O · La travesia solo puede contar si existe un escalon COLOCADO Y VERIFICADO. El ancla vive en
+        // su propio campo, asi que no puede llegar aqui, y si no hay colocacion verificada esto devuelve false.
+        if (escaleraUltimoColocado == null || escaleraTickDeColocacion < 0L) {
+            return false;
+        }
+        long ahora = level().getGameTime();
+        // (4) La observacion tiene que ser POSTERIOR a la colocacion verificada.
+        if (ahora <= escaleraTickDeColocacion) {
+            return false;
+        }
+        // (5) El bloque tiene que seguir existiendo con el estado esperado en el momento de confirmar.
+        boolean bloqueSigue = !level().getBlockState(escaleraUltimoColocado).isAir();
+        if (!bloqueSigue) {
+            escaleraMotivoDeTravesia = "el escalon " + escaleraUltimoColocado.toShortString()
+                    + " YA NO existe (tick " + ahora + ")";
+            return false;
+        }
+        boolean encima = blockPosition().below().equals(escaleraUltimoColocado);
+        boolean enLaCeldaSuperior = blockPosition().equals(escaleraUltimoColocado.above());
+        if (encima || enLaCeldaSuperior) {
+            if (!escaleraTravesiaConfirmada) {
+                escaleraTravesiaConfirmada = true;
+                escaleraTickDeTravesia = ahora;
+                escaleraMotivoDeTravesia = (encima ? "de pie ENCIMA del escalon COLOCADO "
+                        : "en la celda SUPERIOR del escalon COLOCADO ")
+                        + escaleraUltimoColocado.toShortString()
+                        + " con la entidad en " + blockPosition().toShortString()
+                        + " | colocadoEnTick=" + escaleraTickDeColocacion
+                        + " travesadoEnTick=" + escaleraTickDeTravesia
+                        + " | bloqueVerificado=" + bloqueSigue
+                        + " | ancla=" + (escaleraAncla == null ? "-" : escaleraAncla.toShortString())
+                        + " (el ancla NO cuenta como escalon)";
+                DevilRpg.LOGGER.info("[Siege] ESCALON-TRAVESADO #{} {}", getId(), escaleraMotivoDeTravesia);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /** A2 Stage 4N: estado de travesia del ultimo escalon, para telemetria. */
+    private boolean escaleraTravesiaConfirmada;
+    private long escaleraTickDeTravesia = -1L;
+    private String escaleraMotivoDeTravesia = "-";
+
+    /** Diagnostico de travesia, coherente y sin spam por tick. */
+    public String escaleraTravesiaDiag() {
+        return "pisada=" + escaleraPisada()
+                + " confirmada=" + escaleraTravesiaConfirmada
+                + " tickTravesia=" + escaleraTickDeTravesia
+                + " tickColocacion=" + escaleraTickDeColocacion
+                + " ancla=" + (escaleraAncla == null ? "-" : escaleraAncla.toShortString())
+                + " colocados=" + escaleraColocados
+                + " ultimo=" + (escaleraUltimoColocado == null ? "-" : escaleraUltimoColocado.toShortString())
+                + " entidad=" + blockPosition().toShortString()
+                + " motivo=" + escaleraMotivoDeTravesia;
+    }
+
+    /**
+     * A2 Stage 4K · ¿el OBJETIVO ACTIVO exige construir? Se decide con geometria REAL, no solo con la diferencia
+     * vertical: se muestrea la superficie en la columna del propio asaltante y en la del objetivo, y se exige
+     * (a) que la caida supere la caida segura Y (b) que la celda intermedia no tenga soporte real. Ese segundo
+     * criterio es lo que distingue un acantilado de una ruta compleja normal.
+     */
+    public boolean objetivoExigeConstruccion(final BlockPos objetivo) {
+        if (objetivo == null || !descensoExigeConstruir(objetivo)) {
+            return false;
+        }
+        // Hay que construir solo si NO existe aterrizaje soportado a media caida.
+        int miY = blockPosition().getY();
+        BlockPos intermedio = new BlockPos(blockPosition().getX(), miY - CAIDA_SEGURA_MAXIMA, blockPosition().getZ());
+        return !soporteRealYHueco(intermedio);
+    }
+
+    /**
+     * A2 Stage 4K · intenta CONSTRUIR un escalon hacia el objetivo del descenso. Publico para que el ejecutor
+     * pueda enrutar aqui la exhaucion de presupuesto SOLO cuando el objetivo exige construccion.
+     */
+    public boolean construirEscalonHacia(final BlockPos objetivo) {
+        if (!objetivoExigeConstruccion(objetivo)) {
+            return false;
+        }
+        return construirEscalonDescendente(objetivo);
+    }
+
+    /** ¿El descenso actual exige construir? (salto mayor que la caida segura) */
+    private boolean descensoExigeConstruir(final BlockPos centro) {
+        if (centro == null) {
+            return false;
+        }
+        int miY = blockPosition().getY();
+        int objetivoY = centro.getY();
+        int desnivel = miY - objetivoY;
+        if (desnivel <= CAIDA_SEGURA_MAXIMA) {
+            // A2 Stage 4L: se registra POR QUE no se construye (el objetivo ya esta dentro de la caida segura).
+            motivoDeNoConstruir = "objetivo " + centro.toShortString() + " a desnivel " + desnivel
+                    + " <= caida segura " + CAIDA_SEGURA_MAXIMA + " (miY=" + miY + ")";
+            return false;
+        }
+        // La celda de aterrizaje candidata mas baja admisible: no puede estar dentro del terreno.
+        BlockPos primerEscalon = new BlockPos(blockPosition().getX(), objetivoY + CAIDA_SEGURA_MAXIMA,
+                blockPosition().getZ());
+        boolean haySoporte = soporteRealYHueco(primerEscalon);
+        boolean enterrado = !level().getBlockState(primerEscalon).isAir();
+        if (haySoporte && !enterrado) {
+            motivoDeNoConstruir = "objetivo " + centro.toShortString() + " desnivel " + desnivel
+                    + ": SI hay aterrizaje soportado y transitable en " + primerEscalon.toShortString()
+                    + " -> descenso natural, no se construye";
+            return false;
+        }
+        motivoDeConstruir = "objetivo " + centro.toShortString() + " desnivel " + desnivel
+                + ": celda " + primerEscalon.toShortString() + (enterrado ? " DENTRO del terreno" : "")
+                + (haySoporte ? "" : " sin soporte") + " -> hay que construir";
+        return true;
+    }
+
+    /** A2 Stage 4L: motivos registrados en la decision de construir (diagnostico). */
+    private String motivoDeNoConstruir = "-";
+    private String motivoDeConstruir = "-";
+
+    /** Diagnostico de la decision de descenso, para el arnes. */
+    public String decisionDescensoDiag() {
+        return "construir=[" + motivoDeConstruir + "] noConstruir=[" + motivoDeNoConstruir + "]";
     }
 
     /**
@@ -934,8 +2110,7 @@ public class AggressiveZombieEntity extends Zombie {
                         continue; // los tablones del puente son obra del asedio, no un estorbo (I239)
                     }
                     if (canBreakBlock(level().getBlockState(p))) {
-                        breakBlockAt(p);
-                        roto = true;
+                        roto |= breakBlockAt(p);
                     }
                 }
                 // Y el suelo de esa columna, que es el ESCALÓN que queda al abrir el hueco: sin esto el asaltante
@@ -951,8 +2126,7 @@ public class AggressiveZombieEntity extends Zombie {
                             continue; // ni el tablón que el puente pone justo ahí, a la altura de los pies (I239)
                         }
                         if (canBreakBlock(level().getBlockState(p))) {
-                            breakBlockAt(p);
-                            roto = true;
+                            roto |= breakBlockAt(p);
                         }
                     }
                 }
@@ -973,11 +2147,14 @@ public class AggressiveZombieEntity extends Zombie {
      * @return {@code true} si ha cavado
      */
     private boolean cavarHaciaAbajo(BlockPos hacia) {
+        if (celdaBloqueadaPorRutaActiva(hacia)) {
+            return false;
+        }
         if (cavarEspera > 0) {
             return false;
         }
         BlockPos zPos = blockPosition();
-        if (hacia.getY() >= zPos.getY() || zPos.getY() - hacia.getY() > 3) {   // I375: ni el objetivo esta debajo, NI SE CAVA MAS DE 3 HACIA ABAJO (medido: 293 cavadas hasta y=51 y solo 2 de 8 entraron: el asedio entra en la aldea, no persigue a un aldeano por la mina)
+        if (hacia.getY() >= zPos.getY() || zPos.getY() - hacia.getY() > 3) {   // I375: ni el objetivo esta debajo, NI SE CAVA MAS DE 3 HACIA ABAJO
             return false; // el objetivo no está por debajo: el túnel hacia abajo no es la herramienta
         }
         BlockPos abajo = zPos.below();
@@ -987,7 +2164,9 @@ public class AggressiveZombieEntity extends Zombie {
         if (protegidoPorLaAldea(abajo) || !canBreakBlock(level().getBlockState(abajo))) {
             return false; // dentro de la aldea no se cava (ni lo que no se puede romper)
         }
-        breakBlockAt(abajo);
+        if (!breakBlockAt(abajo)) {
+            return false;
+        }
         particulasDeTrabajo(abajo);
         cavarEspera = CAVAR_ENTRE_BLOQUES;
         DevilRpg.LOGGER.info("[Siege] asaltante #{} CAVA hacia abajo en {} para bajar al objetivo ({})", getId(),
@@ -1002,23 +2181,42 @@ public class AggressiveZombieEntity extends Zombie {
                 .add(Attributes.MAX_HEALTH, p.baseHealth())
                 .add(Attributes.MOVEMENT_SPEED, p.baseSpeed())
                 .add(Attributes.ATTACK_DAMAGE, p.baseDamage())
-                .add(Attributes.FOLLOW_RANGE, 64.0D); // Rango de detección base
+                .add(Attributes.FOLLOW_RANGE, 96.0D); // Cubre los 86 bloques máximos a los que aparece la regla de spawn
     }
 
     @Override
     protected void registerGoals() {
         super.registerGoals();
+        // A2: `Zombie.registerGoals()` instala `HurtByTargetGoal` (venganza al ser herido), que NO filtra por clase:
+        // cualquier agresivo que reciba un golpe se pone a perseguir a quien se lo dio, aunque sea otro agresivo.
+        // MEDIDO en el asedio (`build\a2n\a2n-20261015-142513`): a t=2620, justo tras el cambio de fase, CUATRO
+        // asaltantes (z0, z2, z7, z1) se pusieron a la vez a perseguir a los agresivos #209 y #210 — el patron de
+        // una reyerta, no el de una busqueda de objetivo. Se EXCLUYE a los agresivos como represalia, y se conserva
+        // la venganza contra todo lo demas (jugadores, aldeanos, golems, animales).
+        // OJO: NO se puede quitar DENTRO del bucle: `getAvailableGoals()` es la coleccion viva, y mutarla mientras se
+        // recorre provoca NullPointerException (medido: `RUN INVALIDO ... "wrapped" is null` en
+        // `a2n-20261015-144525`, que aborto la corrida con 1/8). Se recoge primero y se quita despues.
+        java.util.List<Goal> venganzasHeredadas = new java.util.ArrayList<>();
+        for (WrappedGoal wrapped : this.targetSelector.getAvailableGoals()) {
+            if (wrapped != null && wrapped.getGoal() instanceof HurtByTargetGoal) {
+                venganzasHeredadas.add(wrapped.getGoal());
+            }
+        }
+        for (Goal obsoleto : venganzasHeredadas) {
+            this.targetSelector.removeGoal(obsoleto);
+        }
+        this.targetSelector.addGoal(1, (new HurtByTargetGoal(this, AggressiveZombieEntity.class)).setAlertOthers());
+        // Zombie.registerGoals() instala ZombieAttackGoal (prioridad 2), MoveThroughVillageGoal (6) y
+        // WaterAvoidingRandomStrollGoal (7). Los tres pueden apropiarse de MOVE; esta entidad delega el movimiento
+        // a sus goals con planner y destino explícitos.
+        this.goalSelector.removeAllGoals(goal -> goal instanceof MeleeAttackGoal
+                || goal instanceof MoveThroughVillageGoal
+                || goal instanceof WaterAvoidingRandomStrollGoal);
         this.goalSelector.addGoal(1, new FloatGoal(this)); // Flotar en agua
-        // Si está en el agua atascado, nadar hacia la orilla más cercana (prioridad alta, antes de romper).
-        // LA PRIORIDAD ES 1, NO 2, Y ESO ES EL ARREGLO (I235, medido el 9-oct-2026): en 2 NO ARRANCABA NUNCA. El
-        // asaltante de vanilla registra `ZombieAttackGoal` en la prioridad 2 (`Zombie.registerGoals`) y ese goal es un
-        // `MeleeAttackGoal`, que pide los flags MOVE y LOOK; `GoalSelector.tick` solo deja entrar a un goal si el que
-        // tiene el flag puede ser reemplazado por él, y `WrappedGoal.canBeReplacedBy` exige una prioridad
-        // ESTRICTAMENTE MENOR. Con las dos en 2, mientras el asaltante tuviera objetivo (o sea, siempre en un asedio)
-        // el ataque tenía el MOVE y el nado no podía entrar: medido con el arnés, 0 ticks corriendo en 60 s dentro
-        // del agua y ni un solo arranque, con un monstruo atascado 20 s contra el borde. En 1 entra él (y `FloatGoal`, que
-        // también es prioridad 1, solo pide el flag JUMP, así que no le estorba) y el ataque, al ser de prioridad
-        // mayor, no puede quitárselo: mientras esté en el agua, el agua es su camino.
+        // Si está atascado en el agua, nada hacia la orilla más cercana (prioridad alta, antes de romper). I235 midió
+        // que prioridad 2 empataba con el ZombieAttackGoal heredado: 0 ticks de nado en 60 s. Ese goal se elimina
+        // arriba porque PursueTargetGoal controla ahora el combate; mantener prioridad 1 permite que salir del agua
+        // siga teniendo precedencia sobre la persecución cuando el atasco ya está confirmado. FloatGoal solo pide JUMP.
         this.goalSelector.addGoal(1, new EscapeWaterGoal(this));
         // Romper el bloque que le estorba cuando está atascado (pero no atacar casas si puede pasar).
         this.goalSelector.addGoal(3, new BreakBlockGoal(this));
@@ -1027,10 +2225,10 @@ public class AggressiveZombieEntity extends Zombie {
         // objetivo está arriba, abajo, o hay un hueco delante?", y los dos son pasivos (no navegan), asi que no se
         // pisan el camino a nadie (I205).
         this.goalSelector.addGoal(3, new TraverseGoal(this));
-        // Comportamiento de MANADA: dispersarse y rodear al objetivo, no apilarse en línea recta. Solo
-        // actúa mientras el zombie NO está bien posicionado; al estarlo, cede el control a MeleeAttack.
-        this.goalSelector.addGoal(4, new HerdBehaviorGoal(this, 1.2D));
-        this.goalSelector.addGoal(5, new MeleeAttackGoal(this, 1.2D, false)); // Ataque cuerpo a cuerpo
+        // Combate y flanqueo comparten un solo goal MOVE: la selección de presa tiene prioridad sobre la marcha a la
+        // aldea, y no hay un segundo goal que reemplace su ruta por un punto de rodeo no validado.
+        this.pursueTargetGoal = new PursueTargetGoal(this);
+        this.goalSelector.addGoal(4, this.pursueTargetGoal);
         this.goalSelector.addGoal(6, new FireballAttackGoal(this)); // Lanzar fuego como los Blaze
         // Si no hay objetivo, marchar hacia el centro de la aldea (para no merodear fuera).
         this.goalSelector.addGoal(7, new MoveToVillageCenterGoal(this));
@@ -1105,15 +2303,25 @@ public class AggressiveZombieEntity extends Zombie {
         // asediador. Si no, se quedaría para siempre sin poder descartarse por lejanía (ver `removeWhenFarAway`).
         boolean eraAsediador = worldSiegeIndex >= 0;
         if (eraAsediador && !level().isClientSide && level() instanceof ServerLevel serverLevel
-                && !VillageManager.hayAsedio(serverLevel, worldSiegeIndex)) {
+                && (!VillageManager.hayAsedio(serverLevel, worldSiegeIndex)
+                || !VillageManager.perteneceAAsedioActual(serverLevel, worldSiegeIndex, getUUID()))) {
+            // A2 REMEDIACIÓN 2 · o el asedio ya no existe, o este UUID no pertenece a la ola VIGENTE (pudo
+            // empezar otro asedio del mismo índice mientras estaba descargado). En ambos casos la campaña es
+            // vieja: se suelta el índice, el destino persistido y el goal de marcha.
             worldSiegeIndex = -1;
         }
-        // El brillo de asediador es una marca de la CAMPAÑA en curso: si al cargar ya no hay asedio, se le quita
-        // (si no, un asediador que se quedó descargado al resolverse el asedio volvería al mundo brillando para
-        // siempre, como si siguiera en campaña). Solo se toca el brillo del que ERA asediador: así no se le
-        // apaga la marca a un monstruo que brille por otra cosa.
+        // El brillo de asediador es una marca de la CAMPAÑA en curso: si al cargar ya no hay campaña, se le
+        // quita. También se limpia el destino/goal persistido, que antes sobrevivía y le hacía marchar solo.
         if (eraAsediador && worldSiegeIndex < 0) {
             setGlowingTag(false);
+            goToCenterActive = false;
+            villageCenter = null;
+        }
+        // A2 REMEDIACIÓN 2 · un centro persistido sin índice de asedio es campaña vieja: no debe seguir
+        // empujando al zombie hacia una aldea que ya no lo reclama.
+        if (worldSiegeIndex < 0) {
+            goToCenterActive = false;
+            villageCenter = null;
         }
         NbtUtils.readBlockPos(tag, "DevilRpgHomePos").ifPresent(pos -> homePos = pos);
         homeRadius = tag.getInt("DevilRpgHomeRadius");
@@ -1147,7 +2355,20 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     @Override
+
     public void aiStep() {
+        // A2 · el ejecutor propio, si está encendido, es el ÚNICO que mueve. Se le da el tick ANTES de los goals.
+        // A2 REMEDIACIÓN 2 · PROPIEDAD ÚNICA: con un objetivo de combate vivo, el movimiento lo lleva el goal
+        // de combate (planificador heredado). El ejecutor se suspende para no emitir un segundo `moveTo` ni
+        // avanzar waypoints por un desplazamiento que no ordenó. Al perder el objetivo, vuelve a planificar.
+        if (com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation() && !this.level().isClientSide) {
+            boolean combate = pursueTargetGoal != null && pursueTargetGoal.estaActivo();
+            if (com.chipoodle.devilrpg.entity.nav.MovementOwnership.executorMayMove(true, combate)) {
+                this.navExecutor.tick();
+            } else if (combate) {
+                this.navExecutor.suspendForCombat();
+            }
+        }
         // I359 · LAS DOS MEDIDAS DEL OBJETIVO, EN EL REGISTRO (lo pidio el jugador). Aqui, cada tick, para verlo tambien
         // cuando NO esta picando (que es justo el caso bueno: el que entra andando). "ENTRO en el recinto" sale UNA vez; el
         // informe de posicion, cada 5 s, para poder medir desde el registro la distancia al centro ((566,566) y (990,990)).
@@ -1390,9 +2611,16 @@ public class AggressiveZombieEntity extends Zombie {
          * eligió no tenía salida) y <b>sigue nadando</b>, sin castigo.
          */
         private static final int RECALCULAR_CADA_TICKS = 200;
+        /** A2 REMEDIACIÓN 2 · escapes de agua por episodio; al agotarlos se retoma la mision. */
+        private static final int MAX_INTENTOS_DE_ESCAPE = 4;
 
         private final AggressiveZombieEntity zombie;
         private BlockPos shore = null;
+        /** A2 REMEDIACIÓN 2 · orillas ya pedidas en este episodio, para no repetir la misma. */
+        private final java.util.Set<BlockPos> orillasIntentadas = new java.util.HashSet<>();
+        private final com.chipoodle.devilrpg.entity.nav.TacticalEscapeBudget escapeBudget =
+                new com.chipoodle.devilrpg.entity.nav.TacticalEscapeBudget(MAX_INTENTOS_DE_ESCAPE);
+        private boolean escapeAgotado;
         private int stuckTicks = 0;
         private int jumpCooldown = 0;
         private double lastX, lastZ;
@@ -1400,15 +2628,21 @@ public class AggressiveZombieEntity extends Zombie {
         private double trackX = Double.NaN, trackZ = 0;
         private int idleStuckTicks = 0;
         private int escapeTicks = 0;
+        // A5.32 · agua atrapada: el movimiento horizontal de una misión no puede aplazar el escape para siempre.
+        // 60 ticks (3 s) sin acercarse a la misión es el umbral independiente; se reinicia al salir del agua o al
+        // acercarse de verdad a la misión.
+        private static final int WATER_DWELL_TICKS = 60;
+        private int waterDwellTicks = 0;
+        private double bestMissionDistance = Double.MAX_VALUE;
+        private boolean waterDwellTracked = false;
+        private int recoveryBreaks = 0;
 
         public EscapeWaterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
-            // Este goal NAVEGA (nada hacia la orilla), así que declara MOVE: los flags son el ÚNICO mecanismo de
-            // prioridad de `GoalSelector`. Y CON MOVE SOLO NO BASTA (I235, medido el 9-oct-2026): un goal solo puede
-            // quitarle el flag a otro si tiene una prioridad ESTRICTAMENTE MENOR (`WrappedGoal.canBeReplacedBy`), así
-            // que este tiene que ir en la prioridad 1 —por delante del `ZombieAttackGoal` de vanilla, que es un
-            // `MeleeAttackGoal` con MOVE en la prioridad 2— o no arranca nunca mientras el asaltante tenga objetivo.
-            // (En la prioridad 2 compartida con el ataque, medido: 0 ticks corriendo en 60 s.)
+            // Este goal NAVEGA (nada hacia la orilla), así que declara MOVE: los flags controlan la prioridad de
+            // `GoalSelector`. En la prueba histórica I235 (9-oct-2026), la prioridad 2 empataba con el
+            // `ZombieAttackGoal` heredado y el nado no arrancaba; registerGoals lo retira ahora. La prioridad 1 se
+            // conserva para que salir del agua tenga precedencia cuando la navegación detecta un atasco real.
             this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE));
         }
 
@@ -1424,25 +2658,56 @@ public class AggressiveZombieEntity extends Zombie {
             if (!zombie.isInWater() || !zombie.isInWaterOrRain()) {
                 trackX = Double.NaN;
                 idleStuckTicks = 0;
+                waterDwellTicks = 0;
+                waterDwellTracked = false;
+                bestMissionDistance = Double.MAX_VALUE;
+                // Episodio nuevo: al salir del agua se repone el presupuesto de escapes.
+                escapeAgotado = false;
+                escapeBudget.reiniciar();
+                orillasIntentadas.clear();
                 return false;
             }
-            // Mientras nada y avanza, no está atascado: que manden el ataque, la manada, romper o el centro.
+            if (escapeAgotado) {
+                return false; // no se vuelve a entrar en el bucle de orillas de este episodio
+            }
+            if (!waterDwellTracked) {
+                waterDwellTracked = true;
+                waterDwellTicks = 0;
+                BlockPos objective = zombie.navExecutor().objective();
+                bestMissionDistance = objective == null ? Double.MAX_VALUE
+                        : zombie.distanceToSqr(objective.getX() + 0.5D, objective.getY() + 0.5D,
+                        objective.getZ() + 0.5D);
+            }
+            waterDwellTicks++;
+            // El movimiento horizontal del goal de misión no reinicia el dwell. Solo lo reinicia un avance
+            // real hacia la misión (>2 bloques más cerca) o salir del agua.
+            BlockPos objective = zombie.navExecutor().objective();
+            if (objective != null && bestMissionDistance < Double.MAX_VALUE) {
+                double d = zombie.distanceToSqr(objective.getX() + 0.5D, objective.getY() + 0.5D,
+                        objective.getZ() + 0.5D);
+                if (d < bestMissionDistance - 4.0D) {
+                    bestMissionDistance = d;
+                    waterDwellTicks = 0;
+                }
+            }
+            // Seguimiento de atasco general para no activarlo mientras nada de verdad.
             double dx = zombie.getX() - trackX;
             double dz = zombie.getZ() - trackZ;
             if (Double.isNaN(trackX) || dx * dx + dz * dz > 0.01D) {
                 trackX = zombie.getX();
                 trackZ = zombie.getZ();
                 idleStuckTicks = 0;
-                return false;
+            } else {
+                idleStuckTicks++;
             }
-            return ++idleStuckTicks > STUCK_TICKS_BEFORE_TRYING;
+            return idleStuckTicks > STUCK_TICKS_BEFORE_TRYING || waterDwellTicks > WATER_DWELL_TICKS;
         }
 
         @Override
         public boolean canContinueToUse() {
-            // NO SE RINDE: mientras esté en el agua, el agua es su camino. Si en RECALCULAR_CADA_TICKS no ha salido,
-            // se recalcula la orilla en `tick()` (por si la elegida no tenía salida) y sigue nadando.
-            return zombie.isInWater() && zombie.isInWaterOrRain();
+            // A2 REMEDIACIÓN 2 · finito: si se agotan los escapes, se deja de pedir orillas y el ejecutor
+            // retoma la mision. Antes podía recalcular una orilla nueva cada 200 ticks sin tope.
+            return !escapeAgotado && zombie.isInWater() && zombie.isInWaterOrRain();
         }
 
         @Override
@@ -1450,12 +2715,47 @@ public class AggressiveZombieEntity extends Zombie {
             stuckTicks = 0;
             jumpCooldown = 0;
             escapeTicks = 0;
+            recoveryBreaks = 0;
             lastX = zombie.getX();
             lastZ = zombie.getZ();
-            shore = findNearestShore();
-            if (shore != null) {
-                // Nadar hacia la orilla (el pathfinding navega por el agua hacia el bloque de tierra).
+            solicitarOrilla(findNearestShore());
+        }
+
+        /** A2 REMEDIACIÓN 2 · pide una orilla contando el intento; al agotar el presupuesto retoma la mision. */
+        private void solicitarOrilla(BlockPos candidata) {
+            if (escapeAgotado) {
+                return;
+            }
+            if (!escapeBudget.intentar()) {
+                escapeAgotado = true;
+                shore = null;
+                // No se declara ARRIVED ni se destruye la mision: el ejecutor vuelve a `misionFinal`.
+                zombie.navExecutor().clearTacticalObjective();
+                DevilRpg.LOGGER.info("[Siege] asaltante #{}: escapes de agua agotados ({}/{});"
+                                + " se retoma la mision", zombie.getId(), escapeBudget.intentos(),
+                        escapeBudget.maxIntentos());
+                return;
+            }
+            if (candidata == null) {
+                shore = null;
+                return; // no hay orilla segura en este intento; el siguiente recalculo cuenta otro intento
+            }
+            shore = candidata;
+            orillasIntentadas.add(candidata.immutable());
+            // A2 Stage 4Q · AUTORIDAD UNICA DE MOVIMIENTO: si el ejecutor propio esta al mando, este goal
+            // SOMETE el objetivo (la orilla) y no navega por su cuenta; si no, se conserva el comportamiento
+            // de siempre. No se elimina la funcionalidad de salir del agua.
+            if (!zombie.navegarTacticamente(shore)) {
                 zombie.getNavigation().moveTo(shore.getX(), shore.getY(), shore.getZ(), 1.2D);
+                if (Boolean.getBoolean("n4.trace")) {
+                    DevilRpg.LOGGER.info("[N4TRACE] uuid={} shore={} custom=false fallback=vanilla nav={} obj={}",
+                            zombie.getUUID(), shore.toShortString(), zombie.navExecutor().state(),
+                            zombie.navExecutor().objective());
+                }
+            } else if (Boolean.getBoolean("n4.trace")) {
+                DevilRpg.LOGGER.info("[N4TRACE] uuid={} shore={} custom=true nav={} obj={}",
+                        zombie.getUUID(), shore.toShortString(), zombie.navExecutor().state(),
+                        zombie.navExecutor().objective());
             }
         }
 
@@ -1466,6 +2766,11 @@ public class AggressiveZombieEntity extends Zombie {
             // que el jugador veía al asaltante parado en el agua).
             trackX = Double.NaN;
             idleStuckTicks = 0;
+            waterDwellTicks = 0;
+            waterDwellTracked = false;
+            // A2 REMEDIACIÓN 2 · al salir del agua se RETOMA la mision; el guard interno no hace nada si no
+            // habia objetivo tactico.
+            zombie.navExecutor().clearTacticalObjective();
         }
 
         @Override
@@ -1482,22 +2787,16 @@ public class AggressiveZombieEntity extends Zombie {
             }
             // Si no avanza en 80 ticks (4 s), re-buscar la orilla y re-navegar.
             if (stuckTicks >= 80) {
-                shore = findNearestShore();
-                if (shore != null) {
-                    zombie.getNavigation().moveTo(shore.getX(), shore.getY(), shore.getZ(), 1.2D);
-                }
+                solicitarOrilla(findNearestShore());
                 stuckTicks = 0;
                 lastX = zombie.getX();
                 lastZ = zombie.getZ();
             }
             // Y si lleva RECALCULAR_CADA_TICKS sin salir del agua, se vuelve a buscar orilla (la que eligió puede no
-            // tener salida) SIN rendirse y SIN castigo: sigue empujando hacia la nueva.
+            // tener salida). El presupuesto de escapes es finito: no hay bucle indefinido.
             if (escapeTicks >= RECALCULAR_CADA_TICKS) {
                 escapeTicks = 0;
-                shore = findNearestShore();
-                if (shore != null) {
-                    zombie.getNavigation().moveTo(shore.getX(), shore.getY(), shore.getZ(), 1.2D);
-                }
+                solicitarOrilla(findNearestShore());
             }
             // Empuje hacia la orilla y hacia arriba MIENTRAS ESTÁ EN EL AGUA, a ritmo de nado (cada 6 ticks, que son
             // 0,3 s): es lo que le hace avanzar a velocidad normal y trepar el desnivel de la orilla. Antes era cada 15
@@ -1505,6 +2804,19 @@ public class AggressiveZombieEntity extends Zombie {
             if (zombie.isInWater() && shore != null && --jumpCooldown <= 0) {
                 jumpTowardShore();
                 jumpCooldown = 6;
+            }
+            // A5.32 · Stage 2 (break) after the bounded jump has failed. At most 3 blocks per escape attempt.
+            if (zombie.isInWater() && shore != null && stuckTicks >= 20 && recoveryBreaks < 3) {
+                int rotos = zombie.romperRecuperacionHacia(shore);
+                if (rotos > 0) {
+                    recoveryBreaks++;
+                    zombie.navegarTacticamente(shore);
+                    stuckTicks = 0;
+                    lastX = zombie.getX();
+                    lastZ = zombie.getZ();
+                    DevilRpg.LOGGER.info("[Siege] asaltante #{} recuperacion de agua: rompio {} bloque(s) hacia {}"
+                                    + " (intento {}/3)", zombie.getId(), rotos, shore.toShortString(), recoveryBreaks);
+                }
             }
         }
 
@@ -1538,7 +2850,10 @@ public class AggressiveZombieEntity extends Zombie {
                         for (int dy = -1; dy <= 0; dy++) {
                             BlockPos ground = new BlockPos(pos.getX() + x, pos.getY() + dy, pos.getZ() + z);
                             if (isLand(ground)) {
-                                return ground.above();
+                                BlockPos candidata = ground.above();
+                                if (!orillasIntentadas.contains(candidata)) {
+                                    return candidata;
+                                }
                             }
                         }
                     }
@@ -1563,6 +2878,9 @@ public class AggressiveZombieEntity extends Zombie {
      * Rompe bloques "débiles" por defecto y obsidiana si su nivel lo permite ({@link #canBreakObsidian()}).
      */
     static class BreakBlockGoal extends Goal {
+        /** Tope de acciones de picado sin avanzar; evita cavar indefinidamente desde el mismo sitio. */
+        private static final int MAX_BREAK_ACTIONS_WITHOUT_PROGRESS = 24;
+        private static final double MIN_EXCAVATION_PROGRESS_SQR = 4.0D;
         /**
      * Cada cuántos ticks se evalúa romper. <b>MEDIDO Y BAJADO (5-oct-2026)</b>: eran <b>60</b> — <b>TRES SEGUNDOS</b>
      * pensando si romper ✗, que es lo que el jugador describió (*«no tarde tanto en romper el muro»*, *«no deben dudar
@@ -1578,18 +2896,32 @@ public class AggressiveZombieEntity extends Zombie {
         /** Dónde estaba el zombie en el tick anterior: es lo que dice si avanza (ver {@link #tick()}). */
         private net.minecraft.world.phys.Vec3 ultimaPos = null;
         private int evalTicks = 0;
+        private int fallosConsecutivos = 0;
+        private int enfriamientoDeFallo = 0;
+        private LivingEntity objetivoDeExcavacion;
+        /** A2 FASE 7 · ultima celda de rotura (centro de la aldea cuando se marcha, objetivo cuando se pelea). */
+        private BlockPos objetivoDeRoturaCache;
+        private net.minecraft.world.phys.Vec3 anclaDeExcavacion;
+        private int accionesDePicadoSinAvance;
+        private boolean excavacionPausada;
 
         public BreakBlockGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
             // A PROPÓSITO sin flags: este goal es un observador pasivo que solo rompe bloques cuando detecta
             // que el zombie no progresa. NO navega ni mira, así que no debe pedir MOVE/LOOK; si los pidiera,
-            // como se registra en prioridad 3 (más alta que la manada y que el ataque), bloquearía al
-            // MeleeAttackGoal de forma permanente mientras haya objetivo y el zombie no atacaría nunca.
+            // como se registra en prioridad 3, bloquearía a la persecución mientras haya objetivo.
         }
 
         @Override
         public boolean canUse() {
-            return zombie.getTarget() != null && zombie.getTarget().isAlive();
+            // A2 FASE 7 · TAMBIEN DURANTE LA MARCHA AL CENTRO.
+            // Antes este goal solo existia con un objetivo de COMBATE. Un asaltante que marchaba al centro con
+            // un muro delante no tenia objetivo vivo y, por tanto, NINGUNA ruta de brecha: se quedaba empujando
+            // la pared. Ahora el objetivo de rotura puede ser el centro de la aldea.
+            if (zombie.getTarget() != null && zombie.getTarget().isAlive()) {
+                return true;
+            }
+            return zombie.isGoToCenterActive() && zombie.getVillageCenter() != null;
         }
 
         @Override
@@ -1597,11 +2929,30 @@ public class AggressiveZombieEntity extends Zombie {
             return canUse();
         }
 
+        /** A2 FASE 7 · a que celda se abre paso: al objetivo de combate o, si no hay, al centro del asedio. */
+        private BlockPos objetivoDeRotura() {
+            LivingEntity target = zombie.getTarget();
+            if (target != null && target.isAlive()) {
+                return target.blockPosition();
+            }
+            if (zombie.isGoToCenterActive() && zombie.getVillageCenter() != null) {
+                return zombie.getVillageCenter();
+            }
+            return null;
+        }
+
         @Override
         public void start() {
             ultimaPos = zombie.position();
             evalTicks = 0;
             blockToBreak = null;
+            fallosConsecutivos = 0;
+            enfriamientoDeFallo = 0;
+            objetivoDeExcavacion = zombie.getTarget();
+            objetivoDeRoturaCache = null;
+            anclaDeExcavacion = zombie.position();
+            accionesDePicadoSinAvance = 0;
+            excavacionPausada = false;
         }
 
         /**
@@ -1621,35 +2972,77 @@ public class AggressiveZombieEntity extends Zombie {
          */
         @Override
         public void tick() {
-            Entity target = zombie.getTarget();
-            if (target == null) {
+            BlockPos hacia = objetivoDeRotura();
+            LivingEntity target = zombie.getTarget();
+            if (hacia == null) {
+                return;
+            }
+            net.minecraft.world.phys.Vec3 posicion = zombie.position();
+            if (objetivoDeExcavacion != target || !hacia.equals(objetivoDeRoturaCache)) {
+                objetivoDeExcavacion = target;
+                objetivoDeRoturaCache = hacia.immutable();
+                anclaDeExcavacion = posicion;
+                accionesDePicadoSinAvance = 0;
+                excavacionPausada = false;
+            } else if (anclaDeExcavacion != null
+                    && posicion.distanceToSqr(anclaDeExcavacion) > MIN_EXCAVATION_PROGRESS_SQR) {
+                anclaDeExcavacion = posicion;
+                accionesDePicadoSinAvance = 0;
+                excavacionPausada = false;
+            }
+            if (excavacionPausada) {
+                ultimaPos = posicion;
+                evalTicks = 0;
+                return;
+            }
+            if (enfriamientoDeFallo > 0) {
+                enfriamientoDeFallo--;
+                ultimaPos = posicion;
                 return;
             }
             boolean seMueve = ultimaPos != null && zombie.position().distanceToSqr(ultimaPos) > MOVIMIENTO_QUE_CUENTA;
-            ultimaPos = zombie.position();
+            ultimaPos = posicion;
             if (seMueve) {
                 evalTicks = 0;
                 return;
             }
             // Pegado al objetivo no se rompe NADA: ahí lo que toca es pelear (y lo de dentro de la aldea está vetado,
             // así que picar alrededor del jugador solo levantaría el pueblo).
-            if (zombie.distanceToSqr(target) < 9.0D) {
+            if (zombie.distanceToSqr(hacia.getX() + 0.5D, hacia.getY() + 0.5D, hacia.getZ() + 0.5D) < 9.0D) {
                 evalTicks = 0;
                 return;
             }
             // Sin moverse durante el periodo: está chocando u orbitando. A abrirse paso.
             if (++evalTicks >= BREAK_EVERY_TICKS) {
-                boolean targetAbove = target.getY() > zombie.getY() + 1.0D;
-                if (targetAbove) {
-                    // El objetivo está ARRIBA: un túnel a su propia altura no le sirve para subir. Rompe un
-                    // ESCALÓN: la columna de delante a la altura de la cabeza (y una más arriba), de modo que
-                    // el obstáculo quede en un bloque de alto que SÍ puede saltar.
-                    breakStepAhead(target);
+                boolean rompio;
+                if (target == null) {
+                    // A2 FASE 7 · MARCHA: solo se ataca el ANILLO REAL DEL MURO (brecha del asedio). No se
+                    // levanta terreno arbitrario fuera del blanco del asedio.
+                    rompio = breakBrechaAhead(hacia);
                 } else {
-                    blockToBreak = blockingBlockAhead();
-                    if (blockToBreak != null) {
-                        breakBlock(blockToBreak);
+                    boolean targetAbove = hacia.getY() > zombie.getY() + 1.0D;
+                    if (targetAbove) {
+                        // El objetivo está ARRIBA: un túnel a su propia altura no le sirve para subir. Rompe un
+                        // ESCALÓN: la columna de delante a la altura de la cabeza (y una más arriba), de modo que
+                        // el obstáculo quede en un bloque de alto que SÍ puede saltar.
+                        rompio = breakStepAhead(hacia);
+                    } else {
+                        blockToBreak = blockingBlockAhead();
+                        rompio = blockToBreak != null && breakBlock(blockToBreak);
                     }
+                }
+                if (rompio) {
+                    fallosConsecutivos = 0;
+                    if (++accionesDePicadoSinAvance >= MAX_BREAK_ACTIONS_WITHOUT_PROGRESS) {
+                        excavacionPausada = true;
+                    }
+                    zombie.pathPlanner.terrainChanged();
+                    // A2 REMEDIACIÓN 2 · la brecha cambia el mundo: ademas del planificador heredado, se
+                    // invalida la ruta/cache del ejecutor propio para que no siga una arista obsoleta.
+                    zombie.navExecutor().terrainChanged();
+                } else {
+                    fallosConsecutivos++;
+                    enfriamientoDeFallo = Math.min(200, 20 << Math.min(fallosConsecutivos, 3));
                 }
                 evalTicks = 0;
             }
@@ -1660,10 +3053,14 @@ public class AggressiveZombieEntity extends Zombie {
          * columna de delante a la altura de la cabeza y uno más arriba. Así un muro de 2–3 bloques queda
          * convertido en un escalón de 1 bloque, que el zombie puede saltar y luego repetir para seguir subiendo.
          */
-        private void breakStepAhead(Entity target) {
+        private boolean breakStepAhead(Entity target) {
+            return target != null && breakStepAhead(target.blockPosition());
+        }
+
+        private boolean breakStepAhead(BlockPos hacia) {
             BlockPos zPos = zombie.blockPosition();
-            int sx = Integer.signum((int) Math.floor(target.getX()) - zPos.getX());
-            int sz = Integer.signum((int) Math.floor(target.getZ()) - zPos.getZ());
+            int sx = Integer.signum(hacia.getX() - zPos.getX());
+            int sz = Integer.signum(hacia.getZ() - zPos.getZ());
             // Columnas candidatas: primero las que van hacia el objetivo, y si está justo encima, las cuatro.
             int[][] dirs = (sx == 0 && sz == 0)
                     ? new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
@@ -1684,14 +3081,71 @@ public class AggressiveZombieEntity extends Zombie {
                         continue;
                     }
                     if (canBreak(zombie.level().getBlockState(p))) {
-                        zombie.breakBlockAt(p);
-                        broke = true;
+                        broke |= zombie.breakBlockAt(p);
                     }
                 }
                 if (broke) {
-                    return;
+                    return true;
                 }
             }
+            return false;
+        }
+
+        /**
+         * A2 FASE 7 · <b>BRECHA DE LA MARCHA</b>: abre paso SOLO en el anillo real del muro generado.
+         * <p>
+         * Antes, un asaltante sin objetivo de combate no tenia ningun camino de rotura: {@code BreakBlockGoal}
+         * exigia {@code getTarget() != null}. Ahora la marcha al centro puede abrir la brecha, pero con dos
+         * limites deliberados: (1) la celda tiene que pertenecer al anillo del muro ({@code esLaMuralla});
+         * (2) se gasta el MISMO presupuesto de tunel ({@code tunelRestante}/{@code tunelEspera}) que las demas
+         * acciones de rotura. Asi no se destruye terreno arbitrario ni se cava sin fin.
+         */
+        private boolean breakBrechaAhead(BlockPos hacia) {
+            if (zombie.tunelRestante <= 0 || zombie.tunelEspera > 0) {
+                return false;
+            }
+            BlockPos zPos = zombie.blockPosition();
+            int cota = zombie.cotaParaElRecinto();
+            int sx = Integer.signum(hacia.getX() - zPos.getX());
+            int sz = Integer.signum(hacia.getZ() - zPos.getZ());
+            int[][] dirs = (sx == 0 && sz == 0)
+                    ? new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}
+                    : new int[][]{{sx, 0}, {0, sz}, {sx, sz}};
+            for (int[] d : dirs) {
+                if (d[0] == 0 && d[1] == 0) continue;
+                for (int dist = 1; dist <= 2; dist++) {
+                    int px = zPos.getX() + d[0] * dist;
+                    int pz = zPos.getZ() + d[1] * dist;
+                    boolean roto = false;
+                    for (int dy = 0; dy <= 2; dy++) {
+                        // A2 REMEDIACIÓN 2 · el presupuesto se comprueba POR BLOQUE, no solo al entrar:
+                        // una columna de 3 no puede dejar `tunelRestante` en negativo.
+                        if (zombie.tunelRestante <= 0) {
+                            break;
+                        }
+                        BlockPos p = new BlockPos(px, zPos.getY() + dy, pz);
+                        if (!zombie.esLaMuralla(p, cota)) {
+                            continue; // fuera del anillo del muro: no es una brecha del asedio
+                        }
+                        if (zombie.protegidoPorLaAldea(p)) {
+                            continue; // la capa/celda no es muralla real: no se toca
+                        }
+                        if (esTablonDelAsalto(p)) {
+                            continue;
+                        }
+                        if (canBreak(zombie.level().getBlockState(p)) && zombie.breakBlockAt(p)) {
+                            zombie.tunelRestante--;
+                            roto = true;
+                        }
+                    }
+                    if (roto) {
+                        zombie.tunelEspera = TUNEL_ENTRE_BLOQUES;
+                        zombie.particulasDeTrabajo(new BlockPos(px, zPos.getY(), pz));
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         /**
@@ -1750,8 +3204,8 @@ public class AggressiveZombieEntity extends Zombie {
             return zombie.canBreakBlock(state);
         }
 
-        private void breakBlock(BlockPos pos) {
-            zombie.breakBlockAt(pos);
+        private boolean breakBlock(BlockPos pos) {
+            boolean broke = zombie.breakBlockAt(pos);
             // Abrir SIEMPRE el hueco de 2 de alto (cuerpo + cabeza). Antes solo se rompía el de arriba si el
             // objetivo estaba más alto, así que contra una valla de 2 bloques el zombie picaba el de abajo,
             // seguía sin caber y necesitaba otra ronda entera (3 s más) para el de arriba.
@@ -1760,7 +3214,7 @@ public class AggressiveZombieEntity extends Zombie {
             // justo lo que el jugador veta (*"una vez dentro ya no puede romper nada"*).
             BlockPos above = pos.above();
             if (!zombie.protegidoPorLaAldea(above) && zombie.canBreakBlock(zombie.level().getBlockState(above))) {
-                zombie.breakBlockAt(above);
+                broke |= zombie.breakBlockAt(above);
             }
             // Y si el objetivo está todavía más arriba, uno más: así el hueco queda en escalón de subida.
             Entity target = zombie.getTarget();
@@ -1768,9 +3222,10 @@ public class AggressiveZombieEntity extends Zombie {
                 BlockPos higher = above.above();
                 if (!zombie.protegidoPorLaAldea(higher)
                         && zombie.canBreakBlock(zombie.level().getBlockState(higher))) {
-                    zombie.breakBlockAt(higher);
+                    broke |= zombie.breakBlockAt(higher);
                 }
             }
+            return broke;
         }
     }
 
@@ -1795,13 +3250,17 @@ public class AggressiveZombieEntity extends Zombie {
      * el camino de otro goal (I205).
      */
     static class TraverseGoal extends Goal {
-        /** Cada cuántos ticks evalúa qué herramienta usar. Medio segundo, igual que el romper (I209). */
-        private static final int EVALUAR_CADA_TICKS = 10;
-        /** Cuánto tiene que moverse (al cuadrado) para contar como que AVANZA: 0,5 bloques. */
-        private static final double MOVIMIENTO_QUE_CUENTA = 0.25D;
+        /** Comprueba el progreso cada medio segundo, igual que el ritmo original de traversal. */
+        private static final int VENTANA_DE_MOVIMIENTO = 10;
+        /** Medio bloque de progreso durante la ventana basta para dejar que la ruta siga. */
+        private static final double DESPLAZAMIENTO_MINIMO_SQR = 0.25D;
+        private static final int VENTANAS_PARADO_ANTES_DE_ACTUAR = 1;
         private final AggressiveZombieEntity zombie;
         private net.minecraft.world.phys.Vec3 ultimaPos = null;
-        private int evalTicks = 0;
+        private int evalTicks;
+        private int ventanasParado;
+        private int enfriamiento;
+        private int fallosConsecutivos;
 
         public TraverseGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -1825,6 +3284,9 @@ public class AggressiveZombieEntity extends Zombie {
         public void start() {
             ultimaPos = zombie.position();
             evalTicks = 0;
+            ventanasParado = 0;
+            enfriamiento = 0;
+            fallosConsecutivos = 0;
         }
 
         /** La celda a la que va: la de lo que ataca o, si no ataca a nadie, la del centro de su aldea. */
@@ -1847,12 +3309,32 @@ public class AggressiveZombieEntity extends Zombie {
                 return;
             }
             if (zombie.distanceToSqr(hacia.getX() + 0.5D, hacia.getY() + 0.5D, hacia.getZ() + 0.5D) < 9.0D) {
+                ultimaPos = zombie.position();
+                evalTicks = 0;
+                ventanasParado = 0;
                 return; // pegado al objetivo: aquí lo que toca es pelear
             }
-            if (++evalTicks < EVALUAR_CADA_TICKS) {
+            if (enfriamiento > 0) {
+                enfriamiento--;
+                ultimaPos = zombie.position();
+                return;
+            }
+            if (++evalTicks < VENTANA_DE_MOVIMIENTO) {
                 return;
             }
             evalTicks = 0;
+            net.minecraft.world.phys.Vec3 posicion = zombie.position();
+            if (ultimaPos != null && posicion.distanceToSqr(ultimaPos) > DESPLAZAMIENTO_MINIMO_SQR) {
+                ultimaPos = posicion;
+                ventanasParado = 0;
+                fallosConsecutivos = 0;
+                return;
+            }
+            ultimaPos = posicion;
+            if (++ventanasParado < VENTANAS_PARADO_ANTES_DE_ACTUAR) {
+                return;
+            }
+            ventanasParado = 0;
             // LA HERRAMIENTA SE ELIGE POR SITUACIÓN, no por un orden fijo (medido en la corrida 36): con el orden
             // fijo (puente → escalera → túnel), un asaltante que tenía una cueva debajo y su objetivo abajo se pasaba
             // la corrida APILANDO escalones hacia arriba —12 cavadas frente a 1 escalón— por culpa del orden. Ahora:
@@ -1871,59 +3353,58 @@ public class AggressiveZombieEntity extends Zombie {
                 // (ROMPER el muro con el tunel de frente, o TREPAR con una escalera de bloques) y, cuando valen las dos,
                 // se ELIGE AL AZAR; si solo vale una, se usa esa. Antes iba en orden fijo (puente -> escalera), asi que
                 // siempre hacia lo mismo. Basta con probarlas en orden aleatorio: la que pueda, entra.
-                boolean primeroRomper = zombie.getRandom().nextBoolean();
+                boolean primeroRomper = zombie.primeroRomperDecidido();
                 for (int intento = 0; intento < 2 && !algo; intento++) {
                     boolean romperAhora = (intento == 0) == primeroRomper;
                     algo = romperAhora ? zombie.puentearHacia(hacia) : zombie.apilarBloqueParaSubir(hacia);
                 }
             }
             if (!algo) {
-                zombie.cavarHaciaAbajo(hacia);
+                algo = zombie.cavarHaciaAbajo(hacia);
+            }
+            if (algo) {
+                fallosConsecutivos = 0;
+                // The block helpers already enforce their own 10/20-tick success cooldown. Do not add another
+                // 40 ticks here or the effective wall traversal rate drops to one action every 50 ticks.
+                enfriamiento = 0;
+                zombie.pathPlanner.terrainChanged();
+                // A2 REMEDIACIÓN 2 · el atravesador también cambia el mundo; la ruta global del ejecutor
+                // no puede sobrevivir a ese cambio.
+                zombie.navExecutor().terrainChanged();
+            } else {
+                // A helper that is still cooling down is not a failed terrain action. Wait only for its cadence;
+                // back off longer only when every available helper was ready and none could change the terrain.
+                int cooldownRestante = Math.max(zombie.puenteEspera,
+                        Math.max(zombie.apilarEspera, zombie.cavarEspera));
+                if (cooldownRestante > 0) {
+                    enfriamiento = Math.max(0, cooldownRestante - VENTANA_DE_MOVIMIENTO);
+                } else {
+                    fallosConsecutivos++;
+                    enfriamiento = Math.min(160, 20 << Math.min(fallosConsecutivos, 3));
+                }
             }
         }
     }
 
     /**
-     * Goal: si el zombie no tiene objetivo de ataque y conoce el centro de la aldea, marcha hacia él.
-     * Si está rodeando sin acercarse (bloqueado por el muro), rompe el bloque delante para entrar.
-     * Al llegar (o encontrar un objetivo) el comportamiento normal retoma el control.
+     * Elige el centro de la aldea solo cuando no hay objetivo de combate. La planificación y el traversal físico
+     * están separados: este goal elige el destino y el planner compartido sigue rutas validadas.
      */
     static class MoveToVillageCenterGoal extends Goal {
-        // Se considera "llegado" al estar a 3 bloques de radio del centro (el goal deja de apuntar ahí).
         private static final double ARRIVE_DIST = 3.0D * 3.0D;
-        private static final int BREAK_EVERY_TICKS = 130;   // I374: 6,5 s buscando rodeo ANTES de romper o trepar (lo pidio el jugador: 6-7 s)
-        private static final double IMPROVEMENT_THRESHOLD = 1.5D;
-        /**
-         * Cuánto se le amplía al buscador de caminos su presupuesto de nodos mientras marcha a la aldea: es lo que le
-         * permite <b>RODEAR</b> una montaña en vez de rendirse al primer intento. Se recalcula la ruta cada
-         * {@link #REPATH_TICKS} (no en cada tick) para que esa búsqueda más cara no cueste una barbaridad.
-         */
-        private static final float RODEO_MULTIPLIER = 6.0F;
-        private static final int REPATH_TICKS = 20;
+        private static final int TICKS_BEFORE_RECOVERY = 80;
         private final AggressiveZombieEntity zombie;
-        private double anchorDist = Double.MAX_VALUE;
-        private int evalTicks = 0;
-        private int repathTicks = 0;
-        /** Dónde estaba el zombie en el tick anterior: lo que dice si AVANZA (ver {@link #tick()}). */
-        private net.minecraft.world.phys.Vec3 ultimaPos = null;
+        private int ticksWithoutRoute;
 
-        public MoveToVillageCenterGoal(AggressiveZombieEntity zombie) {
+        MoveToVillageCenterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
-            // Navega hasta el centro de la aldea: declara MOVE/LOOK para que su prioridad (7) sea real y no
-            // pelee por la navegación con MeleeAttackGoal (5) ni con PatrolHomeGoal (8).
             this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
         }
 
         @Override
         public boolean canUse() {
-            if (!zombie.isGoToCenterActive()) {
-                return false; // la aldea cayó -> dejar de converger al centro
-            }
-            if (zombie.getHomePos() != null) {
-                return false; // tiene un hogar (guarida): patrulla en su lugar
-            }
-            if (zombie.getTarget() != null) {
-                return false; // ya tiene a quién atacar
+            if (!zombie.isGoToCenterActive() || zombie.getHomePos() != null || zombie.getTarget() != null) {
+                return false;
             }
             BlockPos center = zombie.getVillageCenter();
             return center != null && distSqr(center) > ARRIVE_DIST;
@@ -1936,62 +3417,176 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public void start() {
-            anchorDist = centerDistSqr();
-            evalTicks = 0;
-            repathTicks = 0;
-            ultimaPos = zombie.position();
-            // RODEO: más presupuesto de búsqueda para que encuentre la vuelta a la montaña.
-            zombie.getNavigation().setMaxVisitedNodesMultiplier(RODEO_MULTIPLIER);
+            zombie.pathPlanner.reset();
+            ticksWithoutRoute = 0;
         }
 
         @Override
         public void stop() {
-            zombie.getNavigation().resetMaxVisitedNodesMultiplier();
+            zombie.pathPlanner.reset();
         }
 
         @Override
         public void tick() {
             BlockPos center = zombie.getVillageCenter();
-            if (center == null) return;
-            if (--repathTicks <= 0 || zombie.getNavigation().isDone()) {
-                zombie.getNavigation().moveTo(center.getX(), center.getY(), center.getZ(), 1.0D);
-                repathTicks = REPATH_TICKS;
-            }
-            // ABRIRSE PASO, en este orden: (1) el RODEO ya lo intenta el buscador de caminos (con más presupuesto);
-            // si AÚN tiene ruta, se le deja caminar (puede estar dando la vuelta a la montaña, y taladrar ahí sería
-            // un destrozo tonto). (2) Si NO hay ruta y lleva un rato sin avanzar, primero PUENTE (si lo que hay
-            // delante es un abismo) y, si no, TÚNEL lento.
-            // OJO: el "sin avanzar" se mide por DÓNDE ESTÁ EL ZOMBIE, no por la distancia al centro (que baja aunque
-            // esté rodeando) ni por lo que diga el buscador de caminos (que puede tener una ruta viva y no llevar a
-            // ninguna parte). Medido con el arnés: con un muro de piedra de 15 bloques delante, el asaltante lo rodeó
-            // y no picó ni un bloque en tres minutos: el asedio se quedaba fuera para siempre.
-            boolean seMueve = ultimaPos != null && zombie.position().distanceToSqr(ultimaPos) > 0.25D;
-            ultimaPos = zombie.position();
-            double dist = centerDistSqr();
-            if (seMueve) {
-                anchorDist = dist;
-                evalTicks = 0;
+            if (center == null) {
                 return;
             }
-            if (++evalTicks >= BREAK_EVERY_TICKS) {
-                if (!zombie.puentearHacia(center)) {
-                    zombie.breakBlockTowards(center);
+            // A2 · con la navegación propia encendida, este goal SOLO envía el objetivo: el movimiento lo ejecuta
+            // NavExecutor (dueño único). Así los goals dejan de competir por MOVE.
+            // Y el objetivo NO es el centro: el centro es PROTECTED y el planificador nunca lo encola (medido:
+            // metaEncolada=false -> 0/8). Se envía el punto de APROXIMACIÓN, por fuera del muro, en el rumbo del
+            // propio asaltante.
+            if (com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation()) {
+                // A2 · CADENA de etapas a radios decrecientes. `setObjectiveChain` es IDEMPOTENTE: si el contenido no
+                // ha cambiado, no toca nada. Eso corrige la regresion medida en `a2n-20261015-212315`, donde el
+                // envio por tick reiniciaba las etapas (plans=89, moves=0-3).
+                java.util.List<BlockPos> cadena = zombie.cadenaDeAproximacion(center);
+                if (!cadena.isEmpty()) {
+                    zombie.navExecutor().setObjectiveChain(cadena);
                 }
-                anchorDist = centerDistSqr();
-                evalTicks = 0;
+                return;
+            }
+            AggressiveZombiePathPlanner.Result result = zombie.pathPlanner.navigateTo(center, 1.0D);
+            if (result == AggressiveZombiePathPlanner.Result.STALLED
+                    || (result == AggressiveZombiePathPlanner.Result.NO_ROUTE
+                    && ++ticksWithoutRoute >= TICKS_BEFORE_RECOVERY)) {
+                zombie.recoverNavigation(center);
+                ticksWithoutRoute = 0;
+            } else if (result != AggressiveZombiePathPlanner.Result.NO_ROUTE) {
+                ticksWithoutRoute = 0;
             }
         }
 
         private double distSqr(BlockPos center) {
             return zombie.distanceToSqr(center.getX(), center.getY(), center.getZ());
         }
+    }
+    /**
+     * Reúne la persecución y el flanqueo opcional en el único goal de movimiento de combate. El objetivo determina
+     * el destino; el planner compartido valida cada ruta antes de que el zombie la siga.
+     */
+    static class PursueTargetGoal extends Goal {
+        private static final double ATTACK_RANGE_SQR = 4.0D;
+        private static final double FLANK_RANGE_SQR = 36.0D;
+        private static final double FLANK_RADIUS = 3.5D;
+        private static final int DESTINATION_REFRESH_TICKS = 20;
+        private static final int TICKS_BEFORE_RECOVERY = 80;
+        private final AggressiveZombieEntity zombie;
+        private LivingEntity selectedTarget;
+        private BlockPos selectedDestination;
+        private int destinationRefreshTicks;
+        private int attackTicks;
+        private int ticksWithoutRoute;
+        private boolean inAttackRange;
+        /** A2 REMEDIACIÓN 2 · refleja si ESTE goal posee MOVE ahora mismo (no solo si hay target). */
+        private boolean activo;
 
-        private double centerDistSqr() {
-            BlockPos center = zombie.getVillageCenter();
-            return center == null ? Double.MAX_VALUE : distSqr(center);
+        public boolean estaActivo() {
+            return activo;
+        }
+
+        PursueTargetGoal(AggressiveZombieEntity zombie) {
+            this.zombie = zombie;
+            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            LivingEntity target = zombie.getTarget();
+            return target != null && target.isAlive();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void start() {
+            activo = true;
+            zombie.pathPlanner.reset();
+            selectedTarget = null;
+            selectedDestination = null;
+            destinationRefreshTicks = 0;
+            attackTicks = 0;
+            ticksWithoutRoute = 0;
+            inAttackRange = false;
+        }
+
+        @Override
+        public void stop() {
+            activo = false;
+            zombie.pathPlanner.reset();
+            selectedTarget = null;
+            selectedDestination = null;
+            ticksWithoutRoute = 0;
+            inAttackRange = false;
+        }
+
+        @Override
+        public void tick() {
+            LivingEntity target = zombie.getTarget();
+            if (target == null || !target.isAlive()) {
+                return;
+            }
+            if (selectedTarget != target) {
+                zombie.pathPlanner.reset();
+                selectedTarget = target;
+                selectedDestination = null;
+                destinationRefreshTicks = 0;
+                ticksWithoutRoute = 0;
+                inAttackRange = false;
+            }
+            zombie.getLookControl().setLookAt(target, 30.0F, 30.0F);
+            if (zombie.distanceToSqr(target) <= ATTACK_RANGE_SQR) {
+                if (!inAttackRange) {
+                    zombie.pathPlanner.reset();
+                    inAttackRange = true;
+                }
+                if (--attackTicks <= 0) {
+                    zombie.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                    zombie.doHurtTarget(target);
+                    attackTicks = 20;
+                }
+                return;
+            }
+            inAttackRange = false;
+
+            if (selectedDestination == null || --destinationRefreshTicks <= 0) {
+                selectedDestination = chooseDestination(target);
+                destinationRefreshTicks = DESTINATION_REFRESH_TICKS;
+            }
+            AggressiveZombiePathPlanner.Result result = zombie.pathPlanner.navigateTo(selectedDestination, 1.2D);
+            if (result == AggressiveZombiePathPlanner.Result.STALLED
+                    || (result == AggressiveZombiePathPlanner.Result.NO_ROUTE
+                    && ++ticksWithoutRoute >= TICKS_BEFORE_RECOVERY)) {
+                zombie.recoverNavigation(selectedDestination);
+                ticksWithoutRoute = 0;
+            } else if (result != AggressiveZombiePathPlanner.Result.NO_ROUTE) {
+                ticksWithoutRoute = 0;
+            }
+        }
+
+        private BlockPos chooseDestination(LivingEntity target) {
+            BlockPos targetPos = target.blockPosition();
+            if (zombie.distanceToSqr(target) <= FLANK_RANGE_SQR) {
+                return targetPos;
+            }
+            java.util.List<AggressiveZombieEntity> pack = zombie.level().getEntitiesOfClass(
+                    AggressiveZombieEntity.class, zombie.getBoundingBox().inflate(12.0D),
+                    other -> other == zombie || (other.isAlive() && other.getTarget() == target));
+            if (pack.size() < 2) {
+                return targetPos;
+            }
+            pack.sort(java.util.Comparator.comparing(AggressiveZombieEntity::getUUID));
+            int slot = pack.indexOf(zombie);
+            double angle = Math.PI * 2.0D * Math.max(0, slot) / pack.size();
+            int x = (int) Math.floor(target.getX() + Math.cos(angle) * FLANK_RADIUS);
+            int z = (int) Math.floor(target.getZ() + Math.sin(angle) * FLANK_RADIUS);
+            return new BlockPos(x, targetPos.getY(), z);
         }
     }
-
     /**
      * Goal: si el zombie tiene un <b>hogar</b> con radio (p. ej. el núcleo de su guarida), patrulla esa
      * zona: si se aleja más allá del radio vuelve hacia el hogar, y si está dentro y sin objetivo de ataque
@@ -2040,7 +3635,11 @@ public class AggressiveZombieEntity extends Zombie {
             }
             // 1) Si se alejó demasiado, volver al hogar.
             if (outsideRadius(home)) {
-                zombie.getNavigation().moveTo(home.getX(), home.getY(), home.getZ(), SPEED);
+                // A2 Stage 4Q · AUTORIDAD UNICA: con el ejecutor propio al mando se SOMETE el objetivo (el hogar)
+                // y no se navega aqui; si no, comportamiento de siempre.
+                if (!zombie.navegarConEjecutorPropio(home)) {
+                    zombie.getNavigation().moveTo(home.getX(), home.getY(), home.getZ(), SPEED);
+                }
                 return;
             }
             // 2) Si tiene objetivo, el ataque manda (este goal no interfiere).
@@ -2063,94 +3662,6 @@ public class AggressiveZombieEntity extends Zombie {
         private boolean outsideRadius(BlockPos home) {
             double r = zombie.getHomeRadius();
             return zombie.distanceToSqr(home.getX() + 0.5D, home.getY() + 0.5D, home.getZ() + 0.5D) > r * r;
-        }
-    }
-
-    /**
-     * Goal: comportamiento de MANADA. Cuando tiene un objetivo, cuenta cuántos otros zombies
-     * <b>agresivos</b> del mismo bando están atacando a ese mismo objetivo y, en vez de ir todos en línea
-     * recta (apilándose), cada uno persigue un <b>punto de flanqueo</b> alrededor del objetivo según su
-     * "número de miembro". Así rodean al jugador desde ángulos distintos. Cuando están bien posicionados
-     * (cerca del objetivo), el {@link MeleeAttackGoal} (mayor prioridad) toma el control y atacan.
-     */
-    static class HerdBehaviorGoal extends Goal {
-        private final AggressiveZombieEntity zombie;
-        private final double speed;
-        private static final double RADIUS = 3.5D;            // distancia de flanqueo alrededor del objetivo
-        private static final double ARRIVE_SQR = 2.5D * 2.5D; // considerar "posicionado" a < 2.5 bloques del flanco
-        private Vec3 flankPoint = null;
-        private int frameTicks = 0;
-
-        public HerdBehaviorGoal(AggressiveZombieEntity zombie, double speed) {
-            this.zombie = zombie;
-            this.speed = speed;
-            // CLAVE para que el comportamiento de manada funcione de verdad: este goal navega al punto de
-            // flanqueo, así que pide MOVE/LOOK. Antes (sin flags) corría a la vez que el MeleeAttackGoal, y
-            // como MeleeAttackGoal se registra DESPUÉS (prioridad 5) y vuelve a trazar ruta cada 4-11 ticks,
-            // su ruta en línea recta pisaba la de flanqueo casi siempre: el rodeo quedaba anulado. Con MOVE,
-            // el flanqueo (prioridad 4) manda mientras se coloca, y al llegar a su flanco canUse() pasa a
-            // false, suelta el flag y el MeleeAttackGoal retoma el control y ataca: el relevo que documenta
-            // el javadoc de esta clase.
-            this.setFlags(java.util.EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
-        }
-
-        @Override
-        public boolean canUse() {
-            LivingEntity target = zombie.getTarget();
-            if (target == null || !target.isAlive()) return false;
-            // Solo mientras NO está bien posicionado; al estar cerca de su flanco, cede el control a MeleeAttack.
-            return zombie.distanceToSqr(flankPointOr(target)) > ARRIVE_SQR;
-        }
-
-        @Override
-        public boolean canContinueToUse() {
-            return canUse();
-        }
-
-        @Override
-        public void start() {
-            frameTicks = 0;
-            recomputeFlankPoint();
-        }
-
-        @Override
-        public void tick() {
-            LivingEntity target = zombie.getTarget();
-            if (target == null) return;
-            if (frameTicks++ % 40 == 0) {
-                recomputeFlankPoint();
-            }
-            if (flankPoint != null) {
-                zombie.getNavigation().moveTo(flankPoint.x, flankPoint.y, flankPoint.z, speed);
-            }
-        }
-
-        /** Punto de flanqueo, o la posición del objetivo como respaldo (para el cálculo de distancia). */
-        private Vec3 flankPointOr(LivingEntity target) {
-            if (flankPoint != null) return flankPoint;
-            return target.position();
-        }
-
-        /**
-         * Reparte a los zombies agresivos que atacan al MISMO objetivo en ángulos distintos alrededor de
-         * él, usando un índice estable por UUID, para que se dispersen en círculo en vez de apilarse.
-         */
-        private void recomputeFlankPoint() {
-            LivingEntity target = zombie.getTarget();
-            if (target == null) {
-                flankPoint = null;
-                return;
-            }
-            java.util.List<AggressiveZombieEntity> pack = zombie.level().getEntitiesOfClass(
-                    AggressiveZombieEntity.class, zombie.getBoundingBox().inflate(12.0D),
-                    other -> other != zombie && other.getTarget() == target && other.isAlive());
-            int packSize = pack.size() + 1; // + este zombie
-            int index = Math.floorMod((int) zombie.getUUID().getLeastSignificantBits(), packSize);
-            double slotAngle = (2.0 * Math.PI) * index / (double) Math.max(1, packSize);
-            double angle = slotAngle;
-            double tx = target.getX() + Math.cos(angle) * RADIUS;
-            double tz = target.getZ() + Math.sin(angle) * RADIUS;
-            flankPoint = new Vec3(tx, target.getY(), tz);
         }
     }
 

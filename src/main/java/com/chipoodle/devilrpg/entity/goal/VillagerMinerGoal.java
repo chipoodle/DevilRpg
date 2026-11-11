@@ -1054,14 +1054,17 @@ public class VillagerMinerGoal extends Goal {
         if (!VillageGenerator.elMineroPuedePicar(estado)) {
             return true; // algo que ha puesto el pueblo o el jugador: no se toca
         }
-        if (!esLaMina(estado)) {
+        boolean esPiezaDeLaMina = esLaMina(estado);
+        if (!esPiezaDeLaMina) {
             // Partículas y sonido de lo que se rompe: se ve que está picando de verdad. (Las piezas de la mina, si
             // hay que repicarlas, se quitan en silencio: no es "mineral".)
             level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, estado), pos.getX() + 0.5D,
                     pos.getY() + 0.5D, pos.getZ() + 0.5D, 6, 0.3D, 0.3D, 0.3D, 0.0D);
             level.playSound(null, pos, estado.getSoundType().getBreakSound(), SoundSource.BLOCKS, 0.6F, 1.0F);
         }
-        level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        if (!level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL)) {
+            return false; // mutación fallida: el llamador debe reintentar, no darla por hecha
+        }
         ItemStack botin = botinDe(level, estado);
         if (botin != null && !botin.isEmpty()) {
             ItemStack resto = guardarEnInventario(botin);
@@ -1072,6 +1075,9 @@ public class VillagerMinerGoal extends Goal {
         // Y EL AGUJERO QUE ACABO DE ABRIR, CON PAREDES: si al lado hay agua (o lava), se sella AQUÍ. Sin esto el
         // túnel se inunda por la primera veta que se pique en la pared (ver `aislarDelAgua` para la medida).
         aislarDelAgua(level, pos);
+        if (!esPiezaDeLaMina) {
+            VillageManager.premiarOficio(villager, 1);
+        }
         return true;
     }
 

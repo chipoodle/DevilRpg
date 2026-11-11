@@ -40,7 +40,7 @@ public class VillagerTavernGoal extends Goal {
      * que no empaten (en un empate gana el que se engancha antes, y la recogida se le pone al aldeano antes que la
      * taberna).
      */
-    public static final int PRIORIDAD = 7;
+    public static final int PRIORIDAD = -1; // hambre critica puede interrumpir la faena
     /** Puntos de comida que tiene que tener la despensa para que el pueblo vaya a la taberna a comer. */
     private static final int COMIDA_MINIMA = 4;
     /** Ticks que se queda comiendo en la mesa (y de charla) una vez llega. */
@@ -59,6 +59,10 @@ public class VillagerTavernGoal extends Goal {
     @Nullable
     private BlockPos mesa;
     private int espera;
+    private long diagTick;
+    private boolean diag() { return Boolean.getBoolean("devilrpg.fooddiag"); }
+    private boolean usandoDespensa;
+    private BlockPos destinoComida;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
     private int restTicks;
@@ -90,28 +94,48 @@ public class VillagerTavernGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (diag() && VillageManager.hambre(villager) >= 55
+                && villager.level().getGameTime() - diagTick >= 100) {
+            diagTick = villager.level().getGameTime();
+            DevilRpg.LOGGER.info("[FOODDIAG] canUse uuid={} hunger={} restTicks={} attack={} sleep={} pantry={} resultPending=true",
+                    villager.getUUID(), VillageManager.hambre(villager), restTicks,
+                    VillageManager.isVillageUnderAttack((ServerLevel) villager.level(), objectiveIndex),
+                    VillageManager.estaDescansando(villager),
+                    VillagePantry.comida((ServerLevel) villager.level(), center));
+        }
         if (restTicks > 0) {
             restTicks--;
+            if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] reject uuid={} tick={} hunger={} reason=REST_TICKS rest={}", villager.getUUID(), villager.level().getGameTime(), VillageManager.hambre(villager), restTicks);
             return false;
         }
         if (villager.isBaby() || !(villager.level() instanceof ServerLevel level)) {
+            if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] reject uuid={} tick={} hunger={} reason=BABY_OR_LEVEL baby={}", villager.getUUID(), villager.level().getGameTime(), VillageManager.hambre(villager), villager.isBaby());
             return false;
         }
         // Solo con HAMBRE (el mismo reloj que las raciones del pueblo) y con la taberna en pie.
         if (!VillageManager.tieneHambre(level, villager) || !VillageGenerator.tabernaConstruida(level, center)) {
+            if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] reject uuid={} tick={} hunger={} reason=HUNGER_OR_TABERNA hungry={} taberna={}", villager.getUUID(), level.getGameTime(), VillageManager.hambre(villager), VillageManager.tieneHambre(level, villager), VillageGenerator.tabernaConstruida(level, center));
             return false;
         }
-        if (VillageManager.isVillageUnderAttack(level, objectiveIndex)
-                || VillageManager.estaDescansando(villager)) {
+        boolean guardiaCritico = VillageManager.hambre(villager) >= VillageManager.HAMBRE_CRITICA
+                && VillagerGuardGoal.esGuardia(villager);
+        if (!guardiaCritico && (VillageManager.isVillageUnderAttack(level, objectiveIndex)
+                || VillageManager.estaDescansando(villager))) {
+            if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] reject uuid={} tick={} hunger={} reason=ATTACK_OR_SLEEP attack={} sleep={}", villager.getUUID(), level.getGameTime(), VillageManager.hambre(villager), VillageManager.isVillageUnderAttack(level, objectiveIndex), VillageManager.estaDescansando(villager));
             return false;
         }
         // Y tiene que haber comida en la despensa (si no, el reparto del minuto se encargará como siempre).
         if (VillagePantry.comida(level, center) < COMIDA_MINIMA) {
+            if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] reject uuid={} tick={} hunger={} reason=PANTRY pantry={}", villager.getUUID(), level.getGameTime(), VillageManager.hambre(villager), VillagePantry.comida(level, center));
             return false;
         }
-        // Y su mesa tiene que poder alcanzarse: si es la que se quedó aparcada al rendirse (I33), no se levanta a
-        // comer para quedarse empujando la silla: ya comerá del reparto del minuto, que es de donde come el pueblo.
-        return !VillageManager.esPuntoFallido(villager, mesaDeEsteAldeano(level));
+        // La mesa es preferente, pero no puede bloquear la comida: la despensa es el acceso garantizado.
+        destinoComida = VillagePantry.puntoDeApoyo(level, center);
+        usandoDespensa = true;
+        if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] result uuid={} hunger={} dest={} pantry={} result={}",
+                villager.getUUID(), VillageManager.hambre(villager), destinoComida, VillagePantry.comida(level, center),
+                destinoComida != null);
+        return destinoComida != null;
     }
 
     @Override
@@ -120,7 +144,8 @@ public class VillagerTavernGoal extends Goal {
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
         if (villager.level() instanceof ServerLevel level) {
-            VillageManager.caminarHacia(villager, mesaDeEsteAldeano(level), VELOCIDAD);
+            BlockPos destino = usandoDespensa && destinoComida != null ? destinoComida : mesaDeEsteAldeano(level);
+            VillageManager.caminarHacia(villager, destino, VELOCIDAD);
         }
     }
 
@@ -146,7 +171,7 @@ public class VillagerTavernGoal extends Goal {
         if (!(villager.level() instanceof ServerLevel level)) {
             return;
         }
-        BlockPos destino = mesaDeEsteAldeano(level);
+        BlockPos destino = usandoDespensa && destinoComida != null ? destinoComida : mesaDeEsteAldeano(level);
         villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
         // I158 (30-sep-2026) · EL ATASCO SE MIDE CONTRA **EL PASO**, NO CONTRA LA MESA. La mesa es un mueble que NO SE
         // PISA (`destino=dark_oak_fence encima=oak_pressure_plate`), así que la recta hasta ella puede no bajar nunca
@@ -202,11 +227,15 @@ public class VillagerTavernGoal extends Goal {
 
     /** Come una ración de la despensa: la saca de verdad (un punto), marca al aldeano y lo apunta en el log. */
     private void comer(ServerLevel level) {
-        int racion = VillagePantry.sacarComida(VillagePantry.despensa(level, center), 1);
+        int racion = VillagePantry.sacarComida(level, center, 1, 1);
         if (racion <= 0) {
             return; // se acabó la comida: se quedará con hambre y el reparto del minuto decidirá
         }
+        int hambreAntes = VillageManager.hambre(villager);
         VillageManager.marcarComida(level, villager);
+        VillageManager.reducirHambre(villager, 25);
+        DevilRpg.LOGGER.info("[C1-MEAL] uuid={} before={} after={} siege={} tick={}", villager.getUUID(), hambreAntes,
+                VillageManager.hambre(villager), VillageManager.hayAsedio(level, objectiveIndex), level.getGameTime()); // una ración completa baja el hambre por debajo del umbral normal
         level.playSound(null, villager.blockPosition(), SoundEvents.GENERIC_EAT, SoundSource.NEUTRAL, 0.7F, 1.0F);
         VillageManager.ponerSuceso(villager, "Comio en la taberna");
         DevilRpg.LOGGER.info("[Village] {} comio en la taberna (comida de la aldea {})",

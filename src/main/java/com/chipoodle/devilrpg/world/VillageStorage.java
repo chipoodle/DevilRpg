@@ -6,6 +6,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
+import com.chipoodle.devilrpg.DevilRpg;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -127,6 +129,38 @@ public final class VillageStorage {
      * de apoyo devuelto era {@code BlockPos{x=517, y=64, z=666}}. Ver {@link VillageGenerator#bajarElAlmacenAlSuelo}
      * para las aldeas ya construidas.
      */
+    /** Igual que {@link #puntoDeApoyo(ServerLevel, BlockPos)}, pero elige la casilla libre más cercana al aldeano
+     *  dentro del alcance real de depósito. No cambia el radio ni el contenedor. */
+    public static BlockPos puntoDeApoyo(ServerLevel level, BlockPos villageCenter, Villager villager) {
+        int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
+        BlockPos c = centro(villageCenter);
+        java.util.List<WarehouseApproachPolicy.Candidate> candidatos = new java.util.ArrayList<>();
+        for (int r = 0; r <= RADIO_APOYO + 2; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                        continue;
+                    }
+                    BlockPos p = new BlockPos(c.getX() + dx, nivel, c.getZ() + dz);
+                    boolean libre = casillaLibre(level, p);
+                    boolean enRango = Math.sqrt(p.distSqr(c)) <= ALCANCE_ALMACEN;
+                    if (!libre || !enRango) {
+                        continue;
+                    }
+                    var camino = villager.getNavigation().createPath(p, 1);
+                    if (camino == null || !camino.canReach()) {
+                        continue; // dentro del alcance, pero el aldeano no puede llegar a esa casilla
+                    }
+                    double d = villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D);
+                    candidatos.add(new WarehouseApproachPolicy.Candidate(p.getX(), p.getY(), p.getZ(),
+                            libre, enRango, true, d));
+                }
+            }
+        }
+        return WarehouseApproachPolicy.select(candidatos).map(candidato -> new BlockPos(candidato.x(), candidato.y(), candidato.z()))
+                .orElseGet(() -> puntoDeApoyo(level, villageCenter));
+    }
+
     public static BlockPos puntoDeApoyo(ServerLevel level, BlockPos villageCenter) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
         BlockPos c = centro(villageCenter);

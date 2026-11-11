@@ -171,7 +171,9 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
     }
 
     public void updateLevel(Player owner) {
-        tame(owner);
+        if (!this.isTame() || !owner.getUUID().equals(this.getOwnerUUID())) {
+            tame(owner);
+        }
         DevilRpg.LOGGER.debug("-------> updateLevel getOwnerUUID() {} ", this.getOwnerUUID());
         DevilRpg.LOGGER.debug("-------> updateLevel getUUID() {} ", this.getUUID());
         PlayerSkillCapabilityInterface skill = IGenericCapability.getUnwrappedPlayerCapability(owner, PlayerSkillCapability.INSTANCE);
@@ -209,7 +211,8 @@ public class SoulBear extends AbstractChestedHorse implements ITamableEntity, IS
         }
         //tame(owner);
 
-        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(0.4F);
+        double velocidadMontura = this.getMountBearLevel() == 1 ? 0.4D * 0.70D : 0.4D;
+        Objects.requireNonNull(this.getAttribute(Attributes.MOVEMENT_SPEED)).setBaseValue(velocidadMontura);
         Objects.requireNonNull(this.getAttribute(Attributes.MAX_HEALTH)).setBaseValue(saludMaxima);
         Objects.requireNonNull(this.getAttribute(Attributes.ARMOR)).setBaseValue(initialArmor + warBear);
         Objects.requireNonNull(this.getAttribute(Attributes.FOLLOW_RANGE)).setBaseValue(16.0D);

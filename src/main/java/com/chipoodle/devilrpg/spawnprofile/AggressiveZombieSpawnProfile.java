@@ -8,7 +8,7 @@ package com.chipoodle.devilrpg.spawnprofile;
 public final class AggressiveZombieSpawnProfile {
 
     public static final SpawnScaleProfile INSTANCE = new SpawnScaleProfile(
-            67,     // minDistance: zona protegida reducida a un tercio (antes 200)
+            67,     // minDistance: zona protegida hasta 67 bloques (la zona protegida se encoge hasta 17 bloques a máxima amenaza)
             3000,   // maxDistance: probabilidad 1 a partir de 3000 bloques
             17,     // minHardDistance: la zona protegida se encoge hasta 17 bloques a máxima amenaza
             3.0,    // maxScaleMultiplier: +300% de atributos en la distancia máxima

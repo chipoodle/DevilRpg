@@ -145,12 +145,23 @@ public final class HordeManager {
                     // Marchan a la aldea con los goals que ya existían (MoveToVillageCenterGoal).
                     zombie.setVillageCenter(settlement.center());
                     zombie.setGoToCenterActive(true);
+                }
+                // EL LIBRO MAYOR, DESPUÉS DE QUE LA ENTIDAD ESTÉ EN EL MUNDO (Incremento B): si `addFreshEntity`
+                // devuelve false, antes se apuntaba el UUID igual y la horda se registraba con un fantasma que
+                // `isWaveCleared` leía como «limpiada» (la aldea resistía sin un solo enemigo real).
+                if (!level.addFreshEntity(zombie)) {
+                    zombie.discard();
+                    continue;
+                }
+                com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
+                if (settlement != null) {
                     // Y quedan marcados con la aldea a la que van: quien les pegue queda apuntado como
                     // defensor y cobra la recompensa si la horda es rechazada.
                     zombie.setWorldSiegeIndex(settlement.objectiveIndex());
                     wave.add(zombie.getUUID());
+                    // A2 FASE 5/6: ultima celda conocida para distinguir "muerto" de "chunk descargado".
+                    VillageManager.registrarPosicionDeAsediador(zombie.getUUID(), pos);
                 }
-                level.addFreshEntity(zombie);
                 spawned++;
             }
         }

@@ -592,6 +592,7 @@ public final class LairManager {
                 vex.setTarget(player);
             }
             level.addFreshEntity(mob);
+            com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("lair_spawn", level, mob, posicion);
         }
         return mob;
     }

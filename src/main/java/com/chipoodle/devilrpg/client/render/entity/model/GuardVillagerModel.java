@@ -14,6 +14,9 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.npc.Villager;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Modelo del <b>guardia de la aldea</b>: el cuerpo del <b>jugador</b> (humanoide) con la <b>cabeza de aldeano</b> (su
  * narizota, añadida como una caja más de la cabeza). Lo pidió así el jugador: *"puedes usar la del jugador pero con
@@ -37,6 +40,42 @@ public class GuardVillagerModel extends HumanoidModel<Villager> {
 
     public GuardVillagerModel(ModelPart root) {
         super(root);
+    }
+
+    private static final boolean ANIM_AUDIT = Boolean.getBoolean("devilrpg.guardAnimAudit");
+    private static final Map<Integer, String> LAST_ANIM = new HashMap<>();
+    private static int auditLogs;
+
+    @Override
+    public void setupAnim(Villager entity, float limbSwing, float limbSwingAmount,
+                          float ageInTicks, float netHeadYaw, float headPitch) {
+        this.leftArmPose = HumanoidModel.ArmPose.EMPTY;
+        this.rightArmPose = HumanoidModel.ArmPose.EMPTY;
+        if (entity.isBlocking()) {
+            if (entity.getOffhandItem().is(net.minecraft.world.item.Items.SHIELD)) {
+                this.leftArmPose = HumanoidModel.ArmPose.BLOCK;
+            } else if (entity.getMainHandItem().is(net.minecraft.world.item.Items.SHIELD)) {
+                this.rightArmPose = HumanoidModel.ArmPose.BLOCK;
+            }
+        }
+        if (entity.isUsingItem()) {
+            if (entity.getMainHandItem().is(net.minecraft.world.item.Items.BOW)) {
+                this.rightArmPose = HumanoidModel.ArmPose.BOW_AND_ARROW;
+            } else if (entity.getOffhandItem().is(net.minecraft.world.item.Items.BOW)) {
+                this.leftArmPose = HumanoidModel.ArmPose.BOW_AND_ARROW;
+            }
+        }
+        super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+        if (!ANIM_AUDIT || auditLogs >= 80) return;
+        String state = "blocking=" + entity.isBlocking()
+                + " using=" + entity.isUsingItem()
+                + " main=" + entity.getMainHandItem().getItem()
+                + " off=" + entity.getOffhandItem().getItem()
+                + " swinging=" + entity.swinging;
+        if (!state.equals(LAST_ANIM.put(entity.getId(), state))) {
+            auditLogs++;
+            DevilRpg.LOGGER.info("[GuardAnimAudit] id={} uuid={} {}", entity.getId(), entity.getUUID(), state);
+        }
     }
 
     /**

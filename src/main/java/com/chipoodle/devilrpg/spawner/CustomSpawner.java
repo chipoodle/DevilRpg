@@ -183,6 +183,7 @@ public class CustomSpawner {
         mob.setDeltaMovement(0, 0, 0);
         rule.configureEntity(mob, level, player);
         level.addFreshEntity(mob);
+        AggressiveSpawnAudit.success("custom_spawner", level, mob, pos);
         DevilRpg.LOGGER.info("[CustomSpawner] {} en {} - SPAWNEADO en {} (jugador objetivo {})",
                 rule.getEntityType().getDescriptionId(), level.dimension().location(), pos,
                 player.getGameProfile().getName());

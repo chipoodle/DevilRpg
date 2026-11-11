@@ -4422,3 +4422,31 @@ la **guarida** (`LairManager.spawnWave`: 3 cada 25 s a 8–14 bloques del centro
   nunca vio mi archivo). Para tocar la partida hay que escribir en **`level.dat`** (y, por coherencia, en el
   `playerdata` para que no se contradigan). Comprobar SIEMPRE con `NbtTool … --find` en **los dos** archivos, y
   **con el juego cerrado**: al salir, el juego escribe ambos desde memoria y revienta cualquier cambio.
+
+---
+
+## Estado de visión (29-oct-2026) — reconciliación
+
+| Grupo | Documento canónico | Estado |
+|---|---|---|
+| Cerebro autónomo propio | `docs/autonomous-village/02-CUSTOM-BRAIN-VISION.md` | Documentado, **no implementado**; requiere diseño |
+| Geometría adaptada al terreno | `docs/autonomous-village/03-TERRAIN-GEOMETRY-VISION.md` | Documentado, **no implementado**; radio/círculo actual es limitación |
+| Progresión enemiga + fortaleza | `docs/autonomous-village/04-ENEMY-PROGRESSION-FORTRESS-VISION.md` | Documentado, **no implementado**; diseño pendiente |
+| Poderes del jugador | este roadmap + `aldea-invariantes.md` | Sin backlog canónico de poderes pendientes; no inventar nombres |
+
+La tolerancia de **2 bloques** de terreno es una **intención del usuario**, no una
+garantía validada. La progresión enemiga por **tiempo de mundo** queda registrada
+como independiente de la proximidad del jugador; balance y persistencia quedan
+para diseño posterior.
+
+**No autorizado por esta entrada:** reescribir la IA, cambiar geometría/murallas,
+implementar escaleras, escalado temporal enemigo, fortaleza o poderes.
+
+### Poderes existentes documentados (no reabrir)
+
+- `SoulWolf` (lobo), `SoulBear` (oso), `SoulWisp`, `SoulWispArcher`, shulker y
+  esporas: documentados como minions existentes.
+- Pasivo `wisp_ice_spear` documentado.
+- Hombre lobo, hongo y liquen aparecen documentados en invariantes.
+No se ha encontrado un backlog canónico que declare estos poderes «pendientes»;
+no se marcan completados ni se añaden nuevos.

@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.world.VillageFarmCoordinator;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
@@ -219,6 +220,9 @@ public class VillagerFarmGoal extends Goal {
         this.villager = villager;
         this.center = center;
         this.objectiveIndex = objectiveIndex;
+        if (villager.level() instanceof ServerLevel level) {
+            VillageFarmCoordinator.parcelaAsignada(level, center, villager);
+        }
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
@@ -231,6 +235,9 @@ public class VillagerFarmGoal extends Goal {
         if (villager.isBaby() || !(villager.level() instanceof ServerLevel level)) {
             return false;
         }
+        // La parcela se reclama ANTES de que el goal empiece a pedir rumbo: así
+        // el recado nace con una tarea lógica estable (farm:plot).
+        VillageFarmCoordinator.parcelaAsignada(level, center, villager);
         if (villager.getVillagerData().getProfession() != net.minecraft.world.entity.npc.VillagerProfession.FARMER) {
             return false;
         }
@@ -611,6 +618,8 @@ public class VillagerFarmGoal extends Goal {
                 // lo que dejaba el resto a medias—. Solo para cuando no queda ninguna madura, cuando la siguiente ya
                 // no le cabe (entonces el inventario está lleno: a la despensa) o cuando se le acaba el tiempo.
                 if (segada) {
+                    VillageManager.premiarOficio(villager, 1);
+                    VillageManager.registrarTrabajo(level, villager, 1);
                     cosechasSeguidas++;
                     // I166 · LA BARRIDA NO SE CORTA POR CAPACIDAD: se cosecha **TODA** la parcela (lo pidió el jugador:
                     // *"que el granjero coseche TODA su parcela, cada una de las tierras sembradas cuando ya esté
@@ -991,9 +1000,12 @@ public class VillagerFarmGoal extends Goal {
         if (harina.isEmpty()) {
             return;
         }
+        BlockState antes = level.getBlockState(target);
         if (net.minecraft.world.item.BoneMealItem.growCrop(harina, level, target)) {
             level.playSound(null, target, net.minecraft.sounds.SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 0.8F, 1.0F);
             VillageManager.ponerSuceso(villager, "Abono la huerta");
+            DevilRpg.LOGGER.info("[FARMER-GROW] uuid={} target={} antes={} despues={} harina={}",
+                    villager.getUUID(), target.toShortString(), antes, level.getBlockState(target), harina.getCount());
         }
     }
 
@@ -1151,6 +1163,11 @@ public class VillagerFarmGoal extends Goal {
     private int miParcela(ServerLevel level) {
         if (miParcela >= 0) {
             return miParcela;
+        }
+        int coordinada = VillageFarmCoordinator.parcelaAsignada(level, center, villager);
+        if (coordinada >= 0) {
+            miParcela = coordinada;
+            return coordinada;
         }
         int cota = VillageGenerator.cotaDeLaPlaza(level, center);
         Optional<GlobalPos> puesto = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);

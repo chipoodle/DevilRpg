@@ -51,6 +51,7 @@ import net.minecraft.world.item.ArmorMaterials;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -495,6 +496,10 @@ public class PlayerCapabilityForgeEventSubscriber {
     @SubscribeEvent
     public static void onPlayerJoinLevelEvent(EntityJoinLevelEvent event) {
         if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        // Fake players have no connected client to receive capability sync or login restoration.
+        if (player instanceof FakePlayer) {
             return;
         }
         if (player.level().isClientSide)

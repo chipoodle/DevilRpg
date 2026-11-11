@@ -119,6 +119,32 @@ public final class VillageManager {
      */
     private static final int PERIMETER_RADIUS = VillageGenerator.FENCE_RADIUS;
     /**
+     * <b>Barrido vertical de la ola (Incremento C)</b>: cuántos bloques por encima y por debajo de la <b>cota de la
+     * aldea</b> se prueba una columna al buscar una casilla segura. Es una banda <b>acotada y documentada</b> —no un
+     * barrido libre—: por encima caben la ladera, el talud y un tejado del campo ({@code +24}); por debajo, la zanja
+     * y el terreno algo más bajo que el pueblo ({@code -16}), pero no una cueva lejana (un asediador a 30 bloques
+     * bajo la plaza no es un asediador: no se le ve). Además se recorta siempre a la altura del mundo.
+     */
+    private static final int SPAWN_SCAN_ARRIBA_DE_LA_COTA = 24;
+    private static final int SPAWN_SCAN_ABAJO_DE_LA_COTA = 16;
+    /**
+     * Candidatos por asediador (Incremento C): {@value #SPAWN_CANDIDATOS_RADIOS} radios dentro de la banda
+     * {@code WAVE_SPAWN_MIN..WAVE_SPAWN_MAX} por {@value #SPAWN_DESVIOS} desvíos angulares, en orden FIJO. El total
+     * está acotado (15 columnas como máximo por asediador) y no depende de cuántas veces falle: no hay rechazo
+     * aleatorio sin cota.
+     */
+    private static final int SPAWN_CANDIDATOS_RADIOS = 3;
+    /** Desvíos angulares, en orden fijo: el nominal primero y luego a un lado y a otro, cada vez más abiertos. */
+    private static final int[] SPAWN_DESVIOS_ANGULARES = {0, 1, -1, 2, -2};
+    /** Cada desvío angular son 11,25 grados (π/16): 0, ±11,25°, ±22,5°. */
+    private static final double SPAWN_DESVIO_ANGULAR = Math.PI / 16.0D;
+    /**
+     * Margen horizontal (bloques) entre el muro y el cuerpo del asediador: el recinto se mide con
+     * {@link #dentroDelRecinto} y, además, se exige este margen para que la caja del zombie (0,6 de ancho) no
+     * nazca pegada a la cara exterior del muro.
+     */
+    private static final double SPAWN_MARGEN_EXTERIOR = 2.0D;
+    /**
      * Banda <b>vertical</b> del recinto: por debajo de la cota se admiten {@code RECINTO_DY_ABAJO} bloques (una
      * zanja, la acequia, el corral algo más bajo) y por encima {@code RECINTO_DY_ARRIBA} (el segundo piso de la
      * taberna, un tejado, lo alto del muro). Un monstruo <b>mucho</b> más abajo (una cueva bajo la plaza) o más
@@ -132,8 +158,8 @@ public final class VillageManager {
      * jugador pudiera verlo ("si no llegan a los muros, no asedian y no pueden ganar", que es la regla que ya
      * estaba escrita para el asedio).
      */
-    private static final int RECINTO_DY_ABAJO = 6;
-    private static final int RECINTO_DY_ARRIBA = 16;
+    public static final int RECINTO_DY_ABAJO = 6;
+    public static final int RECINTO_DY_ARRIBA = 16;
     /** Cada cuánto se informa del asedio en curso (15 s): un asedio que se pierde a ciegas es una derrota injusta. */
     private static final int SIEGE_STATUS_INTERVAL = 15 * 20;
     /** Cuenta atrás (segundos que quedan) que se avisa aparte, para que el final no pille por sorpresa. */
@@ -171,7 +197,7 @@ public final class VillageManager {
      * ración vale <b>un punto de comida</b> (lo que comía la aldea entera por aldeano y minuto desde el principio):
      * un pan son <b>4 raciones</b>, o sea que un pan da de comer a cuatro aldeanos.
      */
-    private static final int EAT_INTERVAL_TICKS = 60 * 20;
+    private static final int EAT_INTERVAL_TICKS = 20 * 60 * 20; // una comida por dia de Minecraft
     /**
      * Las raciones se reparten en el latido de la aldea que <b>cierra el minuto</b> (un {@code %} sobre
      * {@code gameTime}), así que {@link #EAT_INTERVAL_TICKS} tiene que ser <b>múltiplo</b> de
@@ -191,7 +217,7 @@ public final class VillageManager {
      * Raciones perdidas antes de que el hambre se note: a partir de aquí el aldeano va con <b>Debilidad</b> y
      * <b>Lentitud</b> (3 raciones = 3 minutos sin comer).
      */
-    private static final int HAMBRE_PACIENTE_TICKS = 3 * EAT_INTERVAL_TICKS;
+    private static final int HAMBRE_PACIENTE_TICKS = FoodHungerPolicy.EFFECT_TICKS;
     /** Puntos de comida que da un pan (es lo que vale en vanilla). */
     private static final int FOOD_PER_BREAD = 4;
     /**
@@ -202,7 +228,7 @@ public final class VillageManager {
     /** Comida que cuesta que llegue un aldeano nuevo (nacer o mudarse). */
     private static final int FOOD_TO_GROW = 8;
     /** Tiempo de hambre continua (ticks) antes de que se muera un aldeano: 10 min. */
-    private static final long STARVATION_DEATH_TICKS = 10L * 60L * 20L;
+    private static final long STARVATION_DEATH_TICKS = FoodHungerPolicy.DEATH_TICKS;
 
     /**
      * <b>Cuánto aguanta el sello a un intruso antes de rechazarlo</b> (2 min). En ese rato el que defiende es el
@@ -881,6 +907,39 @@ public final class VillageManager {
 
     private static final Map<ServerLevel, List<VillageDefense>> DEFENSES = new HashMap<>();
 
+    /** A2 REMEDIACIÓN 2 · una sola generación de aldea completa por nivel y tick de juego. */
+    private static final GenerationBudget GENERACION_POR_TICK = new GenerationBudget();
+
+    // ================================================================================================
+    // A2 FASE 5/6 · CICLO DE VIDA DE ENTIDADES CARGADAS vs DESCARGADAS.
+    // `level.getEntity(uuid) == null` NO significa "muerto": puede ser un chunk descargado. Antes se contaba
+    // como baja confirmada y una ola activa se declaraba "limpiada" al descargarse, regalando la victoria.
+    // Aqui se recuerda la ULTIMA CELDA CONOCIDA de cada asediador: si esa celda sigue cargada y la entidad no
+    // existe, la baja (o retirada) es real; si el chunk no esta cargado, el estado es DESCONOCIDO.
+    // Solo se escribe desde el hilo del servidor.
+    // ================================================================================================
+    private static final Map<UUID, BlockPos> ULTIMA_POS_ASEDIO = new HashMap<>();
+    /** Tope defensivo: las olas vivas son pocas; si algo se filtrara, no crece sin limite. */
+    private static final int MAX_POS_ASEDIO = 512;
+
+    /** Registra (o refresca) la ultima celda conocida de un asediador. */
+    public static void registrarPosicionDeAsediador(final UUID uuid, final BlockPos pos) {
+        if (uuid == null || pos == null) {
+            return;
+        }
+        if (ULTIMA_POS_ASEDIO.size() >= MAX_POS_ASEDIO && !ULTIMA_POS_ASEDIO.containsKey(uuid)) {
+            ULTIMA_POS_ASEDIO.clear(); // dato de diagnostico: si se desborda, se reinicia (nunca bloquea el juego)
+        }
+        ULTIMA_POS_ASEDIO.put(uuid, pos.immutable());
+    }
+
+    /** Olvida un asediador (murio, se retiro o el asedio termino). */
+    public static void olvidarPosicionDeAsediador(final UUID uuid) {
+        if (uuid != null) {
+            ULTIMA_POS_ASEDIO.remove(uuid);
+        }
+    }
+
     private VillageManager() {
     }
 
@@ -908,10 +967,15 @@ public final class VillageManager {
      * aldea se volvía a generar <b>encima</b> de la que ya había (nivelaba el terreno, despejaba vegetación y
      * reconstruía cabañas y valla, cargándose lo que hubieras construido cerca).
      */
-    public static void preGenerate(ServerLevel level, int objectiveIndex, BlockPos target) {
+    public static boolean preGenerate(ServerLevel level, int objectiveIndex, BlockPos target) {
         VillageSavedData saved = VillageSavedData.get(level);
         if (saved.isGenerated(objectiveIndex)) {
-            return;
+            return true;
+        }
+        // A2 REMEDIACIÓN 2 · cupo COMPARTIDO por nivel y tick: ObjectiveManager y manageNearby no pueden
+        // generar dos aldeas completas en el mismo tick del jugador. El que llega segundo difiere al siguiente.
+        if (!GENERACION_POR_TICK.tryClaim(level, level.getGameTime())) {
+            return false;
         }
         // `generate` devuelve el PLANO CANÓNICO de la aldea (lo que el generador colocó mientras construía), así
         // que se guarda aquí mismo, con la aldea recién hecha: el obrero sabrá qué reponer sin depender de en qué
@@ -920,6 +984,16 @@ public final class VillageManager {
         entregarRemesaInicialSiHaceFalta(level, saved, objectiveIndex, target);
         VillageGenerator.spawnGuardiasFundadores(level, target, objectiveIndex, saved);
         saved.markGenerated(objectiveIndex);
+        // EL CENTRO AUTORITATIVO SE FIJA AQUÍ, UNA SOLA VEZ (Incremento A): es el punto exacto en el que se acaba de
+        // construir la aldea. A partir de ahora todos los consumidores lo leen de VillageSavedData y ninguno lo
+        // recalcula (ni con el spawn del jugador, ni con el punto medio del plano, que se desplaza al crecer).
+        if (level.hasChunkAt(target)) {
+            saved.setCentre(objectiveIndex, new BlockPos(target.getX(),
+                    VillageGenerator.cotaDeLaPlaza(level, target), target.getZ()));
+        } else {
+            saved.setCentre(objectiveIndex, target);
+        }
+        olvidarCentro(level, objectiveIndex);
         if (plano != null) {
             saved.setBlueprint(objectiveIndex, plano);
             saved.setLayout(objectiveIndex, CURRENT_LAYOUT);
@@ -930,6 +1004,7 @@ public final class VillageManager {
         } else {
             DevilRpg.LOGGER.info("[Village] Aldea {} pre-generada en {}", objectiveIndex, target);
         }
+        return true;
     }
 
     private static void entregarRemesaInicialSiHaceFalta(ServerLevel level, VillageSavedData saved,
@@ -969,7 +1044,10 @@ public final class VillageManager {
         // regresar"*). Se hace una vez porque en cuanto haya UNA aldea apuntada ya no se vuelve a mirar.
         sembrarElDiarioSiHaceFalta(saved, player);
         BlockPos playerPos = player.blockPosition();
-        for (int i = 0; i <= currentIndex; i++) {
+        // A2 FASE 8 · COTA EXPLICITA DEL BUCLE. `currentIndex` viene de una capability persistida; el bucle
+        // debe tener el MISMO limite que `start()` (MAX_OBJECTIVES) y no confiar en que el dato sea sano.
+        final int ultimo = Math.min(currentIndex, MAX_OBJECTIVES);
+        for (int i = 0; i <= ultimo; i++) {
             BlockPos target = ObjectiveTargets.targetOf(anchor, i);
             // LA Y DEL CENTRO ES LA DE LA ALDEA, no la del spawn del jugador: `targetOf` da la altura del ancla (en la
             // partida, 101 con las aldeas a 62-75) y esa Y se arrastraba a TODA la aldea (los goals buscaban los
@@ -978,8 +1056,10 @@ public final class VillageManager {
             if (saved.isGenerated(i)) {
                 BlockPos centro = centroDe(level, i);
                 if (centro != null) {
-                    // lint:ok I1 -- aquí SÍ se quiere la Y del plano, que ya es la cota (ver centroDe)
-                    target = new BlockPos(target.getX(), centro.getY(), target.getZ());
+                    // EL CENTRO ES EL GUARDADO, no el que sale del ancla de este jugador (Incremento A): así el
+                    // muro, el recinto, los asedios y los goals miden desde el mismo punto aunque cambie quién esté
+                    // conectado. La Y ya es la cota (ver centroDe).
+                    target = centro;
                 }
             }
             // Los goals no se serializan con los aldeanos. Restaura la cohorte fundadora tan pronto como su chunk ya
@@ -994,12 +1074,28 @@ public final class VillageManager {
                 asegurarGoalsDeGuardiasFundadores(level, target, i);
                 goalsFundadoresAsegurados = true;
             }
+            // A2 · AUTONOMÍA CON EL JUGADOR LEJOS: si la aldea está cargada, en paz y sin enemigos dentro, su
+            // mantenimiento ordinario sigue latiendo aunque el jugador esté a más de PRE_GENERATE_RADIUS. Antes
+            // el corte de distancia saltaba ANTES de tickVillageLife: al recargar lejos, los oficios no volvían
+            // a registrarse hasta que el jugador se acercaba. Se respeta el mismo poll de 200 ticks y los gates
+            // de ataque/enemigos; no se fuerza ningún goal.
+            boolean vidaLejanaEjecutada = false;
+            if (saved.isGenerated(i) && level.hasChunkAt(target)
+                    && level.getGameTime() % VILLAGE_POLL_TICKS == 0L
+                    && !isVillageUnderAttack(level, i) && !hayEnemigosDentro(level, target)) {
+                tickVillageLife(level, saved, i, target);
+                vidaLejanaEjecutada = true;
+            }
             double distSqr = ObjectiveTargets.horizontalDistSqr(playerPos, target);
             if (distSqr > (double) PRE_GENERATE_RADIUS * PRE_GENERATE_RADIUS) {
                 continue;
             }
             if (!saved.isGenerated(i)) {
-                preGenerate(level, i, target);
+                // A2 REMEDIACIÓN 2 · el cupo es compartido con ObjectiveManager: si ya se genero una aldea
+                // en este tick, esta se difiere (la marca `isGenerated` es persistente).
+                if (!preGenerate(level, i, target)) {
+                    continue;
+                }
             }
             if (saved.isGenerated(i) && level.hasChunkAt(target)) {
                 int cota = VillageGenerator.cotaDeLaPlaza(level, target);
@@ -1056,6 +1152,7 @@ public final class VillageManager {
             // que recibirla también —y sobre todo— la noche del asedio (ver `atenderCamasDelPueblo`).
             if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i)) {
                 atenderCamasDelPueblo(level, target, i);
+                auditarAldeanos(level, target, i);
                 // I183 · Y LOS NOMBRES, TAMBIÉN EN EL ASEDIO (30-sep-2026 — lo reportó el jugador: *«no aparece arriba
                 // el nombre y profesión de los aldeanos»*). El nombrado (y con él la MARCA de «gente del pueblo», que
                 // es lo que da derecho a la etiqueta) vivía dentro de `tickVillageLife`, y esa función solo corre con
@@ -1076,21 +1173,34 @@ public final class VillageManager {
             // celdas del anillo con muro, y los ocho asaltantes entrando ANDANDO ✓).
             // Es idempotente y barato: mira el anillo y, si el muro ya está a la cota, no toca nada.
             if (saved.isGenerated(i) && level.hasChunkAt(target)) {
-                VillageGenerator.asegurarMuro(level, target);
+                // A2 REMEDIACIÓN 2 · `asegurarMuro` recorre el anillo y los portones (miles de lecturas).
+                // El muro es estático: comprobarlo cada 10 s basta y evita el coste por tick.
+                if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L) {
+                    VillageGenerator.asegurarMuro(level, target);
+                }
                 // Y LOS PORTONES DEL MURO, SEGÚN HAYA PUEBLO CERCA (6-oct-2026): abre las dos hojas si un aldeano está
                 // al lado y las cierra en cuanto se va. Va AQUÍ, en el latido de fuera del pueblo, para que funcione
                 // TAMBIÉN con el asedio dentro — que es justo cuando el portón importa. Ver abrirLosPortonesSegunElPueblo.
                 VillageGenerator.abrirLosPortonesSegunElPueblo(level, target);
             }
-            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i) && !isUnderAttack(level, i)) {
+            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i)
+                    && isVillageUnderAttack(level, i)) {
+                MAINTENANCE_RECOVERY_PENDING.add(i);
+                auditarMantenimientoOmitido(level, i, "under_attack");
+            }
+            if (level.getGameTime() % VILLAGE_POLL_TICKS == 0L && !saved.isFallen(i)
+                    && !isVillageUnderAttack(level, i)) {
                 if (saved.isSiegeResolved(i)) {
                     expulsarHostilesDeLaAldea(level, target, i);
                 }
                 if (hayEnemigosDentro(level, target)) {
+                    MAINTENANCE_RECOVERY_PENDING.add(i);
+                    auditarMantenimientoOmitido(level, i, "enemies_inside");
                     continue; // quedan monstruos dentro (los de las cuevas de debajo, por ejemplo): no se toca el pueblo
                 }
                 int vivos = observeVillagers(level, saved, i, target);
-                if (vivos > 0) {
+                MAINTENANCE_RECOVERY_PENDING.remove(i);
+                if (vivos > 0 && !vidaLejanaEjecutada) {
                     tickVillageLife(level, saved, i, target);
                 }
                 if (vivos == 0) {
@@ -1149,6 +1259,24 @@ public final class VillageManager {
                         saved.markRepopulated(i, level.getGameTime());
                         DevilRpg.LOGGER.info("[Village] Aldea {} crece: aldeano {}/{} (comida {})",
                                 i, vivos + 1, VillageGenerator.puestosDelPueblo() + MILICIA_MAX, saved.getFood(i));
+                    }
+                }
+            }
+            if (level.getGameTime() % VILLAGE_POLL_TICKS != 0L
+                    && MAINTENANCE_RECOVERY_PENDING.contains(i)
+                    && !saved.isFallen(i)
+                    && !isUnderAttack(level, i)
+                    && !hayEnemigosDentro(level, target)) {
+                int vivosRecuperacion = observeVillagers(level, saved, i, target);
+                if (vivosRecuperacion > 0) {
+                    // One-shot early poll: the attack cleared between regular 200-tick polls. Reuse the
+                    // normal maintenance path and its idempotent ensure methods; do not force any goal.
+                    tickVillageLife(level, saved, i, target);
+                    MAINTENANCE_RECOVERY_PENDING.remove(i);
+                    if (AUDIT_ALDEANOS && recoveryAuditCount < 20) {
+                        recoveryAuditCount++;
+                        DevilRpg.LOGGER.info("[VillageAudit] recovery poll objective={} time={} villagers={}",
+                                i, level.getGameTime(), vivosRecuperacion);
                     }
                 }
             }
@@ -1416,44 +1544,177 @@ public final class VillageManager {
         return false;
     }
 
-    /** Inicia el asedio al llegar el jugador a la aldea (con un margen antes de la ola). */
+    /**
+     * Inicia el asedio al llegar el jugador a la aldea (con un margen antes de la ola).
+     * <p>
+     * <b>CLAVE DE UNICIDAD (Incremento B): una defensa por {@code (ServerLevel, objectiveIndex)}.</b> En este mod
+     * el índice de objetivo ES la identidad de la aldea: {@link VillageSavedData} guarda por índice el centro
+     * ({@code Center}), el plano, la salud, la presión, {@code Fallen} y {@code resolved}, y {@link #centroDe}
+     * deriva de él la posición. Por eso no se añade un segundo registro de aldeas. El jugador decide
+     * <b>quién</b> defiende (pausa y recompensa), nunca <b>cuántas</b> defensas hay.
+     * <p>
+     * Es idempotente a propósito: los dos llamadores ({@code ObjectiveManager.tick} y {@link #manageNearby}) la
+     * invocan cada tick mientras el jugador está en el radio de llegada. Repetirla para la misma aldea no añade
+     * otra {@link VillageDefense}; solo se sustituye una entrada <b>abandonada antes de lanzar la oleada</b>
+     * (defensor desconectado, cero entidades creadas) y eso se registra. Una defensa con oleada lanzada NUNCA se
+     * reinicia en silencio.
+     */
     public static void start(ServerLevel level, ServerPlayer player, int objectiveIndex, BlockPos target) {
-        // No re-lanzar si ya hay un asedio activo para este jugador/objetivo.
-        for (VillageDefense d : DEFENSES.getOrDefault(level, List.of())) {
-            if (d.playerUUID.equals(player.getUUID()) && d.objectiveIndex == objectiveIndex) {
+        // Validación de entrada: los llamadores pasan datos reales, pero start() es público y una entrada
+        // inválida no debe crear una defensa sin aldea.
+        if (level == null || player == null || target == null
+                || objectiveIndex < 0 || objectiveIndex > MAX_OBJECTIVES) {
+            if (level != null && level.getGameTime() % 40L == 0L) {
+                DevilRpg.LOGGER.info("[Village] asedio NO arranca: entrada invalida (objetivo {}, jugador {},"
+                                + " destino {})", objectiveIndex,
+                        player != null ? player.getUUID() : "null",
+                        target != null ? target.toShortString() : "null");
+            }
+            return;
+        }
+        VillageSavedData saved = VillageSavedData.get(level);
+        // ESTADOS TERMINALES: una aldea caída o con su asedio ya resuelto no vuelve a asediarse. Si quedara una
+        // VillageDefense de una ejecución anterior (libro mayor inconsistente), se retira AQUÍ, de forma explícita
+        // y registrada, para que no bloquee para siempre la comprobación de "ya hay asedio".
+        if (saved.isFallen(objectiveIndex)) {
+            retirarDefensaTerminada(level, objectiveIndex, "la aldea ya cayo");
+            // A2 REMEDIACIÓN 4 · estado terminal normal: `manageNearby` vuelve a llamar a start() cada tick
+            // mientras el jugador sigue en el radio. No se registra en INFO: la aldea ya esta marcada como
+            // caida y repetir el rechazo cada 2 s solo llenaba el log. No hay recompensa ni mensaje aqui.
+            return;
+        }
+        // Si el asedio de este objetivo ya se resolvió (salvada o caída): se guarda, así que al reiniciar la
+        // partida no se puede repetir la recompensa ni volver a asediar la misma aldea.
+        if (saved.isSiegeResolved(objectiveIndex)) {
+            retirarDefensaTerminada(level, objectiveIndex, "el asedio ya se resolvio");
+            // A2 REMEDIACIÓN 4 · mismo caso terminal que la aldea caida: silencio normal, sin recompensa
+            // duplicada ni nuevo mensaje. El estado resuelto sigue persistido en VillageSavedData.
+            return;
+        }
+        // Si el mundo ya la está atacando por su cuenta (horda dirigida a esta aldea): no se apilan dos oleadas
+        // sobre la misma aldea.
+        if (isUnderWorldSiege(level, objectiveIndex)) {
+            logInicioRechazado(level, objectiveIndex, "el mundo ya la esta atacando (horda dirigida)");
+            return;
+        }
+        // UNA SOLA DEFENSA POR ALDEA (Incremento B). Antes se deduplicaba (jugador, objetivo), así que dos
+        // jugadores en la misma aldea creaban DOS VillageDefense: dos oleadas y dos recompensas. La clave es solo
+        // el objetivo; la segunda llamada de OTRO jugador no duplica, y una defensa viva no se reinicia.
+        VillageDefense existente = defensaActivaDe(level, objectiveIndex);
+        if (existente != null) {
+            if (existente.playerUUID.equals(player.getUUID())) {
+                return; // idempotente: el mismo jugador ya la tiene (esto corre cada tick)
+            }
+            if (esDefensaAbandonada(level, existente)) {
+                // Sin oleada lanzada y con el defensor desconectado: no hay entidades ni progreso que perder. Se
+                // dice en el registro y la asume el jugador presente; NO es un reinicio silencioso de un asedio.
+                DevilRpg.LOGGER.info("[Village] Aldea {}: se retira la defensa abandonada de {} (sin oleada,"
+                                + " desconectado) y la asume {}", objectiveIndex, existente.playerUUID,
+                        player.getUUID());
+                List<VillageDefense> lista = DEFENSES.get(level);
+                if (lista != null) {
+                    lista.remove(existente);
+                }
+            } else {
+                logInicioRechazado(level, objectiveIndex, "ya hay una defensa activa del jugador "
+                        + existente.playerUUID + (existente.waveSpawned ? " (oleada lanzada)" : " (en margen)"));
                 return;
             }
         }
-        // Ni si el mundo ya la está atacando por su cuenta (horda dirigida a esta aldea): no se apilan dos
-        // oleadas sobre la misma aldea.
-        if (isUnderWorldSiege(level, objectiveIndex)) {
-            // TRAZA (5-oct-2026): el asedio del mod se salta en silencio si el mundo ya tiene una horda dirigida a esta
-            // aldea, y eso dejaba el registro MUDO (el jugador ve que "no llegan los zombis del asedio inicial" y no
-            // hay ni una linea que diga por que). APRETADA a una linea cada 2 s: su primera version escribia una POR
-            // TICK y dejo 3333 lineas en una sola sesion.
-            if (level.getGameTime() % 40L == 0L) {
-                DevilRpg.LOGGER.info("[Village] asedio de la aldea {} NO arranca: el mundo ya la esta atacando "
-                        + "(horda dirigida)", objectiveIndex);
-            }
-            return;
-        }
-        // Ni si el asedio de este objetivo ya se resolvió (salvada o caída): se guarda, así que al reiniciar
-        // la partida no se puede repetir la recompensa ni volver a asediar la misma aldea.
-        VillageSavedData saved = VillageSavedData.get(level);
-        if (saved.isSiegeResolved(objectiveIndex)) {
-            // TRAZA (5-oct-2026, la otra guarda que puede dejar el asedio inicial sin arrancar; misma cadencia).
-            if (level.getGameTime() % 40L == 0L) {
-                DevilRpg.LOGGER.info("[Village] asedio de la aldea {} NO arranca: su asedio ya consta como resuelto "
-                        + "(salvada o caida)", objectiveIndex);
-            }
-            return;
-        }
         if (!saved.isGenerated(objectiveIndex)) {
-            preGenerate(level, objectiveIndex, target);
+            // A2 REMEDIACIÓN 2 · cupo compartido: si otra aldea se genero en este tick, el asedio espera
+            // al siguiente. No se crea una defensa para una aldea que aun no existe.
+            if (!preGenerate(level, objectiveIndex, target)) {
+                logInicioRechazado(level, objectiveIndex, "generacion de aldea diferida al siguiente tick");
+                return;
+            }
+        }
+        // EL ASEDIO SE ANCLA AL CENTRO AUTORITATIVO (Incremento A), no al que traiga quien llama (que puede venir
+        // del ancla del jugador con OTRA Y, o de una aldea distinta). La oleada, el perímetro y la caída se miden
+        // todos desde d.center, así que este es el punto que los une.
+        BlockPos centro = centroDe(level, objectiveIndex);
+        if (centro != null) {
+            target = centro;
+        }
+        // Re-comprobación local justo antes de insertar. Entre la guarda y aquí solo corre preGenerate (mismo hilo
+        // de servidor), así que es una red de seguridad barata, no una sección crítica.
+        if (defensaActivaDe(level, objectiveIndex) != null) {
+            logInicioRechazado(level, objectiveIndex, "otra defensa se registro durante la preparacion");
+            return;
         }
         DEFENSES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new VillageDefense(objectiveIndex, player.getUUID(), target));
+        DevilRpg.LOGGER.info("[Village] Aldea {}: asedio iniciado por {} (centro {})",
+                objectiveIndex, player.getName().getString(), target.toShortString());
         player.displayClientMessage(Component.literal("Llegaste a la aldea... los monstruos se acercan."), false);
+    }
+
+    /** La defensa activa de esta aldea (una como máximo), o {@code null} si no hay ninguna. */
+    @Nullable
+    /** IMPLEMENT-08 · claim only exact breach target; no active defense means no coordination needed. */
+    public static boolean tryClaimBreach(ServerLevel level, int objectiveIndex, UUID owner, BlockPos target) {
+        VillageDefense defense = defensaActivaDe(level, objectiveIndex);
+        if (defense == null || !defense.wave.contains(owner)) {
+            return true;
+        }
+        return defense.raidBoard.tryClaim(owner, objectiveIndex, target.asLong(), level.getGameTime());
+    }
+
+    public static void releaseBreach(ServerLevel level, int objectiveIndex, UUID owner, BlockPos target) {
+        VillageDefense defense = defensaActivaDe(level, objectiveIndex);
+        if (defense != null && defense.wave.contains(owner)) {
+            defense.raidBoard.release(target.asLong());
+        }
+    }
+
+    private static VillageDefense defensaActivaDe(ServerLevel level, int objectiveIndex) {
+        for (VillageDefense d : DEFENSES.getOrDefault(level, List.of())) {
+            if (d.objectiveIndex == objectiveIndex) {
+                return d;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * ¿Se puede descartar una defensa porque su defensor se desconectó <b>antes</b> de lanzar la oleada? No se
+     * toca una defensa con la oleada ya lanzada: esa está en pausa y sus asediadores existen; reiniciarla sería
+     * justo el "reinicio silencioso" que B prohíbe.
+     */
+    private static boolean esDefensaAbandonada(ServerLevel level, VillageDefense d) {
+        return !d.waveSpawned && level.getServer().getPlayerList().getPlayer(d.playerUUID) == null;
+    }
+
+    /**
+     * Retira una defensa que ya no puede progresar porque su aldea está en un estado terminal (caída o
+     * resuelta). Si tenía asediadores, se les quita la campaña para que vuelvan a descartarse por lejanía.
+     * Se registra siempre: la retirada nunca es silenciosa.
+     */
+    private static void retirarDefensaTerminada(ServerLevel level, int objectiveIndex, String motivo) {
+        List<VillageDefense> lista = DEFENSES.get(level);
+        if (lista == null) {
+            return;
+        }
+        for (int i = lista.size() - 1; i >= 0; i--) {
+            VillageDefense d = lista.get(i);
+            if (d.objectiveIndex != objectiveIndex) {
+                continue;
+            }
+            disableGoToCenter(level, d.wave);
+            lista.remove(i);
+            DevilRpg.LOGGER.info("[Village] Aldea {}: defensa retirada ({}); el libro mayor queda limpio",
+                    objectiveIndex, motivo);
+        }
+    }
+
+    /**
+     * Rechazo de inicio con <b>una línea como máximo cada 2 s</b>: {@link #start} se llama cada tick mientras el
+     * jugador está en el radio de llegada (misma cadencia que usaban las guardas de 5-oct-2026).
+     */
+    private static void logInicioRechazado(ServerLevel level, int objectiveIndex, String motivo) {
+        if (level.getGameTime() % 40L == 0L) {
+            DevilRpg.LOGGER.info("[Village] asedio de la aldea {} NO arranca: {}", objectiveIndex, motivo);
+        }
     }
 
     /** Se llama en el tick del servidor: gestiona el margen, la ola y la resolución del asedio. */
@@ -1519,11 +1780,13 @@ public final class VillageManager {
                     if (d.reintentosDeOleada < 5) {
                         d.reintentosDeOleada++;
                         d.tickTicks -= 100; // cinco segundos más y se vuelve a intentar
-                        DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada salio VACIA (0 asediadores, intento {}/5):"
-                                + " se reintenta en 5 s", d.objectiveIndex, d.reintentosDeOleada);
+                        DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada salio VACIA (0 asediadores, intento {}/5){}:"
+                                        + " se reintenta en 5 s", d.objectiveIndex, d.reintentosDeOleada,
+                                motivoDeOleada(d));
                     } else {
-                        DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada NO PUDO NACER en 5 intentos: el asedio se"
-                                + " cancela SIN darse por ganado (antes se regalaba la victoria)", d.objectiveIndex);
+                        DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada NO PUDO NACER en 5 intentos{}: el asedio se"
+                                        + " cancela SIN darse por ganado (antes se regalaba la victoria)",
+                                d.objectiveIndex, motivoDeOleada(d));
                         list.remove(i);
                     }
                     continue;
@@ -1542,16 +1805,26 @@ public final class VillageManager {
                 // atacante de la ola dentro: la valla está a 62 del centro, así que el pueblo es casi todo
                 // lo que se ve alrededor de la plaza).
                 informarDelAsedio(level, d);
-                // Y UNA OLA VACÍA **NO** ESTÁ LIMPIA: sin este `!isEmpty()`, una oleada que no nació se leía como
-                // «limpiada» en el mismo tick y el pueblo se salvaba solo.
-                boolean waveCleared = !d.wave.isEmpty() && isWaveCleared(level, d.wave);
+                // FASE 5/6: con las entidades cargadas se refresca su ultima celda conocida; si luego se
+                // descargan, esa celda permite distinguir "muerto" de "no observable".
+                actualizarPosicionesConocidas(level, d.wave);
+                // A2 FASE 5 · "OLA LIMPIA" EXIGE QUE LA OLA HAYA NACIDO Y QUE SUS BAJAS ESTEN CONFIRMADAS.
+                // `waveSpawned` solo es true cuando al menos un asediador entro de verdad en el mundo; a partir
+                // de ahi, una lista vacia significa que TODOS fueron descontados (muerte/retirada observada).
+                // Antes se exigia `!wave.isEmpty()`, asi que una ola legitima diezmada por completo NUNCA se
+                // declaraba limpia y solo resolvia por timeout. Una ola que no nacio sigue sin poder ganar.
+                SiegeWaveState.WaveState estadoOla = estadoDeLaOla(level, d.waveSpawned, d.wave);
+                boolean waveCleared = estadoOla == SiegeWaveState.WaveState.LIMPIA_CONFIRMADA;
                 boolean timeout = d.tickTicks > GRACE_TICKS + SIEGE_TIMEOUT_TICKS;
+                // Al agotarse el tiempo se distingue "alguno quedo fuera" de "no se puede saber": un asediador
+                // descargado no puede hacer caer la aldea ni regalar la salvacion.
+                EstadoDelPerimetro perimetro = timeout ? estadoDelPerimetro(level, d)
+                        : EstadoDelPerimetro.DESCONOCIDO;
+                boolean siegeFailed = timeout && !waveCleared && perimetro == EstadoDelPerimetro.ALGUNO_FUERA;
+                boolean sinConfirmar = timeout && !waveCleared
+                        && (perimetro == EstadoDelPerimetro.DESCONOCIDO
+                        || SiegeWaveState.salvacionSinRecompensa(estadoOla));
                 if (waveCleared || timeout) {
-                    // Al acabarse el tiempo, si queda algún zombie FUERA del perímetro (sin pasar los muros) se
-                    // considera que el asedio FRACASÓ y la aldea se salva. Sin esta regla, unos pocos zombies
-                    // escondidos que nunca llegan al centro (y por tanto no se pueden matar) hacían caer la
-                    // aldea sin que el jugador pudiera evitarlo: si no llegan, no asedian, no pueden ganar.
-                    boolean siegeFailed = timeout && !waveCleared && !allZombiesInsidePerimeter(level, d);
                     ServerPlayer player = level.getServer().getPlayerList().getPlayer(d.playerUUID);
                     if (player != null) {
                         PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
@@ -1569,11 +1842,12 @@ public final class VillageManager {
                                         ? "¡Has salvado la aldea! El objetivo avanza."
                                         : "¡Has salvado la aldea!"), false);
                             } else {
-                                // La ola se dio por limpia porque los atacantes dejaron de estar cargados (el
-                                // jugador se alejó y se descargaron los chunks), no porque los matara: la aldea
-                                // se salva igual, pero NO hay recompensa. Misma regla que en las hordas del mundo.
-                                DevilRpg.LOGGER.info("[Village] Aldea {} salvada sin limpiar la horda ({} atacantes "
-                                                + "sin confirmar): sin recompensa", d.objectiveIndex, d.wave.size());
+                                // A2 FASE 5 · La ola esta confirmada como limpia (todas sus entidades son bajas
+                                // observadas) pero el libro mayor aun conserva UUID (el descuento no llego). No
+                                // consta que el jugador las matara: la aldea se salva, pero NO hay recompensa.
+                                DevilRpg.LOGGER.info("[Village] Aldea {} salvada con bajas confirmadas pero libro"
+                                                + " mayor sin vaciar ({} UUID): sin recompensa",
+                                        d.objectiveIndex, d.wave.size());
                                 player.displayClientMessage(Component.literal(isCurrentObjective
                                         ? "Los monstruos se dispersaron: la aldea está a salvo. El objetivo avanza."
                                         : "Los monstruos se dispersaron: la aldea está a salvo."), false);
@@ -1584,6 +1858,16 @@ public final class VillageManager {
                             player.displayClientMessage(Component.literal(isCurrentObjective
                                     ? "Los monstruos no lograron entrar: ¡la aldea está a salvo! El objetivo avanza."
                                     : "Los monstruos no lograron entrar: ¡la aldea está a salvo!"), false);
+                        } else if (sinConfirmar) {
+                            // A2 FASE 5/6 · NO HAY PRUEBA DE NADA: quedan UUID cuyo chunk esta descargado.
+                            // No se declara "limpiada" (no hubo bajas confirmadas) y no se paga recompensa; pero
+                            // tampoco se hace caer la aldea por un estado que no se puede observar.
+                            DevilRpg.LOGGER.info("[Village] Aldea {}: asedio cerrado sin confirmacion ({} atacantes"
+                                            + " descargados o sin posicion); la aldea se salva SIN recompensa",
+                                    d.objectiveIndex, d.wave.size());
+                            player.displayClientMessage(Component.literal(isCurrentObjective
+                                    ? "Los monstruos se dispersaron: la aldea está a salvo. El objetivo avanza."
+                                    : "Los monstruos se dispersaron: la aldea está a salvo."), false);
                         } else {
                             // La aldea ha caído de verdad (los monstruos entraron y sobrevivieron al tiempo):
                             // se marca caída (definitiva) y queda en ruinas. Antes solo se avisaba por chat y la
@@ -1700,100 +1984,306 @@ public final class VillageManager {
         }
     }
 
+    /** Motivo registrado por {@link #spawnWave} para el aviso de reintento/cancelación (vacío si no hubo fallo). */
+    private static String motivoDeOleada(VillageDefense d) {
+        return d.motivoFalloDeOleada.isEmpty() ? "" : " [" + d.motivoFalloDeOleada + "]";
+    }
+
     private static void spawnWave(ServerLevel level, VillageDefense d) {
-        Random random = new Random();
-        // La ola crece al alejarse del ancla, pero con un LÍMITE: no se extiende infinitamente.
+        // La ola crece al alejarse del ancla, pero con un LÍMITE: no se extiende infinitamente (SIN CAMBIOS).
         int count = DEFAULT_WAVE + Math.min(d.objectiveIndex * 2, MAX_WAVE_EXTRA);
+        // La cota de la aldea se mide UNA vez por oleada: es la referencia del barrido vertical (y no cambia).
+        int cota = VillageGenerator.cotaDeLaPlaza(level, d.center);
+        // Contabilidad de fallos (Incremento B, ampliada en C): se acumula por CAUSA y se escribe UNA vez al final
+        // de la oleada. Nunca una línea por spawn ni por tick.
+        int sinSitio = 0;
+        int fallosCreacion = 0;
+        int fallosInsercion = 0;
         for (int i = 0; i < count; i++) {
-            double angle = random.nextDouble() * Math.PI * 2.0D;
-            // FUERA de la valla (hoy FENCE_RADIUS = 62, no 36: el radio viejo de este comentario hizo medir mal
-            // una defensa entera): spawnea entre WAVE_SPAWN_MIN y WAVE_SPAWN_MAX bloques del centro.
-            int dist = WAVE_SPAWN_MIN + random.nextInt(WAVE_SPAWN_MAX - WAVE_SPAWN_MIN);
-            int x = (int) Math.round(d.center.getX() + Math.cos(angle) * dist);
-            int z = (int) Math.round(d.center.getZ() + Math.sin(angle) * dist);
-            int y = VillageGenerator.spawnY(level, x, z);
-            AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
-                    .create(level, null, new BlockPos(x, y, z), MobSpawnType.MOB_SUMMONED, true, true);
-            if (zombie != null) {
-                zombie.moveTo(x + 0.5D, y, z + 0.5D, 0.0F, 0.0F);
-                zombie.setVillageCenter(d.center); // para que converja hacia la aldea si no ataca
-                // Marcado con la aldea: al morir se descuenta de la ola, y así la recompensa solo se paga si
-                // de verdad se limpió la horda (no si se dispersó al descargarse los chunks).
-                zombie.setWorldSiegeIndex(d.objectiveIndex);
-                level.addFreshEntity(zombie);
-                d.wave.add(zombie.getUUID());
+            // SELECCIÓN DE LA CASILLA (Incremento C): fuera del recinto, con apoyo sólido, la caja completa del
+            // asediador libre de bloques y sin fluido ni peligro. Null = no hay sitio seguro en esta columna de
+            // candidatos (acotada); el asediador no se crea.
+            BlockPos sitio = buscarSitioDeLaOleada(level, d, cota, i);
+            if (sitio == null) {
+                sinSitio++;
+                continue;
             }
-        }
-        // SEGUNDA PASADA, SIN EXIGIR QUE LA CASILLA SEA «DE SPAWN» (3-oct-2026, medido). `create(..., alignPosition =
-        // true, ...)` devuelve **null** si el sitio no le gusta (agua, hierba alta, dentro de un bloque, chunk sin
-        // cargar) y una oleada ENTERA podía quedarse en CERO: el registro del jugador enseña «¡Defiende la aldea de
-        // los monstruos!» y un segundo después «Aldea 0 salvada», sin un solo spawn. Aquí se prueba el suelo, un
-        // bloque por encima y uno por debajo, se acepta cualquier casilla con el aire libre y el zombie se coloca a
-        // mano con `moveTo` (el `alignPosition = false` es justo lo que quita la exigencia de casilla).
-        if (d.wave.isEmpty()) {
-            for (int i = 0; i < count * 3 && d.wave.isEmpty(); i++) {
-                double angle = random.nextDouble() * Math.PI * 2.0D;
-                int dist = WAVE_SPAWN_MIN + random.nextInt(WAVE_SPAWN_MAX - WAVE_SPAWN_MIN);
-                int x = (int) Math.round(d.center.getX() + Math.cos(angle) * dist);
-                int z = (int) Math.round(d.center.getZ() + Math.sin(angle) * dist);
-                int y = VillageGenerator.spawnY(level, x, z);
-                for (int dy = 1; dy >= -1; dy--) {
-                    BlockPos donde = new BlockPos(x, y + dy, z);
-                    if (!level.getBlockState(donde).isAir() || !level.getBlockState(donde.above()).isAir()) {
-                        continue;
-                    }
-                    AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
-                            .create(level, null, donde, MobSpawnType.MOB_SUMMONED, false, false);
-                    if (zombie == null) {
-                        continue;
-                    }
-                    zombie.moveTo(x + 0.5D, y + dy, z + 0.5D, 0.0F, 0.0F);
-                    zombie.setVillageCenter(d.center);
-                    zombie.setWorldSiegeIndex(d.objectiveIndex);
-                    level.addFreshEntity(zombie);
-                    d.wave.add(zombie.getUUID());
-                    break;
-                }
+            AggressiveZombieEntity zombie = crearAsediador(level, sitio);
+            if (zombie == null) {
+                fallosCreacion++;
+                continue;
             }
+            zombie.moveTo(sitio.getX() + 0.5D, sitio.getY(), sitio.getZ() + 0.5D, 0.0F, 0.0F);
+            zombie.setVillageCenter(d.center); // para que converja hacia la aldea si no ataca
+            // EL LIBRO MAYOR SE ESCRIBE DESPUÉS DE QUE LA ENTIDAD ESTÉ DE VERDAD EN EL MUNDO (Incremento B):
+            // `addFreshEntity` puede devolver false (casilla rechazada, UUID duplicado...). Antes se apuntaba el
+            // UUID igual y el asedio quedaba "con oleada" con cero asediadores reales; ahora solo cuenta lo que
+            // existe. El marcador persistente (`DevilRpgWorldSiegeIndex`) también se pone ya añadida, de modo que
+            // morir/retirarse la descuenta de ESTA defensa (y de ninguna otra).
+            if (!level.addFreshEntity(zombie)) {
+                fallosInsercion++;
+                zombie.discard(); // no llegó al mundo: no se deja una entidad suelta
+                continue;
+            }
+            com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("village_siege_wave", level, zombie, sitio);
+            zombie.setWorldSiegeIndex(d.objectiveIndex);
+            d.wave.add(zombie.getUUID());
+            // FASE 5/6: ultima celda conocida, para distinguir "muerto" de "descargado" mas tarde.
+            registrarPosicionDeAsediador(zombie.getUUID(), sitio);
         }
-        DevilRpg.LOGGER.info("[Village] Aldea {}: OLEADA de {} asediadores intentados, {} colocados (radio {}-{})",
-                d.objectiveIndex, count, d.wave.size(), WAVE_SPAWN_MIN, WAVE_SPAWN_MAX);
+        int fallos = sinSitio + fallosCreacion + fallosInsercion;
+        // Motivo grabado en la defensa para que el aviso de `tick` (reintento/cancelación) diga POR QUÉ no nació,
+        // distinguiendo «no hay sitio seguro» de «la entidad no se pudo crear/insertar» (Incremento C, punto 8).
+        d.motivoFalloDeOleada = d.wave.isEmpty() && fallos > 0
+                ? "intentados=" + count + ", sin_sitio_seguro=" + sinSitio + ", creacion=" + fallosCreacion
+                        + ", insercion=" + fallosInsercion
+                : "";
+        DevilRpg.LOGGER.info("[Village] Aldea {}: OLEADA de {} asediadores intentados, {} colocados (radio {}-{},"
+                        + " barrido vertical -{}/+{} de la cota){}",
+                d.objectiveIndex, count, d.wave.size(), WAVE_SPAWN_MIN, WAVE_SPAWN_MAX,
+                SPAWN_SCAN_ABAJO_DE_LA_COTA, SPAWN_SCAN_ARRIBA_DE_LA_COTA,
+                fallos > 0 ? ", " + fallos + " fallos (sin sitio seguro=" + sinSitio + ", creacion="
+                        + fallosCreacion + ", insercion=" + fallosInsercion + ")" : "");
         // Los asediadores van marcados con brillo (ver `marcarAsediadores`): sin la marca, en una noche con
         // decenas de monstruos alrededor el jugador no puede saber a quién tiene que matar.
         marcarAsediadores(level, d.wave, true);
     }
 
-    private static boolean isWaveCleared(ServerLevel level, List<UUID> wave) {
-        for (UUID uuid : wave) {
-            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
-            if (e != null && e.isAlive()) {
-                return false;
+    /**
+     * Busca una casilla <b>segura</b> para el asediador {@code indice} de la oleada (Incremento C). Devuelve
+     * {@code null} si no la hay en sus candidatos, que están <b>acotados</b>.
+     * <p>
+     * <b>Orden determinista:</b> para cada asediador, un generador sembrado con {@code (aldea, intento de oleada,
+     * índice)} fija el ángulo base y, a partir de ahí, se recorre una lista <b>fija</b> de
+     * {@link #SPAWN_CANDIDATOS_RADIOS} radios × {@link #SPAWN_DESVIOS_ANGULARES} desvíos (15 columnas como máximo).
+     * La siembra es lo que hace que reintentar una oleada vacía explore direcciones distintas sin dejar de ser
+     * reproducible (mismo estado ⇒ mismas posiciones).
+     */
+    @Nullable
+    private static BlockPos buscarSitioDeLaOleada(ServerLevel level, VillageDefense d, int cota, int indice) {
+        Random orden = new Random(341873128712L * (d.objectiveIndex + 1L)
+                + 132897987541L * (d.reintentosDeOleada + 1L) + indice);
+        double anguloBase = orden.nextDouble() * Math.PI * 2.0D;
+        // Los radios se reparten por la banda documentada: mínimo, medio y máximo (65, 69 y 73 con la valla en 62).
+        int banda = WAVE_SPAWN_MAX - WAVE_SPAWN_MIN;
+        for (int r = 0; r < SPAWN_CANDIDATOS_RADIOS; r++) {
+            int radio = WAVE_SPAWN_MIN + (r * banda) / (SPAWN_CANDIDATOS_RADIOS - 1);
+            for (int desvio : SPAWN_DESVIOS_ANGULARES) {
+                double angulo = anguloBase + desvio * SPAWN_DESVIO_ANGULAR;
+                int x = (int) Math.round(d.center.getX() + Math.cos(angulo) * radio);
+                int z = (int) Math.round(d.center.getZ() + Math.sin(angulo) * radio);
+                BlockPos sitio = sitioSeguroEnLaColumna(level, d.center, cota, x, z);
+                if (sitio != null) {
+                    return sitio;
+                }
             }
         }
-        return true;
+        return null;
     }
 
     /**
-     * ¿Están <b>todos</b> los zombies vivos de la ola dentro del perímetro de la aldea (pasados los muros)?
-     * Se usa al agotarse el tiempo: si alguno se quedó fuera, el asedio fracasó y la aldea se salva.
-     * <p>
-     * "Dentro" es {@link #dentroDelRecinto}: el disco del pueblo (en XZ, invariante I2) <b>y</b> a la altura del
-     * pueblo. Midiendo solo la horizontal, un asediador que se caía a una cueva bajo la plaza contaba como
-     * invasor y la aldea <b>caía sin que el jugador pudiera hacer nada</b> (no se le ve, y hay que cavar a
-     * ciegas): la regla escrita es justo la contraria ("si no llegan a los muros, no asedian y no pueden ganar").
+     * La casilla segura de UNA columna vertical (Incremento C), o {@code null}. Comprueba, en este orden:
+     * <ol>
+     *   <li><b>Exterior</b> contra el recinto de verdad: la MISMA verdad que usa el asedio para contar invasores
+     *       ({@link #dentroDelRecinto} con el centro autoritativo de {@link #centroDe} y el radio del muro,
+     *       {@link #PERIMETER_RADIUS}) más un margen para el cuerpo. No se acepta nada que el propio asedio fuera a
+     *       contar como «dentro».</li>
+     *   <li><b>Chunk cargado</b> ({@link ServerLevel#hasChunkAt}): no se fuerza la carga de ningún chunk.</li>
+     *   <li><b>Barrido vertical acotado</b> de arriba abajo entre {@link #SPAWN_SCAN_ARRIBA_DE_LA_COTA} y
+     *       {@link #SPAWN_SCAN_ABAJO_DE_LA_COTA} sobre la cota, recortado a la altura del mundo.</li>
+     *   <li>Por cada altura: <b>apoyo sólido y estable</b> debajo, la <b>caja completa</b> del asediador sin
+     *       intersección con bloques, y sin <b>fluido ni peligro</b> en ninguna celda de la caja.</li>
+     * </ol>
      */
-    private static boolean allZombiesInsidePerimeter(ServerLevel level, VillageDefense d) {
-        int cota = VillageGenerator.cotaDeLaPlaza(level, d.center);
-        for (UUID uuid : d.wave) {
-            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
-            if (e == null || !e.isAlive()) {
-                continue;
+    @Nullable
+    private static BlockPos sitioSeguroEnLaColumna(ServerLevel level, BlockPos center, int cota, int x, int z) {
+        BlockPos celda = new BlockPos(x, cota, z);
+        // (1) EXTERIOR. `dentroDelRecinto` mide desde el centro + 0,5 y con la banda de altura del pueblo: es la
+        // verdad única de «dentro de la aldea» (la usan la victoria del asedio y el latido del pueblo). Con el
+        // centro autoritativo guardado (Incremento A) no hay radio «adivinado».
+        if (dentroDelRecinto(celda, center, cota, PERIMETER_RADIUS)) {
+            return null;
+        }
+        double dx = x + 0.5D - (center.getX() + 0.5D);
+        double dz = z + 0.5D - (center.getZ() + 0.5D);
+        double margen = PERIMETER_RADIUS + SPAWN_MARGEN_EXTERIOR;
+        if (dx * dx + dz * dz <= margen * margen) {
+            return null;
+        }
+        // (2) CHUNK CARGADO. Leer bloques de un chunk sin cargar lo generaría a mitad del tick; aquí no se hace.
+        if (!level.hasChunkAt(celda)) {
+            return null;
+        }
+        // (3) BARRIDO VERTICAL ACOTADO, de arriba abajo, recortado a la altura del mundo.
+        var tipo = ModEntities.AGGRESSIVE_ZOMBIE.get();
+        double ancho = tipo.getWidth();   // 0,6: lo mismo que devuelve getBbWidth() para esta entidad
+        double alto = tipo.getHeight();   // 1,95: lo mismo que devuelve getBbHeight()
+        int techo = Math.min(cota + SPAWN_SCAN_ARRIBA_DE_LA_COTA, level.getMaxBuildHeight() - 2);
+        int suelo = Math.max(cota - SPAWN_SCAN_ABAJO_DE_LA_COTA, level.getMinBuildHeight() + 1);
+        for (int y = techo; y >= suelo; y--) {
+            BlockPos donde = new BlockPos(x, y, z);
+            if (!soporteFirme(level, donde.below())) {
+                continue; // sin suelo sólido debajo no hay casilla
             }
-            if (!dentroDelRecinto(cota, d.center, e, PERIMETER_RADIUS)) {
-                return false; // éste no llegó a entrar
+            AABB caja = cajaDelAsediador(x, y, z, ancho, alto);
+            if (!level.noCollision(caja)) {
+                continue; // el cuerpo ENTERO tiene que caber: muro, valla, losa a media altura o techo
+            }
+            if (hayFluidoOPeligro(level, caja)) {
+                continue; // agua, lava, fuego: no es segura aunque el bloque exista
+            }
+            return donde;
+        }
+        return null;
+    }
+
+    /**
+     * La caja <b>completa</b> del asediador ({@code getBbWidth()}/{@code getBbHeight()} de su tipo) con los pies en
+     * {@code y} y centrada en la celda: es la misma caja que tendrá la entidad después de {@code moveTo(x+0.5, y,
+     * z+0.5)}, así que lo que se valida aquí es lo que se coloca.
+     */
+    private static AABB cajaDelAsediador(int x, int y, int z, double ancho, double alto) {
+        double cx = x + 0.5D;
+        double cz = z + 0.5D;
+        return new AABB(cx - ancho / 2.0D, y, cz - ancho / 2.0D, cx + ancho / 2.0D, y + alto, cz + ancho / 2.0D);
+    }
+
+    /**
+     * ¿Es un apoyo <b>sólido y estable</b>? Sólido de verdad ({@link BlockState#isSolid} y forma de colisión no
+     * vacía), sin fluido —una casilla con agua no sostiene— y sin peligro. Se excluyen copas y troncos
+     * ({@link BlockTags#LEAVES}/{@link BlockTags#LOGS}): un árbol no es un sitio estable, y el muro de la aldea
+     * está hecho de troncos.
+     */
+    private static boolean soporteFirme(ServerLevel level, BlockPos apoyo) {
+        BlockState estado = level.getBlockState(apoyo);
+        if (estado.isAir() || !estado.getFluidState().isEmpty() || esPeligroso(estado)) {
+            return false;
+        }
+        if (estado.is(BlockTags.LEAVES) || estado.is(BlockTags.LOGS)) {
+            return false;
+        }
+        return estado.isSolid() && !estado.getCollisionShape(level, apoyo).isEmpty();
+    }
+
+    /**
+     * Bloques que <b>no</b> hacen segura una casilla aunque su forma no estorbe: fuego (la etiqueta que ya usa el
+     * mod para el fuego), lava, magma, hogueras, zarzas dulces, cactus, nieve en polvo y rosa del wither.
+     */
+    private static boolean esPeligroso(BlockState estado) {
+        if (estado.is(BlockTags.FIRE)) {
+            return true; // fuego y fuego de almas
+        }
+        net.minecraft.world.level.block.Block bloque = estado.getBlock();
+        return bloque == Blocks.LAVA || bloque == Blocks.MAGMA_BLOCK || bloque == Blocks.CAMPFIRE
+                || bloque == Blocks.SOUL_CAMPFIRE || bloque == Blocks.SWEET_BERRY_BUSH
+                || bloque == Blocks.CACTUS || bloque == Blocks.POWDER_SNOW || bloque == Blocks.WITHER_ROSE;
+    }
+
+    /**
+     * ¿Hay fluido o peligro en alguna celda que ocupa la caja? Se recorren las celdas de la caja (0,6 × 1,95 ocupa
+     * una columna y dos alturas, pero se deriva de la caja, no de constantes) y se pregunta por el estado real del
+     * bloque: {@link BlockState#getFluidState} y {@link #esPeligroso}. El agua no tiene colisión, así que
+     * {@code noCollision} no la detecta: esta pasada es la que la ve.
+     */
+    private static boolean hayFluidoOPeligro(ServerLevel level, AABB caja) {
+        final double eps = 1.0E-4D;
+        int minX = (int) Math.floor(caja.minX + eps);
+        int maxX = (int) Math.floor(caja.maxX - eps);
+        int minY = (int) Math.floor(caja.minY + eps);
+        int maxY = (int) Math.floor(caja.maxY - eps);
+        int minZ = (int) Math.floor(caja.minZ + eps);
+        int maxZ = (int) Math.floor(caja.maxZ - eps);
+        for (int bx = minX; bx <= maxX; bx++) {
+            for (int bz = minZ; bz <= maxZ; bz++) {
+                for (int by = minY; by <= maxY; by++) {
+                    BlockState estado = level.getBlockState(new BlockPos(bx, by, bz));
+                    if (!estado.getFluidState().isEmpty() || esPeligroso(estado)) {
+                        return true;
+                    }
+                }
             }
         }
-        return true;
+        return false;
+    }
+
+    /**
+     * Crea el asediador en una casilla <b>ya validada</b>. Se prefiere {@code alignPosition = true} (el
+     * comportamiento de siempre); si devuelve {@code null} —lo que el 3-oct-2026 dejó una oleada entera en cero— se
+     * crea <b>sin</b> alinear y se coloca a mano con {@code moveTo}. Es el mismo recurso que usaba la segunda pasada
+     * del Incremento B, pero <b>sin relajar</b> ninguna de las comprobaciones nuevas: la casilla es la misma y ya
+     * está validada (apoyo, caja, fluidos y exterior).
+     */
+    @Nullable
+    private static AggressiveZombieEntity crearAsediador(ServerLevel level, BlockPos pos) {
+        AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
+                .create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
+        if (zombie != null) {
+            return zombie;
+        }
+        return ModEntities.AGGRESSIVE_ZOMBIE.get()
+                .create(level, null, pos, MobSpawnType.MOB_SUMMONED, false, false);
+    }
+
+    /**
+     * A2 FASE 5/6 · clasifica cada UUID de la ola (cargada viva / baja confirmada / desconocida) y deriva el
+     * estado con {@link SiegeWaveState}. Es la unica fuente de "ola limpia": no se puede declarar limpia una
+     * ola con entidades descargadas.
+     */
+    private static SiegeWaveState.WaveState estadoDeLaOla(ServerLevel level, boolean waveSpawned,
+                                                          List<UUID> wave) {
+        List<SiegeWaveState.EntityState> estados = new ArrayList<>(wave.size());
+        for (UUID uuid : wave) {
+            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+            if (e != null) {
+                estados.add(e.isAlive() ? SiegeWaveState.EntityState.VIVA
+                        : SiegeWaveState.EntityState.MUERTA_O_AUSENTE_CONFIRMADA);
+                continue;
+            }
+            // A2 REMEDIACIÓN 2 · `getEntity == null` NO es una baja confirmada. Puede ser un chunk
+            // descargado, y la última celda conocida puede estar obsoleta (sobre todo en la horda del
+            // mundo, que antes solo registraba el punto de spawn). Las bajas reales se descuentan del
+            // libro mayor en `onSiegeAttackerKilled`; si un UUID sigue aquí y no se puede leer, el
+            // estado es DESCONOCIDO y no autoriza victoria.
+            estados.add(SiegeWaveState.EntityState.DESCONOCIDA);
+        }
+        return SiegeWaveState.evaluar(waveSpawned, estados);
+    }
+
+    /**
+     * A2 FASE 5/6 · ¿está la ola <b>confirmada</b> como limpia? Una lista VACIA cuenta como limpia solo si la
+     * ola nacio; con UUID pendientes, un chunk descargado produce {@code SIN_CONFIRMAR} y NO limpia.
+     */
+    private static boolean isWaveCleared(ServerLevel level, List<UUID> wave) {
+        return estadoDeLaOla(level, true, wave) == SiegeWaveState.WaveState.LIMPIA_CONFIRMADA;
+    }
+
+    /** Estado del perimetro al agotarse el tiempo: dentro / alguno fuera / no confirmable. */
+    private enum EstadoDelPerimetro {
+        TODOS_DENTRO, ALGUNO_FUERA, DESCONOCIDO
+    }
+
+    /**
+     * A2 FASE 5/6 · estado del perimetro distinguiendo "fuera" de "no se sabe".
+     * Un asediador descargado NO se cuenta como dentro (eso hacia caer la aldea sin pruebas) ni como fuera
+     * (eso regalaba la salvacion): se declara DESCONOCIDO y el asedio se resuelve sin recompensa.
+     */
+    private static EstadoDelPerimetro estadoDelPerimetro(ServerLevel level, VillageDefense d) {
+        int cota = VillageGenerator.cotaDeLaPlaza(level, d.center);
+        boolean algunoFuera = false;
+        for (UUID uuid : d.wave) {
+            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+            if (e == null) {
+                // A2 REMEDIACIÓN 2 · no se puede afirmar ni "dentro" ni "fuera": DESCONOCIDO.
+                return EstadoDelPerimetro.DESCONOCIDO;
+            }
+            if (!e.isAlive()) {
+                continue; // muerte observada: no cuenta
+            }
+            if (!dentroDelRecinto(cota, d.center, e, PERIMETER_RADIUS)) {
+                algunoFuera = true;
+            }
+        }
+        return algunoFuera ? EstadoDelPerimetro.ALGUNO_FUERA : EstadoDelPerimetro.TODOS_DENTRO;
     }
 
     /** Desactiva el goal de converger al centro en los zombies vivos de la ola (cuando la aldea cayó). */
@@ -1807,10 +2297,31 @@ public final class VillageManager {
                 // `AggressiveZombieEntity.removeWhenFarAway`). Si no, los supervivientes de cada asedio se quedarían
                 // por el mundo para siempre.
                 zombie.setWorldSiegeIndex(-1);
+                // A2 REMEDIACIÓN 2 · también se suelta el centro: un superviviente cargado no debe seguir
+                // eligiendo golems ni conservando la protección de una aldea que ya cerró su asedio.
+                zombie.setVillageCenter(null);
                 // Y el brillo de asediador: si el asedio ya se resolvió, ese monstruo es un zombie agresivo normal.
                 zombie.setGlowingTag(false);
             }
+            // FASE 5/6: el asedio termino para este UUID; su posicion ya no hace falta para resolver nada.
+            olvidarPosicionDeAsediador(uuid);
         }
+    }
+
+    /** FASE 5/6 · refresca la ultima celda conocida de los asediadores que ahora mismo estan cargados. */
+    private static void actualizarPosicionesConocidas(ServerLevel level, List<UUID> wave) {
+        for (UUID uuid : wave) {
+            net.minecraft.world.entity.Entity e = level.getEntity(uuid);
+            if (e != null) {
+                registrarPosicionDeAsediador(uuid, e.blockPosition());
+            }
+        }
+    }
+
+    /** A2 REMEDIACIÓN 2 · lectura de diagnóstico: última celda observada de un asediador (nunca infiere muerte). */
+    private static String ultimaPosicionObservada(UUID uuid) {
+        BlockPos ultima = uuid == null ? null : ULTIMA_POS_ASEDIO.get(uuid);
+        return ultima == null ? "-" : ultima.toShortString();
     }
 
     /**
@@ -1917,7 +2428,10 @@ public final class VillageManager {
             if (saved.isFallen(i) || !saved.isGenerated(i) || isUnderAttack(level, i)) {
                 continue;
             }
-            BlockPos target = ObjectiveTargets.targetOf(anchor, i);
+            BlockPos target = centroDe(level, i);
+            if (target == null) {
+                continue; // aldea generada sin centro ni plano: no se puede mandar una horda a ciegas
+            }
             if (ObjectiveTargets.horizontalDistSqr(playerPos, target) > HORDE_TARGET_RADIUS * HORDE_TARGET_RADIUS) {
                 continue;
             }
@@ -1947,14 +2461,21 @@ public final class VillageManager {
         // el asedio?". El asedio clasico ya lo comprobaba, pero la HORDA DEL MUNDO entraba por aqui sin mirar isFallen,
         // asi que a una aldea ya caida (derrota definitiva) le seguian llegando hordas. Y si ya hay una horda en curso
         // para esa aldea, tampoco se apila otra.
+        // INCREMENTO B: tampoco si hay una defensa CLASICA activa (una aldea = un asedio logico), y si el registro se
+        // rechaza hay que SOLTAR la oleada que el llamador ya creo; si no, esos raiders quedarian marcados en campana
+        // para siempre y sin libro mayor que los resolviera.
         if (VillageSavedData.get(level).isFallen(settlement.objectiveIndex())
-                || isUnderWorldSiege(level, settlement.objectiveIndex())) {
-            DevilRpg.LOGGER.info("[Horda] la aldea {} ya cayo o ya tiene horda: NO se le manda otra (I378)",
-                    settlement.objectiveIndex());
+                || isUnderWorldSiege(level, settlement.objectiveIndex())
+                || isUnderPlayerSiege(level, settlement.objectiveIndex())) {
+            disableGoToCenter(level, wave);
+            DevilRpg.LOGGER.info("[Horda] la aldea {} ya cayo o ya tiene asedio (clasico o del mundo): NO se le"
+                            + " manda otra (I378); los {} recien creados vuelven a ser zombies normales",
+                    settlement.objectiveIndex(), wave.size());
             return;
         }
         WORLD_SIEGES.computeIfAbsent(level, l -> new ArrayList<>())
-                .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave));
+                .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave,
+                        level.getGameTime()));
         // Los que marchan contra la aldea van marcados con brillo, igual que la ola del asedio clásico: es la
         // única forma de saber a quién hay que parar cuando llegan de noche entre los monstruos del campo.
         marcarAsediadores(level, wave, true);
@@ -1973,42 +2494,76 @@ public final class VillageManager {
         VillageSavedData saved = VillageSavedData.get(level);
         for (int i = list.size() - 1; i >= 0; i--) {
             WorldSiege siege = list.get(i);
-            if (isWaveCleared(level, siege.wave)) {
-                saved.resetPressure(siege.objectiveIndex);
-                DevilRpg.LOGGER.info("[Horda] la aldea {} resistio el ataque (presion reiniciada)",
-                        siege.objectiveIndex);
-                announceNearby(level, siege.center, "La aldea ha resistido: los monstruos han sido rechazados.");
-                // Recompensa para quien la defendió (ver registerDefender).
-                rewardWorldSiegeDefenders(level, siege);
-                list.remove(i);
-                continue;
-            }
+            // A2 REMEDIACIÓN 2 · el plazo se mide contra el gameTime del REGISTRO, no contra un contador de
+            // invocaciones. Es determinista aunque cambie la cadencia o se congele el tick.
+            long transcurrido = level.getGameTime() - siege.inicioTick;
+            actualizarPosicionesConocidas(level, siege.wave);
+            SiegeWaveState.WaveState estadoOla = estadoDeLaOla(level, true, siege.wave);
+            boolean olaConfirmada = estadoOla == SiegeWaveState.WaveState.LIMPIA_CONFIRMADA;
+            boolean olaActiva = estadoOla == SiegeWaveState.WaveState.ACTIVA;
             int vivos = observeVillagers(level, saved, siege.objectiveIndex, siege.center);
-            if (vivos == 0 && !hayJugadorEnLaAldea(level, siege.center)) {
-                // SIN NADIE DELANTE LA ALDEA NO CAE (ver RADIO_ASEDIO_CON_JUGADOR). El mundo puede mandar hordas
-                // cuando quiera, pero una aldea no se pierde por estar el jugador lejos: se le estaría diciendo que
-                // ha perdido algo que no pudo defender. La horda se queda donde está y, si el jugador vuelve, la
-                // pelea sigue (y con él delante, esta misma comprobación ya decide de verdad).
-                if (!siege.avisadoSinDefensor) {
-                    siege.avisadoSinDefensor = true;
-                    DevilRpg.LOGGER.info("[Horda] la aldea {} se ha quedado sin aldeanos, pero NO cae: no hay"
-                            + " ningun jugador alli que pueda defenderla", siege.objectiveIndex);
+            boolean jugadorDelante = hayJugadorEnLaAldea(level, siege.center);
+            boolean aldeaCaida = vivos == 0 && jugadorDelante;
+            WorldSiegePolicy.Outcome resultado =
+                    WorldSiegePolicy.decidir(olaConfirmada, olaActiva, aldeaCaida, transcurrido);
+            switch (resultado) {
+                case RESISTED_CONFIRMED -> {
+                    // A2 REMEDIACIÓN 2 · se retira PRIMERO el registro: si la recompensa/aviso fallara, no
+                    // puede volver a pagarse en el tick siguiente.
+                    list.remove(i);
+                    saved.resetPressure(siege.objectiveIndex);
+                    DevilRpg.LOGGER.info("[Horda] la aldea {} resistio el ataque (presion reiniciada)",
+                            siege.objectiveIndex);
+                    announceNearby(level, siege.center,
+                            "La aldea ha resistido: los monstruos han sido rechazados.");
+                    // Recompensa para quien la defendió (ver registerDefender).
+                    rewardWorldSiegeDefenders(level, siege);
+                    disableGoToCenter(level, siege.wave);
                 }
-            } else if (vivos == 0) {
-                fallVillage(level, saved, siege.objectiveIndex, siege.center);
-                announceNearby(level, siege.center, "La aldea ha caído: no queda nadie con vida entre sus muros.");
-                // El objetivo avanza para quien lo tuviera pendiente: esa aldea ya no se puede salvar. Se
-                // marca como resuelta para que no se lance además el asedio clásico al llegar.
-                for (ServerPlayer p : level.players()) {
-                    PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(p, PlayerAuxiliaryCapability.INSTANCE);
-                    if (aux != null && aux.getObjectiveIndex() == siege.objectiveIndex) {
-                        p.displayClientMessage(Component.literal(
-                                "La aldea del objetivo ha caído... El objetivo avanza."), false);
-                        aux.setObjectiveIndex(siege.objectiveIndex + 1, p);
+                case FALLEN -> {
+                    list.remove(i);
+                    fallVillage(level, saved, siege.objectiveIndex, siege.center);
+                    announceNearby(level, siege.center,
+                            "La aldea ha caído: no queda nadie con vida entre sus muros.");
+                    // El objetivo avanza para quien lo tuviera pendiente: esa aldea ya no se puede salvar. Se
+                    // marca como resuelta para que no se lance además el asedio clásico al llegar.
+                    for (ServerPlayer p : level.players()) {
+                        PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(p, PlayerAuxiliaryCapability.INSTANCE);
+                        if (aux != null && aux.getObjectiveIndex() == siege.objectiveIndex) {
+                            p.displayClientMessage(Component.literal(
+                                    "La aldea del objetivo ha caído... El objetivo avanza."), false);
+                            aux.setObjectiveIndex(siege.objectiveIndex + 1, p);
+                        }
+                    }
+                    disableGoToCenter(level, siege.wave);
+                }
+                case TIMEOUT_ACTIVE, TIMEOUT_UNCONFIRMED -> {
+                    // A2 REMEDIACIÓN 2 · ni victoria ni recompensa. Una ola aún activa tampoco puede cerrarse
+                    // con el mensaje "la aldea está a salvo": el resultado no está confirmado. Se cierra el
+                    // registro para que un asedio futuro pueda empezar y se liberan las banderas de campaña.
+                    // NO se reinicia la presión: no hubo defensa confirmada y resetearla falsearía el abandono.
+                    list.remove(i);
+                    boolean activa = resultado == WorldSiegePolicy.Outcome.TIMEOUT_ACTIVE;
+                    DevilRpg.LOGGER.warn("[Horda] la aldea {}: asedio del mundo cerrado por plazo ({}) {};"
+                                    + " sin victoria ni recompensa (ultimaPosicionRef={})", siege.objectiveIndex,
+                            WorldSiegePolicy.TIMEOUT_TICKS,
+                            activa ? "con la ola AUN ACTIVA" : "SIN confirmacion",
+                            siege.wave.isEmpty() ? "-" : ultimaPosicionObservada(siege.wave.get(0)));
+                    announceNearby(level, siege.center,
+                            "El asedio del mundo se ha cerrado sin un resultado confirmado.");
+                    disableGoToCenter(level, siege.wave);
+                }
+                case NONE -> {
+                    if (vivos == 0 && !jugadorDelante) {
+                        // SIN NADIE DELANTE LA ALDEA NO CAE (ver RADIO_ASEDIO_CON_JUGADOR). El mundo puede mandar
+                        // hordas cuando quiera, pero una aldea no se pierde por estar el jugador lejos.
+                        if (!siege.avisadoSinDefensor) {
+                            siege.avisadoSinDefensor = true;
+                            DevilRpg.LOGGER.info("[Horda] la aldea {} se ha quedado sin aldeanos, pero NO cae:"
+                                    + " no hay ningun jugador alli que pueda defenderla", siege.objectiveIndex);
+                        }
                     }
                 }
-                disableGoToCenter(level, siege.wave);
-                list.remove(i);
             }
         }
     }
@@ -2025,6 +2580,27 @@ public final class VillageManager {
      */
     public static boolean hayAsedio(ServerLevel level, int objectiveIndex) {
         return isUnderAttack(level, objectiveIndex);
+    }
+
+    /**
+     * A2 REMEDIACIÓN 2 · ¿este UUID sigue en la ola VIGENTE de esa aldea? Sirve para que un asediador que
+     * estuvo descargado no se reenganche a un asedio NUEVO del mismo índice con su campaña vieja.
+     */
+    public static boolean perteneceAAsedioActual(ServerLevel level, int objectiveIndex, UUID uuid) {
+        if (level == null || uuid == null) {
+            return false;
+        }
+        for (WorldSiege siege : WORLD_SIEGES.getOrDefault(level, List.of())) {
+            if (siege.objectiveIndex == objectiveIndex && siege.wave.contains(uuid)) {
+                return true;
+            }
+        }
+        for (VillageDefense defense : DEFENSES.getOrDefault(level, List.of())) {
+            if (defense.objectiveIndex == objectiveIndex && defense.wave.contains(uuid)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -2091,6 +2667,7 @@ public final class VillageManager {
         for (VillageDefense defense : DEFENSES.getOrDefault(level, List.of())) {
             defense.wave.remove(attacker);
         }
+        olvidarPosicionDeAsediador(attacker);
     }
 
     /**
@@ -2340,6 +2917,7 @@ public final class VillageManager {
         // COMER, ALDEANO POR ALDEANO (etapa E): cada uno tiene SU hambre. Se reparte de uno en uno y primero al que
         // hace más tiempo que no come, para que la comida que hay se reparta de verdad (antes era un contador de
         // aldea: se comía "la aldea", y daba igual quién).
+        for (Villager v : aldeanos) if (!v.isBaby()) aumentarHambre(level, v, 1);
         int raciones = repartirRaciones(level, center, aldeanos);
         // LA DESPENSA ES PARA LA COMIDA: lo que no sea comida ni recambio del granjero (una pluma, cuero, hierro,
         // un tronco...) se mueve al ALMACÉN. Lo pidió el jugador: "los materiales que no pertenezcan a la despensa,
@@ -3215,6 +3793,11 @@ public final class VillageManager {
         for (Villager villager : aldeanos) {
             if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)) {
                 asegurarElHuir(villager);
+                if (NAVEGACION_ACTIVA) {
+                    asegurarLaNavegacion(villager);
+                } else if (DESPACHADOR_ACTIVO) {
+                    asegurarElDespachador(villager);
+                }
             }
         }
         // LA TABERNA (etapa F): el aldeano con hambre se va a la taberna a comer y a reponer energía (lo pidió el
@@ -3810,6 +4393,15 @@ public final class VillageManager {
      * que el juego no se la vuelva a borrar.
      */
     private static void reponerProfesiones(ServerLevel level, List<Villager> aldeanos, int objectiveIndex) {
+        BlockPos center = VillageSavedData.get(level).getCentre(objectiveIndex);
+        if (center != null) {
+            for (Villager villager : aldeanos) {
+                if (!villager.isBaby()
+                        && villager.getVillagerData().getProfession() == VillagerProfession.FARMER) {
+                    VillageFarmCoordinator.parcelaAsignada(level, center, villager);
+                }
+            }
+        }
         List<VillagerProfession> presentes = new ArrayList<>();
         List<Villager> sinOficio = new ArrayList<>();
         for (Villager villager : aldeanos) {
@@ -4207,6 +4799,79 @@ public final class VillageManager {
      * cama se quedaba sin ella durante todo el asedio y, como el hambre y la edad tampoco corrían, el estado se
      * quedaba congelado con él de pie y sin cama a la vista del jugador.
      */
+    private static final boolean AUDIT_ALDEANOS = Boolean.getBoolean("devilrpg.villageAudit");
+    private static final int AUDIT_MAX_SNAPSHOTS = 3;
+    private static final int AUDIT_INTERVAL_TICKS = 200;
+    private static long auditLastTick = Long.MIN_VALUE;
+    private static int auditSnapshots;
+    private static final Map<UUID, String> AUDIT_LAST_GOALS = new HashMap<>();
+    /** Villages whose maintenance was skipped by an attack and must get one immediate recovery poll. */
+    private static final Set<Integer> MAINTENANCE_RECOVERY_PENDING =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static int recoveryAuditCount;
+    private static final int RESCUE_AUDIT_MAX = 50;
+    private static int rescueAuditCount;
+    private static final int MAINTENANCE_AUDIT_MAX = 20;
+    private static int maintenanceAuditCount;
+
+    private static void auditarMantenimientoOmitido(ServerLevel level, int objectiveIndex, String reason) {
+        if (!AUDIT_ALDEANOS || maintenanceAuditCount >= MAINTENANCE_AUDIT_MAX) {
+            return;
+        }
+        maintenanceAuditCount++;
+        DevilRpg.LOGGER.info("[VillageAudit] maintenance skipped objective={} reason={} time={}",
+                objectiveIndex, reason, level.getGameTime());
+    }
+
+    /**
+     * Opt-in, bounded villager snapshot: UUID, profession/guard role, running goals, navigation, and bed.
+     * It never changes goals or movement and stops after three snapshots.
+     */
+    private static void auditarAldeanos(ServerLevel level, BlockPos center, int objectiveIndex) {
+        if (!AUDIT_ALDEANOS || auditSnapshots >= AUDIT_MAX_SNAPSHOTS) {
+            return;
+        }
+        long now = level.getGameTime();
+        if (auditLastTick != Long.MIN_VALUE && now - auditLastTick < AUDIT_INTERVAL_TICKS) {
+            return;
+        }
+        auditLastTick = now;
+        auditSnapshots++;
+        List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
+        DevilRpg.LOGGER.info("[VillageAudit] snapshot={} time={} center={} villagers={}",
+                auditSnapshots, now, center.toShortString(), aldeanos.size());
+        for (Villager villager : aldeanos) {
+            StringBuilder goals = new StringBuilder();
+            for (WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+                if (wrapped.isRunning()) {
+                    if (!goals.isEmpty()) goals.append(',');
+                    goals.append(wrapped.getGoal().getClass().getSimpleName())
+                            .append('@').append(wrapped.getPriority());
+                }
+            }
+            String goalSignature = goals.toString();
+            String previousGoals = AUDIT_LAST_GOALS.put(villager.getUUID(), goalSignature);
+            if (previousGoals != null && !previousGoals.equals(goalSignature)) {
+                DevilRpg.LOGGER.info("[VillageAudit] transition villager={} from=[{}] to=[{}] nav={} "
+                                + "profession={} guard={}",
+                        villager.getUUID(), previousGoals, goalSignature,
+                        villager.getNavigation().getPath() == null ? "none" : "path",
+                        villager.getVillagerData().getProfession(), VillagerGuardGoal.esGuardia(villager));
+            }
+            var path = villager.getNavigation().getPath();
+            String nav = path == null ? "none" : "nodes=" + path.getNodeCount() + "/done=" + path.isDone();
+            Optional<GlobalPos> home = villager.getBrain().getMemory(MemoryModuleType.HOME);
+            String homeText = home.map(g -> g.pos().toShortString()).orElse("MISSING");
+            boolean homeReachable = home.map(g -> villager.getNavigation().createPath(g.pos(), 1) != null)
+                    .orElse(false);
+            DevilRpg.LOGGER.info("[VillageAudit] villager={} pos={} profession={} guard={} goals=[{}] nav={} "
+                            + "home={} homeReachable={}",
+                    villager.getUUID(), villager.blockPosition().toShortString(),
+                    villager.getVillagerData().getProfession(), VillagerGuardGoal.esGuardia(villager),
+                    goals, nav, homeText, homeReachable);
+        }
+    }
+
     private static void atenderCamasDelPueblo(ServerLevel level, BlockPos center, int objectiveIndex) {
         List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
         reclamarCamasDelPueblo(level, aldeanos, center);
@@ -5005,6 +5670,14 @@ public final class VillageManager {
                 continue; // sabe ir solo: no se le toca
             }
             villager.getNavigation().stop();
+            if (Boolean.getBoolean("devilrpg.villageAudit") && rescueAuditCount < RESCUE_AUDIT_MAX) {
+                rescueAuditCount++;
+                DevilRpg.LOGGER.info("[VillageAudit] rescue villager={} from={} to={} stuckTicks={} "
+                                + "profession={} guard={} priorRoute={}",
+                        villager.getUUID(), estaba.toShortString(), destino.toShortString(),
+                        ahora - antes[1], villager.getVillagerData().getProfession(),
+                        VillagerGuardGoal.esGuardia(villager), camino == null ? "none" : "unreachable");
+            }
             villager.teleportTo(destino.getX() + 0.5D, destino.getY(), destino.getZ() + 0.5D);
             villager.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
             // I181 · Y EL RESCATE CUENTA COMO AVANCE (30-sep-2026, medido). El rescate baja al aldeano a la plaza, pero
@@ -5154,6 +5827,13 @@ public final class VillageManager {
      * Lo <b>primero</b> que se mira es <b>la muralla</b>: si el destino está al otro lado, el tirón es <b>el portón</b>
      * ({@link #pasoParaCruzarElMuro}), que no se memoriza porque es geometría pura de cuatro puertas.
      */
+    /** Olvida el tirón intermedio: tras cruzar el portón hay que recalcular hacia el almacén, no reusar el portón. */
+    public static void olvidarTiron(final Villager villager) {
+        var datos = villager.getPersistentData();
+        datos.remove(TIRON_TAG);
+        datos.remove(TIRON_DESTINO_TAG);
+    }
+
     public static BlockPos tironConMemoria(ServerLevel level, BlockPos centro, Villager villager, BlockPos destino,
             @Nullable BlockPos plaza) {
         BlockPos porton = pasoParaCruzarElMuro(level, centro, villager, destino);
@@ -5485,7 +6165,7 @@ public final class VillageManager {
                 return;
             }
         }
-        villager.goalSelector.addGoal(4, new VillagerLumberjackGoal(villager, center, objectiveIndex));
+        villager.goalSelector.addGoal(0, new VillagerLumberjackGoal(villager, center, objectiveIndex));
     }
 
     /**
@@ -5640,20 +6320,59 @@ public final class VillageManager {
                 return;
             }
         }
+        if (villager.level() instanceof ServerLevel nivel) {
+            VillageFarmCoordinator.parcelaAsignada(nivel, center, villager);
+        }
         villager.goalSelector.addGoal(4, new VillagerFarmGoal(villager, center, objectiveIndex));
     }
 
     /** ¿Esa aldea está siendo atacada ahora mismo? (el obrero no trabaja en plena refriega). */
-    public static boolean isVillageUnderAttack(ServerLevel level, int objectiveIndex) {
-        return isUnderAttack(level, objectiveIndex);
+    /** Premia trabajo REAL de oficio; aumenta la XP vanilla sin inventar niveles ni bonus. */
+    public static void premiarOficio(Villager villager, int cantidad) {
+        if (villager == null || villager.isBaby() || cantidad <= 0
+                || villager.getVillagerData().getProfession() == VillagerProfession.NONE) return;
+        villager.setVillagerXp(Math.max(1, villager.getVillagerXp()) + cantidad);
     }
 
-    /** Centros de las aldeas ya calculados (del plano), para no recorrer el plano en cada intento de spawn. */
+    public static boolean isVillageUnderAttack(ServerLevel level, int objectiveIndex) {
+        // La defensa se registra al llegar el jugador, pero la oleada tarda GRACE_TICKS (90 s) en nacer.
+        // Para los oficios, "bajo ataque" significa que YA hay asediadores en el mundo: durante el margen
+        // previo no deben quedarse de brazos cruzados. `hayAsedio` sigue contando la defensa registrada para
+        // la UI y el arranque; solo cambia esta consulta de juego.
+        VillageDefense defensa = defensaActivaDe(level, objectiveIndex);
+        return isUnderWorldSiege(level, objectiveIndex)
+                || (defensa != null && defensa.waveSpawned);
+    }
+
+    /** Centros de las aldeas ya leídos del guardado, para no consultar el NBT en cada intento de spawn. */
     private static final Map<ServerLevel, Map<Integer, BlockPos>> CENTROS = new HashMap<>();
 
+    /** Desvío (bloques) entre el centro guardado y el que dicta el objetivo a partir del cual se AVISA. */
+    private static final int CENTRO_DESVIO_AVISO = 32;
     /**
-     * Centro de una aldea: se saca del <b>plano</b> guardado (la caja de lo construido), así que vale también para
-     * aldeas que el jugador ya dejó atrás. Se cachea porque esto se consulta en cada intento de spawn.
+     * Desvío (bloques) a partir del cual un centro guardado se considera <b>ajeno o corrupto</b> (no es el de esta
+     * aldea) y se sustituye por el determinista. Por debajo de esto NUNCA se toca: mover una aldea ya construida
+     * está prohibido (regla de Incremento A).
+     */
+    private static final int CENTRO_DESVIO_CORRUPTO = 256;
+
+    /**
+     * <b>Centro autoritativo de una aldea: UNO por aldea</b> (índice de objetivo), guardado en
+     * {@link VillageSavedData} la primera vez que se genera. Todos los consumidores —el muro, el recinto, los
+     * asedios y la selección de spawns— lo LEEN de aquí; ninguno lo recalcula.
+     * <p>
+     * <b>El defecto que cierra (Incremento A, 19-oct-2026).</b> Antes este método no leía ningún centro guardado:
+     * lo derivaba del {@code spawnPoint} del primer jugador conectado y, si no había nadie, del <b>punto medio de la
+     * caja del plano</b>. Eso daba tres centros distintos para la misma aldea: (1) el del jugador conectado —que es
+     * su spawn, no el ancla con el que se construyó—; (2) el del plano, que se va al este ~16 bloques al crecer la
+     * aldea (almacén +48, corral +50…); y (3) el del asedio, que {@code start}/{@code pickHordeTarget} seguían
+     * sacando del ancla. Con el centro guardado, los tres son EL MISMO y no se mueve una aldea ya construida.
+     * <p>
+     * Si la aldea es de una partida anterior (no hay centro guardado) se deriva <b>una sola vez</b> del objetivo y
+     * se persiste, con aviso en el registro. Un centro cargado se valida contra la identidad (el objetivo) y la
+     * geometría (la caja del plano): si solo se desvía un poco se <b>conserva</b> y se avisa; solo si está a más de
+     * {@link #CENTRO_DESVIO_CORRUPTO} bloques del objetivo <b>y fuera de su propio plano</b> (dato de otra aldea) se
+     * adopta el determinista. Un centro dentro de la aldea construida nunca se sustituye: no se mueve una aldea.
      */
     @Nullable
     public static BlockPos centroDe(ServerLevel level, int objectiveIndex) {
@@ -5663,36 +6382,94 @@ public final class VillageManager {
         if (cached != null) {
             return cached;
         }
-        // CENTRO CANÓNICO, ANTES QUE LA CAJA (5-oct-2026, medido en el registro del jugador). El centro de una aldea
-        // es EL DEL OBJETIVO —el ancla de invocación del jugador más el desfase de esa aldea— y NO el punto medio de
-        // lo construido. Aquí se tomaba el punto medio de la caja de TODO el plano: como la aldea crece hacia el este
-        // (almacén en +48, corral anexo en +50, taberna, pesquera…), el punto medio se iba al este con ella, y como
-        // los reparadores reciben ESTE centro, cada reparación volvía a levantar la aldea entera alrededor del punto
-        // medio nuevo y la empujaba otros 16 bloques. El registro del jugador lo enseña entero: su aldea construida
-        // DOS veces (herreria 585, mina 615, almacén 630, taberna 606, pesquera 602, corral 632) y dos aldeas
-        // superpuestas en el mismo mundo. Con el centro del objetivo, reparar vuelve a reparar LO MISMO.
-        for (ServerPlayer enLinea : level.players()) {
-            PlayerAuxiliaryCapabilityInterface aux =
-                    IGenericCapability.getUnwrappedPlayerCapability(enLinea, PlayerAuxiliaryCapability.INSTANCE);
-            Vec3 ancla = aux == null ? null : aux.getSpawnPoint();
-            if (ancla == null) {
-                continue;
+        BlockPos guardado = saved.getCentre(objectiveIndex);
+        if (guardado != null) {
+            if (!level.hasChunkAt(guardado)) {
+                return guardado; // chunk sin cargar: sin cachear, para no guardar una Y mala
             }
-            BlockPos objetivo = ObjectiveTargets.targetOf(ancla, objectiveIndex);
-            BlockPos canonico = new BlockPos(objetivo.getX(), 0, objetivo.getZ());
-            if (!level.hasChunkAt(canonico)) {
-                return canonico; // chunk sin cargar: sin cachear, para no guardar una Y mala
+            BlockPos centro = new BlockPos(guardado.getX(),
+                    VillageGenerator.cotaDeLaPlaza(level, guardado), guardado.getZ());
+            BlockPos canonico = centroCanonico(level, objectiveIndex);
+            if (canonico != null) {
+                double desvio = distanciaHorizontal(centro, canonico);
+                boolean encajaEnElPlano = centroDentroDelPlano(saved, objectiveIndex, centro);
+                // Solo se sustituye si el centro guardado NO está ni en su propio plano: un centro dentro de la
+                // aldea construida es válido aunque el ancla del mundo se haya movido (regla 5: no mover aldeas).
+                if (desvio > CENTRO_DESVIO_CORRUPTO && !encajaEnElPlano && level.hasChunkAt(canonico)) {
+                    DevilRpg.LOGGER.warn("[Village] Aldea {}: el centro guardado {} no es el de esta aldea (esta a {}"
+                                    + " bloques del objetivo {} y fuera de su plano): se adopta el del objetivo y se"
+                                    + " persiste",
+                            objectiveIndex, centro.toShortString(), Math.round(desvio), canonico.toShortString());
+                    saved.setCentre(objectiveIndex, canonico);
+                    centro = canonico;
+                } else if (desvio > CENTRO_DESVIO_AVISO || !encajaEnElPlano) {
+                    // NO se sustituye: una aldea establecida no se mueve. Solo se deja constancia.
+                    logCentroDesviado(objectiveIndex, centro, canonico, desvio);
+                }
             }
-            BlockPos conCota = new BlockPos(canonico.getX(), VillageGenerator.cotaDeLaPlaza(level, canonico),
-                    canonico.getZ());
-            cache.put(objectiveIndex, conCota);
-            return conCota;
+            cache.put(objectiveIndex, centro);
+            return centro;
         }
-        // Sin ningún jugador en línea no hay ancla que valga: se cae al plano (lo de antes) para no dejar sin centro
-        // ni a la barra de aldea ni a las reglas de spawn.
+        BlockPos canonico = centroCanonico(level, objectiveIndex);
+        if (canonico == null) {
+            return null;
+        }
+        if (!saved.isGenerated(objectiveIndex)) {
+            // Aldea que todavía no existe: su centro es el del objetivo, pero no se guarda hasta generarla.
+            return canonico;
+        }
+        // ALDEA YA CONSTRUIDA POR UNA VERSIÓN ANTERIOR (sin centro guardado): se deriva UNA vez del objetivo y se
+        // persiste. A partir de aquí ya no depende de qué jugador esté conectado ni del tamaño del plano.
+        if (!level.hasChunkAt(canonico)) {
+            return canonico; // todavía sin cargar: no se persiste una Y buena a medias (se hará al cargarla)
+        }
+        saved.setCentre(objectiveIndex, canonico);
+        DevilRpg.LOGGER.info("[Village] Aldea {}: no tenia centro guardado; se deriva del objetivo {} y se persiste"
+                + " (una sola vez)", objectiveIndex, canonico.toShortString());
+        cache.put(objectiveIndex, canonico);
+        return canonico;
+    }
+
+    /**
+     * El centro que dicta la <b>identidad</b> de la aldea: el objetivo (ancla del jugador + desfase del índice).
+     * Es determinista y no depende del plano. Usa el ancla de un jugador conectado si lo hay (así el arnés que fija
+     * un ancla propio sigue mandando) y, si no, el spawn compartido del mundo, que es de donde sale el ancla.
+     */
+    @Nullable
+    private static BlockPos centroCanonico(ServerLevel level, int objectiveIndex) {
+        Vec3 ancla = null;
+        for (ServerPlayer enLinea : level.players()) {
+            ancla = anchorOf(enLinea);
+            if (ancla != null) {
+                break;
+            }
+        }
+        if (ancla == null) {
+            ancla = Vec3.atCenterOf(level.getSharedSpawnPos());
+        }
+        BlockPos objetivo = ObjectiveTargets.targetOf(ancla, objectiveIndex);
+        BlockPos xz = new BlockPos(objetivo.getX(), 0, objetivo.getZ());
+        if (!level.hasChunkAt(xz)) {
+            return xz;
+        }
+        return new BlockPos(xz.getX(), VillageGenerator.cotaDeLaPlaza(level, xz), xz.getZ());
+    }
+
+    /** Distancia HORIZONTAL entre dos centros (la aldea es un recinto en XZ; la Y no identifica nada). */
+    private static double distanciaHorizontal(BlockPos a, BlockPos b) {
+        double dx = a.getX() - b.getX();
+        double dz = a.getZ() - b.getZ();
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /**
+     * ¿El centro cae dentro de la caja de lo construido (con margen)? Detecta un centro que pertenece a OTRA aldea:
+     * el de la aldea de verdad siempre está dentro de su plano, porque el plano se captura alrededor suyo.
+     */
+    private static boolean centroDentroDelPlano(VillageSavedData saved, int objectiveIndex, BlockPos centro) {
         VillageSavedData.Blueprint plano = saved.getBlueprint(objectiveIndex);
         if (plano == null || plano.size() == 0) {
-            return null;
+            return true; // sin plano no hay geometría con la que validar
         }
         int minX = Integer.MAX_VALUE;
         int maxX = Integer.MIN_VALUE;
@@ -5705,18 +6482,16 @@ public final class VillageManager {
             minZ = Math.min(minZ, p.getZ());
             maxZ = Math.max(maxZ, p.getZ());
         }
-        BlockPos centro = new BlockPos((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
-        // OJO CON LA Y: no vale 0. Los goals del pueblo usan este centro para buscar los CULTIVOS y los cofres
-        // (`parcela.offset(dx, 0, dz)` y luego un barrido de ±1 en vertical): con Y=0 buscaban a 60 bloques por
-        // debajo del suelo, no veían ni un cultivo y el granjero se pasaba el día dando vueltas sin cosechar
-        // ("hay betabel y zanahoria y no los cosecha"), y las distancias salían con un desnivel enorme. La Y que
-        // vale es LA COTA DE LA ALDEA (la capa por la que se anda, que es donde están los cultivos y los cofres).
-        if (!level.hasChunkAt(centro)) {
-            return centro; // chunk sin cargar: se devuelve sin cachear, para no guardar una Y mala
-        }
-        BlockPos conCota = new BlockPos(centro.getX(), VillageGenerator.cotaDeLaPlaza(level, centro), centro.getZ());
-        cache.put(objectiveIndex, conCota);
-        return conCota;
+        int margen = 16;
+        return centro.getX() >= minX - margen && centro.getX() <= maxX + margen
+                && centro.getZ() >= minZ - margen && centro.getZ() <= maxZ + margen;
+    }
+
+    /** Aviso (una vez por carga) de un centro guardado que no coincide con la identidad/geometría, pero se conserva. */
+    private static void logCentroDesviado(int objectiveIndex, BlockPos centro, BlockPos canonico, double desvio) {
+        DevilRpg.LOGGER.warn("[Village] Aldea {}: el centro guardado {} se desvia {} bloques del objetivo {}; se"
+                        + " CONSERVA el guardado (no se mueve una aldea establecida)",
+                objectiveIndex, centro.toShortString(), Math.round(desvio), canonico.toShortString());
     }
 
     /**
@@ -5768,11 +6543,23 @@ public final class VillageManager {
                 BlockPos pie = com.chipoodle.devilrpg.world.VillageErrands.casillaPosible(nivel, objetivo);
                 if (pie != null) {
                     ponerRumbo(villager, pie, velocidad);
+                    if (NAVEGACION_ACTIVA) {
+                        asegurarLaNavegacion(villager);
+                    }
+                    if (NAVEGACION_ACTIVA || DESPACHADOR_ACTIVO) {
+                        apuntarElRecado(villager, pie, velocidad);
+                    }
                     return;
                 }
             }
         }
         ponerRumbo(villager, objetivo, velocidad);
+        if (NAVEGACION_ACTIVA) {
+            asegurarLaNavegacion(villager);
+        }
+        if (NAVEGACION_ACTIVA || DESPACHADOR_ACTIVO) {
+            apuntarElRecado(villager, objetivo, velocidad);
+        }
     }
 
     /** El último sitio al que se le mandó caminar, con qué velocidad y cuándo (I171). */
@@ -5995,10 +6782,27 @@ public final class VillageManager {
     }
 
     // --- M1 · EL DESPACHADOR: el recado, su rumbo y su supervisión ---------------------------
+    /**
+     * Interruptor de la implementación experimental del despachador. Por defecto queda APAGADO:
+     * el latido (I198) sigue siendo el camino probado y así se puede comparar el mismo mundo con
+     * y sin él. Se enciende solo con {@code -Ddevilrpg.dispatcher=true}.
+     */
+    public static final boolean DESPACHADOR_ACTIVO = Boolean.getBoolean("devilrpg.dispatcher");
+    /**
+     * Primer controlador de navegación propio (slice inicial, opt-in). Sustituye
+     * la posesión de ruta del despachador mientras esté activo; por defecto no
+     * cambia el comportamiento existente.
+     */
+    public static final boolean NAVEGACION_ACTIVA = Boolean.getBoolean("devilrpg.navigation");
     /** A dónde se le mandó (el «recado»), en datos del propio aldeano. */
     private static final String RECADO_POS = "DevilRpgRecadoPos";
     /** Con qué velocidad. */
     private static final String RECADO_VEL = "DevilRpgRecadoVel";
+    /** Identidad estable del recado (no usar solo coordenadas). */
+    private static final String RECADO_ID = "DevilRpgRecadoId";
+    /** Tarea lógica: para un granjero, su parcela asignada; no cambia por cada sub-paso. */
+    private static final String RECADO_TAREA = "DevilRpgRecadoTarea";
+    private static long RECADO_SECUENCIA = 0L;
     /** Hasta qué tick vale el recado si su goal deja de pedirlo. */
     private static final String RECADO_HASTA = "DevilRpgRecadoHasta";
     /** Cuántos ticks vale un recado sin que lo vuelvan a pedir (3 s): si el goal se rinde o cambia de tarea, caduca. */
@@ -6017,11 +6821,40 @@ public final class VillageManager {
     private static void apuntarElRecado(Villager villager, BlockPos objetivo, float velocidad) {
         if (villager.level() instanceof ServerLevel nivel) {
             net.minecraft.nbt.CompoundTag datos = villager.getPersistentData();
+            BlockPos anterior = elRecadoDeAhora(villager);
+            long id = anterior != null && anterior.equals(objetivo) && datos.contains(RECADO_ID)
+                    ? datos.getLong(RECADO_ID)
+                    : (nivel.getGameTime() << 20) ^ (++RECADO_SECUENCIA);
             datos.putLong(RECADO_POS, objetivo.asLong());
             datos.putFloat(RECADO_VEL, velocidad);
+            datos.putLong(RECADO_ID, id);
+            String tarea;
+            if (villager.getVillagerData().getProfession() == VillagerProfession.FARMER) {
+                tarea = "farm:" + (datos.contains("DevilRpgFarmPlot")
+                        ? datos.getInt("DevilRpgFarmPlot") : -1);
+            } else if (villager.getVillagerData().getProfession() == VillagerProfession.MASON) {
+                tarea = "mine:" + id;
+            } else {
+                tarea = "recado:" + id;
+            }
+            datos.putString(RECADO_TAREA, tarea);
             datos.putLong(RECADO_HASTA, nivel.getGameTime() + RECADO_TICKS);
             RECADOS_APUNTADOS++;
         }
+    }
+
+    /** Identidad estable del recado vivo, o -1 si no hay. */
+    public static long elIdDelRecado(Villager villager) {
+        net.minecraft.nbt.CompoundTag datos = villager.getPersistentData();
+        return elRecadoDeAhora(villager) != null && datos.contains(RECADO_ID) ? datos.getLong(RECADO_ID) : -1L;
+    }
+
+    /** Tarea lógica viva (parcela para granjero o recado simple), o cadena vacía. */
+    public static String laTareaDelRecado(Villager villager) {
+        if (elRecadoDeAhora(villager) == null) {
+            return "";
+        }
+        return villager.getPersistentData().getString(RECADO_TAREA);
     }
 
     /** El recado vivo del aldeano (dentro de su plazo), o {@code null}. */
@@ -6061,7 +6894,15 @@ public final class VillageManager {
         net.minecraft.nbt.CompoundTag datos = villager.getPersistentData();
         datos.remove(RECADO_POS);
         datos.remove(RECADO_HASTA);
+        datos.remove(RECADO_ID);
         RECADOS_ABANDONADOS++;
+    }
+
+    /** Libera el recado al llegar o al completarlo, sin marcarlo como fallido. */
+    public static void liberarElRecado(Villager villager) {
+        villager.getPersistentData().remove(RECADO_POS);
+        villager.getPersistentData().remove(RECADO_HASTA);
+        villager.getPersistentData().remove(RECADO_ID);
     }
 
     /** La medida del despachador, para el registro (una vez cada {@link #VILLAGE_POLL_TICKS}). */
@@ -6082,6 +6923,17 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(0, new com.chipoodle.devilrpg.entity.goal.VillageDispatcherGoal(villager));
+    }
+
+    /** Primer controlador de navegación propio, idempotente y solo con recado vivo. */
+    public static void asegurarLaNavegacion(Villager villager) {
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillageNavigationGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(0, new com.chipoodle.devilrpg.entity.goal.VillageNavigationGoal(villager));
+        DevilRpg.LOGGER.info("[NAV] GOAL-ADD uuid={} flag={}", villager.getUUID(), NAVEGACION_ACTIVA);
     }
 
     /**
@@ -6669,7 +7521,10 @@ public final class VillageManager {
         villager.getNavigation().stop();
     }
 
-    /** El plano cambió (migración): se tira el centro cacheado de esa aldea. */
+    /**
+     * El plano cambió (migración): se tira el centro cacheado de esa aldea para obligar a releerlo. El centro
+     * <b>guardado</b> NO cambia: una aldea ya establecida no se mueve (Incremento A).
+     */
     public static void olvidarCentro(ServerLevel level, int objectiveIndex) {
         Map<Integer, BlockPos> cache = CENTROS.get(level);
         if (cache != null) {
@@ -7482,39 +8337,33 @@ public final class VillageManager {
         // intervalo, come el pueblo que esté esperando (el grupo sigue sincronizado porque una comida los marca a
         // todos a la vez, así que en la práctica es la misma comida de antes, solo que ya no se pierde por un latido
         // que no corrió).
+        long hora = level.getDayTime() % 24000L;
+        if (hora < 11000L || hora > 12000L) {
+            return 0; // ventana de cena, justo antes de la rutina de dormir
+        }
         Container despensa = VillagePantry.despensa(level, center);
         if (despensa == null || aldeanos.isEmpty()) {
             return 0;
         }
-        // El hambre de cada uno, leída UNA vez por aldeano (y de paso se le estrena la marca al que llega nuevo).
-        Map<Villager, Long> ultima = new HashMap<>();
-        long laMasVieja = Long.MAX_VALUE; // la marca del que hace MÁS tiempo que no come (las crías no cuentan)
-        for (Villager villager : aldeanos) {
-            long suya = ultimaComida(level, villager);
-            ultima.put(villager, suya);
-            if (!villager.isBaby() && suya < laMasVieja) {
-                laMasVieja = suya;
-            }
-        }
-        if (laMasVieja == Long.MAX_VALUE || level.getGameTime() - laMasVieja < EAT_INTERVAL_TICKS) {
-            return 0; // todavía no le toca a nadie
-        }
+        long dia = level.getGameTime() / 24000L;
         List<Villager> bocas = new ArrayList<>();
+        int puntos = 0;
         for (Villager villager : aldeanos) {
-            if (!villager.isBaby() && level.getGameTime() - ultima.get(villager) >= EAT_INTERVAL_TICKS) {
-                bocas.add(villager); // las crías maman de la aldea: no gastan ración (y su reloj no corre, I52)
+            if (villager.isBaby()) continue;
+            if (level.getGameTime() - ultimaComida(level, villager) >= EAT_INTERVAL_TICKS) {
+                bocas.add(villager);
+                int trabajo = trabajoHoy(level, villager);
+                puntos += 1 + Math.min(3, trabajo / 8);
             }
         }
-        if (bocas.isEmpty()) {
+        if (bocas.isEmpty() || puntos <= 0) {
             return 0;
         }
-        bocas.sort(Comparator.comparingLong(v -> ultima.get(v)));
-        // I344 · las bocas van a la despensa: el colchón de cada grupo se escala con la población (I343).
-        int raciones = Math.min(VillagePantry.sacarComida(despensa, bocas.size(), bocas.size()), bocas.size());
-        for (int i = 0; i < raciones; i++) {
-            marcarComida(level, bocas.get(i));
+        int dados = VillagePantry.sacarComida(level, center, puntos, bocas.size());
+        if (dados > 0) {
+            for (Villager v : bocas) marcarComida(level, v);
         }
-        return raciones;
+        return dados;
     }
 
     /** El <b>hambre de cada aldeano</b>: debilidad y lentitud a las {@link #HAMBRE_PACIENTE_TICKS} raciones sin comer,
@@ -7537,21 +8386,42 @@ public final class VillageManager {
                 marcarComida(level, villager);
                 continue;
             }
-            long sinComer = level.getGameTime() - ultimaComida(level, villager);
-            if (sinComer < HAMBRE_PACIENTE_TICKS) {
+            CompoundTag hd = villager.getPersistentData();
+            if (!FoodHungerPolicy.critical(hambre(villager))) {
+                hd.remove("DevilRpgHambreCriticaDesde");
+                if (hd.getBoolean("DevilRpgStarvationActive")) {
+                    villager.removeEffect(MobEffects.WEAKNESS);
+                    villager.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+                    hd.putBoolean("DevilRpgStarvationActive", false);
+                }
+                continue;
+            }
+            long desde = hd.getLong("DevilRpgHambreCriticaDesde");
+            if (desde == 0L) {
+                desde = level.getGameTime();
+                hd.putLong("DevilRpgHambreCriticaDesde", desde);
+            }
+            long critica = level.getGameTime() - desde;
+            if (Boolean.getBoolean("devilrpg.starvdiag") && hambre(villager) >= HAMBRE_CRITICA && level.getGameTime() % 200L == 0L) {
+                DevilRpg.LOGGER.info("[STARVDIAG] subject={} hunger={} desde={} critica={} weak={} slow={} tick={}",
+                        villager.getUUID(), hambre(villager), desde, critica,
+                        villager.hasEffect(MobEffects.WEAKNESS), villager.hasEffect(MobEffects.MOVEMENT_SLOWDOWN), level.getGameTime());
+            }
+            if (!FoodHungerPolicy.effects((int) Math.min(Integer.MAX_VALUE, critica))) {
                 continue;
             }
             algunaBocaSinComer = true;
             bocasSinRacion++;
+            hd.putBoolean("DevilRpgStarvationActive", true);
             if (!villager.hasEffect(MobEffects.WEAKNESS)) {
                 villager.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 20 * 60, 0, false, false));
             }
             if (!villager.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
                 villager.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20 * 60, 0, false, false));
             }
-            if (sinComer >= STARVATION_DEATH_TICKS) {
-                DevilRpg.LOGGER.info("[Village] Un aldeano de la aldea {} ha muerto de hambre ({} min sin comer)",
-                        objectiveIndex, sinComer / (60L * 20L));
+            if (FoodHungerPolicy.death((int) Math.min(Integer.MAX_VALUE, critica))) {
+                DevilRpg.LOGGER.info("[Village] Un aldeano de la aldea {} ha muerto de hambre ({} min en hambre critica)",
+                        objectiveIndex, critica / (60L * 20L));
                 villager.hurt(level.damageSources().generic(), Float.MAX_VALUE);
             }
         }
@@ -7587,6 +8457,48 @@ public final class VillageManager {
      * (lleva {@link #EAT_INTERVAL_TICKS} o más sin comer) se va a la taberna a comer, y allí se le marca con
      * {@link #marcarComida} y se le quita la ración abstracta del minuto (nadie come dos veces).
      */
+    private static final int MAX_TRABAJO_DIA = 64;
+    public static final int HAMBRE_NORMAL = FoodHungerPolicy.NORMAL;
+    public static final int HAMBRE_CRITICA = FoodHungerPolicy.CRITICAL;
+    public static final int HAMBRE_MAX = FoodHungerPolicy.MAX;
+
+    public static int hambre(Villager villager) {
+        return FoodHungerPolicy.clamp(villager.getPersistentData().getInt("DevilRpgHambre"));
+    }
+
+    public static void aumentarHambre(ServerLevel level, Villager villager, int puntos) {
+        if (puntos <= 0) return;
+        villager.getPersistentData().putInt("DevilRpgHambre", FoodHungerPolicy.add(hambre(villager), puntos));
+    }
+
+    public static void reducirHambre(Villager villager, int puntos) {
+        if (puntos <= 0) return;
+        villager.getPersistentData().putInt("DevilRpgHambre", FoodHungerPolicy.reduce(hambre(villager), puntos));
+    }
+
+    public static int trabajoHoy(ServerLevel level, Villager villager) {
+        CompoundTag d = villager.getPersistentData();
+        long dia = level.getGameTime() / 24000L;
+        if (d.getLong("DevilRpgDiaTrabajo") != dia) return 0;
+        return Math.min(MAX_TRABAJO_DIA, d.getInt("DevilRpgTrabajoHoy"));
+    }
+
+    public static void registrarTrabajo(ServerLevel level, Villager villager, int puntos) {
+        if (puntos <= 0) return;
+        CompoundTag d = villager.getPersistentData();
+        long dia = level.getGameTime() / 24000L;
+        if (d.getLong("DevilRpgDiaTrabajo") != dia) {
+            d.putLong("DevilRpgDiaTrabajo", dia);
+            d.putInt("DevilRpgTrabajoHoy", 0);
+        }
+        d.putInt("DevilRpgTrabajoHoy", Math.min(MAX_TRABAJO_DIA, d.getInt("DevilRpgTrabajoHoy") + puntos));
+    }
+
+    public static boolean necesitaComidaDiaria(ServerLevel level, Villager villager) {
+        long dia = level.getGameTime() / 24000L;
+        return ultimaComida(level, villager) / 24000L < dia;
+    }
+
     public static long ultimaComida(ServerLevel level, Villager villager) {
         CompoundTag datos = villager.getPersistentData();
         if (!datos.contains(COMIDA_TAG)) {
@@ -7598,7 +8510,8 @@ public final class VillageManager {
 
     /** ¿Ese aldeano tiene <b>hambre</b>? (lleva una ración sin comer: el mismo criterio que las raciones del minuto) */
     public static boolean tieneHambre(ServerLevel level, Villager villager) {
-        return level.getGameTime() - ultimaComida(level, villager) >= EAT_INTERVAL_TICKS;
+        return FoodHungerPolicy.hungry(hambre(villager))
+                && level.getGameTime() - ultimaComida(level, villager) >= 3600L;
     }
 
     /** Marca que ese aldeano acaba de comer (así el reparto abstracto del minuto no le da otra ración). */
@@ -7747,7 +8660,10 @@ public final class VillageManager {
         if (salvada) {
             aux.setObjectiveIndex(objetivo, player);
         }
-        BlockPos destino = ObjectiveTargets.targetOf(ancla, objetivo);
+        BlockPos destino = saved.isGenerated(objetivo) ? centroDe(level, objetivo) : null;
+        if (destino == null) {
+            destino = ObjectiveTargets.targetOf(ancla, objetivo);
+        }
         String hacia = ObjectiveTargets.direccionHacia(player.blockPosition(), destino);
         double dx = destino.getX() + 0.5D - player.getX();
         double dz = destino.getZ() + 0.5D - player.getZ();
@@ -7886,18 +8802,24 @@ public final class VillageManager {
         final BlockPos center;
         final List<UUID> wave;
         /**
+         * A2 REMEDIACIÓN 2 · gameTime del REGISTRO. El plazo se mide como
+         * {@code level.getGameTime() - inicioTick}, no como un contador de invocaciones.
+         */
+        final long inicioTick;
+        /**
          * En los asedios del mundo esta lista guarda solo los atacantes <b>vivos</b>: cada muerte se descuenta
-         * ({@link #onWorldSiegeAttackerKilled}), así que quedar vacía significa "los mataron a todos". Eso es lo
-         * que separa una defensa de verdad de un asedio que se resolvió porque el jugador se alejó.
+         * ({@link #onSiegeAttackerKilled(ServerLevel, UUID)}), así que quedar vacía significa "los mataron a todos".
+         * Eso es lo que separa una defensa de verdad de un asedio que se resolvió porque el jugador se alejó.
          */
         final Set<UUID> defenders = new HashSet<>();
         /** Si ya se avisó (una sola vez) de que esta aldea no cae porque no hay nadie que la defienda. */
         boolean avisadoSinDefensor;
 
-        WorldSiege(int objectiveIndex, BlockPos center, List<UUID> wave) {
+        WorldSiege(int objectiveIndex, BlockPos center, List<UUID> wave, long inicioTick) {
             this.objectiveIndex = objectiveIndex;
             this.center = center;
             this.wave = wave;
+            this.inicioTick = inicioTick;
         }
     }
 
@@ -7907,6 +8829,7 @@ public final class VillageManager {
         final UUID playerUUID;
         final BlockPos center;
         final List<UUID> wave = new ArrayList<>();
+        final RaidTacticalBoard raidBoard = new RaidTacticalBoard();
         long tickTicks;
         boolean waveSpawned;
         /** Último recuento de atacantes vivos, para escribir cada baja (y no repetir el mensaje). */
@@ -7919,6 +8842,12 @@ public final class VillageManager {
          * victoria. Ver el bloque de {@code spawnWave} en {@link #tick(ServerLevel)}.
          */
         int reintentosDeOleada;
+        /**
+         * Motivo del último fallo de oleada (Incremento B), vacío si nació. Lo escribe {@code spawnWave} UNA vez
+         * por intento y lo consume el aviso de {@link #tick(ServerLevel)} al reintentar o cancelar: así el registro
+         * dice por qué no aparecieron asediadores, sin una línea por spawn.
+         */
+        String motivoFalloDeOleada = "";
 
         VillageDefense(int objectiveIndex, UUID playerUUID, BlockPos center) {
             this.objectiveIndex = objectiveIndex;

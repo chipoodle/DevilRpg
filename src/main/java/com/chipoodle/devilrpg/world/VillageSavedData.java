@@ -72,8 +72,11 @@ public final class VillageSavedData extends SavedData {
     private final Map<Integer, Long> repopulatedAt = new HashMap<>();
     /** Comida almacenada: la granja la produce y cada aldeano consume. */
     private final Map<Integer, Integer> food = new HashMap<>();
+    private final Map<Integer, Integer> pantryCredit = new HashMap<>();
     /** Desde cuándo la aldea pasa hambre (0 = tiene comida). Sirve para las consecuencias del hambre. */
     private final Map<Integer, Long> starvingSince = new HashMap<>();
+    /** Dueño autoritativo por aldea+parcela: clave centro#plot, valor UUID. */
+    private final FarmPlotOwners farmOwners = new FarmPlotOwners();
 
     /**
      * Planos de las aldeas: qué bloque debería haber en cada sitio (fuera del suelo natural). Los usa el
@@ -169,10 +172,18 @@ public final class VillageSavedData extends SavedData {
     private final Map<Integer, Integer> guardiasFundadoras = new HashMap<>();
     /** Aldeas a las que ya se entregó la remesa inicial del almacén. */
     private final Set<Integer> remesaInicialEntregada = new HashSet<>();
+    /**
+     * Centro <b>autoritativo</b> de cada aldea (una entrada por índice de objetivo). Es la <b>única fuente de
+     * verdad</b> del centro: se escribe una sola vez, al generar la aldea, y a partir de ahí lo LEEN el muro, el
+     * recinto, los asedios y la selección de spawns; ninguno lo recalcula. Sin esto, el centro dependía de qué
+     * jugador estuviera conectado (su spawn) o del punto medio del plano, que se desplaza al crecer la aldea.
+     */
+    private final Map<Integer, BlockPos> centres = new HashMap<>();
 
     public static VillageSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(
+        VillageSavedData data = level.getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(VillageSavedData::new, VillageSavedData::load), FILE_ID);
+        return data;
     }
 
     public static VillageSavedData load(CompoundTag tag, HolderLookup.Provider registries) {
@@ -197,6 +208,14 @@ public final class VillageSavedData extends SavedData {
             data.pressureSince.put(index, entry.getLong("Since"));
         }
         // Salud, repoblación y comida de cada aldea (una entrada por aldea).
+        for (Tag element : tag.getList("FarmOwners", Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) element;
+            try {
+                data.farmOwners.putResolved(entry.getString("Key"), UUID.fromString(entry.getString("Owner")));
+            } catch (IllegalArgumentException ignored) {
+                // entrada corrupta: se descarta; el coordinador la reclamará de nuevo
+            }
+        }
         for (Tag element : tag.getList("Settlement", Tag.TAG_COMPOUND)) {
             CompoundTag entry = (CompoundTag) element;
             int index = entry.getInt("Index");
@@ -227,7 +246,11 @@ public final class VillageSavedData extends SavedData {
             if (entry.getBoolean("RemesaInicialEntregada")) {
                 data.remesaInicialEntregada.add(index);
             }
+            if (entry.contains("Center")) {
+                NbtUtils.readBlockPos(entry, "Center").ifPresent(pos -> data.centres.put(index, pos));
+            }
             data.food.put(index, entry.getInt("Food"));
+                    if (entry.contains("PantryCredit")) data.pantryCredit.put(index, entry.getInt("PantryCredit"));
         }
         // Planos de las aldeas (paleta de estados + posiciones + índices).
         HolderGetter<Block> blocks = registries.lookupOrThrow(Registries.BLOCK);
@@ -268,6 +291,14 @@ public final class VillageSavedData extends SavedData {
             pressureTag.add(one);
         }
         tag.put("Pressure", pressureTag);
+        ListTag farmOwnerTag = new ListTag();
+        for (Map.Entry<String, UUID> entry : farmOwners.entries().entrySet()) {
+            CompoundTag one = new CompoundTag();
+            one.putString("Key", entry.getKey());
+            one.putString("Owner", entry.getValue().toString());
+            farmOwnerTag.add(one);
+        }
+        tag.put("FarmOwners", farmOwnerTag);
         ListTag settlementTag = new ListTag();
         Set<Integer> villages = new HashSet<>(health.keySet());
         villages.addAll(repopulatedAt.keySet());
@@ -278,6 +309,7 @@ public final class VillageSavedData extends SavedData {
         villages.addAll(anexoAnimales.keySet());
         villages.addAll(guardiasFundadoras.keySet());
         villages.addAll(remesaInicialEntregada);
+        villages.addAll(centres.keySet());
         for (int index : villages) {
             CompoundTag one = new CompoundTag();
             one.putInt("Index", index);
@@ -305,7 +337,11 @@ public final class VillageSavedData extends SavedData {
             if (remesaInicialEntregada.contains(index)) {
                 one.putBoolean("RemesaInicialEntregada", true);
             }
+            if (centres.containsKey(index)) {
+                one.put("Center", NbtUtils.writeBlockPos(centres.get(index)));
+            }
             one.putInt("Food", food.getOrDefault(index, 0));
+                if (pantryCredit.containsKey(index)) one.putInt("PantryCredit", pantryCredit.get(index));
             settlementTag.add(one);
         }
         tag.put("Settlement", settlementTag);
@@ -455,6 +491,21 @@ public final class VillageSavedData extends SavedData {
     }
 
     /** Comida almacenada en la aldea (la produce la granja, la comen los aldeanos). */
+    public int getPantryCredit(int objectiveIndex) { return pantryCredit.getOrDefault(objectiveIndex, 0); }
+
+    public void setPantryCredit(int objectiveIndex, int value) {
+        int clamped = Math.max(0, value);
+        if (pantryCredit.getOrDefault(objectiveIndex, 0) != clamped) { pantryCredit.put(objectiveIndex, clamped); setDirty(); }
+    }
+
+    public int objectiveAt(BlockPos center) {
+        for (var e : centres.entrySet()) {
+            BlockPos p = e.getValue();
+            if (p.getX() == center.getX() && p.getZ() == center.getZ()) return e.getKey();
+        }
+        return 0;
+    }
+
     public int getFood(int objectiveIndex) {
         return food.getOrDefault(objectiveIndex, 0);
     }
@@ -506,6 +557,59 @@ public final class VillageSavedData extends SavedData {
     /** Tira el plano para que se vuelva a capturar (cuando cambia el trazado o la forma de capturarlo). */
     public void clearBlueprint(int objectiveIndex) {
         if (blueprints.remove(objectiveIndex) != null) {
+            setDirty();
+        }
+    }
+
+    // --- Centro autoritativo de la aldea (Incremento A) -------------------------------------------
+
+    /**
+     * El centro guardado de esa aldea, o {@code null} si es de una partida anterior a este dato (entonces
+     * {@link VillageManager#centroDe} lo deriva UNA vez del objetivo y lo guarda). No se recalcula nunca: una aldea
+     * ya construida no se mueve.
+     */
+    public BlockPos getCentre(int objectiveIndex) {
+        return centres.get(objectiveIndex);
+    }
+
+    private static String farmKey(BlockPos center, int plot) {
+        return center.asLong() + "#" + plot;
+    }
+
+    /** Dueño autoritativo de la parcela, o {@code null} si está libre. */
+    public UUID getFarmOwner(BlockPos center, int plot) {
+        return farmOwners.get(farmKey(center, plot));
+    }
+
+    /** Reclama la parcela solo si está libre o ya es del mismo dueño. */
+    public boolean claimFarmPlot(BlockPos center, int plot, UUID owner) {
+        String key = farmKey(center, plot);
+        if (!farmOwners.claim(key, owner)) {
+            return false;
+        }
+        if (farmOwners.get(key) != null) {
+            setDirty();
+        }
+        return true;
+    }
+
+    /** Libera solo si el dueño coincide; nunca borra la parcela de otro. */
+    public void releaseFarmPlot(BlockPos center, int plot, UUID owner) {
+        String key = farmKey(center, plot);
+        if (owner.equals(farmOwners.get(key))) {
+            farmOwners.release(key, owner);
+            setDirty();
+        }
+    }
+
+    public boolean hasCentre(int objectiveIndex) {
+        return centres.containsKey(objectiveIndex);
+    }
+
+    /** Guarda el centro de la aldea. Solo lo llama la generación (o la recuperación de un dato corrupto). */
+    public void setCentre(int objectiveIndex, BlockPos centre) {
+        BlockPos anterior = centres.put(objectiveIndex, centre);
+        if (!centre.equals(anterior)) {
             setDirty();
         }
     }

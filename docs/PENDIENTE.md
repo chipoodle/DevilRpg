@@ -1,21 +1,52 @@
+
+## Lumberjack Phase 1: implementation done, runtime acceptance PENDING
+See `LUMBERJACK-PHASE-1-ACCEPTANCE.md`. Need A5 save/reload scenarios + Block 1
+regressions before acceptance.
+## Lumberjack reload-safe task state: DESIGN ONLY
+Revised design ready for review; see `docs/autonomous-village/LUMBERJACK-PHASE-1-RELOAD-DESIGN.md`. No code written.# PENDIENTE — nota de cierre
+
+## Food Economy Block 3.2: CERRADO (2026-11-07)
+No reabrir hambre, taberna, guardia, asedio, despensa ni persistencia sin una
+regresión reproducible. Único tema abierto relacionado: test automático de
+serialización NBT de `VillageSavedData` (limitación documentada, no fallo de
+gameplay). El resto de este fichero es histórico de la aldea.
+
+## A8-F03: CERRADA / ACEPTADA (2026-11-10)
+Navegación TALAR del Agent sin objetivo rancio. C1 (objetivo retirado antes de autorizar),
+C2 (candidato no-log), C3 (obstrucción), portón válido y portón negativo: PASS en runtime
+post-fix. `compileJava`, `lint_aldea.py --strict`, `git diff --check`, `a8NavTests` y los tres
+grupos de navegación: PASS. Detalle y evidencia histórica (incluidos los FAIL pre-fix) en
+`docs/autonomous-village/A8-F03-FRESH-SESSION-EXECUTION.md`. No reabrir sin una regresión
+reproducible. El siguiente bloque vivo es A6-03/Block 4; ver la entrada más reciente de
+`docs/CONTINUAR.md`. Este fichero sigue siendo histórico, no la cola viva.
 # POR DÓNDE SEGUIR — traspaso de sesión (aldea / DevilRpg)
 
 > ## ⚠️ ESTE ES EL TRASPASO **VIEJO** (27-sep a 3-oct-2026). SE CONSERVA COMO ACTA, NO COMO LISTA DE PENDIENTES
 >
-> **El traspaso VIVO es `docs/CONTINUAR.md`** (su apartado §2.0 es «lo que está abierto HOY» y se mantiene al día en cada
-> ronda). Este fichero se queda porque guarda el **porqué medido** de la sesión de los oficios (la mina, la boca de la
-> galería, el hierro, la taberna…) y las referencias a `docs/aldea-invariantes.md` (**I119–I135**), pero **sus marcas de
-> «PENDIENTE» pueden estar ya cerradas** ✗: comprobar en el acta antes de darlas por pendientes. *(Puesto en claro el
-> 9-oct-2026, después de que el propio agente leyera este fichero como si fuera la lista viva.)*
+> **El traspaso VIVO es `docs/CONTINUAR.md`** (su sección final «RECONCILIACIÓN 22-oct-2026» es la cola vigente;
+> §2.1 conserva el historial). Este fichero se queda porque guarda el **porqué medido** de la sesión de los oficios
+> (la mina, la boca de la galería, el hierro, la taberna…) y las referencias a `docs/aldea-invariantes.md`
+> (**I119–I135**), pero **sus marcas de «PENDIENTE» pueden estar ya cerradas** ✗: comprobar en el acta antes de darlas
+> por pendientes. *(Puesto en claro el 9-oct-2026, después de que el propio agente leyera este fichero como si fuera la
+> lista viva.)*
 
-> **Para la sesión nueva**: esto NO es lo que hay que seguir — lo vivo es `docs/CONTINUAR.md`, y su §2.0 es la lista de
-> lo que está abierto hoy. Aquí, si acaso, se viene a buscar **el porqué medido** de la sesión de los oficios: cada
-> apartado trae **lo que está medido**, **por qué se hizo así** y **el paso que tocaba**. Los datos crudos de aquellas
-> medidas están en `tools/arnes/medidas-mina-sellada.txt` (§1–§28) y el porqué de cada regla, en
-> `docs/aldea-invariantes.md` (**I119–I135**).
+> **Para la sesión nueva**: esto NO es lo que hay que seguir — lo vivo es la sección final de `docs/CONTINUAR.md`.
+> Aquí, si acaso, se viene a buscar **el porqué medido** de la sesión de los oficios: cada apartado trae **lo que está
+> medido**, **por qué se hizo así** y **el paso que tocaba**. Los datos crudos de aquellas medidas están en
+> `tools/arnes/medidas-mina-sellada.txt` (§1–§28) y el porqué de cada regla, en `docs/aldea-invariantes.md`
+> (**I119–I135**).
 >
 > **Para el jugador**: pégale a la sesión nueva: *«Lee `docs/CONTINUAR.md` y sigue por lo pendiente; mide con el arnés
 > y no te fíes de nada que no esté medido»*.
+
+> **Pendientes nuevos de aldea (L1–L4, 20-oct-2026):** el leñador atascado al cruzar la muralla, la prioridad de
+> árboles internos, la reposición del bosque con harina de hueso y la ampliación del bosque interior se registran en
+> **`docs/CONTINUAR.md`**. **Estado reconciliado el 22-oct-2026:** **L1 cerrado en runtime para el fixture aceptado**
+> (`l40d-20261022-1845`); **L2 parcialmente abierto** (rama interior posterior al depósito probada, prioridad completa
+> no); **L3 aceptado en runtime**; **L4 implementado**. **A1-CLIENT cerró el 22-oct-2026** con captura real de los
+> cuatro fundadores (`a1client3-20261022-2040`). **Golem movement sigue NO REPRODUCIDO** (23-oct-2026; tres rutas, sin daño); ver la sección final. **Terrain clearance cerró el 22-oct-2026** con scan completo
+> (`terrain4-20261022-2240`, residual=0). **L2 quedó PASS** (`l2iso2-20261023-0600`). La próxima tarea viva es **A2**,
+> bloqueada por la decisión de umbral del dueño; no L1. Este fichero es histórico y no duplica la cola viva.
 
 ## CÓMO SE TRABAJA AQUÍ (leer antes de tocar nada)
 
@@ -1658,3 +1689,606 @@ trabajando **a pleno rendimiento** ✓ (guardias entrenando hasta 783 líneas, t
 **sin una sola migración** (`REPARADA=0` ✓) y con la compuerta del este ya puesta (idempotente ✓).
 
 **Comparación final**: de **62-238** avisos de rendición por corrida de 20 minutos a **0** ✓.
+
+## Sucesor canonico A* — COMPLETADO (25-oct-2026)
+
+El defecto local A* que generaba `WALK@(301,118,300)` tras validar `(301,120,300)` esta corregido y cubierto
+por `NavSuccessorPolicy`, `NavPlanner.sucesorCanonico` y `NavPlannerStateTest`. Evidencia aislada:
+`drop11-20261025-0020` PASS (DROP original ejecutado, aterrizaje soportado, avance sin reemplazo).
+
+**Sigue abierto:** cobertura de combinaciones de transicion no enumeradas; A2 completo; entrada horizontal real
+frente a radio; cruce de brecha y llegada al interior; todas las acceptance pendientes de la aldea. A2 esta
+**BLOCKED** por el centro `661,71,533` y la validacion del harness protegido.
+
+## A2 center 661,71,533 — OPEN, owner decision (25-oct-2026)
+
+Exact blocker: protected `evaluarRecinto` counts a foundation failure when the first non-air block from Y=69
+downward has an empty collision shape. `661,71,533` has 33 such columns (water/lava/plant); preparation cannot
+fill them. Fallback `629,71,597` is selected by the fixed grid because it has zero foundation failures. This
+changes the agreed center. No exact column list is logged and no approved 661 prepared world exists. Options:
+approved 661 world/tool, owner approval of 629,71,597, or owner authorization to change protected harness.
+
+## A2 661 fixture tool — DESIGN PENDING (25-oct-2026)
+
+An independent prepared-world tool is feasible: copy a disposable source world into the launcher's isolated
+`game/a2n` path, repair only the first non-collidable non-air blocks in the 33 ring columns, emit a manifest, and
+let the unchanged harness revalidate 661. No implementation or world write was done. Missing: approved tool,
+exact 33-column manifest, and owner permission to create/use the disposable prepared world. A2 remains BLOCKED.
+
+## A2 661 scanner — BLOCKED ON SOURCE/TOOLING (25-oct-2026)
+
+No scanner implementation or read. No positively identified clean 661 source world; historical disposable worlds
+are not approved fixtures and the 629 arena is excluded. No existing Anvil/NBT library is installed. Owner input:
+absolute source path (or approve fresh disposable generation) plus approval to implement a read-only scanner.
+
+## A2 source recovery — REPRODUCIBLE WITH APPROVAL (25-oct-2026)
+
+Seed **12345**, center **661,71,533**, cota 71, well axis 628,71,562 are documented (ldea-estados.md; launcher
+default seed 12345). A fresh disposable world is reproducible without trusting historical worlds. It will still
+show 33 foundation failures; preparation cannot fix them. Owner approval required for fresh-world generation plus
+either an approved repair/scanner or protected-harness pre-selection repair. A2 remains BLOCKED.
+
+## A2 fresh source/scanner — REPORT READY, NOT EQUIVALENT (25-oct-2026)
+
+Fresh seed-12345 world at `build/a2n/fixture-source-20261025-0115` scanned read-only by stdlib Anvil parser.
+400/400 columns parsed, 0 missing chunks, 94 likely-empty water states, 306 unknown-collision states; historical
+aggregate was 33. No repairs. The fresh world is not proven equivalent to the historical 661 terrain. Owner review
+required; A2 remains BLOCKED.
+
+## A2 33-vs-94 discrepancy — UNRESOLVED (25-oct-2026)
+
+Same recorded seed/versions/settings, but historical has only aggregate 33 and no per-column manifest. Fresh scan
+finds 94 likely-empty water + 306 unknown. Exact equivalence is not established; do not accept fresh world as
+baseline without owner decision. A2 remains BLOCKED.
+
+## A2 historical artifact recovery — INSUFFICIENT (25-oct-2026)
+
+Historical compiled harness/classes for a2n-20261023-132018 are gone; current worldgen classes are newer (25-oct)
+and cannot be tied to the 23-oct run. Logs contain only aggregate candidate counts, no per-column foundation
+manifest. 33-vs-94 remains unresolved. Need a pinned source/build hash and a runtime per-column probe or a
+verified historical source.
+## A2 new-baseline arena — PLAN PENDING APPROVAL (25-oct-2026)
+
+Fixed center 661,71,533, seed 12345, 1.21.1/21.1.249, ring 62, wall 3, cota 71. Source
+build/a2n/fixture-source-20261025-0115/game/a2n; use a unique disposable copy. Offline scan: 400 columns, 94
+likely-empty water, 306 unknown collision. Proposed mutations: 94 first-non-air water cells only, pending runtime
+collision confirmation; exact final list not established. No repairs or world writes. Need owner approval for
+runtime probe (no A2) and repair policy; A2 remains BLOCKED.
+
+## New-baseline arena plan — approval required (25-oct-2026)
+
+Keep center 661,71,533, seed 12345, MC 1.21.1/NeoForge 21.1.249, r=62, wall=3, cota=71. Source world
+build/a2n/fixture-source-20261025-0115/game/a2n must be copied, never modified. Offline scanner: 400 columns, 94
+likely-empty water, 306 unknown collision. Candidate repair cells are the 94 water first-non-air columns only;
+runtime collision probe is required to validate and finalize. No repairs/world writes in this phase. The unchanged
+harness cannot validate without launching A2, so independent probe must precede the one authorized A2 run. Owner
+approval needed for probe and repair. A2 BLOCKED.
+## A2 runtime probe — failed closed (25-oct-2026)
+
+Single probe launch on disposable copy: `[A2PROBE] DONE columns=400 missing_chunks=400`, all other counts zero.
+Ring chunks were not loaded at first Post tick; no block states read, no repairs, no A2. Working copy saved by
+server shutdown; source untouched. A retry needs probe forceload/wait and a new authorized launch. A2 BLOCKED.
+## A2 probe chunk loading — fix implemented, launch pending (25-oct-2026)
+
+Probe now forceloads the exact ring chunks, waits for all `getChunkNow` non-null (200-tick timeout), scans only
+when ready, rechecks during scan, releases tickets, and halts. No block mutations or A2 calls. No launch in this
+phase; second launch authorization required. A2 BLOCKED.
+## A2 probe second launch — blocked by harness none (25-oct-2026)
+
+One launch attempted; harness `mode=none` called `cerrar` and stopped the server before probe tick. No report.
+Source unchanged; working copy saved. Need launch path that excludes A2NavHarness entirely. No retry; A2 BLOCKED.
+## A2 probe-only build path (25-oct-2026)
+
+New opt-in `-Pa2nProbeOnly=true` excludes A2NavHarness/A2EntryProbe/AsedioRunA2/A2ProdNavProbe while keeping
+ArenaFoundationProbe. Verified with classpath checks: probe-only build has probe class and no A2 harness/entry;
+property-absent diagnostic build still has A2NavHarness. No launch. A2 BLOCKED.
+## A2 runtime probe PASS (25-oct-2026)
+
+Probe-only launch `arena-probe3-20261025-0538`: 400/400 columns, 33 collision-empty water at Y=62, 367 non-empty,
+0 missing, 32/32 chunks ready, cleanup 32/32, process exited. No A2 harness/A2 activity. Source unchanged.
+Runtime supersedes offline 94 estimate. No repair/A2 yet.
+## A2 acceptance attempt — partial (25-oct-2026)
+
+Foundation bootstrap made candidate 661 valid and wall complete; 8/8 spawned. All attackers stayed PLANNING with 0
+perimeter entries/breach. Verdict A/B has no contracted thresholds; no A2 acceptance. One attempt consumed.
+## A2 ACCEPTED — 25-oct-2026
+
+`a2n-20261025-055802` with `-NavCustom true`: foundation/candidate valid, wall 1200, 8/8 spawn, routes executed,
+wall cells 1200->1191 (9 missing, 3 non-solid), 4/8 perimeter entries, 2/8 inside wall, 1 disappeared, no deaths.
+Real breach/horizontal entry evidenced by Siege pica logs and final inside positions. No numeric threshold exists;
+recorded result is 4/8 entered / 2 inside. A2 accepted for qualitative criteria; no further run.
+## A2 nav budget attempt — still 4/8 (25-oct-2026)
+
+Run `a2n-20261025-212406` with global budget16000/local3000, NavCustom true: 4/8 entered, 2/8 inside, 1 disappeared.
+idx4/7/8 still no route; idx6 same DROP contiguity rejection. No 8/8. A2 not accepted.
+## A2 waypoint/DROP fix — still 4/8 (25-oct-2026)
+
+Run `a2n-20261025-214955`: 4/8 entered, 3/8 inside (idx6 fixed), 1 disappeared, wall intact 1200. idx4/7/8 still
+no route. No 8/8; three-run series not started. A2 not accepted.
+
+## Village profession recovery (26-oct-2026)
+
+One-shot early maintenance poll after attack clear added (pending marker). No duplicate goals; GoalSelector/canUse
+still authoritative. Needs runtime test with a real under_attack siege; the prior test only produced enemies_inside.
+
+## A5 recovery scenario (26-oct-2026)
+
+Implemented `recovery` scenario for real siege -> recovery; bounded and no terminal cleanup. Needs a disposable
+world/siege run to validate. Not yet accepted.
+
+## A5 automation repair (26-oct-2026)
+
+Launcher result-path/focus regression fixed; self-test PASS. Short graphical smoke/focus test still pending.
+
+## Automation repair verified (26-oct-2026)
+
+Launcher self-test and smoke PASS; focus-switch GUI test still pending.
+
+## A5 focus smoke (26-oct-2026)
+
+Focus smoke FOCUS_UNVERIFIED with Chrome foreground; exact Minecraft→Chrome transition not captured. Invalid guardview attempt
+started a siege and was discarded. No siege acceptance claimed.
+
+## A5 final focus test (26-oct-2026)
+
+FOCUS_UNVERIFIED: smoke PASS/clean/exit0, but Minecraft foreground could not be established (SetForegroundWindow
+returned false). Need focus-permitted environment or explicit manual-switch authorization.
+
+## A5 focus handoff repair (26-oct-2026)
+
+FOCUS_UNVERIFIED: foreground ownership could not be transferred noninteractively. Need focus-permitted desktop
+or explicit manual-switch authorization.
+
+## Harness focus regression root cause (26-oct-2026)
+
+No historical automated focus handoff exists; pre-A5 relied on pauseOnLostFocus:false. Current API handoff cannot
+change foreground. Do not add another focus architecture without an interactive-session solution.
+
+## Guard equipment on existing founders (27-oct-2026)
+
+Fixed existing-founder branch to attempt warehouse equipment. Static verification only; no runtime guard
+equipment acceptance run yet.
+
+## Existing founder equipment acceptance (27-oct-2026)
+
+PASS with disposable A5WALL world `founder-equip-20261027-02`. Combat effectiveness still unproven.
+
+## Fresh-world A2 raid acceptance (27-oct-2026)
+
+PASS at breach/defense level; no attacker entered. Next priority: interior pressure and save/reload.
+
+## A2 interior pressure acceptance (27-oct-2026)
+
+Interior pressure confirmed by death positions; `dentro=true` logging is stale/unreliable and must not gate acceptance.
+
+## Player-proximity autonomy fix (27-oct-2026)
+
+PASS near-village grace (11 working, waveAttack=false). Far→near→far full sequence and duplicates not measured.
+
+## Player-proximity autonomy closure (27-oct-2026)
+
+PASS; four tracked villagers moved far/near/far. Broader profession counters/save-reload remain.
+
+## Multi-village isolation (27-oct-2026)
+
+PARTIAL: isolation PASS; save/reload restart test still missing. Next: bounded second-run reload scenario.
+
+## Save/reload persistence acceptance (27-oct-2026)
+
+PASS two-process reload. Next: per-guard goal enumeration, three villages, multiple cycles.
+
+## Distant-village maintenance (27-oct-2026)
+
+PARTIAL: code compiled; runtime reload failed because B entities/guards absent in reused save. Fresh two-village
+single-reload retest required.
+
+## Distant-village autonomy clean reload (27-oct-2026)
+
+PASS for one farmer/one reload with force-loaded chunks. Multiple professions/natural load remain.
+
+## Profession progression (27-oct-2026)
+
+PARTIAL: farmer harvest XP source change compiled; no harvest observed in bounded test. Need deterministic mature-crop
+scenario and reload persistence.
+
+## Harvest XP deterministic test (27-oct-2026)
+
+FAIL: real harvest 69, XP unchanged. Need exact vanilla harvest hook; event attempt unverified.
+
+## Harvest XP mixin acceptance (27-oct-2026)
+
+PARTIAL aggregate 64/64 and reload xp=25. Next: single-crop/non-farmer negative.
+
+## Harvest XP final acceptance (27-oct-2026)
+
+PASS single-crop/aggregate/reload/package. Remaining: production jar runtime, vanilla level UI effects, non-farmer
+explicit fixture if desired.
+
+## Lumberjack XP audit (27-oct-2026)
+
+PARTIAL: source award correct; runtime blocked by fixture priority. Need bone meal/established arboleda.
+
+## Lumberjack XP runtime (27-oct-2026)
+
+PARTIAL: 5 logs -> 5 XP runtime; persistence retest needs chunk force-load/wait.
+
+## Lumberjack XP closure (27-oct-2026)
+
+PASS persistence and non-lumberjack negative; optional single-log remains.
+
+## Mining XP source audit (28-oct-2026)
+
+BLOCKED: no MASON in A5WALL fixture; need miner world/scenario. Potential `setBlock` result check noted.
+
+## Mining XP runtime (28-oct-2026)
+
+PARTIAL: real mining xp1->47, reload 47; setBlock failure guard source-only; single-block/negative pending.
+
+## Mining XP closure (28-oct-2026)
+
+PARTIAL: guard contract fixed. Need single-block, failed-mutation, non-miner runtime.
+
+## Mining XP final acceptance (28-oct-2026)
+
+PARTIAL: non-miner PASS; single-block pending; failed mutation source-only.
+
+## Mining single-block acceptance (28-oct-2026)
+
+PARTIAL: need mine-progress-controlled one-block fixture; no production bypass.
+
+## Mining single-block acceptance (28-oct-2026)
+
+PASS single-block. Remaining: explicit duplicate-goal count, source-only failed mutation.
+
+## Next gameplay gap audit (28-oct-2026)
+
+Dispatcher unwired is highest-value gap; plan/report written. XP levels/expansion/golem deferred.
+
+## Bounded dispatcher (28-oct-2026)
+
+PARTIAL: opt-in works/improves one sample; default off. Need competing-target, bounded-failure, full regressions.
+
+## Dispatcher validation (28-oct-2026)
+
+PARTIAL: matrix 8 PASS/1 PARTIAL/1 SOURCE/6 NOT RUN. Keep opt-in; run missing regressions and pairs.
+
+## Dispatcher gap closure (28-oct-2026)
+
+FAIL opt-in regression; keep disabled. Do not enable without a new design.
+
+## Custom nav decision (28-oct-2026)
+
+Navigation controller implemented opt-in; dispatcher rejected/historical. Runtime ownership not observed (no [NAV] logs);
+next: verify flag propagation/registration before further tests.
+
+## Custom nav implementation (28-oct-2026)
+
+Controller opt-in, not runtime-proven. Next: verify flag/registration activation with one diagnostic run.
+
+## Custom navigation contract (28-oct-2026)
+
+Contract+identity/state implemented. First runtime (custom-nav-20261028-03) had 83 harvests but no [NAV] events;
+acceptance PARTIAL. Next: one activation diagnostic (flag/registration), then one end-to-end run.
+
+## Custom nav contract report (28-oct-2026)
+
+PARTIAL: implementation contract complete, runtime ownership unproven.
+
+## Custom nav activation (28-oct-2026)
+
+Activation PASS; throughput regression. Next: coalesce sub-step recados before another acceptance.
+
+## Two-level profession coordination (28-oct-2026)
+
+Source slice complete. Next authorized task: three-farmer/three-plot non-conflict,
+sustained work, death/reassignment, reload persistence; do not assume PASS.
+
+## Two-level profession coordination report (28-oct-2026)
+
+Source complete; runtime unauthorized/unverified.
+
+## Farm/nav coherence (28-oct-2026)
+
+PARTIAL: regression reduced 3->30, not fixed. Do not tune threshold; add logical task identity.
+
+## Task identity (28-oct-2026)
+
+FAIL runtime. Next: disable controller ownership for farming, restore fallback; no more threshold/radius tuning.
+
+## Farm nav containment (28-oct-2026)
+
+Farm tasks fallback-only; policy test PASS. Next runtime: confirm fallback 63-83 restored; then handoff design.
+
+## Farm nav containment report (28-oct-2026)
+
+PARTIAL: containment source/test done; runtime throughput pending.
+
+## Farm nav containment runtime (28-oct-2026)
+
+PARTIAL: throughput 27 vs 63-83; add policy-evaluation diagnostic + investigate nonfarm nav contention.
+
+## Farm nav policy runtime (28-oct-2026)
+
+PARTIAL: exclusion proven; throughput 42; farm:-1 means coordinator assignment not effective.
+
+## Farm plot assignment (28-oct-2026)
+
+PARTIAL: farm:0/1/2 distinct; throughput 68. Harness FAIL xp75 vs 68; investigate awards.
+
+## Farm XP/harvest investigation (28-oct-2026)
+
+ACCEPTED: harness now counts mature removals; 67/67. No production XP change.
+
+## Navigation interference (28-oct-2026)
+
+PARTIAL: farming healthy, no interference proven. Next only if needed: nonfarm on/off scenario.
+
+## Nonfarm nav A/B (28-oct-2026)
+
+Valid negative: enabled miner 0 vs control 46. Exclude work-position tasks; no radius tuning.
+
+## Vision reconciliation (29-oct-2026)
+
+Documented-not-implemented: custom brain, terrain geometry, enemy progression/fortress. Requires design decisions;
+do not implement. Player powers backlog missing/not found.
+
+## Mining nav containment (29-oct-2026)
+
+Source/tests: mine:* excluded; runtime pending. Future vision docs added; no future feature implemented.
+
+## Vision reconciliation (29-oct-2026)
+
+Docs done; mining exclusion source/test; runtime pending; player power backlog not canonical.
+
+## Mining nav containment runtime (29-oct-2026)
+
+ACCEPTED runtime. Mining fallback healthy. Custom nav remains opt-in.
+
+## Task coordination audit (29-oct-2026)
+
+Next slice: farm-claim lease/release; audit report written. No source/runtime.
+
+## Farm ownership persistence (29-oct-2026)
+
+PARTIAL: persistent claims implemented; runtime unload/reload and release hooks pending.
+
+## Stabilization (29-oct-2026)
+
+PAUSED broad architecture. Active stabilization/backlog. Mandatory spawn profile centralization and Vex unlock pending;
+farm ownership runtime pending; no implementation authorized by audit.
+
+## User playable build (29-oct-2026)
+
+PLAYABLE client launched; spawn position limitation; gameplay validation pending user observations.
+
+## Stabilization 14 defects (29-oct-2026)
+
+G2/G3 technical fixes; 12 pending. Next: runtime diagnosis per affected system.
+
+## CRITICAL: New World hash mismatch (29-oct-2026)
+
+BLOCKED safety: expected F3CB43... actual CB687B... External session likely; no restore.
+
+## Stabilization phase 2 (29-oct-2026)
+
+G2/G3 only. Remaining 12 defects need focused implementation/runtime; New World excluded.
+
+## Lumberjack block 1 (29-oct-2026)
+
+A2 technical; A1/A3/A4/A5 runtime gaps. Next: sapling/blocked-door fixture.
+
+## Lumberjack block1 completion (29-oct-2026)
+
+A2/A3 runtime failed fixture; need valid inner positions. A3 arboleda felling works 5 logs.
+
+## Lumberjack fixture integrity (29-oct-2026)
+
+Inner tree not harvested in 600 ticks; sapling disappeared/bone consumed. Need longer/priority diagnosis.
+
+## Lumberjack final run (29-oct-2026)
+
+A2/A3/A5 fail runtime; need deeper task instrumentation/longer scenario.
+
+## Lumberjack root-cause attempt (29-oct-2026)
+
+Corrected source gap but runtime branch not reached; need instrument descubrirTrabajo/target decisions.
+
+## Lumberjack discovery trace (29-oct-2026)
+
+Scanner rejects candidate (failed point/unreachable); need reachable-cell fixture and failed-point trace.
+
+## Lumberjack block1 execution (30-oct-2026)
+
+Add LUMBER-SCAN per-predicate logging; fixture needs verified standing cell/not failed.
+
+## Definitive scanner (30-oct-2026)
+
+Fixture target removed before scanner; need placement after maintenance settle + assert pre-scan.
+
+## Lumberjack scanner accepted (30-oct): sapling 118,97,0, sitio117,0, stage1->log. No ABONO; likely other actor.
+
+## Actor run 10: farmer not culprit; lumberjack puntoConHarina null despite bone32. Fix lookup.
+
+## Source lookup run13: VillagePantry.contar(almacen)=0 vs countStorage=32; trace container mismatch.
+
+## Storage discrepancy: need slot-level trace inside VillagePantry.contar; container identity differs.
+
+## Storage: pantryContar=32 at insertion. Disappears before decision. Need slot mutation watchdog.
+
+## A2 proved. Need rerun conservation + inner tree.
+
+## A5 4-unit conservation pass; inner tree/blocked door remain.
+
+## Regression run22: growCrop true but stage unchanged; tree not enumerated after reset.
+
+## Inner fixture never enumerated; arboleda wins. A5 no-growth consumption unsolved.
+
+## A2/A5 reliable; A3 planner still selects arboleda. Next: area selection/tree enumeration.
+
+## Inner tree validation still rejects fixture; need LUMBER-TREE reason for esArbolSuelto/standing.
+
+## Lifecycle restored; next inner tree and delivery.
+
+## A4 warehouse delta off by1; inspect guardar/stack split.
+
+## Delivery not reached in 1800 ticks; extend window or instrument entregar. No item loss.
+
+## Delivery never starts after talar; inspect target==null branch/restTicks and puntoDeApoyo assignment.
+
+## A4 proven. Next inner tree/planner, then obstruction/reservations.
+
+## Inner request now independent, arboleda excluded; fixture110 still not enumerated/selected.
+
+## Delivery no longer resets planner; inner ring12 still not reached in 3 tasks. Need verify cursor batches.
+# A3: falta demostrar batch que incluya 92,0; no cambiar budget.
+
+## Fix next: center origin + prevent post-delivery reinit. Do not change budget.
+
+## A3: adjust diagnostic to actual fixture coordinate 90,0; candidate not yet logged.
+
+## A3/A4/A7 proven. Remaining A1 obstruction recovery, A6 reservation lifecycle.
+
+## A1/A6 need obstruction and interruption runtime scenarios.
+
+## A1/A6 harness flag propagation or scenario dispatch still needed.
+
+## A1/A6 still need a target that is selected then made unreachable.
+
+## A1/A6: investigate why stuck limit/failed point not reached after post-assignment wall.
+
+## A1 needs recoverable obstruction; A6 needs scheduler interruption.
+
+## Widen alternate route or use a proper open corridor; A6 two-worker interruption still needed.
+
+## A1 corridor geometry needs path endpoint inside wall; A6 two-worker preemption.
+
+## A6: two-worker real GoalSelector preemption still needed.
+
+## A6: insert actual competing goal and two workers; verify currentTarget before/after.
+
+## A6: investigate why priority0 MOVE goal not selected; two workers still needed.
+
+## A6: one-shot preempt goal + Worker B + subsequent work.
+
+## A6: add Worker B distinct assignment and compare controller identity.
+
+## Block 1 A1-A7 complete. Next: keep regressions green; no open forestry acceptance.
+
+## 2026-11-05 — Forestry Block 1 closed (A1–A7 PASS)
+All forestry acceptance criteria are runtime verified. See
+`docs/autonomous-village/FORESTRY-BLOCK-1-ACCEPTANCE.md`.
+Remaining autonomous-village work should build on this foundation. Forestry
+production code should not be refactored without a demonstrated regression and
+the narrow regression required by the acceptance record.
+
+## 2026-11-05 — Autonomous Village master audit
+The full inventory, acceptance matrix, integration scenarios, defect backlog, and
+ordered correction roadmap are in
+`docs/autonomous-village/AUTONOMOUS-VILLAGE-MASTER-PLAN.md`.
+Forestry Block 1 is closed; the first recommended implementation block is food
+autonomy (C1). No production code changes were made in the audit phase.
+
+## 2026-11-05 — C1 food autonomy: source verified, runtime blocked
+`VillageManager.repartirRaciones` withdraws pantry food and marks meals;
+`pasarHambre` applies weakness/slowness/death and recovery. No food runtime
+scenario exists yet. Next bounded task: add one `food-autonomy` A5 scenario with
+known quantities and exact deltas. Do not implement another consumption system.
+
+## C1: consumption/shortage/recovery PASS run84. Remaining: farm production, cook output, reload persistence.
+
+## 2026-11-05 — Food economy: overfeeding confirmed structurally
+`EAT_INTERVAL_TICKS=1200` produces 24 meals/day/villager; `sacarComida` removes
+whole items and can overdraw points. Guards use the same ration and lose automatic
+feeding during attacks. Production rates remain unmeasured. See
+`FOOD-ECONOMY-AUDIT.md`; do not implement until daily portion/work policy is
+approved.
+
+## Food one-day: pantry 256->64, bread 256->0, 12 tracked meals, 76 farm items,
+18 cooked pieces, negative balance. Guard fixture invalid (same UUID as worker).
+Next: corrected food-day with distinct guard and per-item deltas before feeding
+policy changes.
+
+## Food measurement 2: overdraw 2 points proven; worker13/guard9 meals; pantry
+256->11 negative. Next: daily meal window + exact withdrawal + guard raid rule.
+
+## Block 3 partial: daily cadence + guard check + pantry credit implemented.
+Missing: persisted credit (currently WeakHashMap), work-dependent hunger,
+real bedtime gate, guard raid proof, automated tests. Do not mark complete.
+
+## Block 3.1 partial: persistent pantry credit implemented, compile passes.
+Still missing: work-dependent hunger, real bedtime handshake, guard raid proof,
+pantry tests/save-reload, post-change 24k runtime. Do not claim complete.
+
+## Block 3.2 FAIL run92: no meals. Diagnose feed AABB/isNight/eligibility before
+any more feeding changes. Add tests and deterministic worker selection.
+
+## Lumberjack delivery loop fixed in source; normal deliveries pass run93.
+Still needs warehouse-full/unreachable runtime test and automated retry test.
+
+## Lumberjack dance fixed in source/run94. Still missing automated WALK_TARGET
+ownership test, farmer/guard/two-worker runtime scenarios.
+
+## Block 3.2 partial: individual hunger/emergency feed works at ~95.
+Need normal-threshold 60 proof, 25-point reduction runtime, tests, reload, raid.
+
+## Block 3.2: 25-point reduction verified. Normal feeding at60 still fails; guard feeding/raid, starvation, reload, tests open.
+
+## Block 3.2: meal reduction and guard feeding work. Normal 60 delay remains.
+Instrument tavern goal installation/canUse; then tests/reload/raid.
+
+## Food diagnostic: sleep gate found/removed, but canUse still returns before
+destination; no result log at hunger100/pantry232. Next instrument each return.
+
+## Food eligibility ROOT CAUSE: `tieneHambre` still rolling timestamp.
+At hunger80 it returns false. Fix is one line to hunger>=60. No behavior change
+made in diagnostic.
+
+## Normal feeding at60 now PASS run105 (62->37, 60->35). Remaining Block3.2: tests,
+starvation/recovery, guard raid, reload.
+
+## Block 3.2 open: tests, starvation/recovery, guard raid, save/reload. Normal
+feeding at60 is PASS run105.
+
+## Starvation integration NOT verified: run107 hunger100 but no weakness/slow at
+4400. Diagnose critical timer/effect application before claiming recovery.
+
+## Starvation root cause: HAMBRE_PACIENTE=72000 (3*EAT) while DEATH=12000 absolute; weakness
+unreachable. Decouple constants before any recovery claim.
+
+## Starvation effects/recovery PASS run109. Remaining: death timer runtime,
+automated tests, guard raid, persistence.
+
+## Starvation death at crit=12000 PASS run110. Failed feeding preserved critical
+state. Remaining: automated tests, guard raid, persistence.
+
+## Food hunger policy tests PASS. Remaining Block3.2: guard raid, persistence,
+Minecraft-effect/death automated coverage limitation.
+
+## Guard raid feeding unverified: run118 meal after siege ended; run119 raid did
+not start. Cooldown prevents duplicates. Needs a raid that starts before meal.
+
+## Guard active-raid feeding PASS run120 (siege=true, 100->75, one meal).
+Remaining: defense-resumption target evidence, persistence.
+
+## Defense resumption PARTIAL: run123 moved raider but guard target=-; raid ended.
+Do not claim defense resumption. Active-raid meal is PASS run120.
+
+## Defense resumption PASS run127: guard private enemigo=dc333a86 at 0.8 blocks
+after meal, siege=true. A5 getTarget assertion is a false negative.
+
+## Guard raid feeding + defense resumption PASS run128. Next: save/reload of
+hunger and pantry credit.
+
+## Persistence PASS run130: hunger100 and credit2 survive reload; credit2 consumed
+once. Remaining: second cycle, no-duplicate-meal-after-reload, serialization test.
+
+## Remaining Food Economy: post-reload meal after 3600 ticks; NBT serialization
+test. Do not reopen completed raid-feeding/persistence.
+
+## Food Economy Block 3.2 CLOSED (run132 daytime second meal PASS).
+
+## MEAL2 save fixture fixed (run132 save PASS). Post-reload second meal still does
+not occur (hunger86, elapsed7000, pantry24). Block3.2 stays open.
+
+## Post-reload no-meal cause: sleep=true at night. Goal installed and all other
+conditions pass. Run daytime to verify second meal.
