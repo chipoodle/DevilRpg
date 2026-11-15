@@ -1326,9 +1326,19 @@ public final class NavExecutor {
                 new net.minecraft.world.level.ClipContext(mob.getEyePosition(), objetivo.getCenter(),
                         net.minecraft.world.level.ClipContext.Block.COLLIDER,
                         net.minecraft.world.level.ClipContext.Fluid.NONE, mob));
-        return hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK
-                ? hit.getBlockPos().immutable()
-                : null;
+        if (hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            return null;
+        }
+        BlockPos hitPos = hit.getBlockPos();
+        // A ray aimed at an elevated node can graze the support block below it. Breaking that
+        // floor is not a BREAK action: it removes the attacker's own footing and repeats.
+        if (NavBreakTargetPolicy.isSupportBelowTarget(hitPos.getY(), objetivo.getY(),
+                hitPos.getX() == objetivo.getX() && hitPos.getZ() == objetivo.getZ())) {
+            return mob.level().getBlockState(objetivo).getCollisionShape(mob.level(), objetivo).isEmpty()
+                    ? null
+                    : objetivo.immutable();
+        }
+        return hitPos.immutable();
     }
 
     /**

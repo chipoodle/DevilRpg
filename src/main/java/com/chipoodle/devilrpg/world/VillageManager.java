@@ -3883,6 +3883,7 @@ public final class VillageManager {
         for (Villager villager : aldeanos) {
             if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)) {
                 asegurarElHuir(villager);
+                asegurarElVolver(villager, center);
                 if (NAVEGACION_ACTIVA) {
                     asegurarLaNavegacion(villager);
                 } else if (DESPACHADOR_ACTIVO) {
@@ -7148,6 +7149,17 @@ public final class VillageManager {
             }
         }
         villager.goalSelector.addGoal(VillageGoalPriority.EMERGENCY, new com.chipoodle.devilrpg.entity.goal.VillagerFleeGoal(villager));
+    }
+
+    /** Workers beyond profession range must return; flee still wins when a monster is near. */
+    public static void asegurarElVolver(Villager villager, BlockPos center) {
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerReturnGoal) {
+                return;
+            }
+        }
+        villager.goalSelector.addGoal(VillageGoalPriority.UTILITY,
+                new com.chipoodle.devilrpg.entity.goal.VillagerReturnGoal(villager, center));
     }
 
     /**
