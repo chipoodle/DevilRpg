@@ -7,7 +7,7 @@ Read first:
 - `docs/CONTINUAR.md`
 - `docs/PENDIENTE.md`
 
-Baseline: branch `feature/autonomous-village`, HEAD `518fee13fc15bfb9b92b0479d86b5c609d1947da`, dirty tree preserved.
+Baseline: branch `feature/autonomous-village`, HEAD `03e4e387d0cdfb74e99182d6c42998b160d43126` (remote synchronized), dirty tree otherwise preserved.
 
 ## Immediate work
 
