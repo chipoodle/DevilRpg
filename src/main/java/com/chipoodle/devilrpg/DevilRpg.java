@@ -6,6 +6,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.NeoForge;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -33,5 +34,8 @@ public class DevilRpg {
         modContainer.registerConfig(ModConfig.Type.SERVER, ConfigHolder.SERVER_SPEC);
         // Register networking payloads
         modEventBus.addListener(ModNetwork::registerPayloads);
+        // Opt-in A2 damage/death telemetry; no-op unless NavTrace is enabled.
+        NeoForge.EVENT_BUS.addListener(A2DamageTelemetry::onDamage);
+        NeoForge.EVENT_BUS.addListener(A2DamageTelemetry::onDeath);
     }
 }

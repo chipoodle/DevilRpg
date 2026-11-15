@@ -1202,6 +1202,8 @@ public final class VillageGenerator {
         // 1) LO QUE HUBIERA EN LOS COFRES VIEJOS, AL ALMACÉN NUEVO (y si no cupiera, al suelo del nuevo, donde el
         //    recolector del pueblo lo recoge: tirar un cofre tira su contenido al suelo).
         asegurarAlmacen(level, center);
+        var traceBefore = com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.logCounts(
+                VillageStorage.almacen(level, center));
         int movidos = 0;
         for (BlockPos p : VillageStorage.cofresViejos(level, center)) {
             if (!(level.getBlockEntity(p) instanceof Container contenedor)) {
@@ -1221,6 +1223,8 @@ public final class VillageGenerator {
             }
             contenedor.setChanged();
         }
+        com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.systemExternalDelta(
+                traceBefore, VillageStorage.almacen(level, center), "cobertizo-viejo");
         // 2) EL COBERTIZO VIEJO SE RETIRA (solo sus bloques: el suelo de piedra, los postes, el tejado, el farol y
         //    los cofres ya vaciados).
         for (int dx = -2; dx <= 2; dx++) {
@@ -1496,6 +1500,8 @@ public final class VillageGenerator {
      * más: camas y maniquíes son bloques, no tienen contenido.
      */
     private static void vaciarLasArcasDeLaBarraca(ServerLevel level, BlockPos center, BlockPos base, int nivel) {
+        var traceBefore = com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.logCounts(
+                VillageStorage.almacen(level, center));
         int y = nivel + BARRACA_PISO2_VIEJO;
         for (int dz = BARRACA_ARCA_DZ; dz <= BARRACA_ARCA_DZ + 1; dz++) {
             BlockPos arca = new BlockPos(base.getX() - BARRACA_RADIO + 1, y, base.getZ() + dz);
@@ -1519,6 +1525,8 @@ public final class VillageGenerator {
                         + " rehacerla (un piso, I123)", center, pasados, arca.toShortString());
             }
         }
+        com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.systemExternalDelta(
+                traceBefore, VillageStorage.almacen(level, center), "barraca-arcas");
     }
 
     /**

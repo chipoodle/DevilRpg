@@ -40,6 +40,15 @@ public final class NavPlannerStateTest {
         ex.excluir(k, 100L);
         comprobar("DROP rechazado excluido con misma huella", ex.excluida(k, 100L));
         comprobar("DROP vuelve a ser elegible si cambia el terreno", !ex.excluida(k, 101L));
+        long destino = NavDropExclusionPolicy.claveDestino(4, 5, 6);
+        comprobar("clave de destino no colisiona con clave de arista",
+                destino != NavDropExclusionPolicy.clave(0, 0, 0, 4, 5, 6));
+        ex.excluir(destino, 200L);
+        comprobar("landing queda registrado", ex.contiene(destino));
+        comprobar("huella del landing queda registrada", Long.valueOf(200L).equals(ex.huellaRegistrada(destino)));
+        comprobar("landing bloqueado excluye cualquier origen con misma huella", ex.excluida(destino, 200L));
+        comprobar("landing vuelve a ser elegible al cambiar la columna", !ex.excluida(destino, 201L));
+        comprobar("huella obsoleta se elimina", !ex.contiene(destino));
         ex.excluir(k, 100L);
         for (int i = 0; i < 40; i++) ex.excluir(NavDropExclusionPolicy.clave(i,0,0, i,1,0), 7L);
         comprobar("exclusion acotada a 32", ex.tamano() <= NavDropExclusionPolicy.MAX_ENTRADAS);

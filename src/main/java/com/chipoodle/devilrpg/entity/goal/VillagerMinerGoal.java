@@ -819,7 +819,7 @@ public class VillagerMinerGoal extends Goal {
                 && cuantosEnInventario(Items.TORCH) < ANTORCHAS_POR_VIAJE;
         if (cuantosEnInventario(VillageStorage::esCarbon) <= 0 && cuantosEnInventario(VillageStorage::esLena) <= 0
                 && (hayMineralCrudo() || necesitaCarbon)) {
-            ItemStack lena = VillageStorage.quitarLena(level, center, 2);
+            ItemStack lena = VillageStorage.quitarLena(level, center, 2, villager);
             if (lena != null && !lena.isEmpty()) {
                 ItemStack resto = guardarEnInventario(lena);
                 if (!resto.isEmpty()) {

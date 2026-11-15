@@ -52,6 +52,39 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
+            // A2 headless integration runs opt into a private game directory and JVM diagnostics.
+            if (providers.gradleProperty('a2nGameDirectory').isPresent()) {
+                gameDirectory = project.file(providers.gradleProperty('a2nGameDirectory').get())
+            }
+            if (providers.gradleProperty('a2nMode').isPresent()) {
+                systemProperty 'a2n.mode', providers.gradleProperty('a2nMode').get()
+            }
+            if (providers.gradleProperty('a2nMaintenanceHook').isPresent()) {
+                systemProperty 'devilrpg.a2n.allowMaintenanceHook',
+                        providers.gradleProperty('a2nMaintenanceHook').get()
+            }
+            if (providers.gradleProperty('a2nPhaseA').isPresent()) {
+                systemProperty 'a2n.faseA', providers.gradleProperty('a2nPhaseA').get()
+            }
+            if (providers.gradleProperty('a2nPhaseB').isPresent()) {
+                systemProperty 'a2n.faseB', providers.gradleProperty('a2nPhaseB').get()
+            }
+            if (providers.gradleProperty('a2nRecoveryTicks').isPresent()) {
+                systemProperty 'a2n.recuperacionTicks', providers.gradleProperty('a2nRecoveryTicks').get()
+            }
+            if (providers.gradleProperty('a2nRunId').isPresent()) {
+                systemProperty 'a2n.raiz', project.projectDir.absolutePath
+                systemProperty 'a2n.run', providers.gradleProperty('a2nRunId').get()
+            }
+            if (providers.gradleProperty('a2nTraceNav').isPresent()) {
+                systemProperty 'devilrpg.a2n.traceNav', providers.gradleProperty('a2nTraceNav').get()
+            }
+            if (providers.gradleProperty('a2nGuardDiag').isPresent()) {
+                systemProperty 'devilrpg.guarddiag', providers.gradleProperty('a2nGuardDiag').get()
+            }
+            if (providers.gradleProperty('a2nTraceCombat').isPresent()) {
+                systemProperty 'devilrpg.a2n.traceCombat', providers.gradleProperty('a2nTraceCombat').get()
+            }
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.
@@ -93,6 +126,19 @@ sourceSets.main {
     java {
         if (!includeA2Diagnostics) {
             exclude 'com/chipoodle/devilrpg/debug/**'
+        } else {
+            // The C4 server run loads only the canonical A2NavHarness; other debug subscribers
+            // must not compete for startup, ticks, worlds, or shutdown.
+            exclude 'com/chipoodle/devilrpg/debug/A2EntryProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/A2FoundationBootstrap.java'
+            exclude 'com/chipoodle/devilrpg/debug/A2ProdNavProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/A4NavigationLab.java'
+            exclude 'com/chipoodle/devilrpg/debug/A5TestController.java'
+            exclude 'com/chipoodle/devilrpg/debug/ArenaFoundationProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/AsedioRunA2.java'
+            exclude 'com/chipoodle/devilrpg/debug/ForestryTaskBoundaryProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/N4GoalLab.java'
+            exclude 'com/chipoodle/devilrpg/debug/R3TerrainLab.java'
         }
         if (includeA2ProbeOnly) {
             // Probe-only diagnostic: ArenaFoundationProbe may load, but no A2 harness/probe entry point.
@@ -203,6 +249,35 @@ tasks.withType(JavaCompile).configureEach {
 // A2 REMEDIACIÓN 2 · pruebas enfocadas puras (sin servidor de Minecraft).
 // No se añade JUnit: los tests son programas `main` que no tocan clases de Minecraft y se ejecutan
 // con el classpath de test ya existente. `gradlew test` también las ejecuta.
+sourceSets {
+    foodTest {
+        java.srcDir 'src/foodTest/java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+tasks.register('foodTestSuite') {
+    group = 'verification'
+    description = 'Ejecuta toda la suite Food Economy: política, NBT real e integración SavedData.'
+    dependsOn tasks.named('policyTest')
+    dependsOn tasks.named('foodNbtTest')
+    dependsOn tasks.named('foodIntegrationTest')
+}
+tasks.register('foodIntegrationTest', JavaExec) {
+    group = 'verification'
+    description = 'Prueba real de despensa y persistencia VillageSavedData (sin lanzar Minecraft).'
+    dependsOn tasks.named('foodTestClasses')
+    classpath = sourceSets.foodTest.runtimeClasspath
+    mainClass = 'com.chipoodle.devilrpg.world.FoodIntegrationTest'
+}
+tasks.register('foodNbtTest', JavaExec) {
+    group = 'verification'
+    description = 'Prueba NBT real del codec de comida (sin lanzar Minecraft).'
+    dependsOn tasks.named('foodTestClasses')
+    classpath = sourceSets.foodTest.runtimeClasspath
+    mainClass = 'com.chipoodle.devilrpg.world.FoodStateNbtTest'
+}
 tasks.register('policyTest') {
     group = 'verification'
     description = 'Ejecuta las pruebas puras de política de navegación, asedio y generación.'
@@ -210,10 +285,13 @@ tasks.register('policyTest') {
     doLast {
         [
                 'com.chipoodle.devilrpg.agent.ForestryTreeClaimsTest',
+                'com.chipoodle.devilrpg.agent.ForestryResourceTraceTest',
                 'com.chipoodle.devilrpg.entity.goal.VillageGoalPriorityTest',
                 'com.chipoodle.devilrpg.entity.nav.MissionDestinationTest',
+                'com.chipoodle.devilrpg.entity.nav.AdvanceUnderFirePolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavRecoveryPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavArrivalPolicyTest',
+                'com.chipoodle.devilrpg.entity.nav.NavObjectivePolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.MovementOwnershipTest',
                 'com.chipoodle.devilrpg.entity.nav.TacticalEscapeBudgetTest',
                 'com.chipoodle.devilrpg.entity.nav.ObstructionRecoveryPolicyTest',
@@ -222,8 +300,14 @@ tasks.register('policyTest') {
                 'com.chipoodle.devilrpg.entity.nav.NavTerminalDiagnosticsTest',
                 'com.chipoodle.devilrpg.entity.nav.NavRouteInvalidationPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavPlannerStateTest',
+                'com.chipoodle.devilrpg.entity.nav.NavGoalMetricTest',
+                'com.chipoodle.devilrpg.entity.nav.NavClimbPolicyTest',
+                'com.chipoodle.devilrpg.entity.nav.NavDropColumnPolicyTest',
+                'com.chipoodle.devilrpg.entity.nav.NavActionApproachPolicyTest',
+                'com.chipoodle.devilrpg.entity.nav.NavRecoveryGuardPolicyTest',
                 'com.chipoodle.devilrpg.world.SiegeWaveStateTest',
                 'com.chipoodle.devilrpg.world.FoodHungerPolicyTest',
+                'com.chipoodle.devilrpg.world.PantryCreditPolicyTest',
                 'com.chipoodle.devilrpg.entity.goal.ForestryTaskPolicyTest',
                 'com.chipoodle.devilrpg.world.WorldSiegePolicyTest',
                 'com.chipoodle.devilrpg.world.VillageTerrainPolicyTest',

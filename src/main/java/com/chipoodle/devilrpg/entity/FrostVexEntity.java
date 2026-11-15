@@ -1,9 +1,6 @@
 package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
-import com.chipoodle.devilrpg.capability.IGenericCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
-import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
 import com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile;
 import com.chipoodle.devilrpg.spawnprofile.VexSpawnProfile;
 import com.chipoodle.devilrpg.survival.ThreatLevel;
@@ -15,9 +12,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.monster.Vex;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -104,22 +99,16 @@ public class FrostVexEntity extends Vex {
     @Override
     public void setPos(double x, double y, double z) {
         super.setPos(x, y, z);
-        if (spawnDistance == 0) { // solo al spawnear
-            Player nearestPlayer = this.level().getNearestPlayer(this, 128.0D);
-            if (nearestPlayer != null) {
-                PlayerAuxiliaryCapabilityInterface cap = IGenericCapability.getUnwrappedPlayerCapability(nearestPlayer, PlayerAuxiliaryCapability.INSTANCE);
-                Vec3 anchor = cap == null ? null : cap.getAnchorPoint();
-                if (anchor == null && cap != null) {
-                    anchor = cap.getSpawnPoint();
-                }
-                if (anchor != null) {
-                    spawnDistance = Math.sqrt(this.blockPosition().distSqr(
-                            new BlockPos((int) anchor.x, (int) anchor.y, (int) anchor.z)));
-                    spawnThreat = ThreatLevel.current(this.level());
-                    DevilRpg.LOGGER.info("FrostVex spawned at: {} | anchor: {} | distance: {} | threat: {}",
-                            this.blockPosition(), anchor, spawnDistance, String.format("%.2f", spawnThreat));
-                }
-            }
+        if (spawnDistance == 0 && this.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            // Same shared-world-spawn invariant as AggressiveZombie; no player-specific fallback.
+            BlockPos sharedSpawn = serverLevel.getSharedSpawnPos();
+            spawnDistance = Math.sqrt(
+                    com.chipoodle.devilrpg.spawnprofile.SharedSpawnReferencePolicy.distanceSqr(
+                            getX(), getY(), getZ(), sharedSpawn.getX() + 0.5D,
+                            sharedSpawn.getY(), sharedSpawn.getZ() + 0.5D));
+            spawnThreat = ThreatLevel.current(this.level());
+            DevilRpg.LOGGER.info("FrostVex spawned at: {} | sharedSpawn: {} | distance: {} | threat: {}",
+                    this.blockPosition(), sharedSpawn, spawnDistance, String.format("%.2f", spawnThreat));
         }
     }
 

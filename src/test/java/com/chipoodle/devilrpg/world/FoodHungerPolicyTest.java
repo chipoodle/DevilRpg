@@ -18,6 +18,17 @@ public final class FoodHungerPolicyTest {
         check(FoodHungerPolicy.death(12000) == true, "muerte en 12000");
         check(FoodHungerPolicy.startCritical(0, 500) == 500, "inicio timestamp");
         check(FoodHungerPolicy.startCritical(500, 900) == 500, "timestamp solo una vez");
+        check(FoodHungerPolicy.workForDay(3, 3, 9) == 9, "trabajo mismo dia");
+        check(FoodHungerPolicy.workForDay(3, 4, 9) == 0, "trabajo reinicia al dia");
+        check(FoodHungerPolicy.addWork(0, 7) == 7, "suma trabajo");
+        check(FoodHungerPolicy.addWork(7, 0) == 7, "cero no suma");
+        check(FoodHungerPolicy.addWork(63, 5) == 64, "tope trabajo");
+        check(FoodHungerPolicy.rationForWork(0) == 1, "racion sin trabajo");
+        check(FoodHungerPolicy.rationForWork(7) == 1, "racion bajo");
+        check(FoodHungerPolicy.rationForWork(8) == 2, "racion umbral 8");
+        check(FoodHungerPolicy.rationForWork(16) == 3, "racion 16");
+        check(FoodHungerPolicy.rationForWork(24) == 4, "racion 24");
+        check(FoodHungerPolicy.rationForWork(64) == 4, "racion tope");
         if (fallos > 0) { System.out.println("FOOD_HUNGER_POLICY_TEST: FAIL (" + fallos + ")"); System.exit(1); }
         System.out.println("FOOD_HUNGER_POLICY_TEST: OK");
     }

@@ -337,6 +337,10 @@ Automated NBT serialization coverage remains absent and is documented.
 
 ## Block 3.2 final status: CLOSED
 
+**Reconciliation (2026-11-11):** this closure is supported by Runs 98/105/109/110/128/130/132.
+The only residual is the already documented automated NBT serialization test; it does not
+reopen 3.2. Food 3.1 remains PARTIAL for work-dependent hunger and true bedtime gating.
+
 # FINAL — Food Economy Block 3.2 CLOSED (2026-11-07)
 
 | Criterio | Estado |

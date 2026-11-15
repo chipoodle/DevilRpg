@@ -1,6 +1,6 @@
 # Lumberjack Phase 1 — Reload-Safe Task State: Implementation Status
 
-Status: IMPLEMENTED IN SOURCE; RUNTIME ACCEPTANCE NOT RUN.
+Status: **PHASE 1 ACCEPTED WITHIN THE DEFINED SCOPE (2026-11-12).** A5-01..A5-12 normal-lifecycle runtime PASS; A5-09 malformed variants PASS; Forestry Block 1 A1-A7 COMPLETE; both exceptional resource-refund paths now have deterministic runtime PASS. Abrupt process-crash atomicity remains explicitly OUT OF SCOPE. Do not repeat completed scenarios without a relevant regression. Forestry Block 1 historical Runs 57/58/81 remain accepted; Runs 62/65/27 were re-executed and PASS. The extra `lumber-interrupt` fixture attempt had no result and does not supersede historical Run81 PASS.
 
 ## Implemented
 - Versioned villager NBT compound `DevilRpgForestryTask` (Version=1).
@@ -31,13 +31,16 @@ Status: IMPLEMENTED IN SOURCE; RUNTIME ACCEPTANCE NOT RUN.
 - planner restore and negative-bound clamping.
 Result: `FORESTRY_TASK_POLICY_TEST: OK`.
 
-## Not verified
-- All mandatory A5 save/reload scenarios (travelling, harvesting, replanting,
-  growing, delivering, stale target, profession/village mismatch, malformed NBT,
-  unknown version, overlapping workers, resource accounting).
-- Block 1 regressions 62/65/27/57/58/81.
-- Actual NBT round-trip in a real world.
-- No Phase 1 acceptance is claimed.
+## Scope boundary / not claimed
+- Abrupt process-crash atomicity is explicitly outside Phase 1. The contract
+  covers normal save/reload and recoverable operation boundaries, not a forced
+  JVM/process termination between arbitrary world and NBT writes.
+- The two resource-refund exceptions previously listed here are now covered by
+  deterministic runtime fixtures; see **Exceptional resource-refund acceptance**
+  below. They are no longer open items.
+- Forestry Block 1 A1-A7 is complete; see
+  `FORESTRY-BLOCK-1-ACCEPTANCE.md` for Runs 57/58/62/65/27/81 and the full
+  acceptance matrix.
 
 ## Pre-A5 verification (2026-11-07)
 
@@ -162,18 +165,21 @@ Phase 1 remains NOT ACCEPTED.
 NOT RUN: invalid controller enum, invalid target, invalid planner bounds,
 invalid hole position, invalid sapling registry id, subsequent valid assignment.
 
-## Three-status capability table
+## Three-status capability table — reconciled 2026-11-12
 | Capability | Production | Block 1 historical | Phase 1 reload |
 |---|---|---|---|
-| Harvest/discovery | implemented | PASS (62/65/57/58) | NOT RUN |
-| Replanting | implemented | PASS (27/57) | NOT RUN |
-| Bone Meal growth/refund | implemented | PASS (27); refund source-only | NOT RUN |
-| Delivery/accounting | implemented | PASS (57/58) | NOT RUN |
-| Two-worker isolation | implemented | PASS (81) | NOT RUN |
+| Harvest/discovery | implemented | PASS (62/65/57/58) | PASS (A5-02 Run 139) |
+| Replanting | implemented | PASS (27/57) | PASS (A5-03 Run 151) |
+| Bone Meal growth | implemented | PASS (27) | PASS (A5-04 Run 156); API-false refund not forced |
+| Delivery/accounting | implemented | PASS (57/58) | PASS (A5-05 Runs 161/164/167; A5-12 ledger) |
+| Two-worker isolation | implemented | PASS (81) | PASS (A5-11 overlap reload) |
 
-Historical Block 1 conditions inspected: Run 62 terminal obstruction; Run 65
+Historical Block 1 evidence is recorded in
+`FORESTRY-BLOCK-1-ACCEPTANCE.md`: Run 62 terminal obstruction; Run 65
 recoverable wall-end route; Run 27 Bone Meal growth; Runs 57/58 inner forest and
-delivery; Run 81 two-worker isolation.
+delivery; Run 81 two-worker isolation. Runs 62/65/27 were re-executed in the
+2026-11-12 continuation and passed. The additional `lumber-interrupt` run was
+BLOCKED before world login and does not supersede the accepted historical Run 81.
 
 ## A5-02 HARVESTING reload — BLOCKED / NOT RUN
 
@@ -1216,3 +1222,621 @@ enabled; dispatcher is flag-gated; equal-priority order is insertion order by de
 R1 (Run186), R2 (above), R3 (Run185), R4 40/80/120 (Run182) and 160/200 (above), R5-A/B/C/D
 (Run192 + above), R6 and R7 (above) are all covered. **A6-03 runtime acceptance is CLOSED**,
 with the R7 transient-reset timing limitation and the D4/D5 Block 4 findings recorded above.
+
+
+## Reconciliación de estado y siguiente prueba — 2026-11-12
+
+La matriz inicial de la primera página es histórica. La evidencia posterior del mismo
+documento cierra estos casos, que NO deben repetirse por rutina:
+
+| Caso | Estado vigente | Evidencia |
+|---|---|---|
+| A5-01 TRAVELLING | PASS | Run 134, mismo UUID/objetivo/fase/controlador tras reload |
+| A5-02 HARVESTING | PASS | Run 139, mismo estado y ledger 119 + 5 = 124, sin duplicación |
+| A5-03 REPLANTING | PASS | Run 151; Run 157 regresión después del fix GROWING |
+| A5-04 GROWING | PASS | Run 156; conserva GROWING tras Goal install, una operación Bone Meal |
+| A5-05 DELIVERING | PASS | Run 161 (16 logs) y Run 167 (5 logs exactly-once, +200 ticks sin segundo depósito) |
+| A5-10 unknown higher version | PASS | Run 135, Version=99 y FutureMarker preservados |
+| A5-09 missing Phase/Controller/Target | PASS | Run 136; task descartada y Goal reinstalado |
+| A5-09 invalid Phase enum | PASS | Run 137; task descartada y Goal reinstalado |
+
+A5-06 (target obsoleto antes/después de reload) NO equivale a A8-F03 C1/C2/C3:
+aquellos prueban invalidación/guardia de navegación durante runtime, no la recuperación
+de una tarea persistida cuyo bloque objetivo cambió mientras el mundo estaba cerrado.
+El código de carga restaura un objetivo dentro del radio; la validación de TALAR en
+start/tick debe abandonarlo antes de navegar/autorizar. Se necesita una prueba de save,
+cambio del bloque objetivo en el mundo guardado/copia, reload y evidencia de
+NAV-GUARD/ABANDON + target=null/SCOUTING o selección válida posterior. No inyectar una
+fase/controlador imposible ni afirmar que el código fuente sustituye esta prueba.
+
+El arnés A5 actual ya contiene save/load de TRAVELLING, HARVESTING, REPLANTING,
+GROWING, DELIVERING, unknown-version y malformed. No contiene escenarios explícitos
+dedicados a A5-06 stale-after-reload, A5-07 profesión incorrecta, A5-08 objective/
+village mismatch, A5-11 solapamiento post-reload ni A5-12 ledger integral de recursos.
+El harness es local/ignorado por Git; no convertirlo en cambio rastreado sin una decisión
+explícita sobre su política de versionado.
+
+### A5-06 — siguiente subcaso en ejecución
+Diseñar un fixture de dos etapas sobre una copia A5WALL:
+1. Guardar una tarea TRAVELLING real con target que sea un árbol LOGS existente.
+2. Cerrar normalmente el mundo.
+3. En la copia de reload, cambiar ese bloque a aire/otro bloque antes de cargar el Goal.
+4. Reabrir; comprobar que el Goal no navega ni autoriza el target viejo, que libera claim/
+   lease si aplica y que vuelve a SCOUTING/target nulo o elige un target nuevo válido.
+5. Comprobar que no aparecen drops, inventario ni depósito atribuibles al target eliminado.
+6. Guardar logs completos y result.json; ejecutar también A8-F03 stale-target regression
+   solo si el cambio de producción toca esa protección.
+
+No basta con reemplazar el bloque después de que el Goal ya haya navegado; el cambio debe
+existir antes de que se reinstale/ejecute el Goal tras reload. El estado de aceptación
+global sigue PARTIAL hasta A5-06/07/08/09 restantes/11/12 y regresiones Block 1.
+
+
+### Progreso de A5-06 iniciado — 2026-11-12 (runtime aún NO ejecutado)
+
+Se añadieron al A5TestController local/ignorado dos escenarios:
+- lumber-stale-save: espera una tarea real TALAR/TRAVELLING cuyo Target siga siendo
+  un bloque LOGS; cambia ese bloque a AIR y guarda el mundo con la tarea persistida.
+- lumber-stale-load: tras abrir la copia guardada, espera el ciclo del Goal y exige
+  Goal de leñador presente, Controller=SCOUTING y ausencia de Target obsoleto.
+
+La alteración del bloque se hace en una tarea real previamente seleccionada por el
+Goal, no se inyecta una fase ni un target NBT. Este primer fixture deja el mundo
+guardado con entidad apuntando a un bloque que ya no existe; la prueba de reload
+verifica la validación al reanudar. La sustitución del bloque ocurre inmediatamente
+antes del guardado (no durante un intervalo offline); se registra esta precisión
+para no sobredimensionar el alcance de la evidencia.
+
+Validación de compilación forzada después de añadir el fixture:
+.\gradlew.bat compileJava --rerun-tasks --no-daemon --console=plain
+BUILD SUCCESSFUL (26s; 2 tasks executed).
+
+Todavía NO se ha lanzado lumber-stale-save/load en Minecraft. No existe PASS runtime
+de A5-06 todavía. El fixture debe ejecutarse en una copia A5WALL desechable, guardar
+result.json y logs de ambas fases, verificar el mismo UUID entre save/reload y
+confirmar que no hubo navegación/entrega/drops duplicados por el target eliminado.
+
+
+### A5-06 intento 1 — BLOCKED por fixture, no es resultado de producto (2026-11-12)
+
+Run: lumber-stale-save-20261112-130000.
+Copia: build\res-lumber-stale-20261112-130000\game (clon de la copia A5WALL
+stabilization-block1-scan-20261030-134; el guardado original no se usó).
+El cliente cargó y A5 PREPARED; el worker persistido fue UUID
+b89fcee1-c91a-4b1f-a9c4-66471b616288. Sin embargo, la tarea activa era
+RECOGER_HARINA / destino de apoyo, con faltaArboleda=true y planton=53,97,-17;
+el almacén/despensa tenían 0 Bone Meal. No se alcanzó TALAR/TRAVELLING y, por tanto,
+el fixture no alteró un árbol ni guardó la fase A5-06. No se generó result.json:
+el wrapper terminó con result=MISSING/exit 1 tras cerrar únicamente el cliente
+desechable (PID 34900). Clasificación: BLOCKED por precondición de fixture; no es
+PASS ni FAIL de la recuperación de objetivo obsoleto.
+
+Corrección requerida antes del siguiente intento: preparar una copia base sin tarea
+heredada bloqueada en RECOGER_HARINA, o preparar la arboleda/recursos para que el
+Goal complete la fase de harina por la ruta real y seleccione un árbol LOGS real.
+No asignar manualmente Phase/Controller/Target para forzar el estado. Capturar en
+setup el UUID, fase/controlador/target y estado del bloque; si no llega a
+TALAR/TRAVELLING, detener y clasificar BLOCKED en vez de esperar 12 minutos.
+
+
+### A5-06 intento 2/3 — launcher/copia corregidos, Quick Play no abrió el mundo (2026-11-12)
+
+Se detectó un error de aislamiento en el procedimiento: run-a5.ps1 acepta -GameDir,
+pero no lo incorpora directamente a la tarea Gradle; el gameDirectory lo define el
+init.gradle suministrado. El init.gradle base seguía apuntando a
+build/stabilization-block1-scan-20261030-134/game. Por eso la corrida
+lumber-stale-save-2 no se acepta como prueba de la copia declarada: los logs mostraron
+GAMEDIR en el directorio base. El cliente se cerró; no se produjo result.json.
+
+Se creó una copia independiente:
+build/res-lumber-stale3-20261112-135000/game
+con su propio init.gradle que establece explícitamente:
+D:/Documents/DevilRpg-autonomous/build/res-lumber-stale3-20261112-135000/game
+La verificación del log de la corrida siguiente confirmó:
+FMLPaths GAMEDIR, MODSDIR y CONFIGDIR apuntando a esa copia. También se confirmó
+game/saves/A5WALL/level.dat presente.
+
+Sin embargo, Quick Play no llegó a abrir A5WALL: el log llegó a la carga de recursos
+y quedó en el cliente sin entrada de mundo, sin [A5] PREPARED, sin login del jugador
+y sin result.json. Primer intento en esa copia produjo error de parseo de options.txt
+(NumberFormatException: "key.mouse.middle"); se eliminó options.txt únicamente de
+la copia desechable y se reintentó. El segundo intento también terminó en el menú/
+sin abrir el mundo. Ambos clientes de prueba se cerraron; no quedó Minecraft de
+prueba abierto. Wrapper terminó result=MISSING/exit 1. Clasificación: BLOCKED por
+arranque Quick Play; no es PASS ni FAIL de recuperación de target.
+
+No repetir el mismo comando esperando otro resultado. Siguiente corrección del harness
+de lanzamiento: hacer que run-a5.ps1 genere/verifique su init.gradle por ejecución
+a partir de -GameDir, y reutilizar el mecanismo de arranque directo de mundo ya
+validado en los runs A5 previos (no dejar el juego en menú). Antes de la próxima
+corrida exigir en client.log: GAMEDIR=<copia>, quickPlaySingleplayer A5WALL,
+[A5] PREPARED y login del jugador. Si falta cualquiera, abortar temprano y clasificar
+BLOCKED; no esperar el timeout completo. No alterar ni usar run\saves ni otro mundo
+de usuario como fallback.
+
+
+### Traspaso operativo para la siguiente sesión — 2026-11-12 13:00
+
+El usuario confirmó que ya no se trabaja mediante el producto/agente externo Harness.
+La siguiente sesión dispone de acceso directo a CHRIS-PC mediante Desktop Commander:
+leer/editar/ejecutar directamente en `D:\Documents\DevilRpg-autonomous`; no pedir al
+usuario que copie contenido o logs. Esto no elimina por sí mismo los artefactos locales
+del proyecto (`A5TestController`, `run-a5.ps1`); son scripts/fixtures del repositorio y
+se deben inspeccionar, no tratar como un Harness externo ni asumir que funcionan.
+
+Estado confirmado: rama `feature/autonomous-village`, HEAD `518fee1`. El working tree
+contiene cambios preexistentes en producción, pruebas y documentación; preservar todo,
+sin reset/clean ni commit/push. `lint_aldea.py --strict` y `git diff --check` pasaron a
+las 12:53 del 12-nov. No había cliente A5WALL de prueba abierto. Guardado original intacto.
+
+A5-06 continúa BLOCKED por la ruta de lanzamiento, no por el comportamiento del
+leñador. `run-a5.ps1` usa `-Init` para definir el `gameDirectory`; el parámetro
+`-GameDir` solo se usa para opciones y no cambia Gradle. Un init propio logró que
+FMLPaths apuntara a la copia desechable, pero Quick Play no abrió el mundo: faltaron
+`[A5] PREPARED`, login y `result.json`. No repetir el mismo comando.
+
+Próxima sesión: recuperar primero de los logs/historial el mecanismo exacto de apertura
+directa de A5WALL que sí funcionó en corridas A5 aceptadas; corregir/verificar el launcher
+y agregar preflight para GAMEDIR, PREPARED y login. Abortar temprano si falla cualquiera.
+Luego preparar el estado TALAR/TRAVELLING mediante IA real y ejecutar A5-06 save/reload
+solo en copia desechable. No fabricar Phase/Controller/Target por NBT, no usar `run/saves`
+ni el guardado del jugador. Ver también el traspaso de inicio en `docs/CONTINUAR.md`.
+
+
+## A5-06 stale target after reload — PASS (2026-11-12)
+
+**Acceptance result: PASS.** Save and reload were performed on separate disposable
+copies derived from the accepted A5WALL base. The original player save was not used.
+
+Save stage:
+- Run: `lumber-stale-save-final-20261112-134130`.
+- Game directory: `build/res-lumber-stale-final-20261112-134130/game`.
+- Same worker UUID: `b89fcee1-c91a-4b1f-a9c4-66471b616288`.
+- At tick 702 the real Goal had selected `Phase=TALAR`, `Controller=TRAVELLING`,
+  target `49,97,-17`, whose block was `minecraft:oak_log`.
+- The fixture wrote only the target coordinate marker, saved normally, and finished
+  PASS. It did not write Phase/Controller/Target NBT.
+- Result: `build/res-lumber-stale-final-20261112-134130/phase-save/result.json`.
+
+Reload stage:
+- Run: `lumber-stale-load-refined-20261112-135148`.
+- Game directory: `build/res-lumber-stale-reload2-20261112-135148/game`.
+- It was cloned from the saved stage. Before opening Minecraft, the copied region chunk
+  `r.0.-1.mca` was edited offline: the target log at `49,97,-17` and its support block
+  at `49,96,-17` were both changed to air. The region file was backed up as
+  `r.0.-1.mca.pre-stale-edit.bak`; the modified palette values were read back and
+  verified as air. This prevents the removed tree's former position from being
+  reclassified as a valid PLANTAR hole. No entity/task NBT was modified.
+- On reload the same UUID was found. At tick 1200:
+  `oldBlockAir=true`, `noOldTarget=true`, `currentTarget=-`,
+  `currentTargetValid=true`, `navTarget=-`, `navigationAvoidsOld=true`,
+  `nearbyLogDrops=0`, `goal=true`, `phase=TALAR`, `controller=SCOUTING`, `ok=true`.
+- Result: `build/res-lumber-stale-reload2-20261112-135148/phase-load/result.json`.
+  Client and integrated server closed normally; wrapper exit code 0.
+
+**Fixture refinement preserved:** the first reload attempt
+(`lumber-stale-load-final-20261112-134727`) replaced only the log with air while
+leaving solid grass below. The normal discovery logic correctly recognized that
+coordinate as a new planting hole and selected `PLANTAR` at the same position. The
+original assertion treated coordinate equality alone as stale and returned FAIL.
+That was an ambiguous fixture, not evidence of stale TALAR navigation. The final
+fixture removed the support block too; no production code was changed. Do not repeat
+the ambiguous variant.
+
+**No production change was required for A5-06.** The saved TALAR task was re-evaluated
+against the reloaded world; the invalid target was not retained, no path was created
+to it, and no wood was duplicated. This closes A5-06. Next: A5-07 profession mismatch.
+
+
+## A5-07 profession mismatch after reload — PASS (2026-11-12)
+
+Save run `lumber-profession-save-20261112-135837` (tick 600): worker UUID
+`b89fcee1-c91a-4b1f-a9c4-66471b616288` had a real v1 task before the profession change
+(`Phase=TALAR`, `Controller=TRAVELLING`, target `87,97,4`). The fixture changed the
+profession through `VillagerData` from FLETCHER to FARMER and saved normally. Save result
+is PASS in `build/res-lumber-profession-20261112-135837/phase-save/result.json`.
+
+Load run `lumber-profession-load-20261112-140100` (tick 1200): the same UUID restored as
+FARMER, with no `DevilRpgForestryTask` compound and no `VillagerLumberjackGoal`; result
+PASS. The village manager also logged that the villager left the worker role and returned
+to its profession.
+
+**Production correction:** `VillagerLumberjackGoal.clearTaskIfProfessionChanged(Villager)`
+removes an installed lumberjack Goal and clears understood v1 task data when the villager
+is no longer FLETCHER. Unknown future task versions are preserved. The profession loop in
+`VillageManager` invokes this cleanup for non-FLETCHER adult non-guards. CompileJava and
+compileTestJava both PASS after this change.
+
+## A5-08 objective mismatch after reload — PASS (2026-11-12)
+
+Save run `lumber-objective-save-20261112-140610` (tick 600): same worker UUID
+`b89fcee1-c91a-4b1f-a9c4-66471b616288`, real task target `87,97,4`, actual objective 0;
+the negative fixture changed only the persisted task's Objective field to 1 and saved
+normally. Save result PASS.
+
+Load run `lumber-objective-load-20261112-140811` (tick 1200): Goal present, task present
+with stored Objective 0 matching actual Objective 0, and `ok=true`; result PASS. This
+shows the mismatched persisted task was discarded and the installed Goal re-scoped to the
+current village objective. No production change was required for A5-08.
+
+
+## A5 unattended launcher contract — permanent correction (2026-11-12)
+
+The shared runner `tools/a5-closure/run-a5.ps1` now enforces unattended operation for
+all future A5 scenarios. This is a local repository runner; do not depend on the external
+Harness product or ask the user to operate Minecraft.
+
+- Preflight requires the disposable `<GameDir>/saves/<Level>/level.dat` and an init.gradle
+  that points Gradle's `runClient.gameDirectory` at that exact absolute GameDir and passes
+  `--quickPlaySingleplayer <Level>`. A mismatch aborts before Minecraft launches.
+- The runner creates/updates `options.txt` even when absent:
+  `pauseOnLostFocus:false`, `onboardAccessibility:true`,
+  `skipMultiplayerWarning:true`, `tutorialStep:none`. Accessibility onboarding is marked
+  completed; Quick Play enters the requested world directly.
+- Once the Java client window exists, the runner hides only that HWND with Win32
+  `ShowWindowAsync(SW_HIDE)`. This is non-activating. The runner must never call
+  `SetForegroundWindow`, send ESC/keyboard input, simulate mouse clicks, or otherwise
+  steal the user's foreground focus. The integrated server continues ticking with
+  `pauseOnLostFocus:false`.
+- The runner verifies that the requested world actually logged in (`joined the game`).
+  If no login occurs within 300 seconds, it writes a BLOCKED result and aborts; a title
+  screen or onboarding prompt is not accepted as a running test.
+- On completion, it consumes the scenario result, closes/terminates only the disposable
+  test client, verifies zero remaining matching clients, and writes `shutdown.json` with
+  `joinedRequestedWorld`, `clientWindowHiddenWithoutActivation`,
+  `focusStealActions=0`, result, shutdown method and cleanup status.
+
+**Runtime proof of the new contract:**
+- Run: `unattended-runner-smoke-20261112-142210`; scenario:
+  `lumber-profession-load`; disposable GameDir:
+  `build/res-a5-unattended-smoke-20261112-142210/game`.
+- `options.txt` read-back confirmed the four values above. Log confirmed FMLPaths GAMEDIR
+  was the disposable GameDir, Quick Play arguments included `A5WALL`, and the player
+  logged in at 14:24:02. The test completed at tick 1200 with PASS and the same UUID
+  `b89fcee1-c91a-4b1f-a9c4-66471b616288`.
+- During the run the Minecraft HWND was hidden (MainWindowHandle=0); the foreground
+  application remained WhatsApp, not Minecraft. No `Saving and pausing game` marker was
+  emitted. `shutdown.json`: `joinedRequestedWorld=true`,
+  `clientWindowHiddenWithoutActivation=true`, `focusStealActions=0`,
+  `remainingTestClients=0`, `clean=true`, launcher exit 0. Cleanup required the runner's
+  forced test-client termination after the result; no user action was needed.
+- Runner self-test: PASS (root/nested result discovery; malformed/missing results rejected).
+
+This contract supersedes the earlier manual focus/ESC workaround and the old
+`onboardAccessibility:false` setting. Never reintroduce focus-stealing helpers.
+
+
+### Follow-up: exact client-process ownership fixed and cleanup re-proven (2026-11-12 14:30)
+
+The first smoke run `unattended-runner-smoke-20261112-142210` exposed a cleanup-accounting
+bug in the runner: its broad `quickPlaySingleplayer` matcher could select a Gradle-side
+Java process rather than the actual Minecraft client. Although its shutdown report said
+zero remaining, a separate `net.neoforged.devlaunch.Main` child remained; it was identified
+as PID 40892 and manually terminated. Therefore the first run proves hidden-window/no-focus
+operation and scenario PASS, but its cleanup assertion is superseded and must not be cited
+as clean evidence.
+
+Correction in `run-a5.ps1`: all hide/close/kill/remaining-process queries now use the exact
+client identity `net.neoforged.devlaunch.Main` plus the requested
+`--quickPlaySingleplayer <Level>` arguments. Gradle daemon/launcher JVMs are not mistaken
+for the game client.
+
+**Second runtime verification:**
+- Run: `unattended-runner-smoke2-20261112-142720`; scenario:
+  `lumber-profession-load`; result PASS at tick 1200, same UUID
+  `b89fcee1-c91a-4b1f-a9c4-66471b616288`.
+- The client logged into A5WALL, ran with hidden HWND and Chrome as foreground application;
+  no `Saving and pausing game` marker and no focus-steal actions.
+- Correctly identified client PID 676; shutdown method `forced-test-client-kill`;
+  `remainingTestClients=0`, `clean=true`, launcher exit 0. Independent post-run process query
+  also returned `REMAINING_TEST_CLIENTS=0`.
+- Runner self-test and regex matcher self-test both PASS. This second run supersedes the
+  first run for full unattended lifecycle/cleanup acceptance.
+
+
+## A5-09 malformed controller and out-of-range target — PASS (2026-11-12)
+
+**Invalid controller enum:**
+- Save run: `lumber-controller-save-20261112-143500`; load run:
+  `lumber-controller-load-20261112-143500`.
+- Disposable GameDir: `build/res-lumber-controller-20261112-143500/game`.
+- Save stage changed only the real task's Controller string to
+  `INVALID_CONTROLLER_STATE`, saved the world, and returned PASS at tick 600.
+- Reload stage restored the same UUID
+  `b89fcee1-c91a-4b1f-a9c4-66471b616288`. At tick 600:
+  `goal=true taskSafe=true ok=true`; the invalid enum was not retained and the
+  lumberjack Goal remained installed in a safe fallback state. Result PASS.
+- Both stage shutdown reports: joined requested world, hidden window, zero focus actions,
+  zero remaining test clients, clean=true.
+
+**Out-of-range target (invalid target position):**
+- Save run: `lumber-range-save-20261112-143700`; load run:
+  `lumber-range-load-20261112-143700`.
+- Disposable GameDir: `build/res-lumber-range-20261112-143700/game`.
+- Save stage changed the real task Target to `1080,97,1000` (1000 blocks from the
+  village center), saved, and returned PASS at tick 600.
+- Reload stage restored the same UUID. At tick 600:
+  `goal=true farTargetRetained=false taskPresent=true ok=true`; the invalid target
+  was discarded, the Goal was installed, and the task compound remained available for
+  safe continuation. Result PASS.
+- Both stage shutdown reports: joined requested world, hidden window, zero focus actions,
+  zero remaining test clients, clean=true.
+
+These two cases close the invalid-controller and out-of-range-target variants of A5-09.
+Still open: invalid planner bounds, malformed hole position, invalid sapling registry id,
+and valid task reassignment after malformed rejection. No production code change was
+required for these two negative fixtures.
+
+
+## A5-09 remaining malformed payload variants — PASS (2026-11-12)
+
+### Invalid planner bounds + invalid hole position + invalid sapling registry ID
+
+- Save: `lumber-invalid-payload-save-20261112-154000`; reload:
+  `lumber-invalid-payload-load-20261112-154000`.
+- Disposable GameDir: `build/res-lumber-invalid-payload-20261112-154000/game`.
+- Same worker UUID: `b89fcee1-c91a-4b1f-a9c4-66471b616288`.
+- Save stage persisted real task NBT with PlannerInside Ring/Cursor at
+  `Integer.MAX_VALUE`, PlannerOutside Cursor=-1, one valid oak hole, one hole with
+  invalid registry ID `devilrpg:missing_sapling`, and one hole at
+  `1080,97,1000` outside the forestry domain. Save result PASS at tick 600.
+- On reload, production logged both invalid planners reset. The malformed hole position
+  and unknown sapling ID were dropped; exactly one valid oak hole remained. Both planner
+  origins/bounds were sanitized and the lumberjack Goal remained installed:
+  `oneValidHole=true insideSafe=true outsideSafe=true ok=true`. Reload PASS at tick 600.
+- Save and reload shutdown reports both: joined requested world, window hidden without
+  activation, `focusStealActions=0`, `remainingTestClients=0`, `clean=true`.
+
+### Valid reassignment after malformed controller rejection
+
+- Save: `lumber-reassign-save-20261112-154000`; reload:
+  `lumber-reassign-load-20261112-154000`.
+- Disposable GameDir: `build/res-lumber-reassign-20261112-154000/game`.
+- Same worker UUID: `b89fcee1-c91a-4b1f-a9c4-66471b616288`.
+- Save stage wrote `Controller=INVALID_CONTROLLER_STATE` to a real task and saved
+  normally. Reload discarded the malformed controller; the same worker received a new
+  valid task, with Goal installed, `Phase=ENTREGAR`, `Controller=DELIVERING`, target
+  `127,97,20`, version 1. Reload PASS at tick 201.
+- Both stage shutdown reports: joined requested world, hidden window without activation,
+  `focusStealActions=0`, `remainingTestClients=0`, `clean=true`.
+
+**A5-09 is now fully PASS** for the required negative cases and recovery/reassignment.
+No production code changes were needed for these variants; runtime evidence confirms the
+existing validation/sanitization behavior. Next: A5-11 overlap after reload, A5-12 resource
+accounting, then Block 1 regression decision/runs.
+
+
+## A5-11 two-worker overlap after reload — PASS (2026-11-12)
+
+**Production defect found and corrected:** `ForestryTreeClaims` is intentionally ephemeral,
+so all claims disappear when the integrated server stops. Before this correction,
+`VillagerLumberjackGoal.cargarTarea()` restored a persisted TALAR target but did not
+reacquire its claim. Two workers with the same saved tree target could therefore resume
+without an owner reservation.
+
+**Production change:** during v1 task restoration, a TALAR target is revalidated with
+`TalarStepPlanner.isValidTalarTarget` and reacquired through the existing
+`ForestryTreeClaims`. A contested/invalid target is cleared to SCOUTING and persisted
+immediately. Added diagnostics: `RESTORE-ACQUIRED` and `RESTORE-DENIED`. No persistent
+claim NBT or new global registry was introduced; the existing transient claim map remains
+the authority.
+
+**Runtime fixture:**
+- Save: `lumber-overlap-save-20261112-160000`; reload:
+  `lumber-overlap-load-20261112-160000`.
+- Disposable GameDir: `build/res-lumber-overlap-20261112-160000/game`.
+- Two distinct FLETCHER worker UUIDs persisted with the same valid tree target
+  `98,98,0`: A `130d96cd-bf73-47d5-9013-18d759cf56cf`; B
+  `18a41d25-324c-45fb-8020-8c370ee0f375`.
+- Reload emitted `RESTORE-ACQUIRED` for A and `RESTORE-DENIED` for B. At tick 80:
+  A retained target `98,98,0`; B target was null and its task controller was SCOUTING;
+  claim owner matched A's UUID/task; tree remained LOGS; `ok=true`. Result PASS.
+- Both save/reload runner shutdown reports: `joinedRequestedWorld=true`, hidden window
+  without activation, `focusStealActions=0`, `remainingTestClients=0`, `clean=true`.
+- `compileJava compileTestJava policyTest` PASS; focused
+  `FORESTRY_TREE_CLAIMS_TEST: OK` and `FORESTRY_TASK_POLICY_TEST: OK`.
+
+This closes A5-11 and establishes that post-reload overlapping work is serialized by the
+existing transient claim system before navigation/harvest can resume. Next: A5-12 resource
+accounting, then Block 1 regressions/acceptance decision.
+
+
+## A5-12 resource accounting — PASS for normal lifecycle operations (2026-11-12)
+
+The acceptance is a composite of the real save/reload resource cases A5-02..A5-05,
+the dedicated A5 delivery conservation fixture, and the complete A8-01 per-actor
+wood ledger. These are independent runs; quantities are not summed across runs.
+
+### Wood — harvest, delivery, shared-warehouse consumers
+
+- **A5-02 Run 139:** worker inventory 0 logs before harvest; warehouse 119. The
+  worker harvested 5 actual logs, delivered all 5, and ended with 0 carried / 124
+  warehouse logs. Conservation: `119 + 5 = 124`; no duplicate. Leaves yielded 3
+  saplings (0 -> 3); Bone Meal stayed 0.
+- **A5-05 Run 167:** isolated worker carried 5, warehouse 122; after delivery carried
+  0 and warehouse 127 (`+5`). An additional 200-tick observation kept warehouse at
+  127: no second deposit.
+- **A5-12 dedicated save/reload:** final repeat run
+  `lumber-resource-deliver-save2-20261112-162000` / `lumber-resource-deliver-load2-20261112-162000`.
+  Disposable GameDir: `build/res-lumber-resource-delivery2-20261112-162000/game`.
+  Same worker UUID `b89fcee1-c91a-4b1f-a9c4-66471b616288`; save stage persisted
+  `Phase=ENTREGAR`, `Controller=DELIVERING`, 16 carried logs, warehouse 131.
+  Reload delivered exactly 16: carried `16 -> 0`, warehouse `131 -> 147`, accepted
+  `16`, warehouse delta `16`, `balanced=true`, `[A5] FIN PASS` at tick 881.
+  The earlier repeat `...161500` produced the same balanced result.
+- **A8-01-G mixed actor ledger:** initial warehouse 64 oak logs; lumberjack harvested
+  and deposited 10; smith withdrew 2 (1 remained in inventory, 1 burned); cook
+  withdrew/burned 4. Final warehouse 68. Each actor delta 0, warehouse delta 0,
+  global delta 0; 30 events, `complete=true`, `truncated=false`,
+  `unattributed=false`, `[A5] FIN PASS`.
+
+### Saplings — acquisition and planting
+
+- **A5-02 Run 139:** 3 saplings gained from actual leaf drops; none consumed in that
+  harvest segment (0 -> 3).
+- **A5-03 Run 151:** same villager/target across normal save/reload. Inventory
+  `8 -> 7`, one air hole became `minecraft:oak_sapling`, hole count `1 -> 0`.
+  Exactly one sapling consumed for exactly one successful placement.
+- **A6-02 Run 176:** one oak sapling withdrawn from pantry and inserted into worker
+  inventory: pantry `1 -> 0`, worker `0 -> 1`; no duplicate.
+
+### Bone Meal — withdrawal/consumption
+
+- **A5-04 Run 156:** restored `GROWING` task survived Goal installation. Bone Meal
+  inventory `16 -> 15`; `BoneMealItem.growCrop` reported `api=true`, consumed `1`,
+  returned `0`; controller exited to SCOUTING and did not repeat the operation.
+  The sapling remained stage 1 during this particular attempt, so the item was
+  consumed by the vanilla API without a growth transition; accounting still balances.
+
+### Acceptance boundary and remaining limitations
+
+**A5-12 PASS** for the exercised normal save/reload lifecycle: actual wood creation,
+worker inventory, delivery, warehouse consumption, sapling acquisition/planting and
+Bone Meal API consumption reconcile without duplication or unexplained loss. Wood has
+a complete event ledger; sapling and Bone Meal cases use before/after inventory,
+warehouse and block-state snapshots rather than the log-only `ForestryResourceTrace`.
+
+Not claimed: abrupt process-crash atomicity (explicitly out of Phase 1 scope); a forced
+runtime case where sapling placement is rejected after item withdrawal; or a forced
+`growCrop` API-false Bone Meal refund. Those exceptional branches remain separately
+unverified and must not be inferred from the normal-path PASS.
+
+Both stages of the A5-12 save/reload run report `joinedRequestedWorld=true`,
+`clientWindowHiddenWithoutActivation=true`, `focusStealActions=0`,
+`remainingTestClients=0`, `clean=true`. The second run's load client PID was 40208;
+no Minecraft test process remained after shutdown.
+
+**Next acceptance work:** Block 1 regression decision/runs 62/65/27/57/58/81. A5-12
+normal lifecycle resource accounting is no longer pending.
+
+## Block 1 — regresiones históricas reejecutadas (2026-11-12)
+
+Las siguientes pruebas se ejecutaron en copias desechables de `A5WALL` con
+`tools/a5-closure/run-a5.ps1`. No se modificó el guardado original.
+
+| Regresión | Run | Resultado | Evidencia |
+|---|---|---|---|
+| Run 62 — obstrucción terminal | `block1-regression-stuck5-20261112-184000` / `lumber-stuck` | **PASS** | `[A5-OBSTACLE]` instaló el muro alrededor del árbol `53,97,-24`; `[A5-STUCK]` registró `failedPoint tick=803`; limpió la tarea bloqueada y asignó nuevo árbol `45,97,-24` en tick 823. XP 5→13, 6 troncos retirados, `wall=true terminal=true nextWork=true`. |
+| Run 65 — ruta recuperable por extremo del muro | `block1-regression-recover-20261112-185000` / `lumber-recover` | **PASS** | Árbol `53,97,-17` amurallado; `[A5-RECOVERED]` confirmó llegada al extremo en tick 618, posición `53,97,-13`. XP 6→18, 10 troncos retirados, `recovered=true`. No se marcó terminal. |
+| Run 27 — crecimiento con Bone Meal | `block1-regression-growth-20261112-185000` / `lumber-xp` | **PASS** | Almacén Bone Meal 32→0; `[LENADOR-ABONO]` observó crecimiento de plantones a `oak_log`; `growthVerified=true`. XP 1→7, 6 troncos retirados, arboleda 40→36. |
+
+### Contrato unattended y cleanup
+
+Los tres runs PASS anteriores verificaron `joinedRequestedWorld=true`,
+`clientWindowHiddenWithoutActivation=true`, `focusStealActions=0`,
+`remainingTestClients=0` y `clean=true`. El runner terminó usando
+`forced-test-client-kill` tras el cierre del servidor; por eso el proceso
+Gradle reportó exit code -1 aunque el controlador ya había escrito un
+`result.json` válido con PASS y el runner confirmó limpieza. No confundir ese
+código del launcher con fallo de la aserción de gameplay.
+
+### Prueba adicional de dos trabajadores / preempción (no requerida)
+
+Run `block1-regression-scheduler-20261112-185000`, scenario
+`lumber-interrupt`: **sin resultado aceptable; fixture incompleto**. El primer
+intento `phase` terminó BLOCKED con el grace antiguo de 180 s. El reintento
+`phase-retry300` sí entró a `A5WALL` y quedó oculto sin activar foco
+(`joinedRequestedWorld=true`, `clientWindowHiddenWithoutActivation=true`,
+`focusStealActions=0`), pero no escribió `result.json`; `shutdown.json`
+registró `result=MISSING`, `launcherExitCode=1`, `remainingTestClients=0`,
+`clean=true`, elapsed 415.9 s.
+
+El fixture creó worker B como fletcher, pero los logs muestran a B bajo
+`VillagerGuardGoal`; no aparecieron `[A5-WORKERS] distinctGoals=true`,
+`distinctTargets=true` ni `[A5-PREEMPT]`. El cliente terminó con exit code 1
+antes de la aserción. Clasificar como fixture/ejecución sin resultado, no como
+FAIL del scheduler de producción. Run81 histórico sigue PASS y esta prueba
+extra no lo reemplaza. No repetir hasta aislar el worker B de la asignación de
+guardia y controlar el estado de asedio.
+
+### Reconciliación final de Block 1 y siguiente paso
+
+Forestry Block 1 A1-A7 ya estaba declarado COMPLETE en
+`FORESTRY-BLOCK-1-ACCEPTANCE.md`, con Runs 57/58/62/65/27/81 aceptados. La
+continuación del 2026-11-12 reejecutó Run 62, Run 65 y Run 27 equivalents y los
+tres dieron PASS. Runs 57/58 (bosque interior/entrega) y Run 81 (aislamiento de
+dos trabajadores) conservan su evidencia histórica PASS; no requieren repetición.
+
+La prueba adicional `lumber-interrupt` no produjo resultado aceptable:
+`phase` BLOCKED con grace antiguo y `phase-retry300` entró al mundo, pero el
+fixture B quedó bajo `VillagerGuardGoal` y el cliente terminó sin
+`result.json`. No es un FAIL del scheduler de producción y no invalida Run 81.
+No hay regresiones Block 1 pendientes en este momento.
+
+A5-01..A5-12 tienen PASS para los caminos normales de persistencia/reanudación.
+Phase 1 permanece PARTIAL solo por las excepciones explícitamente no reclamadas:
+sapling placement rechazado/refund, Bone Meal API-false refund y crash atomicity
+(fuera de alcance). Siguiente paso: revisar el criterio de cierre con estas
+limitaciones explícitas; no volver a ejecutar A5 ni Block 1 sin un cambio que
+afecte sus invariantes.
+
+## Exceptional resource-refund acceptance — PASS (2026-11-12)
+
+Both exceptional resource paths have deterministic runtime evidence. The
+fixtures use separate disposable copies of `A5WALL`, quick-play unattended,
+and reset the failure-injection flags in `finally`. No original save was used.
+
+### Sapling placement rejection — PASS
+
+Run `phase1-final-sapling-reject-20261112-194500`, scenario
+`lumber-sapling-reject`, tick 100.
+
+- Forced `plantarSemilla` placement rejection after sapling withdrawal.
+- Exercised both `plantar` and immediate `replantar` failure paths.
+- Both target positions remained air; one oak sapling was returned to the
+  villager inventory exactly once.
+- `replantar` returned boolean `false`, preserving the caller's retry/hole
+  handling contract.
+- `result.json`: PASS; detail confirms inventory=1 and bothWorldPositionsAir=true.
+- `shutdown.json`: resultSeen=true, result=PASS, malformed=false,
+  joinedRequestedWorld=true, clientWindowHiddenWithoutActivation=true,
+  focusStealActions=0, remainingTestClients=0, launcherTreeRemaining=0,
+  clean=true. Runner process exit code 0. The Gradle launcher itself was
+  force-terminated after world shutdown (launcherExitCode=1); this is not the
+  gameplay result and is accepted only with the valid result/shutdown pair.
+
+### Bone Meal API-false after argument mutation — PASS
+
+Run `phase1-final-bonemeal-reject-r2-20261112-194700`, scenario
+`lumber-bonemeal-reject`, tick 100.
+
+- Injected an API-false result after simulating consumption of the argument
+  stack (Bone Meal stack count 1 -> 0 before the false result).
+- The first implementation exposed a real defect: growing `ItemStack.EMPTY`
+  did not reconstruct the item, and the first run failed with inventory 0.
+- Corrected the refund path: when the API argument is empty but the operation
+  did not grow the sapling, construct a new `ItemStack(Items.BONE_MEAL,
+  consumidas)`; otherwise copy the remainder and restore the consumed count.
+- Final rerun: log `api=false consumidas=1 devueltas=1 inventario=1`;
+  sapling block state unchanged; `[A5] FIN result=PASS`.
+- `result.json`: PASS, inventoryBoneMeal=1, saplingUnchanged=true.
+- `shutdown.json`: resultSeen=true, result=PASS, malformed=false,
+  joinedRequestedWorld=true, clientWindowHiddenWithoutActivation=true,
+  focusStealActions=0, remainingTestClients=0, launcherTreeRemaining=0,
+  clean=true. Runner process exit code 0. Gradle launcher was force-terminated
+  after server shutdown (launcherExitCode=1), with clean=true.
+
+### Production and harness changes
+
+- `plantarSemilla` now returns success only when the requested sapling block
+  is actually present after `setBlock`; a rejected placement refunds the
+  withdrawn sapling. Both initial planting and immediate replanting check it.
+- Bone Meal failure refunds the original amount even if the API mutated the
+  passed stack before returning false or no growth occurred. If the passed
+  stack became empty, a fresh stack is reconstructed rather than mutating
+  `ItemStack.EMPTY`.
+- Failure-injection controls default to false and are reset after each fixture.
+- `run-a5.ps1` cleanup now tolerates a child process exiting between the
+  process snapshot and `taskkill /T /F`; it still performs a second process
+  sweep. `-SelfTest` verifies launcher-tree termination and passed after the
+  change.
+- Final build validation after the resource fix:
+  `compileJava compileTestJava policyTest --rerun-tasks` — BUILD SUCCESSFUL;
+  all policy fixtures reported OK.
+
+### Phase 1 disposition
+
+A5-01..A5-12 normal lifecycle and malformed-NBT cases are PASS; Block 1 A1-A7
+is COMPLETE; the sapling rejection and Bone Meal API-false refund exceptions
+are now PASS. **Phase 1 is accepted within its documented scope.** Abrupt
+process-crash atomicity remains excluded by design and is not claimed.

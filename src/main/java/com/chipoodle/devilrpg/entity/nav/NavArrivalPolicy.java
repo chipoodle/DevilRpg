@@ -24,6 +24,33 @@ public final class NavArrivalPolicy {
     }
 
     /**
+     * The executor's early objective-proximity shortcut must not consume a pending stair waypoint.
+     * Such a waypoint may be considered reached only after physical occupancy of the verified stair.
+     */
+    public static boolean proximityArrivalAllowed(boolean pendingStair, boolean stairPhysicallyOccupied) {
+        return !pendingStair || stairPhysicallyOccupied;
+    }
+
+    /**
+     * Route-node arrival gate. A pending constructed stair is not reached by proximity:
+     * the entity must physically occupy the verified cell above that stair.
+     */
+    public static boolean waypointReached(boolean jumpUp, boolean drop, boolean pendingStair,
+                                          boolean withinTolerance, boolean stairPhysicallyOccupied,
+                                          boolean validDropLanding) {
+        if (jumpUp) {
+            return false;
+        }
+        if (pendingStair) {
+            return stairPhysicallyOccupied;
+        }
+        if (!withinTolerance) {
+            return false;
+        }
+        return !drop || validDropLanding;
+    }
+
+    /**
      * @param tactico          el objetivo activo se fijo con {@code setTacticalObjective}
      * @param objetivoEsMision el objetivo activo coincide con la mision (o su celda de pie)
      * @param quedanEtapas     la cadena de mision tiene etapas pendientes

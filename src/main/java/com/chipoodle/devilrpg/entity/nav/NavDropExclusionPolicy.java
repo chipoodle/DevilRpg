@@ -17,7 +17,21 @@ public final class NavDropExclusionPolicy {
     }
 
     public static long clave(int fx, int fy, int fz, int tx, int ty, int tz) {
-        return clave(fx, fy, fz) * 31L + clave(tx, ty, tz);
+        // Reserve the low bit for destination-wide exclusions; edge keys are always even.
+        return (clave(fx, fy, fz) * 31L + clave(tx, ty, tz)) * 2L;
+    }
+
+    /** Excludes every DROP edge ending at this landing while its fall-column terrain is unchanged. */
+    public static long claveDestino(int x, int y, int z) {
+        return clave(x, y, z) * 2L + 1L;
+    }
+
+    public boolean contiene(long transicion) {
+        return rechazadas.containsKey(transicion);
+    }
+
+    public Long huellaRegistrada(long transicion) {
+        return rechazadas.get(transicion);
     }
 
     public void excluir(long transicion, long huellaTerreno) {

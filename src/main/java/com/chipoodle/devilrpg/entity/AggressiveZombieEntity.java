@@ -1,6 +1,11 @@
 package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.nav.AdvanceUnderFirePolicy;
+import com.chipoodle.devilrpg.entity.nav.MovementOwnership;
+import com.chipoodle.devilrpg.entity.nav.NavBellObjectivePolicy;
+import com.chipoodle.devilrpg.entity.nav.NavStairTrace;
+import com.chipoodle.devilrpg.entity.nav.NavTrace;
 import com.chipoodle.devilrpg.block.DoubleGateBlock;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
@@ -13,6 +18,7 @@ import com.chipoodle.devilrpg.world.LairGenerator;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
@@ -26,8 +32,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.LivingEntity;import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -95,7 +100,8 @@ public class AggressiveZombieEntity extends Zombie {
 
             @Override
             public boolean canBreak(BlockPos pos) {
-                return !protegidoPorLaAldea(pos);
+                // Planner and executor share the same break contract (fluids, foliage, protections, block entities, hardness and reach).
+                return puedeRomperNodoDeNavegacion(pos);
             }
 
             @Override
@@ -286,7 +292,10 @@ public class AggressiveZombieEntity extends Zombie {
             return etapas;
         }
         // A2 FASE 1 · EL DESTINO FINAL ES EL INTERIOR REAL, no el anillo exterior.
-        BlockPos destinoInterior = destinoInteriorDeLaAldea(centro);
+        BlockPos destinoInterior = destinoAproximacionCampana(centro);
+        if (destinoInterior == null) {
+            destinoInterior = destinoInteriorDeLaAldea(centro);
+        }
         if (destinoInterior == null) {
             // FAIL-CLOSED: sin celda interior valida no se entrega una cadena que pudiera "completarse" fuera
             // del recinto. Se deja constancia y el goal no envia objetivo (no se finge una llegada).
@@ -785,7 +794,16 @@ public class AggressiveZombieEntity extends Zombie {
         if (worldSiegeIndex >= 0 && !level().isClientSide && level() instanceof ServerLevel serverLevel) {
             VillageManager.registerDefender(serverLevel, worldSiegeIndex, source.getEntity());
         }
-        return super.hurt(source, amount);
+        boolean applied = super.hurt(source, amount);
+        if (applied && Boolean.getBoolean("devilrpg.a2n.traceCombat")
+                && !level().isClientSide && source.getEntity() instanceof net.minecraft.world.entity.npc.Villager guard
+                && com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(guard)) {
+            DevilRpg.LOGGER.info("[A2N] C4 GUARD HIT guard={} attacker={} direct={} damage={} remainingHealth={}",
+                    guard.getUUID(), getUUID(), source.getDirectEntity() == null ? "null"
+                            : source.getDirectEntity().getType(),
+                    amount, getHealth());
+        }
+        return applied;
     }
 
     /**
@@ -799,6 +817,14 @@ public class AggressiveZombieEntity extends Zombie {
         // (LivingDeathEvent) el raider sigue vivo y NO puede desaparecer del libro mayor.
         super.die(cause);
         if (isDeadOrDying()) {
+            if (Boolean.getBoolean("devilrpg.a2n.traceCombat")) {
+                net.minecraft.world.entity.Entity source = cause.getEntity();
+                boolean guardKill = source instanceof net.minecraft.world.entity.npc.Villager guard
+                        && com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(guard);
+                DevilRpg.LOGGER.info("[A2N] C4 ATTACKER DEATH attacker={} source={} sourceUuid={} guardKill={}",
+                        getUUID(), source == null ? "null" : source.getType(),
+                        source == null ? "null" : source.getUUID(), guardKill);
+            }
             notificarBajaDeAsedioConfirmada();
         }
     }
@@ -876,6 +902,26 @@ public class AggressiveZombieEntity extends Zombie {
             return false; // IMPLEMENT-06: ordinary recovery never breaks obsidian
         }
         return true; // madera, tierra, grava, arena, lana...
+    }
+
+    /**
+     * Valida un nodo BREAK de navegacion contra las mismas puertas que la accion real de minado.
+     * Evita que el selector descarte el nodo por no ser una celda de pie o que elija obsidiana/bloques protegidos.
+     */
+    public boolean puedeRomperNodoDeNavegacion(final BlockPos pos) {
+        if (pos == null || protegidoPorLaAldea(pos)) {
+            return false;
+        }
+        BlockState state = level().getBlockState(pos);
+        // Keep navigation's promise aligned with breakBlockAt: foliage and logs are never mined for a route.
+        // Fluids are never mining targets; EscapeWaterGoal must navigate to a real shore.
+        if (!state.getFluidState().isEmpty()) {
+            return false;
+        }
+        if (state.is(net.minecraft.tags.BlockTags.LOGS) || state.is(net.minecraft.tags.BlockTags.LEAVES)) {
+            return false;
+        }
+        return !state.hasBlockEntity() && canBreakBlock(state);
     }
 
     /**
@@ -1485,9 +1531,19 @@ public class AggressiveZombieEntity extends Zombie {
             if (vacio < 2) {
                 continue;
             }
+            // Run24: el propio asaltante puede tender un puente en la columna de caída de un peldaño
+            // ya construido (p. ej. 589,93,512 -> puente 589,97,512), invalidando su siguiente DROP.
+            // Se rechaza solo ese lado y se prueban los otros tres; los tablones existentes siguen protegidos.
+            if (puenteInvadeColumnaDeEscalera(delante)) {
+                continue;
+            }
             BlockState puente = Blocks.COBBLESTONE.defaultBlockState();
             level().setBlock(delante, puente, Block.UPDATE_ALL);
             anotarTablon(delante); // es obra del asedio: el pico no la toca (I239)
+            // A2 Run24 · atribución forense por bloque: permite saber qué asaltante tendió cada tablón
+            // y si su propia obra invade una columna DROP/escalera que ya estaba en uso.
+            DevilRpg.LOGGER.info("[Siege] asaltante #{} PUENTE_BLOQUE pos={} origen={} hacia={} tunelRestante={}",
+                    getId(), delante.toShortString(), zPos.toShortString(), towards.toShortString(), tunelRestante);
             level().playSound(null, delante, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
             particulasDeTrabajo(delante);
             if (puenteEspera == 0 && tunelRestante == TUNEL_PRESUPUESTO) {
@@ -1567,6 +1623,20 @@ public class AggressiveZombieEntity extends Zombie {
             TABLONES_DEL_ASALTO.clear();
         }
         TABLONES_DEL_ASALTO.add(pos.immutable());
+    }
+
+    /** Un puente no puede ocupar el corredor de caída de ningún peldaño descendente de esta marcha. */
+    private boolean puenteInvadeColumnaDeEscalera(final BlockPos puente) {
+        for (BlockPos escalon : escalonesConstruidosEnMarcha) {
+            if (com.chipoodle.devilrpg.entity.nav.NavDropColumnPolicy.puenteInvadeColumnaDeEscalon(
+                    escalon.getX(), escalon.getY(), escalon.getZ(),
+                    puente.getX(), puente.getY(), puente.getZ(), CAIDA_SEGURA_MAXIMA)) {
+                DevilRpg.LOGGER.info("[Siege] asaltante #{} PUENTE_RECHAZADO_COLUMNA_ESCALERA puente={} escalon={}",
+                        getId(), puente.toShortString(), escalon.toShortString());
+                return true;
+            }
+        }
+        return false;
     }
     /** Vuelve a darle presupuesto de escalera (al empezar una marcha nueva). */
     public void recargarAtravesadores() {
@@ -1707,6 +1777,7 @@ public class AggressiveZombieEntity extends Zombie {
             return false; // nunca dentro del cuerpo del ente
         }
         level().setBlock(escalon, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
+        escalonesConstruidosEnMarcha.add(escalon.immutable());
         level().playSound(null, escalon, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
         particulasDeTrabajo(escalon);
         DevilRpg.LOGGER.info("[Siege] asaltante #{} pone un ESCALON ADHERIDO A UNA CARA en {} (soporteDebajo={}"
@@ -1775,6 +1846,13 @@ public class AggressiveZombieEntity extends Zombie {
         if (roto) {
             tunelRestante--;
             tunelEspera = TUNEL_ENTRE_BLOQUES;
+            // Route-break mutates terrain outside normal tunnel/bridge goals: invalidate both planners.
+            pathPlanner.terrainChanged();
+            navExecutor.terrainChanged();
+            if (Boolean.getBoolean("n4.trace")) {
+                DevilRpg.LOGGER.info("[NAV] TERRAIN_CHANGED_BY_ROUTE_BREAK uuid={} block={} executorState={}",
+                        getUUID(), nodo.toShortString(), navExecutor.describe());
+            }
         }
         return roto;
     }
@@ -1809,17 +1887,24 @@ public class AggressiveZombieEntity extends Zombie {
      * del bloque; el ancla no puede poblarlo. Es el unico valor que puede contar como "travesado".
      */
     private BlockPos escaleraUltimoColocado;
+    /** Todos los peldaños descendentes verificados de esta marcha (máximo 24); el puente no debe tapar sus DROP. */
+    private final Set<BlockPos> escalonesConstruidosEnMarcha = new java.util.HashSet<>();
     /** Tick en que se verifico la colocacion del escalon actual (la travesia debe ser POSTERIOR). */
     private long escaleraTickDeColocacion = -1L;
     private int escaleraColocados;
     private int escaleraRetraso;
     private String escaleraMotivo = "-";
     private String escaleraUltimoRechazo = "-";
+    /** Primer bloque minable y al alcance que impide el corredor de aterrizaje de un candidato. */
+    private BlockPos escaleraPrimerBloqueoAcceso;
+    /** Bloque de colisión que hizo fallar la última celda del corredor evaluada. */
+    private BlockPos escaleraUltimoBloqueoAccesoEvaluado;
 
     /** Diagnostico de la construccion, para el arnes. */
     public String escaleraDiag() {
         return "colocados=" + escaleraColocados + "/" + ESCALERA_MAX_BLOQUES
                 + " ultimo=" + (escaleraUltimoColocado == null ? "-" : escaleraUltimoColocado.toShortString())
+                + " ancla=" + (escaleraAncla == null ? "-" : escaleraAncla.toShortString())
                 + " motivo=" + escaleraMotivo + " rechazo=" + escaleraUltimoRechazo;
     }
 
@@ -1827,15 +1912,21 @@ public class AggressiveZombieEntity extends Zombie {
      * A2 Stage 4J - ESCALERA DESCENDENTE. Un paso por llamada, con cadencia y presupuesto acotados.
      * <p>
      * Dispara solo cuando el descenso esta bloqueado por un salto mayor que la caida segura (el caso medido
-     * de z3 y z4: 24 y 41 bloques). La geometria la fija `ponerEscalon`: coloca el bloque en una celda VACIA
-     * con DOS de aire encima y BLOQUE debajo, fuera de la aldea. El bloque colocado se VERIFICA leyendo el
-     * estado real, y el progreso de la escalera NO avanza por haber intentado: solo cuando el asaltante pisa
+     * de z3 y z4: 24 y 41 bloques). La geometria la fija `ponerEscalonConSoporteLateral`: coloca el bloque en
+     * una celda VACIA con DOS de aire encima y apoyo real debajo o en una cara horizontal, fuera de la aldea.
+     * El bloque colocado se VERIFICA leyendo el estado real; el ancla solo avanza cuando el asaltante pisa
      * de verdad el escalon (comprobado en `escaleraPisada`).
      *
-     * @return true si coloco y verifico un bloque en esta llamada
+     * @return true si coloco/verifico un escalon o despejo una obstruccion de acceso verificada
      */
     private boolean construirEscalonDescendente(final BlockPos centro) {
         if (centro == null) {
+            return false;
+        }
+        // El siguiente escalon solo puede construirse DESPUES de pisar el anterior. La ancla avanza al bloque
+        // realmente atravesado; sin esto todos los intentos se calculaban desde el suelo inicial y la escalera
+        // nunca descendia por una cara vertical.
+        if (escaleraUltimoColocado != null && !confirmarTravesiaEscalonPendiente()) {
             return false;
         }
         if (escaleraRetraso > 0) {
@@ -1850,10 +1941,20 @@ public class AggressiveZombieEntity extends Zombie {
         // El fallo medido en `a2n-20261016-022229` fue exactamente esto: al sembrar `escaleraUltimoColocado` con
         // el suelo que el asaltante ya pisaba, `escaleraPisada()` daba true de inmediato (tick 200) y se registraba
         // como "escalon travesado" un bloque que nunca se habia construido.
-        if (escaleraAncla == null) {
+        // Mientras no haya un escalon pendiente, el mob puede avanzar por suelo natural entre dos tramos.
+        // El ancla sigue el soporte REAL bajo sus pies, incluso despues de escaleras anteriores; solo se congela
+        // mientras existe un bloque colocado que aun debe atravesar fisicamente.
+        if (escaleraUltimoColocado == null) {
+            // A2: sin escalon pendiente el ancla debe seguir el soporte REAL actual. Antes solo se
+            // actualizaba si ese soporte tenia colision; al caminar por una repisa/aire se quedaba
+            // clavada en la posicion inicial (Run40/42: candidatos 566,120,533 con el mob en 607,95,601).
             escaleraAncla = blockPosition().below();
         }
         BlockPos base = escaleraAncla;
+        if (base == null) {
+            escaleraUltimoRechazo = "sin ancla de escalera ni soporte actual";
+            return false;
+        }
         int pasoX = Integer.signum(centro.getX() - base.getX());
         int pasoZ = Integer.signum(centro.getZ() - base.getZ());
         if (pasoX == 0 && pasoZ == 0) {
@@ -1868,21 +1969,34 @@ public class AggressiveZombieEntity extends Zombie {
         // y ademas sea geometricamente apropiada (a la altura de descenso, no dentro del terreno, no protegida).
         StringBuilder intentos = new StringBuilder();
         int probados = 0;
-        // A2 Stage 4N: se AMPLIA el alcance horizontal de 2 a ALCANCE_HORIZONTAL_DE_ESCALON (8) bloques.
-        // Motivo medido (`a2n-20261016-015724`): los 18 candidatos dentro de 2 bloques eran TODOS roca
-        // (`celdaAire=false`), asi que la busqueda agotaba su radio sin alcanzar nunca el aire. El alcance queda
-        // ACOTADO y documentado, y el orden sigue siendo determinista (dy creciente, luego dx, luego dz).
-        for (int dy = 1; dy <= CAIDA_SEGURA_MAXIMA && probados < MAX_CANDIDATOS_DE_ESCALON; dy++) {
-            for (int dx = 0; dx <= ALCANCE_HORIZONTAL_DE_ESCALON && probados < MAX_CANDIDATOS_DE_ESCALON; dx++) {
-                for (int dz = 0; dz <= ALCANCE_HORIZONTAL_DE_ESCALON && probados < MAX_CANDIDATOS_DE_ESCALON; dz++) {
-                    // Orden determinista: primero el paso recto/diagonal hacia el centro, luego los ensanchamientos.
+        escaleraPrimerBloqueoAcceso = null;
+        // A2 Stage 8: busqueda por shells horizontales Manhattan, intercalando alturas dentro de
+        // cada radio. El orden anterior (dy exterior + 9x9) consumia los 60 candidatos en dy=1,
+        // dejando dy=2/3 sin explorar. En el primer intento se admite UN peldaño lateral contiguo
+        // a la plataforma (dy=0); tras pisarlo, la ancla avanza y solo se permiten descensos.
+        boolean permitirPrimerLateral = escaleraColocados == 0 && escaleraUltimoColocado == null;
+        for (int radio = 0; radio <= ALCANCE_HORIZONTAL_DE_ESCALON
+                && probados < MAX_CANDIDATOS_DE_ESCALON; radio++) {
+            for (int dx = 0; dx <= radio && probados < MAX_CANDIDATOS_DE_ESCALON; dx++) {
+                int dz = radio - dx;
+                // Evita coordenadas duplicadas cuando el objetivo solo tiene componente X o Z.
+                if ((pasoX == 0 && dx > 0) || (pasoZ == 0 && dz > 0)) {
+                    continue;
+                }
+                for (int dy = 0; dy <= CAIDA_SEGURA_MAXIMA
+                        && probados < MAX_CANDIDATOS_DE_ESCALON; dy++) {
+                    boolean primerPasoLateral = permitirPrimerLateral && radio == 1 && dy == 0;
+                    if (dy == 0 && !primerPasoLateral) {
+                        continue;
+                    }
                     int sx = pasoX * dx;
                     int sz = pasoZ * dz;
                     BlockPos objetivo = new BlockPos(base.getX() + sx, base.getY() - dy, base.getZ() + sz);
                     probados++;
-                    String r = evaluarCeldaDeEscalon(objetivo, base, dy);
+                    String r = evaluarCeldaDeEscalon(objetivo, base, dy, pasoX, pasoZ,
+                            primerPasoLateral);
                     if (r == null) {
-                        if (!ponerEscalon(objetivo, centro)) {
+                        if (!ponerEscalonConSoporteLateral(objetivo, centro)) {
                             escaleraUltimoRechazo = objetivo.toShortString() + " ponerEscalon=false";
                             intentos.append(' ').append(objetivo.toShortString()).append("(primitiva=false)");
                             continue;
@@ -1898,14 +2012,27 @@ public class AggressiveZombieEntity extends Zombie {
                         escaleraMotivo = "escalon verificado tras " + probados + " candidatos (dy=" + dy + ")";
                         escaleraUltimoRechazo = "-";
                         DevilRpg.LOGGER.info("[Siege] CONSTRUCCION-ESCALERA #{} bloque {} verificado"
-                                        + " ({} de {}) dy={} candidatos={} hacia {}",
+                                        + " ({} de {}) dy={} candidatos={} hacia {} primerLateral={}",
                                 getId(), objetivo.toShortString(), escaleraColocados,
-                                ESCALERA_MAX_BLOQUES, dy, probados, centro.toShortString());
+                                ESCALERA_MAX_BLOQUES, dy, probados, centro.toShortString(), primerPasoLateral);
                         return true;
                     }
                     intentos.append(' ').append(objetivo.toShortString()).append('(').append(r).append(')');
                 }
             }
+        }
+        // Si todos los escalones accesibles fallan por una obstruccion minable dentro del alcance, despejar
+        // SOLO el primer bloque que tapa el corredor. La siguiente llamada reevalua geometria desde el mundo real.
+        BlockPos bloqueoAcceso = escaleraPrimerBloqueoAcceso;
+        if (bloqueoAcceso != null && puedeRomperNodoDeNavegacion(bloqueoAcceso)
+                && romperNodoDeRuta(bloqueoAcceso) && level().getBlockState(bloqueoAcceso).isAir()) {
+            escaleraMotivo = "obstruccion de acceso removida; replanificar desde el mundo actualizado";
+            escaleraUltimoRechazo = "acceso despejado en " + bloqueoAcceso.toShortString();
+            escaleraPrimerBloqueoAcceso = null;
+            escaleraRetraso = ESCALERA_ENTRE_BLOQUES;
+            DevilRpg.LOGGER.info("[Siege] A2 STAIR-ACCESS-CLEAR #{} bloque {} verificado; reintentar escalon",
+                    getId(), bloqueoAcceso.toShortString());
+            return true; // accion de despeje verificada; aun no hay escalon pendiente
         }
         escaleraUltimoRechazo = "ningun candidato valido de " + probados + ":" + intentos;
         escaleraRetraso = ESCALERA_ENTRE_BLOQUES;
@@ -1919,32 +2046,172 @@ public class AggressiveZombieEntity extends Zombie {
 
     /**
      * Evalua UNA celda de escalon y devuelve null si es valida, o el motivo exacto del rechazo.
-     * Informa por separado las cinco precondiciones y ademas la coherencia geometrica con el descenso.
+     * El unico caso a la misma altura es el primer peldaño lateral, contiguo y orientado hacia el objetivo.
      */
-    private String evaluarCeldaDeEscalon(final BlockPos objetivo, final BlockPos base, final int dy) {
+    private String evaluarCeldaDeEscalon(final BlockPos objetivo, final BlockPos base, final int dy,
+            final int pasoX, final int pasoZ, final boolean primerPasoLateral) {
         boolean celdaAire = level().getBlockState(objetivo).isAir();
         boolean hueco1 = level().getBlockState(objetivo.above()).isAir();
         boolean hueco2 = level().getBlockState(objetivo.above(2)).isAir();
-        boolean soporteSolido = !level().getBlockState(objetivo.below()).isAir()
-                && !level().getBlockState(objetivo.below())
-                        .getCollisionShape(level(), objetivo.below()).isEmpty();
+        boolean soporteSolido = com.chipoodle.devilrpg.entity.nav.NavObstruction
+                .hasSupportFace(level(), objetivo);
         boolean permitido = !protegidoPorLaAldea(objetivo);
+        if ((!celdaAire || !hueco1 || !hueco2) && permitido && soporteSolido) {
+            registrarObstruccionDeVolumenDeEscalon(objetivo);
+        }
         if (!celdaAire || !hueco1 || !hueco2 || !soporteSolido || !permitido) {
             return "celdaAire=" + celdaAire + " hueco1=" + hueco1 + " hueco2=" + hueco2
                     + " soporte=" + soporteSolido + " permitido=" + permitido;
         }
-        // Coherencia geometrica: la celda debe estar POR DEBAJO del ancla y como mucho la caida segura.
-        if (objetivo.getY() >= base.getY() || dy > CAIDA_SEGURA_MAXIMA) {
+        if (primerPasoLateral) {
+            if (escaleraColocados != 0 || escaleraUltimoColocado != null || dy != 0
+                    || objetivo.getY() != base.getY()) {
+                return "primer lateral fuera de estado";
+            }
+            int deltaX = objetivo.getX() - base.getX();
+            int deltaZ = objetivo.getZ() - base.getZ();
+            if (Math.abs(deltaX) + Math.abs(deltaZ) != 1
+                    || (deltaX != 0 && Integer.signum(deltaX) != pasoX)
+                    || (deltaZ != 0 && Integer.signum(deltaZ) != pasoZ)) {
+                return "primer lateral no contiguo o fuera del rumbo";
+            }
+        } else if (objetivo.getY() >= base.getY() || dy < 1 || dy > CAIDA_SEGURA_MAXIMA) {
+            // Tras el primer paso, cada bloque nuevo debe ser estrictamente descendente.
             return "altura no descendente";
         }
-        // Y no puede ser una celda flotante: debe tener el bloque de apoyo justo debajo (ya comprobado) y el
-        // propio escalon debe quedar a la altura del primer bloque de aire sobre el suelo real.
-        int superficie = level().getHeightmapPos(
-                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, objetivo).getY();
-        if (objetivo.getY() != superficie) {
-            return "no esta sobre la superficie (sup=" + superficie + ")";
+        // No colocar un peldaño si la columna completa hasta su aterrizaje está bloqueada.
+        // La comprobación anterior solo exigía dos huecos; Run22 demostró un puente del asedio en Y=97
+        // que quedaba fuera de esos dos bloques y hacía imposible el descenso posterior.
+        if (navExecutor != null) {
+            String rechazoCaida = navExecutor.rechazoColumnaCaidaParaEscalon(objetivo);
+            if (rechazoCaida != null) {
+                return rechazoCaida;
+            }
         }
+        String acceso = evaluarAccesoHorizontalEscalon(base, objetivo);
+        if (acceso != null) {
+            return acceso;
+        }
+        // La celda puede apoyarse en el suelo o en una cara lateral real del acantilado/escalon anterior.
+        // No exigimos coincidencia con heightmap: esa condicion impedia construir una escalera adherida a un muro.
         return null;
+    }
+
+    /**
+     * Rechaza escalones que tengan cabeza libre pero sean INACCESIBLES desde el nivel actual (por ejemplo,
+     * colocados debajo de un techo que bloquea el paso horizontal). Se prueban ambos ordenes X/Z para no
+     * descartar una diagonal que si pueda rodear un obstaculo por uno de sus lados.
+     */
+    /**
+     * If the candidate stair volume is occupied, delegate only its first solid obstruction for one bounded
+     * mining action. The normal break gate still enforces village protection, fluids, logs/leaves, block entities,
+     * hardness and reach. The candidate is re-evaluated against the changed world on the next attempt.
+     */
+    private void registrarObstruccionDeVolumenDeEscalon(final BlockPos objetivo) {
+        if (escaleraPrimerBloqueoAcceso != null || objetivo == null) {
+            return;
+        }
+        BlockPos[] volumen = {objetivo, objetivo.above(), objetivo.above(2)};
+        boolean[] ocupadas = new boolean[3];
+        boolean[] rompibles = new boolean[3];
+        for (int i = 0; i < volumen.length; i++) {
+            BlockPos pos = volumen[i];
+            BlockState state = level().getBlockState(pos);
+            ocupadas[i] = !state.isAir();
+            rompibles[i] = ocupadas[i] && puedeRomperNodoDeNavegacion(pos) && alAlcanceDeRotura(pos);
+        }
+        int index = com.chipoodle.devilrpg.entity.nav.NavStairVolumeClearancePolicy
+                .firstBreakableBlockIndex(ocupadas, rompibles, !protegidoPorLaAldea(objetivo),
+                        com.chipoodle.devilrpg.entity.nav.NavObstruction.hasSupportFace(level(), objetivo));
+        if (index >= 0) {
+            escaleraPrimerBloqueoAcceso = volumen[index].immutable();
+        }
+    }
+    private String evaluarAccesoHorizontalEscalon(final BlockPos base, final BlockPos objetivo) {
+        int dx = objetivo.getX() - base.getX();
+        int dz = objetivo.getZ() - base.getZ();
+        if (dx == 0 && dz == 0) {
+            return null;
+        }
+        // El corredor se valida a la altura REAL de los pies sobre el escalon propuesto (objetivo.y + 1),
+        // no a la altura actual del mob. Validar base.y + 1 acepta falsos positivos bajo techos/suelos.
+        int nivelPiesDestino = objetivo.getY() + 1;
+        escaleraUltimoBloqueoAccesoEvaluado = null;
+        if (pasilloHorizontalEscalonLibre(base, dx, dz, nivelPiesDestino, true)) {
+            return null;
+        }
+        BlockPos bloqueoXz = escaleraUltimoBloqueoAccesoEvaluado;
+        escaleraUltimoBloqueoAccesoEvaluado = null;
+        if (pasilloHorizontalEscalonLibre(base, dx, dz, nivelPiesDestino, false)) {
+            return null;
+        }
+        BlockPos bloqueo = bloqueoXz != null ? bloqueoXz : escaleraUltimoBloqueoAccesoEvaluado;
+        if (escaleraPrimerBloqueoAcceso == null && bloqueo != null
+                && puedeRomperNodoDeNavegacion(bloqueo) && alAlcanceDeRotura(bloqueo)) {
+            escaleraPrimerBloqueoAcceso = bloqueo.immutable();
+        }
+        return "entrada bloqueada a altura de aterrizaje y=" + nivelPiesDestino
+                + (bloqueo == null ? "" : " por " + bloqueo.toShortString());
+    }
+
+    private boolean pasilloHorizontalEscalonLibre(final BlockPos base, final int dx, final int dz,
+            final int nivelPies, final boolean primeroX) {
+        int pasosX = Math.abs(dx);
+        int pasosZ = Math.abs(dz);
+        int signoX = Integer.signum(dx);
+        int signoZ = Integer.signum(dz);
+        int x = base.getX();
+        int z = base.getZ();
+        if (primeroX) {
+            for (int i = 1; i <= pasosX; i++) {
+                x += signoX;
+                boolean finalCell = i == pasosX && pasosZ == 0;
+                if (!celdaPasilloEscalonTransitable(new BlockPos(x, nivelPies, z), !finalCell)) {
+                    return false;
+                }
+            }
+            for (int i = 1; i <= pasosZ; i++) {
+                z += signoZ;
+                boolean finalCell = i == pasosZ;
+                if (!celdaPasilloEscalonTransitable(new BlockPos(x, nivelPies, z), !finalCell)) {
+                    return false;
+                }
+            }
+        } else {
+            for (int i = 1; i <= pasosZ; i++) {
+                z += signoZ;
+                boolean finalCell = i == pasosZ && pasosX == 0;
+                if (!celdaPasilloEscalonTransitable(new BlockPos(x, nivelPies, z), !finalCell)) {
+                    return false;
+                }
+            }
+            for (int i = 1; i <= pasosX; i++) {
+                x += signoX;
+                boolean finalCell = i == pasosX;
+                if (!celdaPasilloEscalonTransitable(new BlockPos(x, nivelPies, z), !finalCell)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean celdaPasilloEscalonTransitable(final BlockPos pies, final boolean exigirSoporte) {
+        BlockState piesState = level().getBlockState(pies);
+        BlockState cabezaState = level().getBlockState(pies.above());
+        if (!piesState.getCollisionShape(level(), pies).isEmpty()) {
+            escaleraUltimoBloqueoAccesoEvaluado = pies.immutable();
+            return false;
+        }
+        if (!cabezaState.getCollisionShape(level(), pies.above()).isEmpty()) {
+            escaleraUltimoBloqueoAccesoEvaluado = pies.above().immutable();
+            return false;
+        }
+        if (!exigirSoporte) {
+            return true;
+        }
+        BlockPos soporte = pies.below();
+        return !level().getBlockState(soporte).getCollisionShape(level(), soporte).isEmpty();
     }
 
 
@@ -1954,6 +2221,22 @@ public class AggressiveZombieEntity extends Zombie {
      * demuestra que ha OCUPADO el escalon: o esta de pie encima (`blockPosition().below()` == escalon) o su celda
      * actual es la de encima del escalon. No se infiere de proximidad, ni de una colocacion, ni de una ruta.
      */
+    /**
+     * Pure physical check used by NavExecutor: true only when the entity occupies the verified pending stair's
+     * upper cell after the placement tick. Unlike escaleraPisada(), this method does not mutate diagnostics.
+     */
+    public boolean escalonPendienteOcupado() {
+        if (escaleraUltimoColocado == null || escaleraTickDeColocacion < 0L) {
+            return false;
+        }
+        if (level().getGameTime() <= escaleraTickDeColocacion
+                || level().getBlockState(escaleraUltimoColocado).isAir()) {
+            return false;
+        }
+        return blockPosition().below().equals(escaleraUltimoColocado)
+                || blockPosition().equals(escaleraUltimoColocado.above());
+    }
+
     private boolean escaleraPisada() {
         // A2 Stage 4O · La travesia solo puede contar si existe un escalon COLOCADO Y VERIFICADO. El ancla vive en
         // su propio campo, asi que no puede llegar aqui, y si no hay colocacion verificada esto devuelve false.
@@ -2033,14 +2316,86 @@ public class AggressiveZombieEntity extends Zombie {
      * pueda enrutar aqui la exhaucion de presupuesto SOLO cuando el objetivo exige construccion.
      */
     public boolean construirEscalonHacia(final BlockPos objetivo) {
+        return construirEscalonResultado(objetivo) == com.chipoodle.devilrpg.entity.nav.StairBuildResult.STAIR_PLACED;
+    }
+
+    private com.chipoodle.devilrpg.entity.nav.StairBuildResult ultimoResultadoEscalon =
+            com.chipoodle.devilrpg.entity.nav.StairBuildResult.NO_PROGRESS;
+
+    public com.chipoodle.devilrpg.entity.nav.StairBuildResult ultimoResultadoEscalon() {
+        return ultimoResultadoEscalon;
+    }
+
+    public com.chipoodle.devilrpg.entity.nav.StairBuildResult construirEscalonResultado(final BlockPos objetivo) {
+        if (NavStairTrace.on()) {
+            NavStairTrace.ev("STAIR_BUILDER_ENTER", "uuid=" + getUUID() + " pos="
+                    + blockPosition().toShortString() + " target=" + objetivo
+                    + " pending=" + escaleraUltimoColocado + " ancla=" + escaleraAncla
+                    + " colocados=" + escaleraColocados);
+        }
         if (!objetivoExigeConstruccion(objetivo)) {
+            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.REJECTED;
+            if (NavStairTrace.on()) {
+                NavStairTrace.ev("STAIR_BUILDER_GATE_FALSE", "uuid=" + getUUID()
+                        + " goal=" + objetivo + " construir={" + motivoDeConstruir + "} noConstruir={"
+                        + motivoDeNoConstruir + "}");
+            }
+            return ultimoResultadoEscalon;
+        }
+        boolean result = construirEscalonDescendente(objetivo);
+        if (result && escaleraUltimoColocado != null) {
+            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.STAIR_PLACED;
+        } else if (result && escaleraMotivo != null
+                && escaleraMotivo.contains("obstruccion de acceso removida")) {
+            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.ACCESS_CLEARED;
+        } else if (!result) {
+            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.NO_PROGRESS;
+        } else {
+            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.FAILED;
+        }
+        if (NavStairTrace.on()) {
+            NavStairTrace.ev("STAIR_BUILDER_RETURN", "uuid=" + getUUID() + " outcome="
+                    + ultimoResultadoEscalon + " pending=" + escaleraUltimoColocado
+                    + " colocados=" + escaleraColocados + " motivo={" + escaleraMotivo
+                    + "} rechazo={" + escaleraUltimoRechazo + "}");
+        }
+        return ultimoResultadoEscalon;
+    }
+
+    /**
+     * Confirma el avance solo cuando el mob ocupa fisicamente la celda superior de un escalon verificado.
+     * Puede llamarse desde el ejecutor de navegacion antes de seleccionar el siguiente waypoint.
+     */
+    public boolean confirmarTravesiaEscalonPendiente() {
+        if (escaleraUltimoColocado == null) {
             return false;
         }
-        return construirEscalonDescendente(objetivo);
+        if (!escaleraPisada()) {
+            escaleraUltimoRechazo = "esperando travesia real de " + escaleraUltimoColocado.toShortString();
+            return false;
+        }
+        BlockPos escalonAtravesado = escaleraUltimoColocado;
+        escaleraAncla = escalonAtravesado;
+        escaleraUltimoColocado = null;
+        escaleraTickDeColocacion = -1L;
+        escaleraTravesiaConfirmada = false;
+        escaleraTickDeTravesia = -1L;
+        escaleraMotivoDeTravesia = "ancla avanzada al escalon atravesado " + escalonAtravesado.toShortString();
+        escaleraUltimoRechazo = "-";
+        DevilRpg.LOGGER.info("[Siege] ESCALERA-ANCLA #{} avanza a {} (colocados={}/{})",
+                getId(), escalonAtravesado.toShortString(), escaleraColocados, ESCALERA_MAX_BLOQUES);
+        return true;
+    }
+
+    /** Celda de pies transitable sobre el ultimo escalon verificado; null si no hay paso pendiente. */
+    public BlockPos objetivoSobreUltimoEscalon() {
+        return escaleraUltimoColocado == null ? null : escaleraUltimoColocado.above();
     }
 
     /** ¿El descenso actual exige construir? (salto mayor que la caida segura) */
     private boolean descensoExigeConstruir(final BlockPos centro) {
+        motivoDeConstruir = "-";
+        motivoDeNoConstruir = "-";
         if (centro == null) {
             return false;
         }
@@ -2053,19 +2408,23 @@ public class AggressiveZombieEntity extends Zombie {
                     + " <= caida segura " + CAIDA_SEGURA_MAXIMA + " (miY=" + miY + ")";
             return false;
         }
-        // La celda de aterrizaje candidata mas baja admisible: no puede estar dentro del terreno.
-        BlockPos primerEscalon = new BlockPos(blockPosition().getX(), objetivoY + CAIDA_SEGURA_MAXIMA,
+        // La primera caida que debe poder hacer AHORA es desde los pies actuales, no desde la cota del
+        // destino. Comprobar objetivoY + maxSafeDrop confundia una repisa cerca del destino con un aterrizaje
+        // intermedio: desde y=96 a una repisa en y=74 seguiria siendo una caida de 22 bloques. El primer
+        // aterrizaje natural alcanzable desde la posicion actual esta en currentY - maxSafeDrop.
+        BlockPos primerEscalon = new BlockPos(blockPosition().getX(), miY - CAIDA_SEGURA_MAXIMA,
                 blockPosition().getZ());
         boolean haySoporte = soporteRealYHueco(primerEscalon);
         boolean enterrado = !level().getBlockState(primerEscalon).isAir();
         if (haySoporte && !enterrado) {
             motivoDeNoConstruir = "objetivo " + centro.toShortString() + " desnivel " + desnivel
-                    + ": SI hay aterrizaje soportado y transitable en " + primerEscalon.toShortString()
-                    + " -> descenso natural, no se construye";
+                    + ": primer aterrizaje natural soportado desde posicion actual en "
+                    + primerEscalon.toShortString() + " -> descenso natural por etapas, no se construye";
             return false;
         }
         motivoDeConstruir = "objetivo " + centro.toShortString() + " desnivel " + desnivel
-                + ": celda " + primerEscalon.toShortString() + (enterrado ? " DENTRO del terreno" : "")
+                + ": primer aterrizaje desde posicion actual " + primerEscalon.toShortString()
+                + (enterrado ? " DENTRO del terreno" : "")
                 + (haySoporte ? "" : " sin soporte") + " -> hay que construir";
         return true;
     }
@@ -2361,12 +2720,27 @@ public class AggressiveZombieEntity extends Zombie {
         // A2 REMEDIACIÓN 2 · PROPIEDAD ÚNICA: con un objetivo de combate vivo, el movimiento lo lleva el goal
         // de combate (planificador heredado). El ejecutor se suspende para no emitir un segundo `moveTo` ni
         // avanzar waypoints por un desplazamiento que no ordenó. Al perder el objetivo, vuelve a planificar.
+        boolean retiradaActiva = false;
+        if (!level().isClientSide && worldSiegeIndex >= 0) {
+            tickOccupationState();
+            if (!ocupacion) {
+                tickObjetivoCampana();
+            }
+            retiradaActiva = tickRetiradaTactica();
+        }
         if (com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation() && !this.level().isClientSide) {
-            boolean combate = pursueTargetGoal != null && pursueTargetGoal.estaActivo();
-            if (com.chipoodle.devilrpg.entity.nav.MovementOwnership.executorMayMove(true, combate)) {
-                this.navExecutor.tick();
-            } else if (combate) {
-                this.navExecutor.suspendForCombat();
+            if (retiradaActiva) {
+                // RETIRADA owns movement this tick; the mission route is preserved for later.
+                this.navExecutor.suspendMovementForRetreat();
+            } else {
+                boolean combate = pursueTargetGoal != null && pursueTargetGoal.estaActivo();
+                boolean combateEnAlcance = combate && getTarget() != null
+                        && distanceToSqr(getTarget()) <= AdvanceUnderFirePolicy.MELEE_RANGE_SQR;
+                if (MovementOwnership.executorMayMove(true, combate, combateEnAlcance)) {
+                    this.navExecutor.tick();
+                } else if (combate) {
+                    this.navExecutor.suspendForCombat();
+                }
             }
         }
         // I359 · LAS DOS MEDIDAS DEL OBJETIVO, EN EL REGISTRO (lo pidio el jugador). Aqui, cada tick, para verlo tambien
@@ -2396,8 +2770,437 @@ public class AggressiveZombieEntity extends Zombie {
             attributesAdjusted = true; // Solo se ejecuta una vez
         }
         if (!equipoAsignado && !level().isClientSide) {
-            equiparAlAzar();
+            if (worldSiegeIndex >= 0) {
+                equiparAsaltanteDeAsedio();
+            } else {
+                equiparAlAzar();
+            }
             equipoAsignado = true;
+        }
+
+        if (!level().isClientSide && worldSiegeIndex >= 0) {
+            // The retreat was evaluated at the start of aiStep; reissue its movement after goals so
+            // no combat/navigation goal can overwrite the single authoritatve move for this tick.
+            if (retiradaActiva) {
+                reemitirRetirada();
+            }
+        }
+    }
+
+    private int retiradaTicks;
+    private int retiradasUsadas;
+    private long ultimaRetirada = Long.MIN_VALUE / 2L;
+    private BlockPos retiradaDestino;
+    private BlockPos retiradaUltimaPos;
+    private int retiradaTicksSinAvance;
+    private Villager retiradaAmenaza;
+    private boolean retiradaFalloRegistrado;
+    private double retiradaDistanciaInicial;
+    private BlockPos retiradaPosicionInicial;
+    private BlockPos campanaObjetivo;
+    private boolean campanaDestruida;
+    private long ultimoAvisoCampana;
+    private boolean ocupacion;
+
+    private void tickOccupationState() {
+        if (ocupacion || worldSiegeIndex < 0 || !(level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        if (com.chipoodle.devilrpg.world.VillageSavedData.get(serverLevel).isOccupied(worldSiegeIndex)) {
+            ocupacion = true;
+            campanaDestruida = true;
+            BlockPos ocupacionDestino = destinoInteriorDeLaAldea(villageCenter);
+            if (ocupacionDestino != null) {
+                // The assault center goal would otherwise keep resending the old chain; occupation
+                // owns the single NavExecutor objective once the village is conquered.
+                goToCenterActive = false;
+                navExecutor.enterOccupationObjective(ocupacionDestino);
+            }
+            DevilRpg.LOGGER.info("[Siege] asaltante #{} entra en OCUPACION de la aldea {}",
+                    getId(), worldSiegeIndex);
+            if (NavTrace.on()) {
+                NavTrace.ev("OCCUPATION_STARTED", "uuid=" + getUUID() + " tick="
+                        + level().getGameTime() + " villageIndex=" + worldSiegeIndex
+                        + " inside=" + dentroDeLaAldea(blockPosition(), cotaParaElRecinto()));
+            }
+        }
+    }
+
+    private boolean objetivoCampanaActivo() {
+        return !ocupacion && !campanaDestruida && campanaObjetivo != null;
+    }
+
+    /** Persistent siege objective: the actual generated bell, not the geometric centre. */
+    private void tickObjetivoCampana() {
+        if (campanaDestruida || villageCenter == null) {
+            return;
+        }
+        int cota = cotaParaElRecinto();
+        if (campanaObjetivo == null) {
+            campanaObjetivo = localizarCampana(cota);
+            if (campanaObjetivo == null) {
+                long now = level().getGameTime();
+                if (now - ultimoAvisoCampana > 200L) {
+                    ultimoAvisoCampana = now;
+                    DevilRpg.LOGGER.warn("[Siege] asaltante #{}: campana no encontrada en la aldea {}",
+                            getId(), villageCenter.toShortString());
+                }
+                return;
+            }
+            if (NavTrace.on()) {
+                NavTrace.ev("BELL_OBJECTIVE_FOUND", "uuid=" + getUUID() + " tick="
+                        + level().getGameTime() + " bell=" + campanaObjetivo.toShortString()
+                        + " center=" + villageCenter.toShortString());
+            }
+        }
+        if (!NavBellObjectivePolicy.objectiveValid(
+                level().getBlockState(campanaObjetivo).is(Blocks.BELL), campanaDestruida)) {
+            campanaDestruida = true;
+            if (NavTrace.on()) {
+                NavTrace.ev("BELL_OBJECTIVE_LOST", "uuid=" + getUUID() + " tick="
+                        + level().getGameTime() + " bell=" + campanaObjetivo.toShortString());
+            }
+            return;
+        }
+        double distSqr = distanceToSqr(campanaObjetivo.getX() + 0.5D,
+                campanaObjetivo.getY() + 0.5D, campanaObjetivo.getZ() + 0.5D);
+        if (NavBellObjectivePolicy.canDestroy(isAlive(), dentroDeLaAldea(blockPosition(), cota),
+                distSqr, 25.0D)) {
+            boolean removed = level().destroyBlock(campanaObjetivo, false);
+            if (removed && level().getBlockState(campanaObjetivo).isAir()) {
+                campanaDestruida = true;
+                ocupacion = true;
+                if (level() instanceof ServerLevel serverLevel) {
+                    com.chipoodle.devilrpg.world.VillageSavedData.get(serverLevel)
+                            .markOccupied(worldSiegeIndex);
+                }
+                DevilRpg.LOGGER.info("[Siege] asaltante #{} DESTRUYO la campana en {} (verificado)",
+                        getId(), campanaObjetivo.toShortString());
+                if (NavTrace.on()) {
+                    NavTrace.ev("BELL_DESTROYED", "uuid=" + getUUID() + " tick="
+                            + level().getGameTime() + " bell=" + campanaObjetivo.toShortString()
+                            + " verified=true");
+                    NavTrace.ev("SIEGE_COMPLETED", "uuid=" + getUUID() + " tick="
+                            + level().getGameTime() + " bell=" + campanaObjetivo.toShortString()
+                            + " village=" + villageCenter.toShortString() + " verified=true");
+                }
+            }
+        }
+    }
+
+    /**
+     * Standable cell adjacent to the actual bell, using the same interior/reach predicate as the
+     * mission. The bell block itself is never used as an entity destination.
+     */
+    private BlockPos destinoAproximacionCampana(final BlockPos centro) {
+        if (!(level() instanceof ServerLevel serverLevel)) {
+            return null;
+        }
+        int cota = VillageGenerator.cotaDeLaPlaza(serverLevel, centro);
+        BlockPos bell = localizarCampana(cota);
+        if (bell == null) {
+            return null;
+        }
+        BlockPos best = null;
+        double bestD = Double.MAX_VALUE;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    if (dx == 0 && dz == 0) {
+                        continue;
+                    }
+                    BlockPos p = bell.offset(dx, dy, dz);
+                    if (!esCeldaDeMisionInteriorValida(p, centro, cota)) {
+                        continue;
+                    }
+                    double d = p.distSqr(bell);
+                    if (d < bestD) {
+                        bestD = d;
+                        best = p.immutable();
+                    }
+                }
+            }
+        }
+        if (best != null && NavTrace.on()) {
+            NavTrace.ev("BELL_APPROACH_SELECTED", "uuid=" + getUUID() + " tick="
+                    + level().getGameTime() + " bell=" + bell.toShortString()
+                    + " approach=" + best.toShortString());
+        }
+        return best;
+    }
+
+    /** Bounded 9x9x5 scan around the kiosk; returns the actual bell block if present. */
+    private BlockPos localizarCampana(final int cota) {        for (int dy = 0; dy <= 4; dy++) {
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    BlockPos p = new BlockPos(villageCenter.getX() + dx, cota + dy,
+                            villageCenter.getZ() + dz);
+                    if (level().getBlockState(p).is(Blocks.BELL)) {
+                        return p.immutable();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean tickRetiradaTactica() {
+        if (!AttackerRetreatPolicy.isValidActivation(getHealth(), isAlive())) {
+            return false;
+        }
+        long now = level().getGameTime();
+        Villager threat = amenazaMasCercana(AttackerRetreatPolicy.THREAT_RANGE);
+
+        if (retiradaTicks > 0) {
+            retiradaTicks--;
+            setTarget(null);
+            if (threat != null) {
+                retiradaAmenaza = threat;
+                repositionarseSeguro(threat);
+            }
+            if (retiradaTicks % 20 == 0 && NavTrace.on()) {
+                NavTrace.ev("RETREAT_PROGRESS", "uuid=" + getUUID() + " tick=" + now
+                        + " pos=" + blockPosition().toShortString() + " target=" + retiradaDestino
+                        + " threat=" + (threat == null ? "-" : threat.blockPosition().toShortString())
+                        + " distance=" + (threat == null ? "-" : String.format(java.util.Locale.ROOT,
+                        "%.2f", distanceTo(threat))) + " health=" + getHealth());
+            }
+            if (retiradaTicks == 0) {
+                terminarRetirada("MANIOBRA_COMPLETADA");
+            }
+            return true;
+        }
+        if (threat == null) {
+            return false;
+        }
+        int nearbyThreats = contarAmenazas(8.0D);
+        if (AttackerThreatPolicy.shouldDisengageFromGroup(getHealth(), getMaxHealth(),
+                nearbyThreats, distanceTo(threat))) {
+            iniciarRetirada(threat, now, "GRUPO");
+            return true;
+        }
+        if (AttackerRetreatPolicy.shouldRetreat(getHealth(), getMaxHealth(),
+                distanceTo(threat), retiradasUsadas, now, ultimaRetirada)) {
+            iniciarRetirada(threat, now, "UMBRAL");
+            return true;
+        }
+        return false;
+    }
+
+    private int contarAmenazas(final double range) {
+        int count = 0;
+        for (Villager v : level().getEntitiesOfClass(Villager.class, getBoundingBox().inflate(range))) {
+            if (!v.isBaby() && v.isAlive()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** Called by the damage telemetry immediately after a non-fatal hit. */
+    public void reaccionarADanoA2() {
+        if (level().isClientSide || worldSiegeIndex < 0 || retiradaTicks > 0) {
+            return;
+        }
+        if (!AttackerRetreatPolicy.isValidActivation(getHealth(), isAlive())) {
+            return;
+        }
+        Villager threat = amenazaMasCercana(AttackerRetreatPolicy.THREAT_RANGE);
+        if (threat != null) {
+            iniciarRetirada(threat, level().getGameTime(), "DANO");
+        }
+    }
+
+    private void iniciarRetirada(final Villager threat, final long now, final String causa) {
+        if (!AttackerRetreatPolicy.shouldRetreat(getHealth(), getMaxHealth(),
+                distanceTo(threat), retiradasUsadas, now, ultimaRetirada)) {
+            return;
+        }
+        retiradasUsadas++;
+        retiradaTicks = AttackerRetreatPolicy.RETREAT_TICKS;
+
+        ultimaRetirada = now;
+        retiradaAmenaza = threat;
+        retiradaPosicionInicial = blockPosition();
+        retiradaDistanciaInicial = distanceTo(threat);
+        retiradaDestino = null;
+        retiradaUltimaPos = null;
+        retiradaTicksSinAvance = 0;
+        setTarget(null);
+        getNavigation().stop();
+        DevilRpg.LOGGER.info("[Siege] asaltante #{} RETREAT_STARTED {}/{} salud={} amenaza={} causa={}",
+                getId(), retiradasUsadas, AttackerRetreatPolicy.MAX_RETREATS, getHealth(),
+                threat.blockPosition().toShortString(), causa);
+        NavTrace.ev("RETREAT_STARTED", "uuid=" + getUUID() + " tick=" + now
+                + " health=" + getHealth() + " threat=" + threat.blockPosition().toShortString()
+                + " start=" + retiradaPosicionInicial.toShortString()
+                + " distance=" + String.format(java.util.Locale.ROOT, "%.2f", retiradaDistanciaInicial));
+    }
+
+    private void terminarRetirada(final String motivo) {
+
+        retiradaTicks = 0;
+        ultimaRetirada = level().getGameTime();
+        if (retiradaDestino != null && retiradaAmenaza != null && NavTrace.on()) {
+            double d = distanceTo(retiradaAmenaza);
+            NavTrace.ev("RETREAT_FAILED_OR_SUCCESS", "uuid=" + getUUID() + " reason=" + motivo
+                    + " start=" + (retiradaPosicionInicial == null ? "-" : retiradaPosicionInicial.toShortString())
+                    + " end=" + blockPosition().toShortString() + " startDistance="
+                    + String.format(java.util.Locale.ROOT, "%.2f", retiradaDistanciaInicial)
+                    + " endDistance=" + String.format(java.util.Locale.ROOT, "%.2f", d));
+        }
+        retiradaDestino = null;
+        retiradaUltimaPos = null;
+        retiradaTicksSinAvance = 0;
+    }
+
+    private void reemitirRetirada() {
+        if (retiradaDestino != null) {
+            getNavigation().moveTo(retiradaDestino.getX() + 0.5D, retiradaDestino.getY(),
+                    retiradaDestino.getZ() + 0.5D, 1.25D);
+        }
+    }
+
+    private void repositionarseSeguro(final Villager threat) {
+        if (retiradaDestino == null) {
+            retiradaDestino = posicionSegura(threat);
+            if (retiradaDestino == null && !retiradaFalloRegistrado) {
+                retiradaFalloRegistrado = true;
+                NavTrace.ev("RETREAT_FAILED", "uuid=" + getUUID() + " tick=" + level().getGameTime()
+                        + " reason=NO_VIABLE_DESTINATION pos=" + blockPosition().toShortString()
+                        + " threat=" + threat.blockPosition().toShortString()
+                        + " health=" + getHealth());
+            }
+        }
+        if (retiradaDestino != null) {
+            getNavigation().moveTo(retiradaDestino.getX() + 0.5D, retiradaDestino.getY(),
+                    retiradaDestino.getZ() + 0.5D, 1.25D);
+        }
+        // Measured escape: reissuing the same path cannot separate a body locked in melee.
+        if (retiradaUltimaPos != null && blockPosition().distSqr(retiradaUltimaPos) < 0.25D) {
+            retiradaTicksSinAvance++;
+        } else {
+            retiradaTicksSinAvance = 0;
+        }
+        retiradaUltimaPos = blockPosition();
+        if (retiradaTicksSinAvance >= 8 && distanceTo(threat) < 3.0D) {
+            getLookControl().setLookAt(threat, 30.0F, 30.0F);
+            net.minecraft.world.phys.Vec3 away = position().subtract(threat.position());
+            if (away.lengthSqr() > 1.0E-4D) {
+                away = away.normalize().scale(0.35D);
+                setDeltaMovement(getDeltaMovement().add(away.x, 0.32D, away.z));
+            }
+            if (horizontalCollision || retiradaTicksSinAvance % 12 == 0) {
+                getJumpControl().jump();
+            }
+            if (NavTrace.on() && retiradaTicksSinAvance % 12 == 0) {
+                NavTrace.ev("RETREAT_STUCK_ESCAPE", "uuid=" + getUUID() + " tick="
+                        + level().getGameTime() + " pos=" + blockPosition().toShortString()
+                        + " threat=" + threat.blockPosition().toShortString()
+                        + " distance=" + String.format(java.util.Locale.ROOT, "%.2f", distanceTo(threat)));
+            }
+        }
+    }
+
+    /** Bounded multi-level scan with full clearance, support, hazard, distance and route checks. */
+    private BlockPos posicionSegura(final Villager threat) {
+        BlockPos base = blockPosition();
+        int cota = cotaParaElRecinto();
+        boolean baseInside = dentroDeLaAldea(base, cota);
+        int evaluated = 0;
+        BlockPos best = null;
+        double bestScore = -Double.MAX_VALUE;
+        for (int r = (int) AttackerRetreatPolicy.SAFE_DISTANCE; r <= (int) AttackerRetreatPolicy.MAX_DISTANCE; r++) {
+            for (int[] dir : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1},
+                    {1, 1}, {1, -1}, {-1, 1}, {-1, -1}}) {
+                for (int dy = -3; dy <= 2; dy++) {
+                    BlockPos c = base.offset(dir[0] * r, dy, dir[1] * r);
+                    evaluated++;
+                    if (!level().isLoaded(c)) {
+                        continue;
+                    }
+                    if (!AttackerRetreatDestinationPolicy.preservesInterior(baseInside,
+                            dentroDeLaAldea(c, cota))) {
+                        continue;
+                    }
+                    boolean feetClear = level().getBlockState(c).isAir();
+                    boolean headClear = level().getBlockState(c.above()).isAir();
+                    BlockPos below = c.below();
+                    boolean support = !level().getBlockState(below).isAir()
+                            && !level().getBlockState(below).getCollisionShape(level(), below).isEmpty();
+                    boolean hazard = !level().getBlockState(c).getFluidState().isEmpty()
+                            || level().getBlockState(c).is(Blocks.FIRE)
+                            || level().getBlockState(c).is(Blocks.LAVA)
+                            || level().getBlockState(c).is(Blocks.MAGMA_BLOCK)
+                            || level().getBlockState(c).is(Blocks.CAMPFIRE);
+                    double dist = Math.sqrt(c.distSqr(threat.blockPosition()));
+                    if (!AttackerRetreatDestinationPolicy.viable(feetClear, headClear, support, hazard,
+                            true, dist, dy, AttackerRetreatPolicy.SAFE_DISTANCE)) {
+                        continue;
+                    }
+                    Path path = getNavigation().createPath(c, 0);
+                    boolean reachable = path != null && path.canReach();
+                    if (!AttackerRetreatDestinationPolicy.viable(feetClear, headClear, support, hazard,
+                            reachable, dist, dy, AttackerRetreatPolicy.SAFE_DISTANCE)) {
+                        continue;
+                    }
+                    // Prefer distance from the threat, then a small descent to break sight lines.
+                    double score = dist - Math.abs(dy) * 0.5D;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = c;
+                    }
+                }
+            }
+        }
+        if (best != null) {
+            NavTrace.ev("RETREAT_DESTINATION_SELECTED", "uuid=" + getUUID() + " tick="
+                    + level().getGameTime() + " dest=" + best.toShortString() + " evaluated=" + evaluated
+                    + " threat=" + threat.blockPosition().toShortString());
+        } else {
+            NavTrace.ev("RETREAT_CANDIDATES_EVALUATED", "uuid=" + getUUID() + " tick="
+                    + level().getGameTime() + " evaluated=" + evaluated + " accepted=0");
+        }
+        return best;
+    }
+
+    private Villager amenazaMasCercana(final double range) {
+        Villager best = null;
+        double bestD = Double.MAX_VALUE;
+        for (Villager v : level().getEntitiesOfClass(Villager.class, getBoundingBox().inflate(range))) {
+            if (v.isBaby() || !v.isAlive()) continue;
+            double d = distanceToSqr(v);
+            if (d < bestD) {
+                bestD = d;
+                best = v;
+            }
+        }
+        return best;
+    }
+
+    @Override
+    public void setTarget(final LivingEntity target) {
+        if (retiradaTicks > 0 && target != null) {
+            return; // suppress retargeting while disengaging
+        }
+        super.setTarget(target);
+    }
+
+    /**
+     * A2: an attacker that is part of an organized siege must not rely on the 35% random
+     * loadout. The acceptance telemetry showed unarmored attackers dying to three guard melee
+     * hits; full iron armor is an attacker-only defensive preparation and does not touch guards.
+     */
+    private void equiparAsaltanteDeAsedio() {
+        setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+        setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+        setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.IRON_LEGGINGS));
+        setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.IRON_BOOTS));
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            if (!getItemBySlot(slot).isEmpty()) {
+                setDropChance(slot, PROBABILIDAD_SOLTAR_EQUIPO);
+            }
         }
     }
 
@@ -2469,27 +3272,19 @@ public class AggressiveZombieEntity extends Zombie {
     public void setPos(double x, double y, double z) {
         super.setPos(x, y, z);
 
-        if (spawnDistance == 0) { // Solo se calcula al momento del spawn
-            Player nearestPlayer = this.level().getNearestPlayer(this, SPAWN_PROFILE.maxDistance());
-            if (nearestPlayer != null) {
-                PlayerAuxiliaryCapabilityInterface playerCapability = IGenericCapability.getUnwrappedPlayerCapability(nearestPlayer, PlayerAuxiliaryCapability.INSTANCE);
-                Vec3 playerSpawn = playerCapability.getAnchorPoint();
-                if (playerSpawn == null) {
-                    playerSpawn = playerCapability.getSpawnPoint();
-                }
-                if (playerSpawn != null) {
-                    spawnDistance = Math.sqrt(this.blockPosition().distSqr(new BlockPos((int) playerSpawn.x, (int) playerSpawn.y, (int) playerSpawn.z)));
-                    spawnThreat = ThreatLevel.current(this.level());
-                    // La traza va DETRAS DE UN FLAG de la config (`devilrpg-server.toml`, [logs] logEscaladoDeSpawn),
-                    // apagado por defecto: es la herramienta para medir el escalado, no algo del dia a dia. Ademas
-                    // solo sale en el SERVIDOR (esto corre tambien en el cliente, que escalaba con OTRA distancia y
-                    // sacaba un ataque distinto) y solo cuando la entidad YA esta colocada: el primer `setPos` de la
-                    // construccion es (0,0,0) y llenaba el log de "spawned at 0,0,0" (12 lineas por tanda de 3).
-                    if (DevilRpgConfig.LOG_ESCALADO_DE_SPAWN && !this.level().isClientSide
-                            && (this.getX() != 0.0D || this.getY() != 0.0D || this.getZ() != 0.0D)) {
-                        DevilRpg.LOGGER.info("Zombie Spawned at: {} | Player Spawn Point: {} | Distance: {} | Threat: {}", this.blockPosition(), playerSpawn, spawnDistance, String.format("%.2f", spawnThreat));
-                    }
-                }
+        if (spawnDistance == 0 && this.level() instanceof ServerLevel serverLevel) {
+            // Geographic difficulty ALWAYS uses the shared world spawn. No player-specific fallback.
+            BlockPos sharedSpawn = serverLevel.getSharedSpawnPos();
+            spawnDistance = Math.sqrt(
+                    com.chipoodle.devilrpg.spawnprofile.SharedSpawnReferencePolicy.distanceSqr(
+                            getX(), getY(), getZ(), sharedSpawn.getX() + 0.5D,
+                            sharedSpawn.getY(), sharedSpawn.getZ() + 0.5D));
+            spawnThreat = ThreatLevel.current(this.level());
+            if (DevilRpgConfig.LOG_ESCALADO_DE_SPAWN
+                    && (this.getX() != 0.0D || this.getY() != 0.0D || this.getZ() != 0.0D)) {
+                DevilRpg.LOGGER.info("Zombie Spawned at: {} | Shared world spawn: {} | Distance: {} | Threat: {}",
+                        this.blockPosition(), sharedSpawn, spawnDistance,
+                        String.format("%.2f", spawnThreat));
             }
         }
     }
@@ -3403,7 +4198,14 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public boolean canUse() {
-            if (!zombie.isGoToCenterActive() || zombie.getHomePos() != null || zombie.getTarget() != null) {
+            if (!zombie.isGoToCenterActive() || zombie.getHomePos() != null) {
+                return false;
+            }
+            LivingEntity target = zombie.getTarget();
+            boolean hasLiveTarget = target != null && target.isAlive();
+            double targetDistance = hasLiveTarget ? zombie.distanceToSqr(target) : 0.0D;
+            if (!AdvanceUnderFirePolicy.shouldMarchToVillage(zombie.objetivoCampanaActivo(),
+                    hasLiveTarget, targetDistance)) {
                 return false;
             }
             BlockPos center = zombie.getVillageCenter();
@@ -3494,7 +4296,12 @@ public class AggressiveZombieEntity extends Zombie {
         @Override
         public boolean canUse() {
             LivingEntity target = zombie.getTarget();
-            return target != null && target.isAlive();
+            if (target == null || !target.isAlive()) {
+                return false;
+            }
+            // The bell is the strategic objective: do not chase guards far away from it.
+            return AdvanceUnderFirePolicy.shouldChase(zombie.objetivoCampanaActivo(),
+                    zombie.distanceToSqr(target));
         }
 
         @Override

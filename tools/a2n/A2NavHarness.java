@@ -84,8 +84,15 @@ public final class A2NavHarness {
             if (!rIniciado || hecho) {
                 return;
             }
+            if (rRegistroAsedioPendiente && rTicks >= rRegistroAsedioDesdeTick) {
+                registrarAsedioPendiente(evento.getServer());
+                if (rRegistroAsedioPendiente) {
+                    return; // no se inicia el muestreo del asedio hasta registrar la ola completa
+                }
+            }
             rTicks++;
             muestrearRaid();
+            muestrearDefensa();
             traceInit();
             traceTick(evento.getServer());
             if (rTicks == R_FASE_A) {
@@ -94,12 +101,140 @@ public final class A2NavHarness {
             if (rTicks == R_FASE_A + 1) {
                 log("FASE B inicio t=" + rTicks + " " + resumenRaid());
             }
-            if (rTicks >= R_FASE_B) {
+            if (rTicks >= R_FASE_B && !rPostRaidIniciado) {
                 informeRaid("B", evento.getServer());
+                rTrabajadoresQueReanudaron.clear();
+                boolean diagSnapshot = Boolean.getBoolean("a2n.diagSnapshot");
+                int retirados = 0;
+                if (diagSnapshot) {
+                    for (int i = 0; i < rAsaltantes.size(); i++) {
+                        AggressiveZombieEntity atacante = rAsaltantes.get(i);
+                        if (atacante == null || atacante.isRemoved()) {
+                            continue;
+                        }
+                        String estado = String.valueOf(atacante.navExecutor().state());
+                        BlockPos obj = atacante.navExecutor().objective();
+                        var color = estado.equals("FAILED")
+                                ? net.minecraft.ChatFormatting.RED
+                                : estado.equals("TRAVERSING")
+                                ? net.minecraft.ChatFormatting.GREEN
+                                : net.minecraft.ChatFormatting.YELLOW;
+                        atacante.setCustomName(net.minecraft.network.chat.Component.literal(
+                                "A2 IDX" + i + " " + estado + " tgt="
+                                        + (obj == null ? "-" : obj.toShortString()))
+                                .withStyle(color));
+                        atacante.setCustomNameVisible(true);
+                    }
+                    nivel.setDefaultSpawnPos(new BlockPos(661, 80, 590), 0.0F);
+                    evento.getServer().saveEverything(false, true, true);
+                    log("A2 DIAG SNAPSHOT saved diagSnapshot=true center=661,71,533 spawn=661,80,590");
+                    rRetiradosPorArnes = 0;
+                } else {
+                    for (AggressiveZombieEntity atacante : rAsaltantes) {
+                        if (atacante != null && !atacante.isRemoved()) {
+                            atacante.discard();
+                            retirados++;
+                        }
+                    }
+                    rRetiradosPorArnes = retirados;
+                }
+                try {
+                    com.chipoodle.devilrpg.world.VillageManager.terminarAsedioParaArnes(
+                            evento.getServer().overworld(), 0);
+                    com.chipoodle.devilrpg.world.VillageManager.ejecutarMantenimientoParaArnes(
+                            evento.getServer().overworld(), 0, rCentro);
+                    prepararRecursosC4Recovery(evento.getServer().overworld(), rCentro);
+                    rPostRaidIniciado = true;
+                    log("C4 POSTRAID maintenance=OK attackersRemovedForRecovery=" + retirados
+                            + " recoveryTicks=" + R_RECUPERACION_TICKS);
+                } catch (RuntimeException ex) {
+                    fallosDeInstrumento++;
+                    hecho = true;
+                    cerrar("INVALIDO", "C4 POSTRAID maintenance failed: " + ex, evento.getServer());
+                    return;
+                }
+                return;
+            }
+            if (rPostRaidIniciado && ++rPostRaidTicks >= R_RECUPERACION_TICKS) {
+                int[] assignments = auditarAsignacionesJobSite();
+                var villagers = nivel.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
+                        new net.minecraft.world.phys.AABB(rCentro).inflate(
+                                com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D));
+                int alive = 0;
+                for (var villager : villagers) {
+                    if (villager.isAlive() && !villager.isBaby()) alive++;
+                }
+                int expectedProfessionals = com.chipoodle.devilrpg.world.VillageGenerator.puestosDelPueblo();
+                int professionals = 0;
+                int professionalGoals = 0;
+                int workerDeaths = 0;
+                int workerUnknown = 0;
+                int workersResumedAlive = 0;
+                for (java.util.UUID workerId : rTrabajadoresEsperados) {
+                    var entity = nivel.getEntity(workerId);
+                    if (entity instanceof net.minecraft.world.entity.npc.Villager worker && worker.isAlive()) {
+                        professionals++;
+                        if (tieneGoalProfesional(worker)) professionalGoals++;
+                        if (rTrabajadoresQueReanudaron.contains(workerId)) {
+                            workersResumedAlive++;
+                        } else {
+                            java.util.List<String> runningGoals = new java.util.ArrayList<>();
+                            for (var wrapped : worker.goalSelector.getAvailableGoals()) {
+                                if (wrapped.isRunning()) runningGoals.add(wrapped.getGoal().getClass().getSimpleName());
+                            }
+                            var jobSite = worker.getBrain().getMemory(
+                                    net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE)
+                                    .map(memory -> memory.pos().toShortString()).orElse("none");
+                            String eligibility = diagnosticoElegibilidadProfesional(worker);
+                            log("C4 WORKER NOT RESUMED uuid=" + workerId
+                                    + " profession=" + worker.getVillagerData().getProfession()
+                                    + " expectedGoal=" + goalProfesionalEsperado(worker)
+                                    + " runningGoals=" + runningGoals
+                                    + " pos=" + worker.blockPosition().toShortString()
+                                    + " jobSite=" + jobSite + " eligibility={" + eligibility + "} alive=true");
+                        }
+                    } else if (rTrabajadoresMuertos.contains(workerId)) {
+                        workerDeaths++;
+                        log("C4 WORKER CASUALTY uuid=" + workerId + " " + rCausaMuerteTrabajador.getOrDefault(
+                                workerId, "deathSource=unknown"));
+                    } else {
+                        workerUnknown++;
+                        log("C4 WORKER UNRESOLVED uuid=" + workerId
+                                + " entity=" + (entity == null ? "missing" : entity.getType())
+                                + " deathEvent=" + rTrabajadoresMuertos.contains(workerId));
+                    }
+                }
+                boolean defenseObserved = rGuardiasQueCombatieron.size() == 4;
+                boolean workersAccounted = professionals + workerDeaths == expectedProfessionals && workerUnknown == 0;
+                boolean professionsRestored = workersAccounted
+                        && workersResumedAlive == professionals
+                        && professionalGoals == professionals;
+                boolean assignmentsClean = assignments[0] > 0 && assignments[1] == 0 && assignments[2] == 0;
+                boolean villageOutcomeObserved = alive > 0;
+                boolean accepted = rFixtureOk && fallosDeInstrumento == 0 && defenseObserved
+                        && professionsRestored && assignmentsClean && villageOutcomeObserved;
+                log("C4 DEFENSE guardasQueCombatieron=" + rGuardiasQueCombatieron.size() + "/4"
+                        + " trabajadoresEsperados=" + expectedProfessionals
+                        + " trabajadoresVivos=" + professionals
+                        + " trabajadoresReanudados=" + workersResumedAlive
+                        + " bajasTrabajadores=" + workerDeaths
+                        + " trabajadoresNoResueltos=" + workerUnknown
+                        + " villageVillagersAlive=" + alive
+                        + " professionGoals=" + professionalGoals + "/" + professionals);
+                log("C4 JOB_SITE assignments=" + assignments[0] + " orphaned=" + assignments[1]
+                        + " duplicateOwners=" + assignments[2]);
+                log("C4 OUTCOME=" + (alive > 0 ? "SURVIVED" : "FALLEN")
+                        + " attackersRemovedForRecovery=" + rRetiradosPorArnes
+                        + " workerCasualties=" + workerDeaths);
                 hecho = true;
-                cerrar(fallosDeInstrumento == 0 ? "INSTRUMENTADO" : "INVALIDO",
-                        "RAID INSTRUMENTADO - Edit 4 only | ticks=" + rTicks + " faseA=" + R_FASE_A
-                                + " faseB=" + R_FASE_B + " " + resumenRaid() + " nav={" + rNavConfig + "}"
+                cerrar(accepted ? "C4_PASS" : "C4_FAIL",
+                        "guardasCombatieron=" + defenseObserved + " profesionalesReanudados=" + professionsRestored
+                                + " asignacionesJobSiteLimpias=" + assignmentsClean
+                                + " supervivientes=" + alive + " trabajadoresEsperados=" + expectedProfessionals
+                                + " trabajadoresVivos=" + professionals + " trabajadoresReanudados=" + workersResumedAlive
+                                + " bajasTrabajadores=" + workerDeaths + " trabajadoresNoResueltos=" + workerUnknown
+                                + " retiradosParaRecuperacion=" + rRetiradosPorArnes
+                                + " jobSite=" + java.util.Arrays.toString(assignments)
                                 + " fallosDeInstrumento=" + fallosDeInstrumento, evento.getServer());
             }
             return;
@@ -1100,6 +1235,9 @@ public final class A2NavHarness {
     private static final int R_RADIO_ALDEA = 71;
     private static final int R_RADIO_ANILLO = 62;
     private static final int R_ALTO_ANILLO = 3;
+    // El muro de producción tiene dos capas continuas; las columnas de piedra añaden una tercera.
+    // C4 valida el cierre continuo de dos capas, sin exigir que cada tramo de troncos sea una columna.
+    private static final int R_ALTURA_MURO_VALIDADA = 2;
     /** Edit 10: contadores de la FUNDACION bajo el anillo (cierre del hueco vertical de Edit 9). */
     private static int rFundBloques;
     private static int rFundMin = Integer.MAX_VALUE;
@@ -1123,6 +1261,9 @@ public final class A2NavHarness {
     private static int rSpawneados;
     private static int rFallosSpawn;
     private static boolean rIniciado;
+    private static boolean rRegistroAsedioPendiente;
+    private static int rRegistroAsedioDesdeTick;
+    private static int rRegistroAsedioIntentos;
     private static String rNavConfig = "-";
 
     private static void prepararRaidAsaltantes(final MinecraftServer server) {
@@ -1135,6 +1276,10 @@ public final class A2NavHarness {
                 + " env=" + com.chipoodle.devilrpg.entity.nav.NavFeature.ENV + "=" + env
                 + " navCustomEfectivo=" + com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation();
         log("NAVCUSTOM " + rNavConfig);
+        // Edit 32 · los puntos de asalto deben estar en SUPERFICIE real, no en una plataforma
+        // artificial dentro de una montaña. La ventana vertical admite hasta 80 bloques sobre el centro.
+        final int spawnYMin = rAncla.getY() - 8;
+        final int spawnYMax = rAncla.getY() + 80;
         // Edit 30 · posiciones ya elegidas, para exigir columnas DISTINTAS entre direcciones.
         final java.util.Set<Long> usadas = new java.util.HashSet<>();
         for (int i = 1; i <= R_ASALTANTES; i++) {
@@ -1156,7 +1301,7 @@ public final class A2NavHarness {
                 int csz = rAncla.getZ() + (int) Math.round(Math.sin(ang) * radio);
                 int csy = -1;
                 int cConSuelo = 0;
-                for (int prueba = rAncla.getY() - 8; prueba <= rAncla.getY() + 24; prueba++) {
+                for (int prueba = spawnYMax; prueba >= spawnYMin; prueba--) {
                     if (nivelR.getBlockState(new BlockPos(csx, prueba - 1, csz)).isAir()) {
                         continue;
                     }
@@ -1192,7 +1337,7 @@ public final class A2NavHarness {
                         continue;
                     }
                     int csy = -1;
-                    for (int prueba = rAncla.getY() - 8; prueba <= rAncla.getY() + 24; prueba++) {
+                    for (int prueba = spawnYMax; prueba >= spawnYMin; prueba--) {
                         if (nivelR.getBlockState(new BlockPos(csx, prueba - 1, csz)).isAir()) {
                             continue;
                         }
@@ -1219,31 +1364,11 @@ public final class A2NavHarness {
                 log("SPAWN idx=" + i + " nominal=" + nomX + "," + nomZ + " ajustado=" + sx + "," + sz
                         + " offsetRadial=" + offElegido + " (misma direccion; holgura intacta)");
             }
-            // Edit 31 · PLATAFORMA DE SPAWN (AUTORIZADA): si ni el radial ni el lateral encuentran columna
-            // valida, se prepara SOLO la columna nominal: suelo solido en la superficie detectada + 2
-            // bloques de aire encima. Bounded (1 columna, 3 celdas), determinista y registrado. No toca
-            // el muro (r=62) ni el perimetro: la columna esta a radio 95 de la aldea.
-            boolean plataformaPreparada = false;
+            // No fabricar una plataforma de una sola columna si no se encontro superficie real.
+            // Ese fallback anterior podia colocar al atacante dentro de roca maciza y falsear A2.
             if (sy < 0) {
-                int baseP = Integer.MIN_VALUE;
-                for (int prueba = rAncla.getY() + 24; prueba >= rAncla.getY() - 8; prueba--) {
-                    if (!nivelR.getBlockState(new BlockPos(nomX, prueba, nomZ)).isAir()) {
-                        baseP = prueba;
-                        break;
-                    }
-                }
-                if (baseP == Integer.MIN_VALUE) {
-                    baseP = rAncla.getY();
-                }
-                solido(nomX, baseP, nomZ);
-                aire(nomX, baseP + 1, nomZ);
-                aire(nomX, baseP + 2, nomZ);
-                sx = nomX;
-                sz = nomZ;
-                sy = baseP + 1;
-                plataformaPreparada = true;
-                log("SPAWN idx=" + i + " PLATAFORMA en " + nomX + "," + baseP + "," + nomZ
-                        + " (suelo + 2 de aire; 3 celdas; solo columna nominal)");
+                log("SPAWN idx=" + i + " sin columna de superficie transitable; no se fabrica plataforma"
+                        + " nominal=" + nomX + "," + nomZ + " ventanaY=" + spawnYMin + ".." + spawnYMax);
             }
             if (sy >= 0 && usadas.contains(((long) sx << 32) ^ (sz & 0xffffffffL))) {
                 // Edit 30: columna duplicada -> no se acepta (8 posiciones distintas).
@@ -1260,7 +1385,7 @@ public final class A2NavHarness {
                 String motivo = conSuelo == 0 ? "NO_SUITABLE_GROUND" : "INSUFFICIENT_CLEARANCE";
                 log("SPAWN idx=" + i + " pos=" + sx + ",?," + sz + " ok=false motivo=" + motivo
                         + " columnasConSuelo=" + conSuelo
-                        + " ventanaY=" + (rAncla.getY() - 8) + ".." + (rAncla.getY() + 24));
+                        + " ventanaY=" + spawnYMin + ".." + spawnYMax);
                 continue;
             }
             BlockPos pos = new BlockPos(sx, sy, sz);
@@ -1269,9 +1394,15 @@ public final class A2NavHarness {
             boolean ok = false;
             if (asaltante != null) {
                 asaltante.moveTo(sx + 0.5D, sy, sz + 0.5D, 0.0F, 0.0F);
+                // Mismo contrato que VillageManager.spawnWave: el centro habilita MoveToVillageCenterGoal.
+                asaltante.setVillageCenter(rAncla);
+                asaltante.setGoToCenterActive(true);
                 asaltante.setPersistenceRequired();
                 ok = nivelR.addFreshEntity(asaltante);
                 if (ok) {
+                    // El índice se escribe tras insertar, igual que en la oleada de producción.
+                    // Con índice 0 no se despawnea sin jugador y las bajas/brechas se atribuyen a esta aldea.
+                    asaltante.setWorldSiegeIndex(0);
                     asaltante.navExecutor().setObjective(rAncla);
                     rAsaltantes.add(asaltante);
                     rSpawneados++;
@@ -1291,6 +1422,119 @@ public final class A2NavHarness {
         if (rSpawneados != R_ASALTANTES) {
             fallosDeInstrumento++;
             log("FALLO DE INSTRUMENTO raid: spawneados=" + rSpawneados + "/" + R_ASALTANTES);
+        } else {
+            // addFreshEntity puede completar el alta en el nivel durante este mismo tick, pero el lookup por UUID
+            // del ServerLevel no siempre queda visible hasta el siguiente tick. No registrar una ola parcial:
+            // esperar y validar las ocho entidades antes de activar C4.
+            rRegistroAsedioPendiente = true;
+            rRegistroAsedioDesdeTick = rTicks + 1;
+            rRegistroAsedioIntentos = 0;
+            log("C4 TEST SIEGE registration deferred until next server tick; attackers=" + rAsaltantes.size());
+        }
+    }
+
+    /**
+     * Recursos de trabajo acotados para la fase C4 de reanudacion. El arnes no debe exigir que un Goal se ejecute
+     * cuando su oficio no tiene materia prima: entrega una tarea real y pequena a cocinero, herrero de armas y
+     * pescador. Solo modifica el mundo desechable de prueba y registra cantidades antes/despues.
+     */
+    private static void prepararRecursosC4Recovery(final ServerLevel level, final BlockPos center) {
+        int carneAntes = com.chipoodle.devilrpg.world.VillagePantry.contar(
+                com.chipoodle.devilrpg.world.VillagePantry.despensa(level, center),
+                com.chipoodle.devilrpg.world.VillagePantry::sePuedeCocinar);
+        net.minecraft.world.item.ItemStack carne = new net.minecraft.world.item.ItemStack(
+                net.minecraft.world.item.Items.BEEF, 4);
+        net.minecraft.world.item.ItemStack carneResto = com.chipoodle.devilrpg.world.VillagePantry.guardar(
+                com.chipoodle.devilrpg.world.VillagePantry.despensa(level, center), carne);
+        int carneAgregada = 4 - carneResto.getCount();
+
+        int lingotesAntes = com.chipoodle.devilrpg.world.VillagePantry.contar(
+                com.chipoodle.devilrpg.world.VillageStorage.almacen(level, center),
+                stack -> stack.is(net.minecraft.world.item.Items.IRON_INGOT));
+        int hierroAgregado = guardarRecursoC4(level, center, net.minecraft.world.item.Items.IRON_INGOT, 2);
+        int tablonesAgregados = guardarRecursoC4(level, center, net.minecraft.world.item.Items.OAK_PLANKS, 6);
+        int palosAgregados = guardarRecursoC4(level, center, net.minecraft.world.item.Items.STICK, 3);
+        int cuerdasAgregadas = guardarRecursoC4(level, center, net.minecraft.world.item.Items.STRING, 3);
+        int plumasAgregadas = guardarRecursoC4(level, center, net.minecraft.world.item.Items.FEATHER, 1);
+        int pepitasAgregadas = guardarRecursoC4(level, center, net.minecraft.world.item.Items.IRON_NUGGET, 1);
+
+        int pecesAntes = com.chipoodle.devilrpg.world.VillageGenerator.pecesEnElLago(level, center);
+        int pecesAgregados = 0;
+        for (int i = 0; i < 3; i++) {
+            int agregados = com.chipoodle.devilrpg.world.VillageGenerator.reponerPecesDelLago(level, center);
+            pecesAgregados += agregados;
+            if (agregados <= 0) {
+                break;
+            }
+        }
+        int pecesDespues = com.chipoodle.devilrpg.world.VillageGenerator.pecesEnElLago(level, center);
+        log("C4 TEST RESOURCES butcherRaw=" + carneAgregada + " pantryRawBefore=" + carneAntes
+                + " smithIron=" + hierroAgregado + " ironBefore=" + lingotesAntes
+                + " planks=" + tablonesAgregados + " sticks=" + palosAgregados
+                + " string=" + cuerdasAgregadas + " feathers=" + plumasAgregadas + " nuggets=" + pepitasAgregadas
+                + " fishBefore=" + pecesAntes + " fishAdded=" + pecesAgregados + " fishAfter=" + pecesDespues);
+    }
+
+    private static int guardarRecursoC4(final ServerLevel level, final BlockPos center,
+            final net.minecraft.world.item.Item item, final int count) {
+        net.minecraft.world.item.ItemStack rest = com.chipoodle.devilrpg.world.VillageStorage.guardar(
+                level, center, new net.minecraft.world.item.ItemStack(item, count));
+        return count - rest.getCount();
+    }
+
+    private static void registrarAsedioPendiente(final MinecraftServer server) {
+        if (!rRegistroAsedioPendiente) {
+            return;
+        }
+        java.util.List<java.util.UUID> attackerIds = new java.util.ArrayList<>();
+        java.util.List<String> pendientes = new java.util.ArrayList<>();
+        ServerLevel level = server.overworld();
+        for (AggressiveZombieEntity instance : rAsaltantes) {
+            if (instance == null) {
+                pendientes.add("null-instance");
+                continue;
+            }
+            java.util.UUID uuid = instance.getUUID();
+            net.minecraft.world.entity.Entity resolved = level.getEntity(uuid);
+            if (resolved instanceof AggressiveZombieEntity attacker) {
+                int indexBefore = attacker.getWorldSiegeIndex();
+                if (indexBefore != 0) {
+                    attacker.setWorldSiegeIndex(0);
+                }
+                attackerIds.add(uuid);
+                log("C4 TEST SIEGE resolve uuid=" + uuid + " instanceRemoved=" + instance.isRemoved()
+                        + " instanceAlive=" + instance.isAlive() + " indexBefore=" + indexBefore
+                        + " indexAfter=" + attacker.getWorldSiegeIndex() + " resolved=true");
+            } else {
+                pendientes.add(uuid + "(instanceRemoved=" + instance.isRemoved()
+                        + ",alive=" + instance.isAlive() + ",instanceIndex=" + instance.getWorldSiegeIndex()
+                        + ",resolved=" + (resolved == null ? "null" : resolved.getClass().getSimpleName()) + ")");
+            }
+        }
+        if (attackerIds.size() == R_ASALTANTES) {
+            try {
+                com.chipoodle.devilrpg.world.VillageManager.iniciarAsedioParaArnes(
+                        level, 0, rCentro, attackerIds);
+                rRegistroAsedioPendiente = false;
+                log("C4 TEST SIEGE registration complete attempts=" + (rRegistroAsedioIntentos + 1)
+                        + " attackers=" + attackerIds.size());
+            } catch (RuntimeException ex) {
+                rRegistroAsedioPendiente = false;
+                fallosDeInstrumento++;
+                log("C4 TEST SIEGE ERROR after resolution: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+            }
+            return;
+        }
+        rRegistroAsedioIntentos++;
+        if (rRegistroAsedioIntentos >= 20) {
+            rRegistroAsedioPendiente = false;
+            fallosDeInstrumento++;
+            log("C4 TEST SIEGE ERROR: UUID lookup unresolved after " + rRegistroAsedioIntentos
+                    + " ticks; resolved=" + attackerIds.size() + "/" + R_ASALTANTES
+                    + " pending=" + pendientes);
+        } else {
+            log("C4 TEST SIEGE pending attempt=" + rRegistroAsedioIntentos + " resolved="
+                    + attackerIds.size() + "/" + R_ASALTANTES + " pending=" + pendientes);
         }
     }
 
@@ -1300,6 +1544,10 @@ public final class A2NavHarness {
     // ================================================================================================
     private static final int R_FASE_A = Integer.getInteger("a2n.faseA", 3000);
     private static final int R_FASE_B = Integer.getInteger("a2n.faseB", 6600);
+    private static final int R_RECUPERACION_TICKS = Integer.getInteger("a2n.recuperacionTicks", 1200);
+    private static boolean rPostRaidIniciado;
+    private static int rPostRaidTicks;
+    private static int rRetiradosPorArnes;
     private static final boolean[] rEntroPerimetro = new boolean[R_ASALTANTES];
     private static final boolean[] rDentroParedAhora = new boolean[R_ASALTANTES];
     private static final boolean[] rMuertoRegistrado = new boolean[R_ASALTANTES];
@@ -1379,7 +1627,7 @@ public final class A2NavHarness {
             int dx = (int) (entrada.getKey() >> 32);
             int dz = (int) (long) entrada.getKey();
             int baseOriginal = entrada.getValue();
-            rAnilloEsperadas += R_ALTO_ANILLO;
+            rAnilloEsperadas += R_ALTURA_MURO_VALIDADA;
             // NO se re-deriva el suelo: sueloDeColumna() veria la cima del muro como "terreno" y marcaria
             // todas las columnas como desplazadas. Se comprueba el soporte REAL bajo la base registrada.
             if (nivelR.getBlockState(new BlockPos(rAncla.getX() + dx, baseOriginal - 1,
@@ -1389,14 +1637,14 @@ public final class A2NavHarness {
                 continue;
             }
             boolean columnaOk = true;
-            for (int dy = 0; dy < R_ALTO_ANILLO; dy++) {
+            for (int dy = 0; dy < R_ALTURA_MURO_VALIDADA; dy++) {
                 if (nivelR.getBlockState(new BlockPos(rAncla.getX() + dx, baseOriginal + dy,
                         rAncla.getZ() + dz)).isAir()) {
                     columnaOk = false;
                 }
             }
             if (columnaOk) {
-                presentes += R_ALTO_ANILLO;
+                presentes += R_ALTURA_MURO_VALIDADA;
             } else {
                 rAnilloNoSolidas++;
             }
@@ -1592,8 +1840,19 @@ public final class A2NavHarness {
         for (int k = 0; k < n; k++) {
             AggressiveZombieEntity a = rAsaltantes.get(k);
             final int idx = k + 1;
-            if (a == null || a.isRemoved()) {
+            if (a == null) {
                 rDesaparecidos++;
+                continue;
+            }
+            // Tras completar la animación de muerte, Entity.isRemoved() pasa a true y isAlive() deja
+            // de servir para clasificarla. Se conserva el primer MUERTO observado (o health<=0) para
+            // que una baja confirmada no cambie luego a DESAPARECIDO en snapshots posteriores.
+            if (a.isRemoved()) {
+                if (rMuertoRegistrado[k] || a.getHealth() <= 0.0F) {
+                    rMuertos++;
+                } else {
+                    rDesaparecidos++;
+                }
                 continue;
             }
             boolean vivo = a.isAlive() && a.getHealth() > 0.0F;
@@ -1681,14 +1940,131 @@ public final class A2NavHarness {
                 } catch (RuntimeException e) {
                     descenso = "NO DISPONIBLE(" + e.getClass().getSimpleName() + ")";
                 }
+                String localDiag;
+                String decisionEscalera;
+                String escaleraDiag;
+                try {
+                    localDiag = a.navExecutor().objetivoLocalDiag();
+                    decisionEscalera = a.decisionDescensoDiag();
+                    escaleraDiag = a.escaleraDiag();
+                } catch (RuntimeException e) {
+                    localDiag = decisionEscalera = escaleraDiag =
+                            "NO DISPONIBLE(" + e.getClass().getSimpleName() + ")";
+                }
                 double ddx = a.getX() - rAncla.getX();
                 double ddz = a.getZ() - rAncla.getZ();
                 log("RAID NAV idx=" + (k + 1) + " uuid=" + a.getUUID()
                         + " pos=" + a.blockPosition().toShortString()
                         + " dist=" + dos(Math.sqrt(ddx * ddx + ddz * ddz))
-                        + " estado=" + estado + " ruta={" + ruta + "} descenso={" + descenso + "}");
+                        + " estado=" + estado + " ruta={" + ruta + "} descenso={" + descenso + "}"
+                        + " local={" + localDiag + "} decisionEscalera={" + decisionEscalera
+                        + "} escalera={" + escaleraDiag + "}");
             }
         }
+    }
+
+
+    private static final java.util.Set<java.util.UUID> rGuardiasQueCombatieron = new java.util.HashSet<>();
+    /** UUIDs capturados en la fundación; no se pierde al trabajador cuando se aleja del recinto. */
+    private static final java.util.Set<java.util.UUID> rTrabajadoresEsperados = new java.util.LinkedHashSet<>();
+    private static final java.util.Set<java.util.UUID> rTrabajadoresQueReanudaron = new java.util.HashSet<>();
+    private static final java.util.Set<java.util.UUID> rTrabajadoresMuertos = new java.util.HashSet<>();
+    private static final java.util.Map<java.util.UUID, String> rCausaMuerteTrabajador = new java.util.HashMap<>();
+
+    @SubscribeEvent
+    public static void registrarMuerteTrabajador(
+            net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof net.minecraft.world.entity.npc.Villager worker)) return;
+        java.util.UUID workerId = worker.getUUID();
+        if (!rTrabajadoresEsperados.contains(workerId)) return;
+        rTrabajadoresMuertos.add(workerId);
+        var source = event.getSource();
+        var attacker = source.getEntity();
+        var direct = source.getDirectEntity();
+        String killer = attacker == null ? "none"
+                : attacker.getType() + "#" + attacker.getId() + "/" + attacker.getUUID();
+        String directEntity = direct == null ? "none"
+                : direct.getType() + "#" + direct.getId() + "/" + direct.getUUID();
+        String cause = "msgId=" + source.getMsgId() + " killer=" + killer + " direct=" + directEntity;
+        rCausaMuerteTrabajador.put(workerId, cause);
+        log("C4 WORKER DEATH uuid=" + workerId
+                + " profession=" + worker.getVillagerData().getProfession()
+                + " name=" + worker.getName().getString()
+                + " pos=" + worker.blockPosition().toShortString()
+                + " " + cause);
+    }
+
+    private static void muestrearDefensa() {
+        if (nivel == null || rCentro == null) return;
+        var zona = new net.minecraft.world.phys.AABB(rCentro)
+                .inflate(com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D);
+        for (var villager : nivel.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, zona)) {
+            if (!villager.isAlive() || villager.isBaby()) continue;
+            if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(villager)) {
+                for (var wrapped : villager.goalSelector.getAvailableGoals()) {
+                    if (wrapped.isRunning()
+                            && wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal goal) {
+                        var enemy = goal.enemigoActual();
+                        if (enemy != null && enemy.isAlive() && !enemy.isRemoved()
+                                && rGuardiasQueCombatieron.add(villager.getUUID())) {
+                            log("C4 GUARD ENGAGED guard=" + villager.getUUID() + " enemy=" + enemy.getUUID()
+                                    + " t=" + rTicks + " pos=" + villager.blockPosition().toShortString());
+                        }
+                    }
+                }
+            }
+        }
+        // Muestrea los UUID capturados en el censo inicial, aunque el trabajador esté fuera del
+        // AABB del recinto (p. ej. un leñador que ya salió a buscar un árbol). El conteo anterior
+        // dependía de permanecer a 82 bloques del centro y podía producir un falso 11/12.
+        if (rPostRaidIniciado) {
+            for (java.util.UUID workerId : rTrabajadoresEsperados) {
+                var entity = nivel.getEntity(workerId);
+                if (!(entity instanceof net.minecraft.world.entity.npc.Villager villager)
+                        || !villager.isAlive() || villager.isBaby()) {
+                    continue;
+                }
+                String expectedGoal = goalProfesionalEsperado(villager);
+                if (expectedGoal.isEmpty()) continue;
+                for (var wrapped : villager.goalSelector.getAvailableGoals()) {
+                    if (!wrapped.isRunning()) {
+                        continue;
+                    }
+                    String runningGoal = wrapped.getGoal().getClass().getSimpleName();
+                    if (goalProfesionalActivo(villager, runningGoal)) {
+                        boolean firstObservation = rTrabajadoresQueReanudaron.add(workerId);
+                        if (firstObservation
+                                && villager.getVillagerData().getProfession()
+                                        == net.minecraft.world.entity.npc.VillagerProfession.NITWIT
+                                && !runningGoal.equals(expectedGoal)) {
+                            log("C4 WORKER ALTERNATE ACTIVITY uuid=" + workerId
+                                    + " expectedGoal=" + expectedGoal + " activeGoal=" + runningGoal
+                                    + " builderTag=" + villager.getPersistentData().getBoolean(
+                                            com.chipoodle.devilrpg.world.VillageManager.BUILDER_TAG));
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private static int[] auditarAsignacionesJobSite() {
+        if (nivel == null || rCentro == null) return new int[] {0, 0, 0};
+        var zona = new net.minecraft.world.phys.AABB(rCentro)
+                .inflate(com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D);
+        java.util.Set<Long> owners = new java.util.HashSet<>();
+        int presentes = 0, huerfanas = 0, duplicadas = 0;
+        for (var villager : nivel.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, zona)) {
+            var memory = villager.getBrain().getMemory(
+                    net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE);
+            if (memory.isEmpty()) continue;
+            presentes++;
+            BlockPos pos = memory.get().pos();
+            if (nivel.getPoiManager().getType(pos).isEmpty()) huerfanas++;
+            if (!owners.add(pos.asLong())) duplicadas++;
+        }
+        return new int[] {presentes, huerfanas, duplicadas};
     }
 
     private static String resumenRaid() {
@@ -1767,345 +2143,232 @@ public final class A2NavHarness {
         return new int[] {sinSuelo, fallosBase, fallosAltura, fallosContinuidad, escaneos, fallosFundacion};
     }
 
+
     private static void prepararRaidFixture(final MinecraftServer server) {
-        int cx = 661;
-        int cy = 71;
-        int cz = 533;
-        final int cxOriginal = cx;
-        final int czOriginal = cz;
-        rCentro = new BlockPos(cx, cy, cz);
-        rAncla = rCentro;
-        var nivelR = server.overworld();
-        // --- A. CHUNKS: forzar y verificar (API real de ServerLevel en 1.21.1) ---
-        int forzados = 0;
+        final int objectiveIndex = 0;
+        final BlockPos requestedCenter = new BlockPos(661, 71, 533);
+        final var level = server.overworld();
+        final var saved = com.chipoodle.devilrpg.world.VillageSavedData.get(level);
+        int forced = 0;
         for (int dx = -8; dx <= 8; dx++) {
             for (int dz = -8; dz <= 8; dz++) {
-                nivelR.setChunkForced((cx >> 4) + dx, (cz >> 4) + dz, true);
-                forzados++;
+                level.setChunkForced((requestedCenter.getX() >> 4) + dx,
+                        (requestedCenter.getZ() >> 4) + dz, true);
+                forced++;
             }
         }
-        boolean centroCargado = nivelR.hasChunkAt(rCentro);
-        boolean bordeCargado = nivelR.hasChunkAt(new BlockPos(cx + R_RADIO_ALDEA, cy, cz))
-                && nivelR.hasChunkAt(new BlockPos(cx - R_RADIO_ALDEA, cy, cz))
-                && nivelR.hasChunkAt(new BlockPos(cx, cy, cz + R_RADIO_ALDEA))
-                && nivelR.hasChunkAt(new BlockPos(cx, cy, cz - R_RADIO_ALDEA));
-        boolean asaltoCargado = nivelR.hasChunkAt(new BlockPos(cx + R_RADIO_ASALTO, cy, cz))
-                && nivelR.hasChunkAt(new BlockPos(cx - R_RADIO_ASALTO, cy, cz));
-        log("CHUNKS: hasChunkAt centro=" + centroCargado + " bordeAldea=" + bordeCargado
-                + " radioAsalto=" + asaltoCargado + " forzados=" + forzados
-                + " aldea=" + cx + "," + cy + "," + cz);
-        if (!centroCargado || !bordeCargado || !asaltoCargado) {
-            fallosDeInstrumento++;
-            log("FALLO DE INSTRUMENTO raid: chunks requeridos no disponibles; se aborta sin tocar bloques");
-            rFixtureOk = false;
-            return;
-        }
-        // --- BUSQUEDA ACOTADA Y DETERMINISTA DE CENTRO (Opcion 2 aprobada por el dueno) ---
-        // 16 candidatos en rejilla fija sobre el centro documentado, orden fijo (dx mayor -> dz menor).
-        // Se evalua el anillo r=62 COMPLETO de cada candidato con la MISMA regla (sueloDeColumna) y los
-        // MISMOS invariantes que la construccion, SIN mutar el mundo. Se elige el primero valido.
-        // Si ninguno pasa: INVALIDO y se aborta ANTES de construir o spawnear.
-        final int[] offs = {0, 32, -32, 64, -64};
-        int candidatos = 0;
-        int escaneosSuelo = 0;
-        boolean centroElegido = false;
-        for (int ox : offs) {
-            for (int oz : offs) {
-                if (centroElegido || candidatos >= 16) {
-                    continue;
-                }
-                candidatos++;
-                int ccx = cxOriginal + ox;
-                int ccz = czOriginal + oz;
-                int ccy = cy;
-                int[] r = evaluarRecinto(nivelR, ccx, ccy, ccz);
-                escaneosSuelo += r[4];
-                log("CANDIDATO idx=" + candidatos + " centro=" + ccx + "," + ccy + "," + ccz
-                        + " offset=" + ox + "," + oz + " sinSuelo=" + r[0] + " fallosBase=" + r[1]
-                        + " fallosAltura=" + r[2] + " fallosContinuidad=" + r[3]
-                        + " fallosFundacion=" + r[5] + " valido=" + (r[0] == 0 && r[5] == 0));
-                // Edit 28 · ELEGIBILIDAD PRE-PREPARACION: solo condiciones que la preparacion NO puede fabricar.
-                // r[5]=fallosFundacion (agua/lava/bloque sin colision bajo la base) y r[0]=sinSuelo son
-                // propiedades del terreno virgen. r[1] es tautologico, r[2] (altura) y r[3] (continuidad)
-                // los GARANTIZA la preparacion (repisa Y=70 + despeje Y=71..103), asi que NO pueden exigirse
-                // aqui: evaluarlos en virgen hacia la seleccion insatisfacible (medido en a2n-20261019-110446).
-                if (r[0] == 0 && r[5] == 0) {   // Edit 28: pre-seleccion = fundacion resoluble + suelo aceptable
-                    cx = ccx;
-                    ccz = ccz;
-                    cz = ccz;
-                    centroElegido = true;
-                    rCentro = new BlockPos(cx, cy, cz);
-                    rAncla = rCentro;
-                    log("CENTRO ELEGIDO idx=" + candidatos + " centro=" + cx + "," + cy + "," + cz
-                            + " (original=" + cxOriginal + "," + czOriginal + ") candidatosEvaluados="
-                            + candidatos + " limite=16 escaneosSuelo=" + escaneosSuelo);
-                }
-            }
-        }
-        if (!centroElegido) {
+        log("C4 CHUNKS forced=" + forced + " center=" + requestedCenter.toShortString()
+                + " loaded=" + level.hasChunkAt(requestedCenter));
+        if (!level.hasChunkAt(requestedCenter) || saved.isGenerated(objectiveIndex)
+                || !level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
+                        new net.minecraft.world.phys.AABB(requestedCenter).inflate(100.0D)).isEmpty()) {
             fallosDeInstrumento++;
             rFixtureOk = false;
-            log("FIXTURE RAID INVALIDO: ningun centro valido entre " + candidatos
-                    + " candidatos (limite 16); no se construye ni se spawnnea");
+            log("C4 FIXTURE INVALIDO: mundo no virgen para objective=0 o centro no cargado; no se sobrescribe");
             return;
         }
-        // --- PREPARACION CONTROLADA DEL TERRENO DEL FIXTURE (Opcion 2 aprobada por el dueno) ---
-        // Superficie de REFERENCIA: bloque de suelo solido en Y=70 para TODA columna del anillo r=62,
-        // y volumen 71..73 despejado (aire, sin fluidos) para que el muro de 3 se apoye y quepa.
-        // BOUNDED: exactamente 4 celdas por columna (1 suelo + 3 de holgura), 400 columnas => 1600
-        // escrituras como maximo, solo en el mundo aislado del arnes y solo en el pie del anillo.
-        // No se allana el interior ni el paisaje circundante. Determinista: mismas coordenadas siempre.
-        final int ySueloRef = 70;
-        // TECHO DE DESPEJE DERIVADO DEL VALIDADOR (no adivinado): sueloDeColumna() escanea la vertical
-        // [cy+32 .. cy-32] de arriba abajo y devuelve el PRIMER bloque aceptable, es decir el mas ALTO.
-        // Con cy=71 la ventana superior es 71+32=103. Por tanto, para que el suelo derivado sea el de
-        // referencia (Y=70), hay que despejar TODA la ventana por encima: 71..103. Despejar solo hasta
-        // Y=81 (lo sugerido inicialmente) dejaba terreno entre 82..103, que el validador tomaba como
-        // suelo => fallosAltura/fallosContinuidad medidos en a2n-20261019-004246.
-        final int techoDespeje = cy + 32;
-        final int celdasPorColumna = techoDespeje - ySueloRef;
-        int prepPuestos = 0;
-        int prepLimpiados = 0;
-        int prepColumnas = 0;
-        int prepFluido = 0;
-        int prepNatural = 0;
-        int prepOtro = 0;
-        int prepCeldasOcupadas = 0;
-        for (int pdx = -R_RADIO_ANILLO - 1; pdx <= R_RADIO_ANILLO + 1; pdx++) {
-            for (int pdz = -R_RADIO_ANILLO - 1; pdz <= R_RADIO_ANILLO + 1; pdz++) {
-                double pd = Math.sqrt((double) (pdx * pdx + pdz * pdz));
-                if (!(Math.abs(pd - R_RADIO_ANILLO) < 0.5D)) {
-                    continue;
-                }
-                prepColumnas++;
-                // AUDITORIA ACOTADA de sobrescritura: se clasifica lo que habia ANTES de escribir en el
-                // bloque de superficie. solido(...) usa setBlockAndUpdate(STONE) y aire(...) setBlockAndUpdate(AIR),
-                // asi que ambos SOBRESCRIBEN incondicionalmente cualquier estado previo en esa posicion.
-                var stSuelo = nivelR.getBlockState(new BlockPos(cx + pdx, ySueloRef, cz + pdz));
-                if (!stSuelo.isAir()) {
-                    if (!stSuelo.getFluidState().isEmpty()) {
-                        prepFluido++;
-                    } else if (stSuelo.is(net.minecraft.world.level.block.Blocks.STONE)
-                            || stSuelo.is(net.minecraft.world.level.block.Blocks.DIRT)
-                            || stSuelo.is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK)
-                            || stSuelo.is(net.minecraft.world.level.block.Blocks.GRAVEL)
-                            || stSuelo.is(net.minecraft.world.level.block.Blocks.SAND)
-                            || stSuelo.is(net.minecraft.world.level.block.Blocks.DEEPSLATE)
-                            || stSuelo.is(net.minecraft.world.level.block.Blocks.ANDESITE)
-                            || stSuelo.is(net.minecraft.world.level.block.Blocks.TUFF)) {
-                        prepNatural++;
-                    } else {
-                        prepOtro++;
-                        if (prepOtro <= 8) {
-                            log("PREP SOBRESCRITURA superficie=" + (cx + pdx) + "," + ySueloRef + ","
-                                    + (cz + pdz) + " bloque=" + stSuelo.getBlock());
-                        }
-                    }
-                }
-                solido(cx + pdx, ySueloRef, cz + pdz);
-                prepPuestos++;
-                // Edit 10 - FUNDACION hacia abajo: cierra el hueco vertical medido en Edit 9 (asaltantes a
-                // Y=63 pasaban POR DEBAJO de la repisa de Y=70). Reglas: solo se rellena AIRE; se detiene en
-                // el primer terreno NO-aire con colision; NUNCA reemplaza terreno ni agua/lava; profundidad
-                // acotada a 64; si aparece un no-aire sin colision la columna queda NO RESUELTA (no se finge
-                // sellada). Profundidad = bloques NUEVOS por debajo de Y=70, sin contar la repisa.
-                int fondo = 0;
-                boolean fundResuelta = false;
-                for (int yf = ySueloRef - 1; yf >= ySueloRef - 1 - 64; yf--) {
-                    BlockPos pf = new BlockPos(cx + pdx, yf, cz + pdz);
-                    var stf = nivelR.getBlockState(pf);
-                    if (stf.isAir()) {
-                        solido(cx + pdx, yf, cz + pdz);
-                        fondo++;
-                        continue;
-                    }
-                    if (!stf.getCollisionShape(nivelR, pf).isEmpty()) {
-                        fundResuelta = true;
-                    } else {
-                        log("FUNDACION NO RESUELTA columna=" + (cx + pdx) + "," + (cz + pdz)
-                                + " y=" + yf + " bloque=" + stf.getBlock() + " motivo=bloque-no-aire-sin-colision");
-                    }
-                    break;
-                }
-                if (fundResuelta) {
-                    rFundOk++;
-                } else {
-                    rFundSinSoporte++;
-                }
-                rFundBloques += fondo;
-                if (fondo > 0) {
-                    rFundMin = Math.min(rFundMin, fondo);
-                    rFundMax = Math.max(rFundMax, fondo);
-                }
-                for (int y = ySueloRef + 1; y <= techoDespeje; y++) {
-                    if (!nivelR.getBlockState(new BlockPos(cx + pdx, y, cz + pdz)).isAir()) {
-                        prepCeldasOcupadas++;
-                    }
-                    aire(cx + pdx, y, cz + pdz);
-                    prepLimpiados++;
-                }
-            }
-        }
-        log("FUNDACION: columnas=" + prepColumnas + " bloquesNuevos=" + rFundBloques
-                + " profundidadMin=" + (rFundMin == Integer.MAX_VALUE ? 0 : rFundMin)
-                + " profundidadMax=" + rFundMax + " hastaTerrenoSolido=" + rFundOk
-                + " noResueltas=" + rFundSinSoporte
-                + " (profundidad = bloques nuevos bajo Y=70, sin contar la repisa; tope 64)");
-        log("TERRENO PREPARADO: columnas=" + prepColumnas + " puestos=" + prepPuestos
-                + " limpiados=" + prepLimpiados + " ySueloRef=" + ySueloRef
-                + " banda=" + (ySueloRef + 1) + ".." + techoDespeje + " celdasPorColumna=" + celdasPorColumna
-                + " centro=" + cx + "," + cy + "," + cz
-                + " (solo pie del anillo; interior y paisaje intactos)"
-                + " AUDITORIA: sueloPrevioFluido=" + prepFluido + " sueloPrevioNatural=" + prepNatural
-                + " sueloPrevioOtro=" + prepOtro + " celdasDeHolguraOcupadas=" + prepCeldasOcupadas);
-        // --- B. CENTRO DERIVADO / ALDEA idx / ANCLA congelada ---
-        // El centro se toma del contrato documentado del escenario A2 (no de la posicion del jugador:
-        // el fixture no depende de que entre un jugador). La aldea del fixture es unica => idx 0.
-        log("CENTRO DERIVADO: " + cx + "," + cy + "," + cz
-                + " (contrato del escenario A2; no derivado del jugador)");
-        log("ALDEA idx=0 centro=" + cx + "," + cy + "," + cz + " (unica aldea del fixture)");
-        log("ANCLA congelada: " + rAncla.getX() + "," + rAncla.getY() + "," + rAncla.getZ()
-                + " (ancla del asalto = centro derivado; se congela antes de construir el anillo)");
-        // --- C. ANILLO APOYADO EN EL TERRENO REAL (Stage A2: terreno variable) ---
-        // REGLA DE SUELO: se acepta como suelo el bloque NO aire mas alto de la vertical [cy-32..cy+32]
-        // que (1) no sea fluido y (2) tenga forma de colision (excluye liquido, aire, y bloques sin
-        // colision como hierba alta). Si no existe, la columna es sinSuelo y el recinto es INVALIDO.
-        // El muro se apoya DIRECTAMENTE en ese suelo (base = suelo+1) y sube R_ALTO_ANILLO, de modo que
-        // no queda hueco transitable por debajo. Se preserva el pie (radio 62) y puertas cerradas: la
-        // cascara es continua y sin aberturas.
-        int celdas = 0;
-        int columnas = 0;
-        int sinSuelo = 0;
-        int baseMin = Integer.MAX_VALUE;
-        int baseMax = Integer.MIN_VALUE;
-        boolean anilloCerrado = true;
-        final int r = R_RADIO_ANILLO;
-        for (int dx = -r - 1; dx <= r + 1; dx++) {
-            for (int dz = -r - 1; dz <= r + 1; dz++) {
-                double d = Math.sqrt((double) (dx * dx + dz * dz));
-                if (!(Math.abs(d - r) < 0.5D)) {
-                    continue;
-                }
-                columnas++;
-                BlockPos columna = new BlockPos(cx + dx, cy, cz + dz);
-                int suelo = sueloDeColumna(nivelR, cx + dx, cz + dz, cy);
-                if (suelo == Integer.MIN_VALUE) {
-                    sinSuelo++;
-                    anilloCerrado = false;
-                    continue;
-                }
-                // Holgura: las celdas que va a ocupar el muro deben estar libres antes de construir.
-                for (int dy = 1; dy <= R_ALTO_ANILLO; dy++) {
-                    BlockPos p = new BlockPos(cx + dx, suelo + dy, cz + dz);
-                    if (!nivelR.getBlockState(p).isAir() || !nivelR.getBlockState(p).getFluidState().isEmpty()) {
-                        anilloCerrado = false;
-                    }
-                }
-                baseMin = Math.min(baseMin, suelo + 1);
-                baseMax = Math.max(baseMax, suelo + 1);
-                // Baseline AUTORITATIVA: la base validada en construccion se conserva para que la
-                // verificacion por fase compare contra ELLA y no re-ancle el muro a un terreno cambiado.
-                rBaseValidada.put(claveColumna(dx, dz), suelo + 1);
-                for (int dy = 1; dy <= R_ALTO_ANILLO; dy++) {
-                    solido(cx + dx, suelo + dy, cz + dz);
-                    celdas++;
-                }
-            }
-        }
-        rCeldasAnillo = celdas;
-        log("PARED construida celdas=" + celdas + " radio=" + r + " alto=" + R_ALTO_ANILLO
-                + " puertas=cerradas centro=" + cx + "," + cy + "," + cz);
-        // --- D. Caedizos: despejar la banda sobre el anillo para que nada caiga sobre los asaltantes ---
-        int despejados = 0;
-        for (int dx = -r - 2; dx <= r + 2; dx++) {
-            for (int dz = -r - 2; dz <= r + 2; dz++) {
-                double d = Math.sqrt((double) (dx * dx + dz * dz));
-                if (d >= r - 1.5D && d <= r + 1.5D) {
-                    for (int dy = R_ALTO_ANILLO; dy <= R_ALTO_ANILLO + 12; dy++) {
-                        var st = nivelR.getBlockState(new BlockPos(cx + dx, cy + dy, cz + dz));
-                        if (!st.isAir() && (st.getBlock() == net.minecraft.world.level.block.Blocks.GRAVEL
-                                || st.getBlock() == net.minecraft.world.level.block.Blocks.SAND
-                                || st.getBlock() == net.minecraft.world.level.block.Blocks.RED_SAND
-                                || st.getBlock() == net.minecraft.world.level.block.Blocks.SUSPICIOUS_GRAVEL
-                                || st.getBlock() == net.minecraft.world.level.block.Blocks.SUSPICIOUS_SAND)) {
-                            aire(cx + dx, cy + dy, cz + dz);
-                            despejados++;
-                        }
-                    }
-                }
-            }
-        }
-        log("CAEDIZOS despejados=" + despejados + " banda=radio " + (r - 1) + ".." + (r + 1)
-                + " alto=" + R_ALTO_ANILLO + ".." + (R_ALTO_ANILLO + 12));
-        // --- E. VALIDACION de TODO el recinto (no una muestra de 64): base apoyada, altura continua,
-        // --- continuidad con la columna vecina y ausencia de huecos bajo el muro.
-        boolean anilloCompleto = anilloCerrado;
-        int verificadas = 0;
-        int fallosBase = 0;
-        int fallosAltura = 0;
-        int fallosContinuidad = 0;
-        int anteriorBase = Integer.MIN_VALUE;
-        for (int dx = -r - 1; dx <= r + 1; dx++) {
-            for (int dz = -r - 1; dz <= r + 1; dz++) {
-                double d = Math.sqrt((double) (dx * dx + dz * dz));
-                if (!(Math.abs(d - r) < 0.5D)) {
-                    continue;
-                }
-                // POST-CONSTRUCCION: se usa la base REGISTRADA al construir. No se re-deriva el suelo:
-                // sueloDeColumna() devolveria la CIMA DEL MURO recien colocado (Y=73) y contaria el propio
-                // muro como obstaculo (medido: fallosAltura=1200 en a2n-20261019-004842).
-                Integer baseReg = rBaseValidada.get(claveColumna(dx, dz));
-                if (baseReg == null) {
-                    // Sin base registrada no se acepta en silencio: la columna no queda verificada.
-                    anilloCompleto = false;
-                    continue;
-                }
-                final int suelo = baseReg - 1;
-                verificadas++;
-                if (nivelR.getBlockState(new BlockPos(cx + dx, suelo, cz + dz)).isAir()) {
-                    fallosBase++;
-                }
-                for (int dy = 1; dy <= R_ALTO_ANILLO; dy++) {
-                    if (nivelR.getBlockState(new BlockPos(cx + dx, suelo + dy, cz + dz)).isAir()) {
-                        fallosAltura++;
-                    }
-                }
-                if (anteriorBase != Integer.MIN_VALUE && Math.abs((suelo + 1) - anteriorBase) > 2) {
-                    fallosContinuidad++;
-                }
-                anteriorBase = suelo + 1;
-            }
-        }
-        if (fallosBase > 0 || fallosAltura > 0 || fallosContinuidad > 0 || sinSuelo > 0) {
-            anilloCompleto = false;
-        }
-        boolean centroOk = !nivelR.getBlockState(rCentro.below()).isAir();
-        log("PARED total: columnas=" + columnas + " verificadas=" + verificadas + " celdas=" + celdas
-                + " sinSuelo=" + sinSuelo + " baseMin=" + (baseMin == Integer.MAX_VALUE ? -1 : baseMin)
-                + " baseMax=" + (baseMax == Integer.MIN_VALUE ? -1 : baseMax)
-                + " fallosBase=" + fallosBase + " fallosAltura=" + fallosAltura
-                + " fallosContinuidad=" + fallosContinuidad
-                + " anilloCompleto=" + anilloCompleto + " centroConSoporte=" + centroOk
-                + " puertas=cerradas");
-        // Edit 10.1 - FAIL CLOSED: una fundacion incompleta NO es un fixture listo. Si alguna columna del
-        // anillo no alcanzo terreno solido (agua/lava/bloque sin colision o tope de profundidad), el
-        // fixture se declara invalido AQUI, antes de cualquier spawn o fase (rFixtureOk gobierna ambas).
-        boolean fundacionCompleta = rFundSinSoporte == 0;
-        if (!fundacionCompleta) {
+        if (!com.chipoodle.devilrpg.world.VillageManager.preGenerate(level, objectiveIndex, requestedCenter)) {
             fallosDeInstrumento++;
-            log("FIXTURE NO LISTO: fundacion incompleta, columnasNoResueltas=" + rFundSinSoporte
-                    + " (ver lineas FUNDACION NO RESUELTA con coordenadas y motivo)");
+            rFixtureOk = false;
+            log("C4 FIXTURE INVALIDO: preGenerate no completó la aldea");
+            return;
         }
-        rFixtureOk = anilloCompleto && centroOk && celdas > 500 && fundacionCompleta;
-        if (!rFixtureOk) {
+        BlockPos center = saved.getCentre(objectiveIndex);
+        if (center == null) {
             fallosDeInstrumento++;
-            log("FALLO DE INSTRUMENTO raid: geometria del fixture no cumple (anilloCompleto=" + anilloCompleto
-                    + " centroConSoporte=" + centroOk + " celdas=" + celdas + ")");
+            rFixtureOk = false;
+            log("C4 FIXTURE INVALIDO: VillageSavedData no persistió el centro");
+            return;
         }
-        log("FIXTURE RAID listo=" + rFixtureOk + " celdasAnillo=" + rCeldasAnillo
-                + " centro=" + rCentro.toShortString() + " ancla=" + rAncla.toShortString());
+        rCentro = center.immutable();
+        rAncla = rCentro;
+        int baseY = com.chipoodle.devilrpg.world.VillageGenerator.cotaDeLaPlaza(level, center);
+        rBaseValidada.clear();
+        rTrabajadoresEsperados.clear();
+        rTrabajadoresQueReanudaron.clear();
+        rTrabajadoresMuertos.clear();
+        rCausaMuerteTrabajador.clear();
+        java.util.Set<Long> wallColumns = com.chipoodle.devilrpg.world.VillageGenerator.columnasDelAnilloDelMuro(center);
+        for (long packed : wallColumns) {
+            BlockPos column = BlockPos.of(packed);
+            rBaseValidada.put(claveColumna(column.getX() - center.getX(),
+                    column.getZ() - center.getZ()), baseY);
+        }
+        rCeldasAnillo = wallColumns.size() * R_ALTURA_MURO_VALIDADA;
+        rCeldasAnilloAhora = integridadAnillo(server);
+        try {
+            com.chipoodle.devilrpg.world.VillageManager.ejecutarMantenimientoParaArnes(level, objectiveIndex, center);
+        } catch (RuntimeException ex) {
+            fallosDeInstrumento++;
+            rFixtureOk = false;
+            log("C4 MAINTENANCE ERROR: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+            return;
+        }
+        var villagers = level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
+                new net.minecraft.world.phys.AABB(center).inflate(
+                        com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D));
+        int guards = 0, founders = 0, guardGoals = 0, equipped = 0, professionals = 0, professionGoals = 0;
+        java.util.Map<String, Integer> roster = new java.util.TreeMap<>();
+        for (var villager : villagers) {
+            if (!villager.isAlive() || villager.isBaby()) continue;
+            if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(villager)) {
+                guards++;
+                boolean founder = false;
+                for (int slot = 0; slot < 4; slot++) {
+                    if (com.chipoodle.devilrpg.world.VillageManager.esGuardiaFundadora(villager, objectiveIndex, slot)) founder = true;
+                }
+                if (founder) founders++;
+                boolean hasGoal = false;
+                for (var wrapped : villager.goalSelector.getAvailableGoals()) {
+                    if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal) hasGoal = true;
+                }
+                if (hasGoal) guardGoals++;
+                if (!villager.getMainHandItem().isEmpty()) equipped++;
+            } else if (villager.getVillagerData().getProfession()
+                    != net.minecraft.world.entity.npc.VillagerProfession.NONE) {
+                professionals++;
+                rTrabajadoresEsperados.add(villager.getUUID());
+                roster.merge(villager.getVillagerData().getProfession().toString(), 1, Integer::sum);
+                if (tieneGoalProfesional(villager)) professionGoals++;
+            }
+        }
+        int expectedProfessionals = com.chipoodle.devilrpg.world.VillageGenerator.puestosDelPueblo();
+        boolean wallOk = !rBaseValidada.isEmpty() && rCeldasAnilloAhora == rCeldasAnillo
+                && rAnilloSinSuelo == 0 && rAnilloNoSolidas == 0;
+        boolean populationOk = founders == 4 && guardGoals == 4 && equipped == 4
+                && professionals == expectedProfessionals && professionGoals == expectedProfessionals
+                && rTrabajadoresEsperados.size() == expectedProfessionals;
+        rFixtureOk = wallOk && populationOk;
+        log("C4 PRODUCTION VILLAGE generated=true objective=" + objectiveIndex + " center=" + center.toShortString()
+                + " baseY=" + baseY + " wallColumns=" + wallColumns.size()
+                + " wallCells=" + rCeldasAnillo + " wallPresent=" + rCeldasAnilloAhora + " wallOk=" + wallOk
+                + " supportMissing=" + rAnilloSinSuelo + " damagedColumns=" + rAnilloNoSolidas);
+        log("C4 POPULATION villagers=" + villagers.size() + " guards=" + guards + " founders=" + founders + "/4"
+                + " guardGoals=" + guardGoals + "/4 equipped=" + equipped + "/4 professionals=" + professionals
+                + "/" + expectedProfessionals + " professionGoals=" + professionGoals + "/"
+                + expectedProfessionals + " trackedWorkerUuids=" + rTrabajadoresEsperados.size()
+                + " roster=" + roster);
+        log("C4 FIXTURE ready=" + rFixtureOk + " (production VillageGenerator + VillageManager maintenance)");
     }
 
+    /**
+     * Diagnostico de elegibilidad al cierre C4. No altera goals ni crea recursos:
+     * distingue un fallo de reanudacion de una profesion que esta correctamente ociosa/evadiendo peligro.
+     */
+    private static String diagnosticoElegibilidadProfesional(
+            net.minecraft.world.entity.npc.Villager worker) {
+        StringBuilder out = new StringBuilder();
+        boolean underAttack = com.chipoodle.devilrpg.world.VillageManager
+                .isVillageUnderAttack(nivel, 0);
+        boolean resting = com.chipoodle.devilrpg.world.VillageManager.estaDescansando(worker);
+        double dx = worker.getX() - rCentro.getX();
+        double dz = worker.getZ() - rCentro.getZ();
+        double distance = Math.sqrt(dx * dx + dz * dz);
+        var threats = nivel.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class,
+                new net.minecraft.world.phys.AABB(worker.blockPosition()).inflate(22.0D));
+        out.append("underAttack=").append(underAttack)
+                .append(" resting=").append(resting)
+                .append(" distanceCenter=").append(String.format(java.util.Locale.ROOT, "%.1f", distance))
+                .append(" nearbyMonsters22=").append(threats.size());
+        if (!threats.isEmpty()) {
+            var nearest = threats.stream().min(java.util.Comparator.comparingDouble(worker::distanceToSqr))
+                    .orElse(null);
+            if (nearest != null) {
+                out.append(" nearestMonster=").append(nearest.getType())
+                        .append("#").append(nearest.getId())
+                        .append("@").append(nearest.blockPosition().toShortString())
+                        .append(" d=").append(String.format(java.util.Locale.ROOT, "%.1f",
+                                Math.sqrt(worker.distanceToSqr(nearest))));
+            }
+        }
+        var profession = worker.getVillagerData().getProfession();
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.NITWIT) {
+            var items = nivel.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new net.minecraft.world.phys.AABB(rCentro).inflate(
+                            com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 28.0D),
+                    item -> item.isAlive() && item.getAge() >= 100);
+            out.append(" agedItemEntitiesVillage=").append(items.size());
+        } else if (profession == net.minecraft.world.entity.npc.VillagerProfession.BUTCHER) {
+            var pantry = com.chipoodle.devilrpg.world.VillagePantry.despensa(nivel, rCentro);
+            var smoker = com.chipoodle.devilrpg.world.VillageGenerator.puestoDelCocinero(nivel, rCentro);
+            out.append(" rawFood=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                    pantry, com.chipoodle.devilrpg.world.VillagePantry::sePuedeCocinar))
+                    .append(" wheat=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                            pantry, stack -> stack.is(net.minecraft.world.item.Items.WHEAT)))
+                    .append(" smokerPresent=").append(nivel.getBlockState(smoker)
+                            .is(net.minecraft.world.level.block.Blocks.SMOKER))
+                    .append(" woodForFuel=").append(
+                            com.chipoodle.devilrpg.world.VillageStorage.hayLenaParaQuemar(nivel, rCentro));
+        } else if (profession == net.minecraft.world.entity.npc.VillagerProfession.WEAPONSMITH) {
+            var storage = com.chipoodle.devilrpg.world.VillageStorage.almacen(nivel, rCentro);
+            out.append(" iron=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                    storage, stack -> stack.is(net.minecraft.world.item.Items.IRON_INGOT)))
+                    .append(" planks=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                            storage, stack -> stack.is(net.minecraft.world.item.Items.OAK_PLANKS)))
+                    .append(" sticks=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                            storage, stack -> stack.is(net.minecraft.world.item.Items.STICK)))
+                    .append(" string=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                            storage, stack -> stack.is(net.minecraft.world.item.Items.STRING)))
+                    .append(" feathers=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                            storage, stack -> stack.is(net.minecraft.world.item.Items.FEATHER)))
+                    .append(" nuggets=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                            storage, stack -> stack.is(net.minecraft.world.item.Items.IRON_NUGGET)))
+                    .append(" swords=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                            storage, stack -> stack.is(net.minecraft.world.item.Items.IRON_SWORD)))
+                    .append(" shields=").append(com.chipoodle.devilrpg.world.VillagePantry.contar(
+                            storage, stack -> stack.is(net.minecraft.world.item.Items.SHIELD)));
+        } else if (profession == net.minecraft.world.entity.npc.VillagerProfession.FISHERMAN) {
+            var barrel = com.chipoodle.devilrpg.world.VillageGenerator.puestoDelPescador(nivel, rCentro);
+            out.append(" fisherBarrel=").append(barrel.toShortString())
+                    .append(" barrelPresent=").append(nivel.getBlockState(barrel).is(net.minecraft.world.level.block.Blocks.BARREL))
+                    .append(" fishInLake=").append(
+                            com.chipoodle.devilrpg.world.VillageGenerator.pecesEnElLago(nivel, rCentro))
+                    .append(" fisheryBuilt=").append(
+                            com.chipoodle.devilrpg.world.VillageGenerator.pesqueraConstruida(nivel, rCentro));
+        }
+        return out.toString();
+    }
+
+    private static String goalProfesionalEsperado(net.minecraft.world.entity.npc.Villager villager) {
+        var profession = villager.getVillagerData().getProfession();
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.FARMER) return "VillagerFarmGoal";
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.WEAPONSMITH
+                || profession == net.minecraft.world.entity.npc.VillagerProfession.TOOLSMITH) return "VillagerSmithGoal";
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.MASON) return "VillagerMinerGoal";
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.NITWIT) return "VillagerCollectGoal";
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.FLETCHER) return "VillagerLumberjackGoal";
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.SHEPHERD) return "VillagerAnimalFarmGoal";
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.BUTCHER) return "VillagerCookGoal";
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.FISHERMAN) return "VillagerFisherGoal";
+        if (profession == net.minecraft.world.entity.npc.VillagerProfession.CLERIC) return "VillagerClericGoal";
+        return "";
+    }
+
+    /**
+     * El nitwit recolector tambien es el obrero constructor. Durante una recuperacion puede estar reparando
+     * un daño real en lugar de recoger; ambas son actividades autonomas validas. No se acepta RepairGoal para
+     * un nitwit sin BUILDER_TAG ni para otras profesiones.
+     */
+    private static boolean goalProfesionalActivo(
+            net.minecraft.world.entity.npc.Villager villager, String runningGoal) {
+        if (runningGoal.equals(goalProfesionalEsperado(villager))) {
+            return true;
+        }
+        return villager.getVillagerData().getProfession()
+                        == net.minecraft.world.entity.npc.VillagerProfession.NITWIT
+                && "VillagerRepairGoal".equals(runningGoal)
+                && villager.getPersistentData().getBoolean(
+                        com.chipoodle.devilrpg.world.VillageManager.BUILDER_TAG);
+    }
+
+    private static boolean tieneGoalProfesional(net.minecraft.world.entity.npc.Villager villager) {
+        String expected = goalProfesionalEsperado(villager);
+        if (expected.isEmpty()) return false;
+        for (var wrapped : villager.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal().getClass().getSimpleName().equals(expected)) return true;
+        }
+        return false;
+    }
 
     private static void prepararLongrange() {
         lrPreparado = true;

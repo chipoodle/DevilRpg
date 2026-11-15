@@ -179,6 +179,8 @@ public final class VillageSavedData extends SavedData {
      * jugador estuviera conectado (su spawn) o del punto medio del plano, que se desplaza al crecer la aldea.
      */
     private final Map<Integer, BlockPos> centres = new HashMap<>();
+    /** Villages whose bell was destroyed by the siege; occupation phase is village-wide. */
+    private final Set<Integer> occupied = new HashSet<>();
 
     public static VillageSavedData get(ServerLevel level) {
         VillageSavedData data = level.getDataStorage().computeIfAbsent(
@@ -193,6 +195,9 @@ public final class VillageSavedData extends SavedData {
         }
         for (int index : tag.getIntArray("Resolved")) {
             data.resolved.add(index);
+        }
+        for (int index : tag.getIntArray("Occupied")) {
+            data.occupied.add(index);
         }
         for (Tag element : tag.getList("Noticed", Tag.TAG_STRING)) {
             data.noticed.add(element.getAsString());
@@ -270,6 +275,7 @@ public final class VillageSavedData extends SavedData {
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putIntArray("Generated", toArray(generated));
         tag.putIntArray("Resolved", toArray(resolved));
+        tag.putIntArray("Occupied", toArray(occupied));
         ListTag noticedTag = new ListTag();
         for (String key : noticed) {
             noticedTag.add(StringTag.valueOf(key));
@@ -309,6 +315,7 @@ public final class VillageSavedData extends SavedData {
         villages.addAll(anexoAnimales.keySet());
         villages.addAll(guardiasFundadoras.keySet());
         villages.addAll(remesaInicialEntregada);
+        villages.addAll(pantryCredit.keySet());
         villages.addAll(centres.keySet());
         for (int index : villages) {
             CompoundTag one = new CompoundTag();
@@ -394,6 +401,17 @@ public final class VillageSavedData extends SavedData {
 
     public void markSiegeResolved(int objectiveIndex) {
         if (resolved.add(objectiveIndex)) {
+            setDirty();
+        }
+    }
+
+    /** Village-wide conquest/occupation; idempotent and persisted. */
+    public boolean isOccupied(int objectiveIndex) {
+        return occupied.contains(objectiveIndex);
+    }
+
+    public void markOccupied(int objectiveIndex) {
+        if (occupied.add(objectiveIndex)) {
             setDirty();
         }
     }

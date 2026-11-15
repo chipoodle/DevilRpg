@@ -240,6 +240,18 @@ public final class VillageStorage {
         return quitar(level, villageCenter, VillageStorage::esLena, Math.min(Math.max(1, cuantas), excedente));
     }
 
+    /** Fuel withdrawal with the consuming actor, for the default-off resource trace. */
+    @Nullable
+    public static ItemStack quitarLena(ServerLevel level, BlockPos villageCenter, int cuantas,
+                                       @Nullable net.minecraft.world.entity.npc.Villager actor) {
+        ItemStack lena = quitarLena(level, villageCenter, cuantas);
+        if (lena != null && !lena.isEmpty() && actor != null) {
+            com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.consumed(
+                    actor, level, villageCenter, lena, lena.getCount());
+        }
+        return lena;
+    }
+
     /**
      * Troncos con los que <b>arranca</b> el almacén de una aldea (la <b>remesa inicial de madera</b>): dos pilas
      * completas. Lo pidió el jugador: *"considera entonces que inicialmente tenga la aldea suficiente madera en el
@@ -273,6 +285,7 @@ public final class VillageStorage {
         if (caja == null) {
             return false; // aún no está el almacén
         }
+        var traceBefore = com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.logCounts(caja);
         // El pico y los seis lingotes pueden haber sido sembrados antes por asegurarElPicoDelMinero. No se puede
         // usar "cofre no vacío" como señal de que la remesa terminó: se completa solo el faltante de cada renglón.
         // El plan se prepara en una copia para que la bandera no quede verdadera tras una entrega parcial por falta
@@ -329,6 +342,8 @@ public final class VillageStorage {
             caja.setItem(i, plan.getItem(i).copy());
         }
         caja.setChanged();
+        com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.systemCreatedDelta(
+                traceBefore, caja, "remesa-inicial");
         DevilRpg.LOGGER.info("[Village] almacen: remesa inicial ({} troncos de roble para el fuego del cocinero, la"
                 + " fragua del herrero y su sierra; 1 pico de hierro con {} lingotes para el minero; y el equipo de"
                 + " arranque de la milicia: cuero, espadas de madera, escudos, arcos y flechas)",
@@ -532,6 +547,9 @@ public final class VillageStorage {
     public static void repararCofresFlotantes(ServerLevel level, BlockPos villageCenter) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, villageCenter);
         BlockPos c = centro(villageCenter);
+        var traceBefore = com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.logCounts(
+                almacen(level, villageCenter));
+        java.util.Map<String, Integer> droppedLogs = new java.util.LinkedHashMap<>();
         List<ItemStack> dentro = new ArrayList<>();
         boolean saco = false;
         for (BlockPos q : BlockPos.betweenClosed(
@@ -569,10 +587,18 @@ public final class VillageStorage {
                 ItemStack sobra = VillagePantry.guardar(nuevo, stack);
                 if (!sobra.isEmpty()) {
                     Block.popResource(level, puntoDeApoyo(level, villageCenter), sobra);
+                    if (esLena(sobra)) {
+                        int id = sobra.getCount();
+                        String item = net.minecraft.core.registries.BuiltInRegistries.ITEM
+                                .getKey(sobra.getItem()).toString();
+                        droppedLogs.merge(item, id, Integer::sum);
+                    }
                     alSuelo += sobra.getCount();
                 }
             }
         }
+        com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.systemMaintenanceDelta(
+                traceBefore, nuevo, droppedLogs, "reparar-cofres-flotantes");
         DevilRpg.LOGGER.info("[Village] almacen: cofres flotantes recolocados al suelo ({} objeto(s) conservados{})",
                 dentro.size(), alSuelo > 0 ? ", " + alSuelo + " al suelo del cobertizo" : "");
     }

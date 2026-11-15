@@ -213,7 +213,7 @@ public final class VillageManager {
         }
     }
     /** Marca (datos persistentes del aldeano) con el <b>gameTime de su última ración</b>: su hambre personal. */
-    private static final String COMIDA_TAG = "DevilRpgUltimaComida";
+    private static final String COMIDA_TAG = FoodStateNbt.LAST_MEAL;
     /**
      * Raciones perdidas antes de que el hambre se note: a partir de aquí el aldeano va con <b>Debilidad</b> y
      * <b>Lentitud</b> (3 raciones = 3 minutos sin comer).
@@ -1738,6 +1738,12 @@ public final class VillageManager {
         }
         for (int i = list.size() - 1; i >= 0; i--) {
             VillageDefense d = list.get(i);
+            // El arnés C4 controla explícitamente su propia oleada y su reloj. La defensa temporal solo
+            // mantiene isVillageUnderAttack/raidBoard activos para las IA reales; no debe lanzar una
+            // segunda oleada ni pausarse por ausencia de jugador en un servidor headless.
+            if (d.testHarness) {
+                continue;
+            }
             // EL RELOJ NO CORRE SIN EL JUGADOR (ver RADIO_ASEDIO_CON_JUGADOR): si se va, el asedio se PAUSA —no se da
             // por perdido— y las aldeas no caen a sus espaldas. Un asedio que se resuelve sin nadie delante es una
             // derrota a ciegas, y es exactamente lo que le pasó al jugador: se fue con los zombis dentro del muro y
@@ -2913,6 +2919,87 @@ public final class VillageManager {
      *   <li><b>Envejecen</b>: ver {@link #ageVillagers}.</li>
      * </ul>
      */
+    /**
+     * Ejecuta el mantenimiento real de una aldea desde el arnés A2, sin fabricar un jugador ni
+     * recorrer manageNearby (que además dispara descubrimiento y lógica de llegada del jugador).
+     * Está cerrado por dos propiedades de JVM y solo existe para el escenario de diagnóstico.
+     */
+    public static void ejecutarMantenimientoParaArnes(ServerLevel level, int objectiveIndex, BlockPos center) {
+        if (!Boolean.getBoolean("devilrpg.a2n.allowMaintenanceHook")
+                || !"raid".equals(System.getProperty("a2n.mode"))) {
+            throw new IllegalStateException("A2 maintenance hook disabled");
+        }
+        VillageSavedData saved = VillageSavedData.get(level);
+        if (!saved.isGenerated(objectiveIndex)) {
+            throw new IllegalStateException("A2 maintenance requires a generated village");
+        }
+        BlockPos persisted = saved.getCentre(objectiveIndex);
+        if (persisted == null || !persisted.equals(center)) {
+            throw new IllegalStateException("A2 maintenance center mismatch: " + persisted + " != " + center);
+        }
+        asegurarGoalsDeGuardiasFundadores(level, center, objectiveIndex);
+        tickVillageLife(level, saved, objectiveIndex, center);
+    }
+
+    /**
+     * Registra el escenario de asedio del arnés en el mismo libro mayor que consulta VillagerGuardGoal.
+     * No crea jugador ni activa el reloj/recompensa del asedio interactivo; solo mantiene el estado "bajo ataque"
+     * y la lista de UUID de la oleada para que la IA de guardia opere en condiciones reales.
+     */
+    public static void iniciarAsedioParaArnes(ServerLevel level, int objectiveIndex, BlockPos center,
+            java.util.Collection<UUID> attackers) {
+        if (!Boolean.getBoolean("devilrpg.a2n.allowMaintenanceHook")
+                || !"raid".equals(System.getProperty("a2n.mode"))) {
+            throw new IllegalStateException("A2 siege hook disabled");
+        }
+        VillageSavedData saved = VillageSavedData.get(level);
+        if (!saved.isGenerated(objectiveIndex) || !center.equals(saved.getCentre(objectiveIndex))
+                || attackers == null || attackers.isEmpty()) {
+            throw new IllegalStateException("A2 siege requires generated village, exact center and attackers");
+        }
+        for (UUID attackerId : attackers) {
+            if (!(level.getEntity(attackerId) instanceof AggressiveZombieEntity attacker)
+                    || attacker.getWorldSiegeIndex() != objectiveIndex) {
+                throw new IllegalStateException("A2 attacker is not registered to objective " + objectiveIndex
+                        + ": " + attackerId);
+            }
+        }
+        if (defensaActivaDe(level, objectiveIndex) != null) {
+            throw new IllegalStateException("A2 siege already registered for objective " + objectiveIndex);
+        }
+        VillageDefense defense = new VillageDefense(objectiveIndex, new UUID(0L, 0L), center);
+        defense.wave.addAll(attackers);
+        defense.waveSpawned = true;
+        defense.testHarness = true;
+        DEFENSES.computeIfAbsent(level, ignored -> new ArrayList<>()).add(defense);
+        DevilRpg.LOGGER.info("[A2N] C4 TEST SIEGE registered objective={} attackers={} center={}",
+                objectiveIndex, defense.wave.size(), center.toShortString());
+    }
+
+    /** Retira únicamente el registro temporal del arnés y libera las reclamaciones de brecha. */
+    public static void terminarAsedioParaArnes(ServerLevel level, int objectiveIndex) {
+        if (!Boolean.getBoolean("devilrpg.a2n.allowMaintenanceHook")
+                || !"raid".equals(System.getProperty("a2n.mode"))) {
+            throw new IllegalStateException("A2 siege hook disabled");
+        }
+        List<VillageDefense> defenses = DEFENSES.get(level);
+        if (defenses == null) {
+            return;
+        }
+        for (int i = defenses.size() - 1; i >= 0; i--) {
+            VillageDefense defense = defenses.get(i);
+            if (defense.objectiveIndex == objectiveIndex && defense.testHarness) {
+                disableGoToCenter(level, defense.wave);
+                defenses.remove(i);
+                DevilRpg.LOGGER.info("[A2N] C4 TEST SIEGE released objective={} attackers={}",
+                        objectiveIndex, defense.wave.size());
+            }
+        }
+        if (defenses.isEmpty()) {
+            DEFENSES.remove(level);
+        }
+    }
+
     private static void tickVillageLife(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center) {
         List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
         // COMER, ALDEANO POR ALDEANO (etapa E): cada uno tiene SU hambre. Se reparte de uno en uno y primero al que
@@ -3718,9 +3805,11 @@ public final class VillageManager {
         // 4, como los demás oficios (antes era un segundo goal del recolector a prioridad 6, que empataba con la
         // taberna y le quitaba la comida al aldeano con hambre).
         for (Villager villager : aldeanos) {
-            if (!villager.isBaby() && !VillagerGuardGoal.esGuardia(villager)
-                    && villager.getVillagerData().getProfession() == VillagerProfession.FLETCHER) {
+            if (villager.isBaby() || VillagerGuardGoal.esGuardia(villager)) continue;
+            if (villager.getVillagerData().getProfession() == VillagerProfession.FLETCHER) {
                 asegurarGoalDeLenador(villager, center, objectiveIndex);
+            } else {
+                VillagerLumberjackGoal.clearTaskIfProfessionChanged(villager);
             }
         }
         // GANADERO (etapa D): el pastor vive con el rebaño en la granja anexa. Cría, recoge lo que sueltan los
@@ -4736,6 +4825,16 @@ public final class VillageManager {
             }
             villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), elegido));
             villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+            // El clérigo puede estar curando fuera del radio vanilla de JOB_SITE. Registra el puesto directamente
+            // en su Goal antes de que el siguiente tick del Brain borre la memoria por distancia.
+            if (villager.getVillagerData().getProfession() == VillagerProfession.CLERIC) {
+                for (WrappedGoal wrapped : villager.goalSelector.getAvailableGoals()) {
+                    if (wrapped.getGoal() instanceof com.chipoodle.devilrpg.entity.goal.VillagerClericGoal clericGoal) {
+                        clericGoal.registrarSoporteAsignado(elegido);
+                        break;
+                    }
+                }
+            }
             DevilRpg.LOGGER.info("[Village] Aldea {}: {} reclama su estacion de {} en {}", objectiveIndex,
                     villager.getUUID(), profesion, elegido.toShortString());
         }
@@ -4876,7 +4975,7 @@ public final class VillageManager {
     private static void atenderCamasDelPueblo(ServerLevel level, BlockPos center, int objectiveIndex) {
         List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
         reclamarCamasDelPueblo(level, aldeanos, center);
-        acostarAlQueNoLlega(level, aldeanos);
+        acostarAlQueNoLlega(level, aldeanos, center);
         abrirLaCompuertaAlQueEstaEncerrado(level, aldeanos, center);
         // Y SI ALGUIEN SE QUEDA SIN CAMA, SE DICE EN EL LOG CON NOMBRE Y MOTIVO (una vez por cambio, no cada latido):
         // es la queja del jugador y así se ve de un vistazo si es que no hay camas, si están todas cogidas o si la que
@@ -5236,7 +5335,7 @@ public final class VillageManager {
      * dormitorio y se quedaba de pie toda la noche a 2 bloques de su cama, y —peor— vanilla se la borraba a los 60 s
      * por no llegar (I43).
      */
-    private static void acostarAlQueNoLlega(ServerLevel level, List<Villager> aldeanos) {
+    private static void acostarAlQueNoLlega(ServerLevel level, List<Villager> aldeanos, BlockPos center) {
         for (Villager villager : aldeanos) {
             if (villager.isSleeping() || !estaDescansando(villager)) {
                 continue;
@@ -5315,6 +5414,68 @@ public final class VillageManager {
                     villager.getUUID(),
                     Math.round(Math.sqrt(villager.distanceToSqr(cama.getX() + 0.5D, cama.getY() + 0.5D,
                             cama.getZ() + 0.5D))), cama.toShortString());
+        }
+    }
+
+    /**
+     * Bedtime handshake for the forced sleep transition: if the villager is hungry, consume one
+     * real pantry ration and reduce hunger BEFORE {@code startSleeping}. A failed transaction
+     * leaves hunger/credit untouched and does not block sleep. Repeated calls are suppressed by
+     * the existing meal cooldown. Normal vanilla sleep (SleepInBed) has no shared callback yet.
+     */
+    private static void comerAntesDeDormir(ServerLevel level, Villager villager, BlockPos center) {
+        if (!tieneHambre(level, villager)) return;
+        int antes = hambre(villager);
+        int trabajo = trabajoHoy(level, villager);
+        int esperado = FoodHungerPolicy.rationForWork(trabajo);
+        int racion = VillagePantry.sacarComida(level, center, esperado, 1);
+        if (racion <= 0) {
+            DevilRpg.LOGGER.info("[SLEEP-MEAL] uuid={} result=NO_FOOD hunger={} tick={}",
+                    villager.getUUID(), antes, level.getGameTime());
+            return;
+        }
+        reducirHambre(villager, 25 * racion);
+        marcarComida(level, villager);
+        DevilRpg.LOGGER.info("[SLEEP-MEAL] uuid={} result=OK work={} expected={} charged={}"
+                        + " before={} after={} tick={}",
+                villager.getUUID(), trabajo, esperado, racion, antes, hambre(villager),
+                level.getGameTime());
+    }
+
+    /**
+     * Shared pre-sleep handshake used by the sleep mixin for both vanilla SleepInBed and the
+     * forced bedtime path. Finds the villager's generated village centre; if none is within the
+     * fence radius, it does nothing. A failed meal never blocks sleep.
+     */
+    public static void comerAntesDeDormir(ServerLevel level, Villager villager) {
+        if (level == null || villager == null || villager.isBaby()
+                || villager.level() != level || !tieneHambre(level, villager)) {
+            return;
+        }
+        VillageSavedData saved = VillageSavedData.get(level);
+        BlockPos villagerPos = villager.blockPosition();
+        double maxDistanceSqr = Math.pow(VillageGenerator.FENCE_RADIUS + 8.0D, 2.0D);
+        BlockPos nearestCenter = null;
+        double nearestDistanceSqr = Double.MAX_VALUE;
+        int nearestIndex = Integer.MAX_VALUE;
+        for (int index : saved.generatedIndices()) {
+            BlockPos center = saved.getCentre(index);
+            if (center == null) {
+                continue;
+            }
+            double dx = villagerPos.getX() - center.getX();
+            double dz = villagerPos.getZ() - center.getZ();
+            double distanceSqr = dx * dx + dz * dz;
+            if (distanceSqr <= maxDistanceSqr
+                    && (distanceSqr < nearestDistanceSqr
+                    || (Double.compare(distanceSqr, nearestDistanceSqr) == 0 && index < nearestIndex))) {
+                nearestCenter = center;
+                nearestDistanceSqr = distanceSqr;
+                nearestIndex = index;
+            }
+        }
+        if (nearestCenter != null) {
+            comerAntesDeDormir(level, villager, nearestCenter);
         }
     }
 
@@ -5462,6 +5623,25 @@ public final class VillageManager {
         }
         if (!tieneUnGoalDelModActivo(villager)) {
             return; // sin faena del mod, su paseo es cosa suya: no se le toca
+        }
+        // La guardia tiene un estado de espera legítimo: cuando no hay enemigo cerca puede mantener
+        // VillagerGuardGoal activo sin ruta de navegación. El recuperador de aldeanos no debe
+        // interpretar esa espera como atasco ni reiniciar el Goal cada 3 s; solo puede empujarla
+        // cuando el propio Goal tiene un enemigo vivo asignado.
+        if (VillagerGuardGoal.esGuardia(villager)) {
+            boolean enCombate = false;
+            for (var wrapped : villager.goalSelector.getAvailableGoals()) {
+                if (wrapped.isRunning() && wrapped.getGoal() instanceof VillagerGuardGoal guardGoal) {
+                    var enemigo = guardGoal.enemigoActual();
+                    if (enemigo != null && enemigo.isAlive() && !enemigo.isRemoved()) {
+                        enCombate = true;
+                        break;
+                    }
+                }
+            }
+            if (!enCombate) {
+                return;
+            }
         }
         if (seHaMovidoHacePoco(villager, 40)) {
             return; // se ha movido en los últimos 2 s: va bien
@@ -6332,9 +6512,25 @@ public final class VillageManager {
     /** Premia trabajo REAL de oficio; aumenta la XP vanilla sin inventar niveles ni bonus. */
     public static void premiarOficio(Villager villager, int cantidad) {
         if (villager == null || villager.isBaby() || cantidad <= 0
-                || villager.getVillagerData().getProfession() == VillagerProfession.NONE) return;
+                || villager.getVillagerData().getProfession() == VillagerProfession.NONE
+                || !(villager.level() instanceof ServerLevel level)) {
+            return;
+        }
+        int antes = trabajoHoy(level, villager);
         villager.setVillagerXp(Math.max(1, villager.getVillagerXp()) + cantidad);
+        registrarTrabajo(level, villager, cantidad);
+        if (Boolean.getBoolean("devilrpg.workdiag")) {
+            String caller = StackWalker.getInstance().walk(s -> s.skip(2).findFirst()
+                    .map(f -> f.getClassName() + "." + f.getMethodName()).orElse("?"));
+            villager.getPersistentData().putString("DevilRpgLastWorkRewardCaller", caller);
+            DevilRpg.LOGGER.info("[WORK-REWARD] seq={} uuid={} amount={} before={} after={} caller={}",
+                    WORK_REWARD_SEQ.incrementAndGet(), villager.getUUID(), cantidad, antes,
+                    trabajoHoy(level, villager), caller);
+        }
     }
+
+    private static final java.util.concurrent.atomic.AtomicLong WORK_REWARD_SEQ =
+            new java.util.concurrent.atomic.AtomicLong();
 
     public static boolean isVillageUnderAttack(ServerLevel level, int objectiveIndex) {
         // La defensa se registra al llegar el jugador, pero la oleada tarda GRACE_TICKS (90 s) en nacer.
@@ -8355,7 +8551,7 @@ public final class VillageManager {
             if (level.getGameTime() - ultimaComida(level, villager) >= EAT_INTERVAL_TICKS) {
                 bocas.add(villager);
                 int trabajo = trabajoHoy(level, villager);
-                puntos += 1 + Math.min(3, trabajo / 8);
+                puntos += FoodHungerPolicy.rationForWork(trabajo);
             }
         }
         if (bocas.isEmpty() || puntos <= 0) {
@@ -8459,41 +8655,37 @@ public final class VillageManager {
      * (lleva {@link #EAT_INTERVAL_TICKS} o más sin comer) se va a la taberna a comer, y allí se le marca con
      * {@link #marcarComida} y se le quita la ración abstracta del minuto (nadie come dos veces).
      */
-    private static final int MAX_TRABAJO_DIA = 64;
     public static final int HAMBRE_NORMAL = FoodHungerPolicy.NORMAL;
     public static final int HAMBRE_CRITICA = FoodHungerPolicy.CRITICAL;
     public static final int HAMBRE_MAX = FoodHungerPolicy.MAX;
 
     public static int hambre(Villager villager) {
-        return FoodHungerPolicy.clamp(villager.getPersistentData().getInt("DevilRpgHambre"));
+        return FoodStateNbt.hunger(villager.getPersistentData());
     }
 
     public static void aumentarHambre(ServerLevel level, Villager villager, int puntos) {
         if (puntos <= 0) return;
-        villager.getPersistentData().putInt("DevilRpgHambre", FoodHungerPolicy.add(hambre(villager), puntos));
+        FoodStateNbt.setHunger(villager.getPersistentData(),
+                FoodHungerPolicy.add(hambre(villager), puntos));
     }
 
     public static void reducirHambre(Villager villager, int puntos) {
         if (puntos <= 0) return;
-        villager.getPersistentData().putInt("DevilRpgHambre", FoodHungerPolicy.reduce(hambre(villager), puntos));
+        FoodStateNbt.setHunger(villager.getPersistentData(),
+                FoodHungerPolicy.reduce(hambre(villager), puntos));
     }
 
     public static int trabajoHoy(ServerLevel level, Villager villager) {
-        CompoundTag d = villager.getPersistentData();
         long dia = level.getGameTime() / 24000L;
-        if (d.getLong("DevilRpgDiaTrabajo") != dia) return 0;
-        return Math.min(MAX_TRABAJO_DIA, d.getInt("DevilRpgTrabajoHoy"));
+        return FoodStateNbt.workForDay(villager.getPersistentData(), dia);
     }
 
     public static void registrarTrabajo(ServerLevel level, Villager villager, int puntos) {
         if (puntos <= 0) return;
         CompoundTag d = villager.getPersistentData();
         long dia = level.getGameTime() / 24000L;
-        if (d.getLong("DevilRpgDiaTrabajo") != dia) {
-            d.putLong("DevilRpgDiaTrabajo", dia);
-            d.putInt("DevilRpgTrabajoHoy", 0);
-        }
-        d.putInt("DevilRpgTrabajoHoy", Math.min(MAX_TRABAJO_DIA, d.getInt("DevilRpgTrabajoHoy") + puntos));
+        int actual = FoodStateNbt.workForDay(d, dia);
+        FoodStateNbt.setWork(d, dia, FoodHungerPolicy.addWork(actual, puntos));
     }
 
     public static boolean necesitaComidaDiaria(ServerLevel level, Villager villager) {
@@ -8503,11 +8695,11 @@ public final class VillageManager {
 
     public static long ultimaComida(ServerLevel level, Villager villager) {
         CompoundTag datos = villager.getPersistentData();
-        if (!datos.contains(COMIDA_TAG)) {
-            datos.putLong(COMIDA_TAG, level.getGameTime());
+        if (!FoodStateNbt.hasLastMeal(datos)) {
+            FoodStateNbt.setLastMeal(datos, level.getGameTime());
             return level.getGameTime();
         }
-        return datos.getLong(COMIDA_TAG);
+        return FoodStateNbt.lastMeal(datos);
     }
 
     /** ¿Ese aldeano tiene <b>hambre</b>? (lleva una ración sin comer: el mismo criterio que las raciones del minuto) */
@@ -8518,7 +8710,7 @@ public final class VillageManager {
 
     /** Marca que ese aldeano acaba de comer (así el reparto abstracto del minuto no le da otra ración). */
     public static void marcarComida(ServerLevel level, Villager villager) {
-        villager.getPersistentData().putLong(COMIDA_TAG, level.getGameTime());
+        FoodStateNbt.setLastMeal(villager.getPersistentData(), level.getGameTime());
     }
 
     /** Camas del pueblo (puntos de interés `HOME` alrededor de la plaza): es el tope real de población. */
@@ -8834,6 +9026,8 @@ public final class VillageManager {
         final RaidTacticalBoard raidBoard = new RaidTacticalBoard();
         long tickTicks;
         boolean waveSpawned;
+        /** Defensa headless controlada por el arnés; no ejecuta el reloj ni genera una segunda oleada. */
+        boolean testHarness;
         /** Último recuento de atacantes vivos, para escribir cada baja (y no repetir el mensaje). */
         int ultimosVivos = -1;
         /** El reloj está parado porque el jugador no está en la aldea (ver {@link #RADIO_ASEDIO_CON_JUGADOR}). */

@@ -39,6 +39,30 @@ public final class NavArrivalPolicyTest {
         comprobar("objetivo no-mision => RECALCULAR", escalon == NavArrivalPolicy.Result.RECALCULAR);
         comprobar("escalon local NO declara ARRIVED", !NavArrivalPolicy.declaraArrived(escalon));
 
+        // A pending stair is reached only after physical occupancy, never by the generic 1.5-block tolerance.
+        comprobar("proximidad generica NO consume escalon pendiente sin pisarlo",
+                !NavArrivalPolicy.proximityArrivalAllowed(true, false));
+        comprobar("proximidad generica permite escalon pendiente solo despues de pisarlo",
+                NavArrivalPolicy.proximityArrivalAllowed(true, true));
+        comprobar("proximidad generica conserva objetivos normales",
+                NavArrivalPolicy.proximityArrivalAllowed(false, false));
+        comprobar("escalon pendiente adyacente NO se considera alcanzado",
+                !NavArrivalPolicy.waypointReached(false, false, true, true, false, false));
+        comprobar("escalon pendiente fuera de tolerancia SI se reconoce si esta ocupado",
+                NavArrivalPolicy.waypointReached(false, false, true, false, true, false));
+        comprobar("escalon pendiente ocupado se alcanza",
+                NavArrivalPolicy.waypointReached(false, false, true, true, true, false));
+        comprobar("waypoint WALK normal conserva tolerancia",
+                NavArrivalPolicy.waypointReached(false, false, false, true, false, false));
+        comprobar("waypoint WALK fuera de tolerancia no se alcanza",
+                !NavArrivalPolicy.waypointReached(false, false, false, false, false, false));
+        comprobar("DROP cercano sin aterrizaje fisico no se alcanza",
+                !NavArrivalPolicy.waypointReached(false, true, false, true, false, false));
+        comprobar("DROP con aterrizaje valido se alcanza",
+                NavArrivalPolicy.waypointReached(false, true, false, true, false, true));
+        comprobar("JUMP_UP sigue esperando confirmacion del controlador",
+                !NavArrivalPolicy.waypointReached(true, false, false, true, true, true));
+
         if (fallos > 0) {
             System.out.println("NAV_ARRIVAL_TEST: FAIL (" + fallos + " fallos)");
             System.exit(1);

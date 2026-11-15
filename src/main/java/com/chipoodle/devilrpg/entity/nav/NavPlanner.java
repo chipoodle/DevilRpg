@@ -138,7 +138,9 @@ public final class NavPlanner {
                     transicion = NavRoute.Transition.BUILD;
                     piesHasta = candidate.getY() + 1;
                 } else {
-                    if (NavTrace.on()) {
+                    // Per-candidate rejection is extremely high-volume during global A*: keep it opt-in.
+                    // Aggregate planner counters remain available in the route summary.
+                    if (NavTrace.on() && Boolean.getBoolean("devilrpg.a2n.traceNav.verboseDrops")) {
                         NavTrace.ev("DROP_UNSAFE", "candidate=" + candidate.toShortString()
                                 + " caida=" + caida + " maxSafeDrop=" + policies.maxSafeDrop()
                                 + " constructible=false");
@@ -260,9 +262,30 @@ public final class NavPlanner {
                             BlockPos landing = sucesorCanonico(candidate, arista.kind(), arista.transicion(), arista.piesHasta());
                             long clave = NavDropExclusionPolicy.clave(pos.getX(), pos.getY(), pos.getZ(),
                                     landing.getX(), landing.getY(), landing.getZ());
-                            long huella = huellaTerreno(level, landing);
-                            if (exclusiones.excluida(clave, huella)) {
-                                continue;
+                            long claveDestino = NavDropExclusionPolicy.claveDestino(
+                                    landing.getX(), landing.getY(), landing.getZ());
+                            boolean edgeRegistered = exclusiones.contiene(clave);
+                            boolean destinationRegistered = exclusiones.contiene(claveDestino);
+                            if (edgeRegistered || destinationRegistered) {
+                                long huella = huellaTerreno(level, landing, policies.maxSafeDrop());
+                                Long huellaDestinoRegistrada = exclusiones.huellaRegistrada(claveDestino);
+                                if (destinationRegistered && huellaDestinoRegistrada != null
+                                        && huellaDestinoRegistrada.longValue() != huella && NavTrace.on()) {
+                                    NavTrace.ev("DROP_DESTINATION_EXCLUSION_STALE", "uuid=" + mob.getUUID()
+                                            + " landing=" + landing.toShortString()
+                                            + " stored=" + huellaDestinoRegistrada + " actual=" + huella);
+                                }
+                                boolean edgeExcluded = exclusiones.excluida(clave, huella);
+                                boolean destinationExcluded = exclusiones.excluida(claveDestino, huella);
+                                if (edgeExcluded || destinationExcluded) {
+                                    if (destinationExcluded && NavTrace.on()) {
+                                        NavTrace.ev("DROP_DESTINATION_EXCLUSION_HIT", "uuid=" + mob.getUUID()
+                                                + " from=" + pos.toShortString()
+                                                + " landing=" + landing.toShortString()
+                                                + " fingerprint=" + huella);
+                                    }
+                                    continue;
+                                }
                             }
                         }
                         double cost = arista.coste();
@@ -284,12 +307,12 @@ public final class NavPlanner {
 
             @Override
             public double heuristic(long state) {
-                return heuristicaGlobal(BlockPos.of(state), objetivo);
+                return heuristicaGlobal(BlockPos.of(state), objetivo, policies.maxSafeDrop());
             }
 
             @Override
             public double distance(long state) {
-                return horizontalAlCuadrado(BlockPos.of(state), objetivo);
+                return distanciaGlobal(BlockPos.of(state), objetivo);
             }
         };
         NavGraphSearch.Result resultado = NavGraphSearch.search(start.asLong(), start.getY(), graph, maxExpansions);
@@ -297,7 +320,7 @@ public final class NavPlanner {
         boolean hitBudget = resultado.hitBudget();
         BlockPos found = resultado.found() ? BlockPos.of(resultado.route().get(resultado.route().size() - 1).state()) : null;
         BlockPos frente = BlockPos.of(resultado.front());
-        double mejorDistFrente = horizontalAlCuadrado(frente, objetivo);
+        double mejorDistFrente = distanciaGlobal(frente, objetivo);
         StringBuilder resumen = new StringBuilder();
         resumen.append("global inicio=").append(start.toShortString())
                 .append(" meta=").append(objetivo.toShortString())
@@ -309,8 +332,11 @@ public final class NavPlanner {
             String motivo = hitBudget ? "presupuesto global agotado"
                     : "el frente alcanzable se agoto dentro del radio " + maxRadio;
             resumen.append(" frente=").append(frente.toShortString())
-                    .append(" dFrente=").append(String.format(java.util.Locale.ROOT, "%.1f",
+                    .append(" dFrente3D=").append(String.format(java.util.Locale.ROOT, "%.1f",
                             Math.sqrt(mejorDistFrente)))
+                    .append(" dFrenteXZ=").append(String.format(java.util.Locale.ROOT, "%.1f",
+                            Math.sqrt(horizontalAlCuadrado(frente, objetivo))))
+                    .append(" dFrenteY=").append(Math.max(0, Math.abs(frente.getY() - objetivo.getY()) - 1))
                     .append(" motivo=").append(motivo);
             List<NavRoute.Node> nodosFrente = new ArrayList<>();
             for (NavGraphSearch.Step paso : resultado.route()) {
@@ -329,11 +355,16 @@ public final class NavPlanner {
                 "meta alcanzada", resumen.toString());
     }
 
-    /** A2 Stage 7C · heuristica ADMISIBLE: distancia horizontal (ninguna arista cuesta menos que eso). */
-    private static double heuristicaGlobal(BlockPos a, BlockPos b) {
-        double dx = a.getX() - b.getX();
-        double dz = a.getZ() - b.getZ();
-        return Math.sqrt(dx * dx + dz * dz);
+    /** A2 Stage 7C · cota inferior admisible horizontal + vertical hacia la region de meta. */
+    private static double heuristicaGlobal(BlockPos a, BlockPos b, int maxSafeDrop) {
+        return NavGoalMetric.heuristic(a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ(),
+                RADIO_DE_LLEGADA_SQR, 1.0D, SUBIDA_MAXIMA, maxSafeDrop);
+    }
+
+    /** Distancia 3D al cuadrado de la region de meta para seleccionar un frente parcial util. */
+    private static double distanciaGlobal(BlockPos a, BlockPos b) {
+        return NavGoalMetric.frontDistanceSquared(a.getX(), a.getY(), a.getZ(),
+                b.getX(), b.getY(), b.getZ(), RADIO_DE_LLEGADA_SQR, 1.0D);
     }
 
     private static double horizontalAlCuadrado(BlockPos a, BlockPos b) {
@@ -372,9 +403,17 @@ public final class NavPlanner {
      * clasificaban por separado como transitables. La clasificacion de una celda NO es la validez de una arista:
      * esta funcion da la magnitud que sí lo decide.
      */
-    private static long huellaTerreno(CollisionGetter level, BlockPos p) {
+    /**
+     * Fingerprint of the landing and its complete bounded fall corridor. Including blocks above the
+     * landing is essential: a leaf/overhang at landing+2 must invalidate the exclusion when it changes.
+     * The fixed height makes the fingerprint independent of which adjacent take-off cell found the landing.
+     */
+    static long huellaTerreno(CollisionGetter level, BlockPos p, int maxSafeDrop) {
         long h = level.getBlockState(p).hashCode();
         h = h * 31L + level.getBlockState(p.above()).hashCode();
+        for (int dy = 2; dy <= Math.max(1, maxSafeDrop); dy++) {
+            h = h * 31L + level.getBlockState(p.above(dy)).hashCode();
+        }
         h = h * 31L + level.getBlockState(p.below()).hashCode();
         return h;
     }
@@ -446,6 +485,15 @@ public final class NavPlanner {
                               int horizontalRange, int verticalRange, int maxExpansions,
                               NavObstruction.Policies policies,
                               java.util.Set<BlockPos> construidas) {
+        return plan(level, mob, start, goal, horizontalRange, verticalRange, maxExpansions,
+                policies, construidas, null);
+    }
+
+    public static Result plan(CollisionGetter level, Mob mob, BlockPos start, BlockPos goal,
+                              int horizontalRange, int verticalRange, int maxExpansions,
+                              NavObstruction.Policies policies,
+                              java.util.Set<BlockPos> construidas,
+                              NavDropExclusionPolicy exclusiones) {
         DIAG_START = DIAG_DROP ? start.immutable() : null;
         if (start.equals(goal)) {
             return new Result(new NavRoute(List.of(new NavRoute.Node(goal, NavRoute.Transition.WALK)), goal), 0, false,
@@ -520,6 +568,36 @@ public final class NavPlanner {
                     double cost = arista.coste();
                     NavRoute.Transition transicion = arista.transicion();
                     int piesHasta = arista.piesHasta();
+                    BlockPos sucesor = sucesorCanonico(candidate, arista.kind(), transicion, piesHasta);
+                    if (exclusiones != null && transicion == NavRoute.Transition.DROP) {
+                        long clave = NavDropExclusionPolicy.clave(pos.getX(), pos.getY(), pos.getZ(),
+                                sucesor.getX(), sucesor.getY(), sucesor.getZ());
+                        long claveDestino = NavDropExclusionPolicy.claveDestino(
+                                sucesor.getX(), sucesor.getY(), sucesor.getZ());
+                        boolean edgeRegistered = exclusiones.contiene(clave);
+                        boolean destinationRegistered = exclusiones.contiene(claveDestino);
+                        if (edgeRegistered || destinationRegistered) {
+                            long huella = huellaTerreno(level, sucesor, policies.maxSafeDrop());
+                            Long huellaDestinoRegistrada = exclusiones.huellaRegistrada(claveDestino);
+                            if (destinationRegistered && huellaDestinoRegistrada != null
+                                    && huellaDestinoRegistrada.longValue() != huella && NavTrace.on()) {
+                                NavTrace.ev("DROP_LOCAL_EXCLUSION_STALE", "uuid=" + mob.getUUID()
+                                        + " landing=" + sucesor.toShortString()
+                                        + " stored=" + huellaDestinoRegistrada + " actual=" + huella);
+                            }
+                            boolean edgeExcluded = exclusiones.excluida(clave, huella);
+                            boolean destinationExcluded = exclusiones.excluida(claveDestino, huella);
+                            if (edgeExcluded || destinationExcluded) {
+                                if (destinationExcluded && NavTrace.on()) {
+                                    NavTrace.ev("DROP_LOCAL_EXCLUSION_HIT", "uuid=" + mob.getUUID()
+                                            + " from=" + pos.toShortString()
+                                            + " landing=" + sucesor.toShortString()
+                                            + " fingerprint=" + huella);
+                                }
+                                continue;
+                            }
+                        }
+                    }
                     if (off[0] != 0 && off[1] != 0) {
                         cost *= 1.4142D; // diagonal
                     }
@@ -531,7 +609,6 @@ public final class NavPlanner {
                         }
                     }
                     double tentative = current.g() + cost;
-                    BlockPos sucesor = sucesorCanonico(candidate, arista.kind(), transicion, piesHasta);
                     Double known = bestG.get(sucesor);
                     if (known != null && known <= tentative) {
                         continue;
@@ -592,8 +669,8 @@ public final class NavPlanner {
 
     /**
      * A2 Stage 4Q · ¿Se puede CONSTRUIR un escalon en esta celda? Espeja las precondiciones de la primitiva de
-     * colocacion de la casa (`ponerEscalon`): celda vacia, dos huecos encima, bloque con colision debajo, y fuera
-     * de la aldea. La proteccion NO se debilita: si la politica la protege, no es construible.
+     * colocacion de la casa (`ponerEscalonConSoporteLateral`): celda vacia, dos huecos encima, apoyo con colision
+     * debajo o en una cara horizontal, y fuera de la aldea. La proteccion NO se debilita.
      */
     private static boolean esConstruible(CollisionGetter level, Mob mob, BlockPos pos,
                                          NavObstruction.Policies policies) {
@@ -604,8 +681,7 @@ public final class NavPlanner {
                 || !level.getBlockState(pos.above(2)).isAir()) {
             return false;
         }
-        net.minecraft.world.level.block.state.BlockState debajo = level.getBlockState(pos.below());
-        return !debajo.isAir() && !debajo.getCollisionShape(level, pos.below()).isEmpty();
+        return NavObstruction.hasSupportFace(level, pos);
     }
 
     /**

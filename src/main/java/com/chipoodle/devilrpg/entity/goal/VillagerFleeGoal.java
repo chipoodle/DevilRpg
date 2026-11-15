@@ -36,8 +36,8 @@ public class VillagerFleeGoal extends Goal {
     private static final double RADIO_DE_PANICO = 12.0D;
     /** Y no se le pasa el susto hasta que el enemigo se aleja más que esto (si no, oscila en el borde). */
     private static final double RADIO_DE_CALMA = 22.0D;
-    /** Corriendo: el asaltante ataca a 1.2, así que un aldeano a 1.35 puede ganarle la carrera a la casa. */
-    private static final float VELOCIDAD = 1.35F;
+    /** Corriendo: velocidad de huida reducida al 70% de la original por decisión del usuario. */
+    private static final float VELOCIDAD = VillagerFleeSpeedPolicy.FLEE_SPEED;
 
     private final Villager villager;
     /** El enemigo del que huye ahora (para no recalcularlo en cada tick). */

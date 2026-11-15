@@ -5,6 +5,16 @@ public final class NavWaypointWindowPolicy {
     private NavWaypointWindowPolicy() {
     }
 
+    /**
+     * A destination can fit inside the planner's rectangular window and still be physically unreachable
+     * by the local planner (for example, a landing point 24 blocks below the mob through solid terrain).
+     * Such destinations must be approached through a validated global route, not treated as direct objectives.
+     */
+    public static boolean directoAlcanzable(int dy, int maxSafeDrop) {
+        int maxStepUp = 2; // maximum legal jump-up transition
+        return dy < 0 ? -dy <= maxSafeDrop : dy <= maxStepUp;
+    }
+
     public static boolean aceptable(int dx, int dz, int dy, boolean drop, int maxHorizontal, int maxVertical,
                                     int maxDrop) {
         if (Math.abs(dx) > maxHorizontal || Math.abs(dz) > maxHorizontal) {

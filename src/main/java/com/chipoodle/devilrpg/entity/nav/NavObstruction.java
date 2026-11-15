@@ -130,6 +130,23 @@ public final class NavObstruction {
     }
 
     /**
+     * ¿La celda de colocacion puede adherirse a suelo o a una cara lateral real?
+     * La misma regla se usa en planificacion y ejecucion para evitar que el planificador prometa escalones
+     * que el ejecutor no puede colocar. No admite soporte desde arriba ni celdas flotantes.
+     */
+    public static boolean hasSupportFace(BlockGetter level, BlockPos placement) {
+        if (hasSolidFace(level, placement.below())) {
+            return true;
+        }
+        for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            if (hasSolidFace(level, placement.relative(direction))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * A2 Stage 4V · CAIDA REAL de una celda: cuantos bloques hay que bajar hasta encontrar suelo firme.
      * <p>
      * Motivo medido (`a2n-20261016-075956`): el planificador aceptaba `DROP` con coste positivo SIEMPRE, sin mirar

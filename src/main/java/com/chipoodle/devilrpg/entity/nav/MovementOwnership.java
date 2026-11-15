@@ -15,6 +15,12 @@ public final class MovementOwnership {
 
     /** ¿Puede el ejecutor propio emitir movimiento en este tick? */
     public static boolean executorMayMove(final boolean customNavigation, final boolean validCombatTarget) {
-        return customNavigation && !validCombatTarget;
+        return executorMayMove(customNavigation, validCombatTarget, false);
+    }
+
+    /** Melee-range combat does not stop the assault; NavExecutor may keep advancing. */
+    public static boolean executorMayMove(final boolean customNavigation, final boolean validCombatTarget,
+                                          final boolean targetInMeleeRange) {
+        return AdvanceUnderFirePolicy.executorMayAdvance(customNavigation, validCombatTarget, targetInMeleeRange);
     }
 }

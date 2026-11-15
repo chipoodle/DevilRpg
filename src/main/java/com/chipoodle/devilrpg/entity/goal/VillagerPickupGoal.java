@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
@@ -349,6 +350,7 @@ public class VillagerPickupGoal extends Goal {
                 objetivo = null; // no le cabe: se queda en el suelo
                 return;
             }
+            ForestryResourceTraceMinecraft.pickup(villager, level, stack, cogidos);
             objetivo.getItem().shrink(cogidos);
             level.playSound(null, villager.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.NEUTRAL, 0.4F, 1.0F);
             if (objetivo.getItem().isEmpty()) {
@@ -460,8 +462,10 @@ public class VillagerPickupGoal extends Goal {
                 continue;
             }
             int antes = s.getCount();
+            ItemStack antesStack = s.copy();
             ItemStack resto = destinoTipo() == Destino.DESPENSA ? VillagePantry.guardar(caja, s.copy())
                     : VillageStorage.guardar(level, center, s.copy());
+            ForestryResourceTraceMinecraft.deposit(villager, null, level, center, antesStack, resto, null);
             guardados += antes - resto.getCount();
             villager.getInventory().setItem(i, resto);
         }

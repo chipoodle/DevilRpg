@@ -427,7 +427,7 @@ public class VillagerSmithGoal extends Goal {
         // LA LEÑA PRIMERO: si la faena es una fundición y el almacén no tiene excedente por encima de la reserva, no
         // se lleva los ingredientes para nada — la fragua no funciona sin combustible (lo pidió el jugador).
         if (receta.quema()) {
-            ItemStack lena = VillageStorage.quitarLena(level, center, 1);
+            ItemStack lena = VillageStorage.quitarLena(level, center, 1, villager);
             if (lena == null || lena.isEmpty()) {
                 DevilRpg.LOGGER.info("[Village] {}: no funde, el almacen no tiene lena por encima de la reserva de {}",
                         armas() ? "El herrero de armas" : "El herrero de herramientas", VillageStorage.RESERVA_LENA);
@@ -447,6 +447,12 @@ public class VillagerSmithGoal extends Goal {
             ItemStack resto = guardarEnInventario(enMano);
             if (!resto.isEmpty()) {
                 VillageStorage.guardar(level, center, resto); // no le cupo: de vuelta al almacén
+            }
+            int movidas = sacadas - resto.getCount();
+            if (movidas > 0 && necesario.is(net.minecraft.tags.ItemTags.LOGS)) {
+                com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.withdrawal(
+                        villager, null, level, center,
+                        new ItemStack(necesario.getItem(), movidas), movidas, null);
             }
         }
         return true;
@@ -485,10 +491,22 @@ public class VillagerSmithGoal extends Goal {
                 DevilRpg.LOGGER.debug("[Village] al herrero le falta la lena para {}: no funde", receta.producto());
                 return;
             }
+            for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
+                ItemStack s = villager.getInventory().getItem(i);
+                if (VillageStorage.esLena(s)) {
+                    com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.burned(
+                            villager, s.copyWithCount(1), 1);
+                    break;
+                }
+            }
             gastarDelInventario(VillageStorage::esLena, 1);
         }
         for (ItemStack necesario : receta.ingredientes()) {
             gastarDelInventario(necesario.getItem(), necesario.getCount());
+            if (necesario.is(net.minecraft.tags.ItemTags.LOGS)) {
+                com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.burned(
+                        villager, necesario.copyWithCount(necesario.getCount()), necesario.getCount());
+            }
         }
         ItemStack resto = guardarEnInventario(receta.producto().copy());
         if (!resto.isEmpty()) {

@@ -3,10 +3,14 @@ package com.chipoodle.devilrpg.entity.goal;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
+import com.chipoodle.devilrpg.world.VillageStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.block.Block;
@@ -115,6 +119,14 @@ public class VillagerRepairGoal extends Goal {
             restTicks = IDLE_REST_TICKS; // nada roto: no volver a recorrer el plano hasta dentro de 5 s
             return false;
         }
+        BlockState repairState = VillageManager.bloqueParaReparar(level, objectiveIndex, target);
+        Item material = materialDeReparacion(repairState);
+        if (material == null || VillageStorage.cuenta(level, center, stack -> stack.is(material)) < 1) {
+            saltados.add(target.asLong());
+            target = null;
+            restTicks = IDLE_REST_TICKS;
+            return false;
+        }
         // Se reclama el hueco para que otro obrero no vaya al mismo sitio (varios comparten el trabajo).
         if (!VillageManager.reclamarHueco(level, target, villager.getUUID())) {
             // Otro se lo quedó primero: se prueba en el siguiente intento sin gastar el descanso largo.
@@ -216,14 +228,46 @@ public class VillagerRepairGoal extends Goal {
             if (state.is(Blocks.FARMLAND)) {
                 state = VillageGenerator.tierraDeCultivo(level, target);
             }
-            VillageManager.ponerActividad(villager, "Reparando la aldea");
+            Item material = materialDeReparacion(state);
+            if (material == null) {
+                DevilRpg.LOGGER.debug("[REPAIR-RESOURCE] event=UNMAPPED center={} target={} block={}",
+                        center.toShortString(), target.toShortString(), state.getBlock());
+                VillageManager.liberarHueco(level, target);
+                target = null;
+                restTicks = IDLE_REST_TICKS;
+                return;
+            }
+            ItemStack retirado = VillageStorage.quitar(level, center, stack -> stack.is(material), 1);
+            if (retirado == null || retirado.isEmpty()) {
+                DevilRpg.LOGGER.debug("[REPAIR-RESOURCE] event=NO_MATERIAL center={} target={} item={}",
+                        center.toShortString(), target.toShortString(), material);
+                VillageManager.liberarHueco(level, target);
+                target = null;
+                restTicks = IDLE_REST_TICKS;
+                return;
+            }
             BlockPos puesto = target;
-            level.setBlock(puesto, state, Block.UPDATE_ALL);
+            boolean placed = level.setBlock(puesto, state, Block.UPDATE_ALL)
+                    && level.getBlockState(puesto).equals(state);
+            if (!placed) {
+                ItemStack sobrante = VillageStorage.guardar(level, center, retirado);
+                if (!sobrante.isEmpty()) villager.spawnAtLocation(sobrante);
+                DevilRpg.LOGGER.warn("[REPAIR-RESOURCE] event=PLACEMENT_REJECTED center={} target={} item={} refunded={}",
+                        center.toShortString(), puesto.toShortString(), material,
+                        retirado.getCount() - sobrante.getCount());
+                VillageManager.liberarHueco(level, target);
+                target = null;
+                restTicks = REST_TICKS;
+                return;
+            }
+            VillageManager.ponerActividad(villager, "Reparando la aldea");
             level.playSound(null, puesto, state.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.8F, 1.0F);
             // Lo que acaba de reponer, en la cabeza (además del log): así se ve al obrero trabajar de verdad. El
             // nombre del bloque va en español a mano: la traducción del juego la resolvería el servidor (en inglés).
             VillageManager.ponerSuceso(villager, "Repuso " + VillageManager.nombreEnEspanol(state));
             DevilRpg.LOGGER.debug("[Village] El obrero repuso {} en {}", state.getBlock(), puesto);
+            DevilRpg.LOGGER.debug("[REPAIR-RESOURCE] event=CONSUMED center={} target={} item={} count=1",
+                    center.toShortString(), puesto.toShortString(), material);
         }
         VillageManager.liberarHueco(level, target);
         target = null; // el siguiente hueco lo busca canUse() tras el descanso
@@ -296,6 +340,14 @@ public class VillagerRepairGoal extends Goal {
         sitioDeCaminoDe = hueco;
         sitioDeCamino = mejor;
         return mejor;
+    }
+
+    @Nullable
+    private static Item materialDeReparacion(@Nullable BlockState state) {
+        if (state == null || state.isAir()) return null;
+        if (state.is(Blocks.FARMLAND)) return Items.DIRT;
+        Item item = state.getBlock().asItem();
+        return item == Items.AIR ? null : item;
     }
 
     private boolean isBuilder() {

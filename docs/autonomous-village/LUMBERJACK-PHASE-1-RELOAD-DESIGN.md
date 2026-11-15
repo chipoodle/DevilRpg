@@ -299,7 +299,7 @@ world save behavior must be runtime evidence.
 - Main risk: duplicate harvest/delivery after reload if saved "progress" is
   trusted. Mitigation: actual inventory/block state is authoritative.
 
-## 12. Source classes/methods affected (future)
+## 12. Source classes/methods affected (initial design; implementation completed)
 
 - `VillagerLumberjackGoal`: add `saveTaskState`/`loadTaskState`, call on stop and
   goal installation; phase transition hooks.
@@ -325,28 +325,48 @@ world save behavior must be runtime evidence.
 - Bone Meal: if the sapling grew, block state invalidates the target; if not, the
   refund path returns unused Bone Meal to inventory/storage. Safe in normal reload.
 
-## 14. Final implementation checklist (not started)
+## 14. Final implementation checklist (historical pre-implementation checklist; completed)
 
-1. [ ] Add versioned `DevilRpgForestryTask` read/write helpers.
-2. [ ] Persist only the fields in §2.1; skip transient navigation/timers.
-3. [ ] Restore in `VillageManager.asegurarGoalDeLenador` before first tick.
-4. [ ] Validate objective/profession/village/target/holes/planner bounds.
-5. [ ] Enforce the phase/controller/target consistency table.
-6. [ ] Revalidate target immediately before each resource mutation.
-7. [ ] Use actual blocks/inventory/storage as authoritative; no saved totals.
-8. [ ] Unknown higher version: never overwrite; transient SCOUTING.
-9. [ ] Add A5 boundaries before mutation, after mutation, after phase advance.
-10. [ ] Re-run Block 1 Runs 62/65/27/57/81.
-11. [ ] Add pure tests for schema/predicates where Minecraft-free.
-12. [ ] Validate compileJava, compileTestJava, policyTest, lint, diff.
+1. [x] Add versioned `DevilRpgForestryTask` read/write helpers.
+2. [x] Persist only the fields in §2.1; skip transient navigation/timers.
+3. [x] Restore in `VillageManager.asegurarGoalDeLenador` before first tick.
+4. [x] Validate objective/profession/village/target/holes/planner bounds.
+5. [x] Enforce the phase/controller/target consistency table.
+6. [x] Revalidate target immediately before each resource mutation.
+7. [x] Use actual blocks/inventory/storage as authoritative; no saved totals.
+8. [x] Unknown higher version: never overwrite; transient SCOUTING.
+9. [x] Add A5 boundaries before mutation, after mutation, after phase advance.
+10. [x] Re-run Block 1 Runs 62/65/27/57/81.
+11. [x] Add pure tests for schema/predicates where Minecraft-free.
+12. [x] Validate compileJava, compileTestJava, policyTest, lint, diff.
 
 Crash-window journals are explicitly **not** on this checklist.
 
-## 15. Implementation status (source, not accepted)
+## 15. Implementation and acceptance status (updated 2026-11-12)
 
 Implemented: `DevilRpgForestryTask` Version 1, goal/controller/planner
 export/restore, constructor load, assignment/tick/stop save, objective/profession
 validation, phase/controller/target consistency (`ForestryTaskPolicy`), unknown
 version preservation, harvest target revalidation.
 Deviation: holes persist positions but not seed species.
-No A5 save/reload scenario has been run. Phase 1 is NOT accepted.
+A5-01..A5-12 normal lifecycle PASS; A5-09 malformed variants PASS; Forestry Block 1 A1-A7 COMPLETE. Forced sapling-placement rejection PASS for both `plantar` and `replantar`; forced Bone Meal API-false after argument mutation PASS. **Phase 1 ACCEPTED within the defined scope.** See `LUMBERJACK-PHASE-1-ACCEPTANCE.md` for run IDs and result/shutdown evidence. Abrupt process-crash atomicity and crash-window journals remain explicitly out of scope. No further A5/Block 1 repetitions are required without a relevant invariant change.
+
+## 16. Exceptional resource-refund closeout (2026-11-12)
+
+- Sapling placement rejection: runtime PASS for both `plantar` and
+  `replantar`; forced rejection after withdrawal returned exactly one sapling,
+  left both world positions air, and kept the immediate-replant method result
+  false so the caller can retain its retry/hole handling.
+- Bone Meal API false after argument mutation: first extended test exposed a
+  real defect because `ItemStack.EMPTY.grow(1)` does not reconstruct an item.
+  The refund now creates a fresh `Items.BONE_MEAL` stack when the API argument
+  became empty. Final runtime evidence: `api=false consumidas=1 devueltas=1
+  inventario=1`, sapling unchanged, result PASS.
+- Runner cleanup hardened for a process-exit race during `taskkill /T /F`;
+  the error is tolerated only after a second process sweep verifies zero
+  matching clients and zero launcher descendants. `-SelfTest` PASS.
+- Final `compileJava compileTestJava policyTest --rerun-tasks`: BUILD SUCCESSFUL.
+
+See `LUMBERJACK-PHASE-1-ACCEPTANCE.md` for exact disposable run IDs and
+result/shutdown JSON. Phase 1 is accepted within scope; crash atomicity remains
+excluded.

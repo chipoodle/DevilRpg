@@ -108,10 +108,14 @@ public final class VillagerAgent {
             return false;
         }
         if (!navigationLease.acquire(entityId, newTaskId, priority, gameTime)) {
+            ForestryNavTrace.event("LEASE_ACQUIRE", entityId, newTaskId,
+                    ForestryNavigationGateway.mode().name(), "-", gameTime, "result=DENIED");
             if (DIAG) DevilRpg.LOGGER.info("[AGENT-LEASE] DENIED uuid={} task={} priority={} owner={}",
                     entityId, newTaskId, priority, navigationLease.currentOwner(gameTime));
             return false;
         }
+        ForestryNavTrace.event("LEASE_ACQUIRE", entityId, newTaskId,
+                ForestryNavigationGateway.mode().name(), "-", gameTime, "result=OK");
         this.taskId = newTaskId;
         this.taskKind = kind;
         this.state = AgentTaskState.TRAVELLING;
@@ -125,13 +129,19 @@ public final class VillagerAgent {
         if (taskId == null) {
             return false;
         }
-        return navigationLease.renew(entityId, taskId, gameTime);
+        boolean ok = navigationLease.renew(entityId, taskId, gameTime);
+        ForestryNavTrace.event("LEASE_RENEW", entityId, taskId,
+                ForestryNavigationGateway.mode().name(), "-", gameTime,
+                "result=" + (ok ? "OK" : "FAILED"));
+        return ok;
     }
 
     public void completeTask(long gameTime) {
         UUID old = taskId;
         if (taskId != null) {
             navigationLease.release(entityId, taskId);
+            ForestryNavTrace.event("LEASE_RELEASE", entityId, old,
+                    ForestryNavigationGateway.mode().name(), "-", gameTime, "reason=complete");
         }
         taskId = null;
         taskKind = null;
@@ -143,6 +153,8 @@ public final class VillagerAgent {
         UUID old = taskId;
         if (taskId != null) {
             navigationLease.release(entityId, taskId);
+            ForestryNavTrace.event("LEASE_RELEASE", entityId, old,
+                    ForestryNavigationGateway.mode().name(), "-", 0L, "reason=" + reason);
         }
         taskId = null;
         taskKind = null;
@@ -239,12 +251,17 @@ public final class VillagerAgent {
         NavigationOwner owner = navigationLease.currentOwner(gameTime).orElse(null);
         if (owner != null && !owner.taskId().equals(task)) {
             navigationLease.release(entityId, owner.taskId());
+            ForestryNavTrace.event("LEASE_RELEASE", entityId, owner.taskId(),
+                    ForestryNavigationGateway.mode().name(), "-", gameTime, "reason=task-changed");
         }
         boolean ok = navigationLease.owns(entityId, task, gameTime)
                 ? navigationLease.renew(entityId, task, gameTime)
                 : navigationLease.acquire(entityId, task, NavigationPriority.WORK, gameTime);
         if (ok) {
             boolean changed = owner == null || !owner.taskId().equals(task);
+            ForestryNavTrace.event(changed ? "LEASE_ACQUIRE" : "LEASE_RENEW",
+                    entityId, task, ForestryNavigationGateway.mode().name(), "-", gameTime,
+                    "result=OK");
             taskId = task;
             lastNavigationTaskId = task;
             state = AgentTaskState.TRAVELLING;
@@ -259,7 +276,11 @@ public final class VillagerAgent {
     public void releaseNavigation() {
         UUID task = navigationLease.currentOwner(0L)
                 .map(NavigationOwner::taskId).orElse(lastNavigationTaskId);
-        if (task != null) navigationLease.release(entityId, task);
+        if (task != null) {
+            navigationLease.release(entityId, task);
+            ForestryNavTrace.event("LEASE_RELEASE", entityId, task,
+                    ForestryNavigationGateway.mode().name(), "-", 0L, "reason=releaseNavigation");
+        }
     }
     public void tick(long gameTime) {
         if (navigationLease.purgeExpired(gameTime) && DIAG) {

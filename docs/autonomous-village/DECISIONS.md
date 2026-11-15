@@ -61,3 +61,32 @@ running goal is interruptable, and never replaces equal priority (first register
 Lumberjack is 4; tavern is 1 (not -1: it must yield to flee). Claims/leases are separate
 mechanisms. Status: accepted; D5-A–E runtime evidence in
 `LUMBERJACK-PHASE-1-ACCEPTANCE.md`.
+
+## D-012 — Default-off bounded per-actor resource ledger
+`ForestryResourceTrace` is a pure, bounded (2048 events) ledger; the Minecraft adapter counts
+only and never mutates inventories, targets, claims or schedules. It is enabled only by
+`-Ddevilrpg.resourcetrace=true`. Harvest is creation; deposits/withdrawals are transfers;
+inventory inserts are informational and excluded from conservation; pickup is a world source;
+drop/fuel consumption are sinks. Every event has a unique ID and transfer correlation, and
+truncation/unattributed events force INCOMPLETE. A8-01 is COMPLETE within the declared
+post-initialization autonomous scope; A7-12 may not claim equivalence from it yet.
+
+**Resolution (2026-11-11).** The final sentence above was the status when D-012 was accepted.
+A7-12 subsequently closed in Campaign 9 (`res-a7abandon3-off-20261111-224500` /
+`res-a7abandon3-audit-20261111-225000`): isolated single/two-worker resource and target
+equivalence, arrival/path/lease lifecycle, same-tree contention/reselection, and real
+abandonment/cleanup/recovery were observed. Scope: controlled A5WALL forestry fixtures only;
+no universal OFF/AUDIT equivalence is claimed. Campaign 6’s AUDIT owner non-completion remains
+`INSUFFICIENT_EVIDENCE` and non-reproduced (Campaign 8); it is a documented limitation, not a
+proven defect. OFF remains default; AUDIT diagnostic-only; no authority transfer.
+
+
+## D-013 — World-global difficulty reference and per-creature SpawnProfile progression
+
+**Decision (owner-confirmed design):** geographic difficulty is measured from the single shared world spawnpoint, common to all players. Both custom-spawned `AggressiveZombie` and its siege-attacker spawn path use that world-global reference. Temporal difficulty is based on shared world play time; current intended semantics snapshot threat at spawn, so newly spawned creatures scale while existing entities retain their spawn-time attributes. Multiplayer behavior must not depend on nearest-player selection, player-specific bed/spawn anchors, current player position, or the player that triggered spawning.
+
+**Required verification before implementation:** the existing forensic audit reports a nearest player's anchor/spawn as the reference. This is not equivalent by definition to the shared world spawnpoint. Trace the exact production source/API and verify both spawn paths plus multiplayer independence before changing code.
+
+**Future architecture:** temporal progression parameters belong to each creature's `SpawnProfile`; shared world time/threat remains a global input. Current custom creatures are `AggressiveZombie` and custom Vex, which should be consistently named `AggressiveVex`. Plan the rename across source names, registries/resource IDs, serialized identity/save compatibility, configs, translation keys, diagnostics/log strings, tests and docs. Preserve existing worlds; do not blindly change persisted registry identifiers.
+
+**Status:** design accepted; implementation NOT AUTHORIZED by this decision. First verify the current global spawn reference, then design the profile contract and rename migration separately. No balance changes or A2/C4 acceptance changes.

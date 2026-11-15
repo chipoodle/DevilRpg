@@ -10,7 +10,19 @@ public final class NavClimbPolicy {
     }
 
     public static boolean esWaypointDePie(NavRoute.Transition t) {
-        // DROP guarda el ATERRIZAJE (celda de pie valida); BUILD guarda la celda donde se COLOCA el bloque.
-        return t != NavRoute.Transition.BUILD;
+        // DROP guarda el ATERRIZAJE (celda de pie valida); BUILD, BREAK y BRIDGE son nodos de accion,
+        // no celdas donde el mob deba poder permanecer de pie.
+        return t != null && t != NavRoute.Transition.BUILD
+                && t != NavRoute.Transition.BREAK && t != NavRoute.Transition.BRIDGE;
+    }
+
+    /** BUILD/BREAK/BRIDGE tambien son objetivos locales: son celdas de accion, no celdas de pie. */
+    public static boolean esWaypointSeleccionable(NavRoute.Transition t) {
+        return t != null && (esWaypointDePie(t) || requiereConstruccion(t)
+                || t == NavRoute.Transition.BREAK || t == NavRoute.Transition.BRIDGE);
+    }
+
+    public static boolean requiereConstruccion(NavRoute.Transition t) {
+        return t == NavRoute.Transition.BUILD;
     }
 }

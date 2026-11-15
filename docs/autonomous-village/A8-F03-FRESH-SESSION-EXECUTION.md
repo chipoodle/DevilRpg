@@ -85,7 +85,7 @@ for that Step.
 
 All fixtures run in a fresh copy of the disposable `A5WALL` world under
 `build/<run-id>/game/saves/A5WALL`, launched with
-`build/a5-closure/run-a5.ps1`, `-Pa2nDiagnostics=true`, `-Da5.scenario=<fixture>`:
+`tools/a5-closure/run-a5.ps1`, `-Pa2nDiagnostics=true`, `-Da5.scenario=<fixture>`:
 
 | Fixture | Scenario id | Purpose |
 |---|---|---|

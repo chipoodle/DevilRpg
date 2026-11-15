@@ -518,12 +518,11 @@ public final class VillagePantry {
         int idx = saved.objectiveAt(center);
         int credito = saved.getPantryCredit(idx);
         int usar = Math.min(credito, puntos);
-        credito -= usar;
         int necesidad = puntos - usar;
         int sacados = necesidad > 0 ? sacarComidaFisica(c, necesidad, aldeanos) : 0;
-        if (sacados > necesidad) credito += sacados - necesidad;
-        saved.setPantryCredit(idx, credito);
-        return Math.min(puntos, usar + sacados);
+        PantryCreditPolicy.Result result = PantryCreditPolicy.apply(credito, puntos, sacados);
+        saved.setPantryCredit(idx, result.remainingCredit());
+        return result.granted();
     }
 
     private static int sacarComidaFisica(@Nullable Container c, int puntos, int aldeanos) {

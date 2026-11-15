@@ -619,7 +619,6 @@ public class VillagerFarmGoal extends Goal {
                 // no le cabe (entonces el inventario está lleno: a la despensa) o cuando se le acaba el tiempo.
                 if (segada) {
                     VillageManager.premiarOficio(villager, 1);
-                    VillageManager.registrarTrabajo(level, villager, 1);
                     cosechasSeguidas++;
                     // I166 · LA BARRIDA NO SE CORTA POR CAPACIDAD: se cosecha **TODA** la parcela (lo pidió el jugador:
                     // *"que el granjero coseche TODA su parcela, cada una de las tierras sembradas cuando ya esté

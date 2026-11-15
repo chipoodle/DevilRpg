@@ -407,7 +407,7 @@ public class VillagerCookGoal extends Goal {
             return;
         }
         VillageManager.parar(villager);
-        ItemStack lena = VillageStorage.quitarLena(level, center, LENA_POR_VIAJE);
+        ItemStack lena = VillageStorage.quitarLena(level, center, LENA_POR_VIAJE, villager);
         if (lena == null || lena.isEmpty()) {
             // Se la han llevado por delante (u otro aparato se comió el excedente): a esperar, sin cocinar de la nada.
             target = null;
@@ -456,7 +456,9 @@ public class VillagerCookGoal extends Goal {
             if (!VillageStorage.esLena(s)) {
                 continue;
             }
+            ItemStack burned = s.copyWithCount(1);
             s.shrink(1);
+            com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft.burned(villager, burned, 1);
             if (s.isEmpty()) {
                 mochila.setItem(i, ItemStack.EMPTY);
             }

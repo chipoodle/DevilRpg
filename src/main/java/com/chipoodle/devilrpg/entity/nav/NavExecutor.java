@@ -48,8 +48,8 @@ public final class NavExecutor {
             return 900;
         }
     }
-    private static final int MAX_REPLANS_PER_DESTINATION = 4;
-    private static final int MAX_RECOVERY_ACTIONS = 6;
+    private static final int MAX_REPLANS_PER_DESTINATION = 8;
+    private static final int MAX_RECOVERY_ACTIONS = 24;
     private static final int REPLAN_COOLDOWN_TICKS = 20;
     private static final int RECOVERY_COOLDOWN_TICKS = 40;
     private static final int MAX_RECOVERY_COOLDOWN_TICKS = 400;
@@ -59,7 +59,7 @@ public final class NavExecutor {
     /**
      * A2 FASE 3 · TOPE DE REINTENTOS POR PRESUPUESTO AGOTADO SIN PROGRESO.
      * Un solo `hitBudget` es INCONCLUYENTE; repetirlo indefinidamente no lo es. Este tope (configurable por
-     * `-Ddevilrpg.nav.budgetRetries`, por defecto 6, acotado 1..20) convierte la repeticion sin progreso en un
+     * `-Ddevilrpg.nav.budgetRetries`, por defecto 10, acotado 1..20) convierte la repeticion sin progreso en un
      * fallo TERMINAL con motivo, que la recuperacion acotada de la Fase 2 puede intentar rearmar.
      */
     private static final int MAX_BUDGET_RETRIES = maxBudgetRetriesPorPropiedad();
@@ -74,12 +74,12 @@ public final class NavExecutor {
     private static int maxBudgetRetriesPorPropiedad() {
         String p = System.getProperty("devilrpg.nav.budgetRetries");
         if (p == null) {
-            return 6;
+            return 10;
         }
         try {
             return Math.max(1, Math.min(20, Integer.parseInt(p.trim())));
         } catch (NumberFormatException e) {
-            return 6;
+            return 10;
         }
     }
     /** Dispersión del objetivo que dispara un recálculo (no se replanifica cada tick). */
@@ -101,9 +101,9 @@ public final class NavExecutor {
     /** Progreso horizontal MINIMO exigido a un objetivo local: si no acerca, no vale como escalon. */
     private static final double PROGRESO_MINIMO_DE_OBJETIVO = 8.0D;
     /** Tope DURO de objetivos locales por mision (acotado; nunca escalona sin fin). */
-    private static final int MAX_ESCALONES_DE_OBJETIVO = 24;
+    private static final int MAX_ESCALONES_DE_OBJETIVO = 64;
     /** Fallos seguidos eligiendo objetivo local antes de rendirse con motivo explicito. */
-    private static final int MAX_FALLOS_DE_ESCALON_DE_OBJETIVO = 6;
+    private static final int MAX_FALLOS_DE_ESCALON_DE_OBJETIVO = 10;
 
     // ============================================================================================
     // A2 Stage 7C · CAPA GLOBAL ACOTADA. El Stage 7B eligio el objetivo local por GEOMETRIA (pasos
@@ -153,7 +153,7 @@ public final class NavExecutor {
      * generica toque la ruta activa, ese rechazo NO es evidencia de que la ruta este bloqueada: se invalida la ruta
      * local y se replanifica. Acotado por si mismo (no se sube MAX_RECOVERY_ACTIONS ni se reintenta sin fin).
      */
-    private static final int MAX_REPLANTEOS_POR_GUARDA = 6;
+    private static final int MAX_REPLANTEOS_POR_GUARDA = 12;
     private static final double ARRIVE_DISTANCE_SQR = 2.25D;
     /**
      * A2 Stage 6E · FIX B · distancia (al cuadrado) dentro de la cual el ejecutor DELEGA una transicion BREAK/BRIDGE
@@ -170,6 +170,10 @@ public final class NavExecutor {
     private NavRoute route;
     private int routeIndex;
     private BlockPos objective;
+    /** El objetivo local procede de una transición BUILD y puede no tener soporte hasta ejecutar esa transición. */
+    private boolean objetivoPermiteConstruccion;
+    /** La transicion del waypoint local: BREAK/BRIDGE son nodos de accion, no celdas de pie. */
+    private NavRoute.Transition objetivoTransicionLocal;
     /**
      * A2 FASE 4 · el objetivo actual es TACTICO (orilla, escape) y NO es la mision. Mientras este activo,
      * llegar a el no puede declarar {@link NavState#ARRIVED}: se vuelve a la mision.
@@ -195,6 +199,7 @@ public final class NavExecutor {
     private int replans;
     private int recoveryActions;
     private long nextPlanAt;
+    private StairBuildResult ultimoResultadoEscalon = StairBuildResult.NO_PROGRESS;
     private long nextRecoveryAt;
     private int recoveryCooldown = RECOVERY_COOLDOWN_TICKS;
 
@@ -231,7 +236,7 @@ public final class NavExecutor {
      */
     private int intentosObjetivoInvalido;
     private double mejorDistObjetivoInvalido = Double.MAX_VALUE;
-    private static final int MAX_INTENTOS_OBJETIVO_INVALIDO = 6;
+    private static final int MAX_INTENTOS_OBJETIVO_INVALIDO = 10;
     /** A2 diagnostico: resumen acotado del ULTIMO plan (una linea). */
     private String lastPlanSummary = "-";
     /** A2 Stage 4K: motivo por el que la exhaucion de presupuesto se enruto a construccion. */
@@ -245,6 +250,12 @@ public final class NavExecutor {
     /** A2 diagnóstico: cuántas veces se ha enviado movimiento al juego y el último destino. */
     private int moveSubmissions;
     private String lastMoveTarget = "-";
+    /** A2 Run22: ultimo comando de movimiento trazado, con cadencia acotada. */
+    private String lastMoveTraceKey = "-";
+    private long lastMoveTraceTick = -1L;
+    private double lastMoveTraceX = Double.NaN;
+    private double lastMoveTraceY = Double.NaN;
+    private double lastMoveTraceZ = Double.NaN;
 
     /** A2 diagnóstico: instantánea acotada para el arnés. */
     public String diag() {
@@ -358,7 +369,7 @@ public final class NavExecutor {
     // ============================================================================================
     public enum FaseEscalon { NOT_STARTED, PLACING, PLACED_VERIFIED, TRAVERSED }
 
-    private static final int MAX_ESCALONES_POR_PLAN = 12;
+    private static final int MAX_ESCALONES_POR_PLAN = 24;
     private static final int ESPERA_ENTRE_ESCALONES = 10;
     /**
      * A2 Stage 6D · FIX 4 · PRESUPUESTO PROPIO DE CONSTRUCCION.
@@ -385,6 +396,8 @@ public final class NavExecutor {
     private boolean construccionAgotada;
     /** A2 Stage 6E · FIX B · nodo de ruta sobre el que se esta actuando (BREAK/BRIDGE) y ultimo resultado real. */
     private BlockPos nodoDeRecuperacion;
+    /** BREAK approach: primer bloque opaco al objetivo, delegado por el mismo RecoveryAction/gate de producción. */
+    private BlockPos nodoDeRecuperacionOverride;
     private String ultimaAccionDeRuta = "-";
     /** A2 Stage 6F · estado del descenso explicito: intentos, fallos, ultimo descrito y ultimo rechazo de candidato. */
     private int intentosDeDescenso;
@@ -579,17 +592,28 @@ public final class NavExecutor {
             return new Descenso(salida, aterrizaje, dx, dy, dz, construido,
                     "el aterrizaje construido no esta verificado por este plan");
         }
-        // CAMINO DE CAIDA: la columna del aterrizaje, desde el nivel del ente hasta el aterrizaje, tiene que estar
-        // libre. Si el propio escalon que el ente pisa la tapa, NO hay descenso posible por mucho que dy <= limite.
-        for (int y = aterrizaje.getY() + 1; y <= yo.getY(); y++) {
-            BlockPos celda = new BlockPos(aterrizaje.getX(), y, aterrizaje.getZ());
-            if (!sinFluidoNiPeligro(celda)
-                    || !mob.level().getBlockState(celda).getCollisionShape(mob.level(), celda).isEmpty()) {
-                return new Descenso(salida, aterrizaje, dx, dy, dz, construido,
-                        "el camino de caida esta bloqueado en y=" + y);
-            }
+        // CAMINO DE CAIDA: la misma regla se reutiliza en el constructor genérico para no colocar
+        // escalones cuyo aterrizaje quedaría bloqueado por un puente/obra del asedio.
+        String bloqueoColumna = rechazoColumnaCaida(aterrizaje, yo);
+        if (bloqueoColumna != null) {
+            return new Descenso(salida, aterrizaje, dx, dy, dz, construido, bloqueoColumna);
         }
         return new Descenso(salida, aterrizaje, dx, dy, dz, construido, null);
+    }
+
+    /**
+     * Devuelve el bloque sólido exacto que obstruye la columna de caída, si existe. Solo se usa para proponer
+     * una ruptura local; el ejecutor vuelve a validar alcance, protección, block entity y dureza antes de picar.
+     */
+    private BlockPos primerBloqueoEnCaminoDeCaida(final BlockPos aterrizaje) {
+        BlockPos yo = mob.blockPosition();
+        for (int y = aterrizaje.getY() + 1; y <= yo.getY(); y++) {
+            BlockPos celda = new BlockPos(aterrizaje.getX(), y, aterrizaje.getZ());
+            if (!mob.level().getBlockState(celda).getCollisionShape(mob.level(), celda).isEmpty()) {
+                return celda;
+            }
+        }
+        return null;
     }
 
     /** Celda sin fluido y sin bloques peligrosos aunque su colisión sea vacía (fuego, lava, zarzas...). */
@@ -599,6 +623,26 @@ public final class NavExecutor {
             return false;
         }
         return !esPeligrosoParaAterrizaje(state);
+    }
+
+    /** Devuelve el rechazo exacto de la columna de caída para un escalón aún no colocado, o null si está libre. */
+    public String rechazoColumnaCaidaParaEscalon(final BlockPos celdaBloque) {
+        if (celdaBloque == null) {
+            return "escalon nulo";
+        }
+        return rechazoColumnaCaida(celdaBloque.above(), mob.blockPosition());
+    }
+
+    private String rechazoColumnaCaida(final BlockPos aterrizaje, final BlockPos origen) {
+        java.util.OptionalInt yBloqueada = NavDropColumnPolicy.primerBloqueoY(
+                aterrizaje.getY(), origen.getY(), y -> {
+                    BlockPos celda = new BlockPos(aterrizaje.getX(), y, aterrizaje.getZ());
+                    return !sinFluidoNiPeligro(celda)
+                            || !mob.level().getBlockState(celda).getCollisionShape(mob.level(), celda).isEmpty();
+                });
+        return yBloqueada.isPresent()
+                ? "el camino de caida esta bloqueado en y=" + yBloqueada.getAsInt()
+                : null;
     }
 
     /** Misma lista de peligros que usa el asedio para no considerar segura una celda sin colisión. */
@@ -876,7 +920,32 @@ public final class NavExecutor {
         }
         // 1) Si hay un escalon pendiente de travesia, NO se construye el siguiente.
         if (escalonActual != null && faseEscalon == FaseEscalon.PLACED_VERIFIED) {
-            boolean pisado = mob.blockPosition().equals(escalonActual.above())
+            BlockPos aterrizajePendiente = escalonActual.above();
+            if (NavStairProgressPolicy.shouldAbandonPendingStep(mob.blockPosition().getY(),
+                    aterrizajePendiente.getY(), planMision.getY(), policies.maxSafeDrop())) {
+                BlockPos abandonado = escalonActual;
+                faseEscalon = FaseEscalon.NOT_STARTED;
+                escalonActual = null;
+                // El ente ya descendio mas alla de este aterrizaje: no se cuenta como travesia, pero
+                // tampoco se le obliga a regresar decenas de bloques para pisar un escalon obsoleto.
+                intentosConstruccion = 0;
+                intentosDeDescenso = 0;
+                fallosMismoEscalon = 0;
+                descensoBloqueado = false;
+                construccionAgotada = false;
+                nextConstruccionAt = ahora;
+                ultimoFalloConstruccion = "escalon pendiente abandonado sin contarlo como travesia: "
+                        + abandonado.toShortString() + " landing=" + aterrizajePendiente.toShortString()
+                        + " mobY=" + mob.blockPosition().getY() + " misionY=" + planMision.getY();
+                if (NavTrace.on()) {
+                    NavTrace.ev("STAIR_ABANDONED", "uuid=" + mob.getUUID()
+                            + " stair=" + abandonado.toShortString()
+                            + " landing=" + aterrizajePendiente.toShortString()
+                            + " pos=" + mob.blockPosition().toShortString()
+                            + " mission=" + planMision.toShortString());
+                }
+                return true;
+            }            boolean pisado = mob.blockPosition().equals(escalonActual.above())
                     && !mob.level().getBlockState(escalonActual).isAir()
                     && ahora > tickUltimaColocacion;
             if (pisado) {
@@ -1028,6 +1097,7 @@ public final class NavExecutor {
     private final java.util.ArrayDeque<BlockPos> etapas = new java.util.ArrayDeque<>();
     /** A2 · identidad de la cadena activa: permite que el envio repetido sea idempotente. */
     private int cadenaActivaFirma;
+    private long ultimoTickDiagRetencionCadena = Long.MIN_VALUE;
     private int cadenaEnviada;
     private int indiceDeEtapa;
     /** A2 · ultima transicion de etapa observada, con indices, coordenadas y motivo. */
@@ -1039,6 +1109,13 @@ public final class NavExecutor {
     private BlockPos misionFinal;
     /** A2 Stage 7B · objetivos locales usados y fallos seguidos eligiendolos (ambos ACOTADOS). */
     private int escalonesDeObjetivo;
+    /** One bounded rearm of the local stair budget after a verified terrain break, per mission. */
+    private boolean rearmadoPorCambioDeTerreno;
+    /** Pending verified terrain change, consumed only if the local stair cap is later reached. */
+    private boolean cambioTerrenoPendienteRearme;
+    private int rearmesLocalesDeEscalera;
+    private static final int MAX_REARMES_LOCALES_DE_ESCALERA = 2;
+    private String ultimoStairFallbackDiag = "";
     private int fallosDeEscalonDeObjetivo;
     /** A2 Stage 7B · ultimo escalon local elegido (o el motivo exacto por el que no hubo ninguno). */
     private String ultimoEscalonDeObjetivo = "-";
@@ -1092,6 +1169,25 @@ public final class NavExecutor {
         if (firma == cadenaActivaFirma) {
             return; // IDEMPOTENTE: mismo contenido -> no se toca el progreso ni se reordena nada
         }
+        // El punto de aproximacion se deriva del rumbo ACTUAL del asaltante y puede desplazarse mientras camina.
+        // No sustituir una etapa activa por ese nuevo punto: eso convierte el destino en una meta movil.
+        BlockPos raiz = cadena.get(cadena.size() - 1).immutable();
+        boolean mismaRaiz = raiz.equals(misionRaiz) && misionRaiz != null;
+        boolean soloInterior = cadena.size() == 1;
+        if (NavMissionChainPolicy.retainActiveApproachChain(mismaRaiz, objective != null,
+                !etapas.isEmpty(), soloInterior)) {
+            long ahora = mob.level().getGameTime();
+            if (NavTrace.on() && (ultimoTickDiagRetencionCadena == Long.MIN_VALUE
+                    || ahora - ultimoTickDiagRetencionCadena >= 100L)) {
+                NavTrace.ev("MISSION_CHAIN_RETAINED", "uuid=" + mob.getUUID()
+                        + " root=" + raiz.toShortString()
+                        + " current=" + objective.toShortString()
+                        + " incoming=" + cadena.get(0).toShortString()
+                        + " remainingStages=" + etapas.size());
+                ultimoTickDiagRetencionCadena = ahora;
+            }
+            return;
+        }
         cadenaActivaFirma = firma;
         cadenaEnviada = cadena.size();
         etapas.clear();
@@ -1101,8 +1197,6 @@ public final class NavExecutor {
         indiceDeEtapa = 0;
         // A2 FASE 2 · la RAIZ de la mision es la ULTIMA etapa (el interior). Mientras la raiz no cambie, las
         // etapas intermedias son el MISMO asedio: no reinician el contador de rearmes ni borran su motivo.
-        BlockPos raiz = cadena.get(cadena.size() - 1).immutable();
-        boolean mismaRaiz = raiz.equals(misionRaiz) && misionRaiz != null;
         misionRaiz = raiz;
         boolean enCadenaAnterior = enCadenaDeEtapas;
         boolean noResetAnterior = noReiniciarRearmes;
@@ -1144,6 +1238,7 @@ public final class NavExecutor {
         BlockPos anterior = objective;
         BlockPos siguiente = etapas.pollFirst();
         objective = siguiente;
+        objetivoPermiteConstruccion = false;
         indiceDeEtapa++;
         // A2 Stage 7B · la nueva ETAPA pasa a ser la MISION FINAL y el escalonado local se recalcula desde cero.
         misionFinal = siguiente.immutable();
@@ -1151,6 +1246,8 @@ public final class NavExecutor {
         // sincroniza con la etapa nueva, sigue comparando contra la primera etapa.
         setPlanMision(siguiente);
         escalonesDeObjetivo = 0;
+        rearmadoPorCambioDeTerreno = false;
+        cambioTerrenoPendienteRearme = false;
         fallosDeEscalonDeObjetivo = 0;
         // A2 REMEDIACIÓN 2 · una etapa NUEVA y valida reinicia solo el contador de objetivo local invalido.
         // El presupuesto duro y los rearmes siguen scoped a la misma mision.
@@ -1218,6 +1315,20 @@ public final class NavExecutor {
             return false;
         }
         return NavObstruction.hasSolidFace(mob.level(), c.below());
+    }
+
+    /** Primer bloque con colisión entre los ojos del mob y el centro del objetivo BREAK. */
+    private BlockPos primerBloqueoEnLineaDeVision(final BlockPos objetivo) {
+        if (objetivo == null) {
+            return null;
+        }
+        net.minecraft.world.phys.BlockHitResult hit = mob.level().clip(
+                new net.minecraft.world.level.ClipContext(mob.getEyePosition(), objetivo.getCenter(),
+                        net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                        net.minecraft.world.level.ClipContext.Fluid.NONE, mob));
+        return hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK
+                ? hit.getBlockPos().immutable()
+                : null;
     }
 
     /**
@@ -1305,10 +1416,7 @@ public final class NavExecutor {
 
     /** A2 Stage 7C · un waypoint de la ruta global es pisable si su nodo es una celda de PIE real. */
     private long huellaTerreno(BlockPos p) {
-        long h = mob.level().getBlockState(p).hashCode();
-        h = h * 31L + mob.level().getBlockState(p.above()).hashCode();
-        h = h * 31L + mob.level().getBlockState(p.below()).hashCode();
-        return h;
+        return NavPlanner.huellaTerreno(mob.level(), p, policies.maxSafeDrop());
     }
 
     static boolean esWaypointDePie(final NavRoute.Node n) {
@@ -1323,9 +1431,11 @@ public final class NavExecutor {
      * el llamante informa el motivo y termina, en vez de planificar a un objetivo imposible.
      * <p>
      * A2 Stage 7C · el tramo ya NO se elige por geometria: se elige sobre la RUTA GLOBAL acotada. El objetivo local
-     * es el ULTIMO waypoint de pie de esa ruta que quepa en la ventana local; la ventana local no cambia.
+     * es el ULTIMO waypoint de pie o transicion BUILD seleccionable que quepa en la ventana local; la ventana no cambia.
      */
     private BlockPos elegirObjetivoLocal() {
+        objetivoPermiteConstruccion = false;
+        objetivoTransicionLocal = null;
         BlockPos mision = misionDePie();
         if (mision == null) {
             ultimoEscalonDeObjetivo = "sin mision utilizable (mision="
@@ -1333,38 +1443,148 @@ public final class NavExecutor {
             return null;
         }
         BlockPos yo = mob.blockPosition();
-        if (dentroDeLaVentana(yo, mision)) {
+        if (mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az) {
+            // Un escalon verificado pero aun no atravesado es el siguiente objetivo local obligatorio.
+            // No se debe abandonar por un waypoint global distinto en ticks posteriores al de colocacion.
+            az.confirmarTravesiaEscalonPendiente();
+            BlockPos escalonPendiente = az.objetivoSobreUltimoEscalon();
+            if (escalonPendiente != null) {
+                boolean dentro = dentroDeLaVentana(yo, escalonPendiente);
+                boolean cargado = mob.level().hasChunkAt(escalonPendiente);
+                boolean protegido = policies.isProtected(escalonPendiente);
+                boolean piesAire = cargado && mob.level().getBlockState(escalonPendiente).isAir();
+                boolean cabezaAire = cargado && mob.level().getBlockState(escalonPendiente.above()).isAir();
+                boolean soporte = cargado
+                        && NavObstruction.hasSolidFace(mob.level(), escalonPendiente.below());
+                boolean pieValido = cargado && !protegido && piesAire && cabezaAire && soporte;
+                if (dentro && pieValido) {
+                    objetivoPermiteConstruccion = false;
+                    ultimoEscalonDeObjetivo = "mantener escalon pendiente hasta travesia real "
+                            + escalonPendiente.toShortString();
+                    if (NavTrace.on()) {
+                        NavTrace.ev("STAIR_PENDING_WAYPOINT_SELECTED", "uuid=" + mob.getUUID()
+                                + " target=" + escalonPendiente.toShortString()
+                                + " step=" + escalonPendiente.below().toShortString()
+                                + " pos=" + yo.toShortString());
+                    }
+                    return escalonPendiente;
+                }
+                String diagnostico = "escalon pendiente rechazado target=" + escalonPendiente.toShortString()
+                        + " dentro=" + dentro + " cargado=" + cargado + " protegido=" + protegido
+                        + " piesAire=" + piesAire + " cabezaAire=" + cabezaAire + " soporte=" + soporte
+                        + " piesState=" + (cargado ? mob.level().getBlockState(escalonPendiente) : "chunk-unloaded")
+                        + " cabezaState=" + (cargado ? mob.level().getBlockState(escalonPendiente.above()) : "chunk-unloaded")
+                        + " soporteState=" + (cargado ? mob.level().getBlockState(escalonPendiente.below()) : "chunk-unloaded");
+                if (!diagnostico.equals(ultimoEscalonDeObjetivo) && NavTrace.on()) {
+                    NavTrace.ev("STAIR_PENDING_WAYPOINT_REJECTED", "uuid=" + mob.getUUID() + " " + diagnostico);
+                }
+                ultimoEscalonDeObjetivo = diagnostico;
+            }
+        }
+        int desnivelDirecto = mision.getY() - yo.getY();
+        boolean objetivoLocalFisicamenteAlcanzable =
+                NavWaypointWindowPolicy.directoAlcanzable(desnivelDirecto, policies.maxSafeDrop());
+        if (dentroDeLaVentana(yo, mision) && objetivoLocalFisicamenteAlcanzable) {
+            if (mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity) {
+                BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo,
+                        "mision dentro de ventana local y desnivel ejecutable");
+                if (escalon != null) {
+                    return escalon;
+                }
+            }
             return mision;
         }
+        if (dentroDeLaVentana(yo, mision) && !objetivoLocalFisicamenteAlcanzable) {
+            ultimoEscalonDeObjetivo = "objetivo dentro de ventana pero desnivel no ejecutable local (dy="
+                    + desnivelDirecto + ", caidaSegura=" + policies.maxSafeDrop()
+                    + "); se exige ruta global";
+            if (NavTrace.on()) {
+                NavTrace.ev("LOCAL_OBJECTIVE_REQUIRES_GLOBAL_ROUTE", "uuid=" + mob.getUUID()
+                        + " pos=" + yo.toShortString() + " mission=" + mision.toShortString()
+                        + " dy=" + desnivelDirecto + " maxSafeDrop=" + policies.maxSafeDrop());
+            }
+        }
         NavPlanner.GlobalResult global = rutaGlobalHacia(mision);
+        // El planificador GLOBAL puede agotar su presupuesto antes de producir un waypoint local, aunque el
+        // descenso requiera una escalera. El fallback anterior solo se ejecutaba cuando agotaba el presupuesto
+        // LOCAL; por eso un atacante en un acantilado quedaba en PLANNING sin llegar a construir.
+        if (global.hitBudget()
+                && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az) {
+            boolean escalonColocado = az.construirEscalonHacia(mision);
+            if (escalonColocado) {
+                BlockPos escalonTransitable = az.objetivoSobreUltimoEscalon();
+                if (escalonTransitable != null && dentroDeLaVentana(yo, escalonTransitable)
+                        && esPieValido(escalonTransitable)) {
+                    globalCache = null;
+                    globalMision = null;
+                    globalDesde = null;
+                    objetivoPermiteConstruccion = false;
+                    ultimoEscalonDeObjetivo = "fallback por presupuesto GLOBAL: escalon lateral colocado y verificado "
+                            + escalonTransitable.toShortString() + " hacia " + mision.toShortString();
+                    com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] A2 GLOBAL-BUDGET-STAIR #{} objetivo={} escalon={}",
+                            mob.getId(), mision.toShortString(), escalonTransitable.toShortString());
+                    return escalonTransitable;
+                }
+                ultimoEscalonDeObjetivo = "fallback por presupuesto GLOBAL coloco escalon pero no hay celda de pies local valida";
+            } else {
+                String diagnostico = "fallback GLOBAL sin escalon: objetivo=" + mision.toShortString()
+                        + " pos=" + yo.toShortString() + " decision={" + az.decisionDescensoDiag()
+                        + "} escalera={" + az.escaleraDiag() + "}";
+                if (!diagnostico.equals(ultimoEscalonDeObjetivo)) {
+                    com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] A2 GLOBAL-BUDGET-STAIR-REJECT #{} {}",
+                            mob.getId(), diagnostico);
+                }
+                ultimoEscalonDeObjetivo = diagnostico;
+            }
+        }
         if (global.route().isEmpty()) {
+            if (!global.hitBudget()) {
+                BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo, "sin ruta global");
+                if (escalon != null) {
+                    return escalon;
+                }
+            }
             ultimoEscalonDeObjetivo = "sin ruta global hacia " + mision.toShortString() + ": " + global.reason()
                     + " frente=" + global.frente().toShortString();
             return null;
         }
         BlockPos objetivo = null;
+        boolean objetivoConstruible = false;
+        NavRoute.Transition objetivoTransicion = null;
         BlockPos previoRuta = null;
         boolean descartados = false;
         for (NavRoute.Node n : global.route().nodes()) {
             if (n.transition() == NavRoute.Transition.DROP && previoRuta != null
-                    && exclusionesDescenso.excluida(NavDropExclusionPolicy.clave(
+                    && (exclusionesDescenso.excluida(NavDropExclusionPolicy.clave(
                             previoRuta.getX(), previoRuta.getY(), previoRuta.getZ(),
                             n.pos().getX(), n.pos().getY(), n.pos().getZ()),
-                            huellaTerreno(n.pos()))) {
+                            huellaTerreno(n.pos()))
+                        || exclusionesDescenso.excluida(NavDropExclusionPolicy.claveDestino(
+                                n.pos().getX(), n.pos().getY(), n.pos().getZ()),
+                                huellaTerreno(n.pos())))) {
                 previoRuta = n.pos();
                 continue;
             }
             previoRuta = n.pos();
-            if (!esWaypointDePie(n)) {
+            boolean requiereConstruccion = NavClimbPolicy.requiereConstruccion(n.transition());
+            boolean accionBreak = n.transition() == NavRoute.Transition.BREAK;
+            boolean accionBridge = n.transition() == NavRoute.Transition.BRIDGE;
+            if (!NavClimbPolicy.esWaypointSeleccionable(n.transition())) {
                 continue;
             }
-            if (!dentroDeLaVentana(yo, n.pos())) {
+            // BUILD/BREAK/BRIDGE son celdas de ACCION, no posiciones de pie: el ejecutor coloca/rompe/puentea
+            // sobre ese nodo concreto. No se deben descartar con esPieValido(), que exige aire bajo los pies.
+            // BREAK ademas se revalida contra la puerta real de minado (proteccion, bloque especial y block entity).
+            BlockPos waypoint = n.pos();
+            if (!dentroDeLaVentana(yo, waypoint)) {
                 if (n.transition() == NavRoute.Transition.DROP
-                        && NavWaypointWindowPolicy.aceptable(n.pos().getX() - yo.getX(), n.pos().getZ() - yo.getZ(),
-                                n.pos().getY() - yo.getY(), true, HORIZONTAL_RANGE - MARGEN_DE_VENTANA,
+                        && NavWaypointWindowPolicy.aceptable(waypoint.getX() - yo.getX(), waypoint.getZ() - yo.getZ(),
+                                waypoint.getY() - yo.getY(), true, HORIZONTAL_RANGE - MARGEN_DE_VENTANA,
                                 VERTICAL_RANGE, policies.maxSafeDrop())
-                        && esPieValido(n.pos())) {
-                    objetivo = n.pos();
+                        && esPieValido(waypoint)) {
+                    objetivo = waypoint;
+                    objetivoConstruible = false;
+                    objetivoTransicion = n.transition();
                     continue;
                 }
                 continue; // keep scanning: a later in-window node may still be the valid local waypoint
@@ -1379,13 +1599,36 @@ public final class NavExecutor {
             // `plans` congelado y la ruta global (51 nodos) intacta. Se valida la celda contra el mundo ACTUAL y
             // se salta a la siguiente de la ruta; si ninguna vale, la ruta cacheada es obsoleta y se invalida.
             // ==========================================================================================
-            if (!esPieValido(n.pos())) {
+            if (accionBreak && (!(mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az)
+                    || !az.puedeRomperNodoDeNavegacion(waypoint)
+                    || !NavBreakReachPolicy.reachable(yo.getY(), waypoint.getY(),
+                            mob.distanceToSqr(waypoint.getX() + 0.5D, waypoint.getY() + 0.5D,
+                                    waypoint.getZ() + 0.5D), ALCANCE_DE_ACCION_SQR))) {
+                descartados = true;
+                if (NavTrace.on()) {
+                    NavTrace.ev("VERTICAL_TRANSITION_REJECTED", "uuid=" + mob.getUUID()
+                            + " tick=" + mob.level().getGameTime() + " transition=BREAK target="
+                            + waypoint.toShortString() + " feetY=" + yo.getY() + " reason=OUT_OF_REACH");
+                }
+                continue;
+            }
+            if (!requiereConstruccion && !accionBreak && !accionBridge && !esPieValido(waypoint)) {
                 descartados = true;
                 continue;
             }
-            objetivo = n.pos();
+            objetivo = waypoint;
+            objetivoConstruible = requiereConstruccion;
+            objetivoTransicion = n.transition();
         }
         if (objetivo == null) {
+            if (!global.hitBudget()) {
+                BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo,
+                        "ruta global sin waypoint de pie valido");
+                if (escalon != null) {
+                    return escalon;
+                }
+            }
+            objetivoPermiteConstruccion = false;
             globalCache = null;
             globalDesde = null;
             ultimoEscalonDeObjetivo = "ruta global sin waypoint de pie VALIDO dentro de la ventana desde "
@@ -1394,33 +1637,181 @@ public final class NavExecutor {
             return null;
         }
         if (objetivo.equals(yo)) {
+            if (!global.hitBudget()) {
+                BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo,
+                        "waypoint global coincide con posicion actual");
+                if (escalon != null) {
+                    return escalon;
+                }
+            }
+            objetivoPermiteConstruccion = false;
             ultimoEscalonDeObjetivo = "el primer waypoint global es la celda actual (" + yo.toShortString()
                     + ") global={" + global.summary() + "}";
             return null;
         }
+        if (!objetivoConstruible
+                && objetivo.getY() < yo.getY() - policies.maxSafeDrop()
+                && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az) {
+            if (NavTrace.on()) {
+                String diag = "objetivo=" + objetivo.toShortString() + " mision=" + mision.toShortString()
+                        + " buildable=" + objetivoConstruible + " local=" + escalonesDeObjetivo
+                        + "/" + MAX_ESCALONES_DE_OBJETIVO + " fallos=" + fallosDeEscalonDeObjetivo
+                        + "/" + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO
+                        + " anchor=" + az.escaleraDiag();
+                if (!diag.equals(ultimoStairFallbackDiag)) {
+                    ultimoStairFallbackDiag = diag;
+                    NavTrace.ev("A2_STAIR_FALLBACK_DECISION", "uuid=" + mob.getUUID()
+                            + " tick=" + mob.level().getGameTime() + " pos=" + yo.toShortString() + " " + diag);
+                }
+            }
+            BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo,
+                    "waypoint global es la mision y exige escalera");
+            if (NavTrace.on()) {
+                NavTrace.ev("A2_STAIR_FALLBACK_RESULT", "uuid=" + mob.getUUID()
+                        + " tick=" + mob.level().getGameTime()
+                        + " result=" + (escalon == null ? "null" : escalon.toShortString())
+                        + " stair={" + az.escaleraDiag() + "}");
+            }
+            if (escalon != null) {
+                return escalon;
+            }
+        }
+        objetivoPermiteConstruccion = objetivoConstruible;
+        objetivoTransicionLocal = objetivoTransicion;
         ultimoEscalonDeObjetivo = "global " + (global.alcanzoMision() ? "ALCANZA la mision" : "solo frente")
                 + " -> waypoint local " + objetivo.toShortString()
-                + " (rutaGlobal=" + global.route().length() + " exp=" + global.expansions() + ")";
+                + " (transicion=" + objetivoTransicion + " build=" + objetivoPermiteConstruccion
+                + " rutaGlobal=" + global.route().length() + " exp=" + global.expansions() + ")";
         return objetivo;
+    }
+
+    /**
+     * Ultimo recurso acotado cuando la ruta global no ofrece ningun waypoint local utilizable aunque no haya
+     * agotado el presupuesto. Solo construye si AggressiveZombieEntity confirma que la geometria exige escalera.
+     */
+    private BlockPos intentarConstruirEscalonSinWaypoint(final BlockPos mision, final BlockPos yo,
+            final String causa) {
+        if (NavStairTrace.on()) {
+            NavStairTrace.ev("STAIR_PIPELINE_ENTER", "uuid=" + mob.getUUID() + " pos="
+                    + yo.toShortString() + " mision=" + mision.toShortString() + " causa={" + causa
+                    + "} local=" + escalonesDeObjetivo + "/" + MAX_ESCALONES_DE_OBJETIVO
+                    + " fallos=" + fallosDeEscalonDeObjetivo + "/" + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO);
+        }
+        if (!(mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az)) {
+            return null;
+        }
+        StairBuildResult stairOutcome = az.construirEscalonResultado(mision);
+        ultimoResultadoEscalon = stairOutcome;
+        if (stairOutcome != StairBuildResult.STAIR_PLACED) {
+            if (stairOutcome == StairBuildResult.ACCESS_CLEARED) {
+                globalCache = null;
+                globalMision = null;
+                globalDesde = null;
+                objetivoPermiteConstruccion = false;
+                ultimoEscalonDeObjetivo = causa + ": ACCESS_CLEARED; reintento acotado sin consumir escalon";
+            }
+            if (NavStairTrace.on()) {
+                NavStairTrace.ev("STAIR_PIPELINE_RETURN", "uuid=" + mob.getUUID()
+                        + " outcome=" + stairOutcome + " causa={" + causa + "}");
+            }
+            return null;
+        }
+        BlockPos escalonTransitable = az.objetivoSobreUltimoEscalon();
+        if (NavStairTrace.on()) {
+            NavStairTrace.ev("STAIR_PIPELINE_PENDING", "uuid=" + mob.getUUID()
+                    + " transitable=" + escalonTransitable + " stair={" + az.escaleraDiag() + "}");
+        }
+        if (escalonTransitable == null) {
+            // construirEscalonHacia tambien puede haber despejado una obstruccion minable del corredor.
+            // No hay escalon pendiente: invalidar la ruta para recalcular desde el mundo ya modificado.
+            globalCache = null;
+            globalMision = null;
+            globalDesde = null;
+            objetivoPermiteConstruccion = false;
+            if (NavTerrainRearmPolicy.shouldResetLocalStairBudget(true, true,
+                    rearmesLocalesDeEscalera, MAX_REARMES_LOCALES_DE_ESCALERA)) {
+                escalonesDeObjetivo = 0;
+                fallosDeEscalonDeObjetivo = 0;
+                rearmesLocalesDeEscalera++;
+                // The world changed at a verified access clear: allow the bounded terminal rearm
+                // budget to be used again. This is still bounded by MAX_REARMES_LOCALES_DE_ESCALERA.
+                rearmesTerminales = 0;
+                nextRearmAt = 0L;
+                falloDefinitivoTerminal = false;
+                rearmadoPorCambioDeTerreno = false;
+                cambioTerrenoPendienteRearme = true;
+                ultimoEscalonDeObjetivo = "rearme local tras acceso de escalera despejado ("
+                        + rearmesLocalesDeEscalera + "/" + MAX_REARMES_LOCALES_DE_ESCALERA + ")";
+            } else {
+                ultimoEscalonDeObjetivo = causa + ": obstruccion de acceso despejada; replanificar ruta global";
+            }
+            return null;
+        }
+        if (!dentroDeLaVentana(yo, escalonTransitable) || !esPieValido(escalonTransitable)) {
+            globalCache = null;
+            globalMision = null;
+            globalDesde = null;
+            ultimoEscalonDeObjetivo = causa + ": escalon verificado sin celda de pies local valida";
+            return null;
+        }
+        globalCache = null;
+        globalMision = null;
+        globalDesde = null;
+        objetivoPermiteConstruccion = false;
+        ultimoEscalonDeObjetivo = causa + ": escalon verificado " + escalonTransitable.toShortString()
+                + " hacia " + mision.toShortString();
+        com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] A2 NO-WAYPOINT-STAIR #{} causa={} objetivo={} escalon={}",
+                mob.getId(), causa, mision.toShortString(), escalonTransitable.toShortString());
+        return escalonTransitable;
     }
 
     /**
      * A2 Stage 7B · aplica el escalonado: deja {@code objective} en el objetivo local acotado. Devuelve si hay un
      * objetivo local UTILIZABLE. Lleva sus propios contadores (escalones y fallos seguidos), ambos acotados.
      */
+    private boolean esAccionLocalValida(BlockPos destino) {
+        if (destino == null) {
+            return false;
+        }
+        boolean bridge = objetivoTransicionLocal == NavRoute.Transition.BRIDGE;
+        boolean romper = objetivoTransicionLocal == NavRoute.Transition.BREAK;
+        boolean puedeRomper = romper
+                && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az
+                && az.puedeRomperNodoDeNavegacion(destino);
+        return NavObjectivePolicy.accionLocalValida(bridge, romper, puedeRomper);
+    }
+
     private boolean escalonarObjetivoLocal() {
+        if (NavTrace.on()) {
+            NavTrace.ev("A2_LOCAL_STAIR_ENTER", "uuid=" + mob.getUUID() + " tick="
+                    + mob.level().getGameTime() + " local=" + escalonesDeObjetivo
+                    + "/" + MAX_ESCALONES_DE_OBJETIVO + " fallos=" + fallosDeEscalonDeObjetivo
+                    + "/" + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO + " mision=" + misionFinal
+                    + " objetivo=" + objective);
+        }
         if (misionFinal == null) {
             return false;
         }
         if (escalonesDeObjetivo >= MAX_ESCALONES_DE_OBJETIVO) {
             fallosDeEscalonDeObjetivo = MAX_FALLOS_DE_ESCALON_DE_OBJETIVO;
+            if (NavTrace.on()) {
+                NavTrace.ev("A2_LOCAL_STAIR_WRITE", "uuid=" + mob.getUUID() + " tick="
+                        + mob.level().getGameTime() + " op=SET_FALLOS_MAX old=?"
+                        + " new=" + fallosDeEscalonDeObjetivo + " reason=LOCAL_LIMIT_AT_ENTRY");
+            }
             ultimoEscalonDeObjetivo = "tope de escalones locales alcanzado (" + MAX_ESCALONES_DE_OBJETIVO
                     + ") hacia " + misionFinal.toShortString();
             return false;
         }
         BlockPos siguiente = elegirObjetivoLocal();
+        boolean siguientePermiteConstruccion = objetivoPermiteConstruccion;
         if (siguiente == null) {
             fallosDeEscalonDeObjetivo++;
+            if (NavTrace.on()) {
+                NavTrace.ev("A2_LOCAL_STAIR_WRITE", "uuid=" + mob.getUUID() + " tick="
+                        + mob.level().getGameTime() + " op=INC_FAIL new="
+                        + fallosDeEscalonDeObjetivo + " reason=NO_LOCAL_OBJECTIVE");
+            }
             ultimoEscalonDeObjetivo = ultimoEscalonDeObjetivo + " [intento " + fallosDeEscalonDeObjetivo + "/"
                     + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO + "]";
             return false;
@@ -1429,12 +1820,36 @@ public final class NavExecutor {
         // A2 Stage 7D · la idempotencia solo vale si el objetivo SIGUE siendo utilizable. Antes bastaba con que la
         // celda coincidiera: si el mundo la habia dejado solida, se devolvia "true" sin cambiar nada y el llamante
         // salia sin planificar en cada tick (bucle medido en `a2n-20261017-121902`).
-        if (siguiente.equals(objective) && esPieValido(objective)
+        boolean accionLocalValida = esAccionLocalValida(objective);
+        if (siguiente.equals(objective)
+                && (esPieValido(objective) || siguientePermiteConstruccion || accionLocalValida)
                 && dentroDeLaVentana(mob.blockPosition(), objective)) {
-            return true; // el escalon ya estaba puesto Y sigue siendo valido: no se toca el progreso
+            return true; // el waypoint de pie/accion sigue siendo valido: no se reinicia la ruta ni su transicion
         }
         escalonesDeObjetivo++;
+        if (!NavLocalObjectiveProgressPolicy.aceptar(mob.blockPosition().getY(),
+                misionFinal.getY(), siguiente.getY(),
+                mob.getX(), mob.getZ(),
+                misionFinal.getX() + 0.5D, misionFinal.getZ() + 0.5D,
+                siguiente.getX() + 0.5D, siguiente.getZ() + 0.5D,
+                objetivoTransicionLocal != null && objetivoTransicionLocal != NavRoute.Transition.WALK,
+                mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az
+                        && az.objetivoSobreUltimoEscalon() != null)) {
+            escalonesDeObjetivo--;
+            fallosDeEscalonDeObjetivo++;
+            ultimoEscalonDeObjetivo = "candidato local sin progreso vertical: pos="
+                    + mob.blockPosition().toShortString() + " mision=" + misionFinal.toShortString()
+                    + " candidato=" + siguiente.toShortString() + " dy="
+                    + (siguiente.getY() - mob.blockPosition().getY());
+            return false;
+        }
+        if (NavTrace.on()) {
+            NavTrace.ev("A2_LOCAL_STAIR_WRITE", "uuid=" + mob.getUUID() + " tick="
+                    + mob.level().getGameTime() + " op=INC_STEP new=" + escalonesDeObjetivo
+                    + " objective=" + siguiente);
+        }
         objective = siguiente;
+        objetivoPermiteConstruccion = siguientePermiteConstruccion;
         plannedFrom = null;
         route = null;
         routeIndex = 0;
@@ -1456,6 +1871,7 @@ public final class NavExecutor {
     public String objetivoLocalDiag() {
         return "mision=" + (misionFinal == null ? "-" : misionFinal.toShortString())
                 + " objetivo=" + (objective == null ? "-" : objective.toShortString())
+                + " buildable=" + objetivoPermiteConstruccion
                 + " escalones=" + escalonesDeObjetivo + "/" + MAX_ESCALONES_DE_OBJETIVO
                 + " fallosEscalon=" + fallosDeEscalonDeObjetivo + "/" + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO
                 + " expGlobal=" + globalExpansionesTotal
@@ -1562,6 +1978,7 @@ public final class NavExecutor {
         // tick de llegada la retomaria en bucle.
         if (objective == null || !objective.equals(immutable)) {
             objective = immutable;
+            objetivoPermiteConstruccion = false;
             plannedFrom = null;
             route = null;
             routeIndex = 0;
@@ -1598,6 +2015,7 @@ public final class NavExecutor {
         }
         objetivoTactico = false;
         objective = misionFinal;
+        objetivoPermiteConstruccion = false;
         plannedFrom = null;
         route = null;
         routeIndex = 0;
@@ -1631,8 +2049,14 @@ public final class NavExecutor {
      * invalida la ruta/plan en curso para que, al terminar el combate, el ejecutor replanifique desde la
      * posición real y no avance nodos por un movimiento que ordenó otro goal.
      */
-    public void suspendForCombat() {
-        route = null;
+    /** Tactical retreat owns movement for this tick; do not clear the mission route. */
+    public void suspendMovementForRetreat() {
+        if (mob != null) {
+            mob.getNavigation().stop();
+        }
+    }
+
+    public void suspendForCombat() {        route = null;
         routeIndex = 0;
         plannedFrom = null;
         lastRouteSignature = 0;
@@ -1667,16 +2091,47 @@ public final class NavExecutor {
         return motivoFalloTerminal;
     }
 
-    public void setObjective(BlockPos target) {
-        // A2 Stage 6A · la MISION del plan de construccion es SIEMPRE el objetivo fijado. Medido en
+    /**
+     * Village occupation must be authoritative: discard any retained assault stage/chain before
+     * assigning the conquered-village interior.
+     */
+    public void enterOccupationObjective(BlockPos target) {
+        if (target == null) {
+            return;
+        }
+        etapas.clear();
+        enCadenaDeEtapas = false;
+        cadenaActivaFirma = 0;
+        objective = null;
+        objetivoPermiteConstruccion = false;
+        plannedFrom = null;
+        route = null;
+        routeIndex = 0;
+        globalCache = null;
+        globalDesde = null;
+        objetivoTactico = false;
+        // Conquest is a genuine mission change: allow one bounded fresh occupation attempt.
+        rearmesTerminales = 0;
+        nextRearmAt = 0L;
+        falloDefinitivoTerminal = false;
+        escalonesDeObjetivo = 0;
+        fallosDeEscalonDeObjetivo = 0;
+        replans = 0;
+        state = NavState.PLANNING;
+        setObjective(target);
+    }
+
+    public void setObjective(BlockPos target) {        // A2 Stage 6A · la MISION del plan de construccion es SIEMPRE el objetivo fijado. Medido en
         // 2n-20261016-122549: planMision seguia null porque el arnes llama a setObjective directamente, asi
         // que el cableado desde la entidad nunca se ejecutaba y el plan de construccion jamas arrancaba.
         if (target == null) {
             return;
         }
         BlockPos immutable = target.immutable();
-        // A2 FASE 4 · un objetivo de MISION desactiva el modo tactico.
-        this.objetivoTactico = false;
+        // Solo una mision nueva cancela la prioridad tactica; reenviar la misma mision no debe cancelar la orilla temporal.
+        if (!NavTacticalObjectivePolicy.preserveTacticalObjective(this.objetivoTactico, immutable.equals(this.misionFinal))) {
+            this.objetivoTactico = false;
+        }
         if (!enCadenaDeEtapas) {
             this.misionRaiz = immutable;
         }
@@ -1695,6 +2150,7 @@ public final class NavExecutor {
                 // La mision nueva manda: aunque el movimiento sea corto, el planificador no puede
                 // seguir apuntando al objetivo anterior.
                 this.objective = immutable;
+                this.objetivoPermiteConstruccion = false;
                 this.plannedFrom = null;
                 this.route = null;
                 this.routeIndex = 0;
@@ -1720,6 +2176,9 @@ public final class NavExecutor {
             intentosObjetivoInvalido = 0;
             mejorDistObjetivoInvalido = Double.MAX_VALUE;
             escalonesDeObjetivo = 0;
+        rearmadoPorCambioDeTerreno = false;
+        cambioTerrenoPendienteRearme = false;
+            rearmesLocalesDeEscalera = 0;
             fallosDeEscalonDeObjetivo = 0;
             ultimoEscalonDeObjetivo = "-";
             misionEnPieCalculada = false;
@@ -1733,6 +2192,7 @@ public final class NavExecutor {
         lastSubmissionTick = mob.level().getGameTime();
         if (objective == null) {
             objective = immutable;
+            objetivoPermiteConstruccion = false;
             plannedFrom = null;
             replans = 0;
             recoveryActions = 0;
@@ -1755,6 +2215,7 @@ public final class NavExecutor {
         if (objective.distToCenterSqr(immutable.getX() + 0.5D, immutable.getY() + 0.5D,
                 immutable.getZ() + 0.5D) > OBJECTIVE_MOVE_THRESHOLD_SQR) {
             objective = immutable;
+            objetivoPermiteConstruccion = false;
             plannedFrom = null;
             state = NavState.PLANNING;
             nextPlanAt = 0L;
@@ -1767,6 +2228,7 @@ public final class NavExecutor {
     /** Abandona el objetivo y para el movimiento. */
     public void clearObjective() {
         objective = null;
+        objetivoPermiteConstruccion = false;
         objetivoTactico = false;
         rearmesTerminales = 0;
         nextRearmAt = 0L;
@@ -1781,6 +2243,8 @@ public final class NavExecutor {
         // A2 Stage 7B · sin objetivo no hay mision final ni escalonado que conservar.
         misionFinal = null;
         escalonesDeObjetivo = 0;
+        rearmadoPorCambioDeTerreno = false;
+        cambioTerrenoPendienteRearme = false;
         fallosDeEscalonDeObjetivo = 0;
         ultimoEscalonDeObjetivo = "-";
         route = null;
@@ -1857,6 +2321,8 @@ public final class NavExecutor {
         if (d < mejorDistMision - PROGRESO_MINIMO_DE_OBJETIVO) {
             mejorDistMision = d;
             escalonesDeObjetivo = 0;
+        rearmadoPorCambioDeTerreno = false;
+        cambioTerrenoPendienteRearme = false;
             ultimoEscalonDeObjetivo = "progreso verificado en tick: dMision="
                     + String.format(java.util.Locale.ROOT, "%.1f", d) + " -> contador de escalones reiniciado";
         }
@@ -2059,7 +2525,25 @@ public final class NavExecutor {
 
         double distSqr = mob.distanceToSqr(objective.getX() + 0.5D, objective.getY() + 0.5D,
                 objective.getZ() + 0.5D);
-        if (distSqr <= ARRIVE_DISTANCE_SQR) {
+        com.chipoodle.devilrpg.entity.AggressiveZombieEntity zombiePendiente =
+                mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az ? az : null;
+        BlockPos escalonPendiente = zombiePendiente == null ? null : zombiePendiente.objetivoSobreUltimoEscalon();
+        boolean objetivoEsEscalonPendiente = escalonPendiente != null && objective.equals(escalonPendiente);
+        boolean escalonPendienteOcupado = objetivoEsEscalonPendiente
+                && zombiePendiente.escalonPendienteOcupado();
+        boolean proximidadPuedeConsumirObjetivo = NavArrivalPolicy.proximityArrivalAllowed(
+                objetivoEsEscalonPendiente, escalonPendienteOcupado);
+        // A2 RUN20: no consumir un escalon pendiente por la tolerancia generica de proximidad.
+        // Run19 demostro que la distancia <= 2.25 puede ser cierta al estar junto al bloque, sin pisarlo.
+        if (distSqr <= ARRIVE_DISTANCE_SQR && objetivoEsEscalonPendiente && !escalonPendienteOcupado
+                && NavTrace.on() && now % 100L == 0L) {
+            NavTrace.ev("STAIR_WAYPOINT_PROXIMITY_SUPPRESSED", "uuid=" + mob.getUUID()
+                    + " target=" + objective.toShortString()
+                    + " step=" + escalonPendiente.toShortString()
+                    + " pos=" + mob.blockPosition().toShortString()
+                    + " distSqr=" + String.format(java.util.Locale.ROOT, "%.3f", distSqr));
+        }
+        if (distSqr <= ARRIVE_DISTANCE_SQR && proximidadPuedeConsumirObjetivo) {
             // A2 FASE 4 · LLEGADA TACTICA != LLEGADA DE MISION. La decision vive en una politica pura y
             // probada: solo MISION_LLEGADA (sin etapas) puede declarar ARRIVED.
             NavArrivalPolicy.Result llegada =
@@ -2072,6 +2556,7 @@ public final class NavExecutor {
                         + " -> se recalcula hacia " + (misionFinal == null ? "-" : misionFinal.toShortString());
                 objetivoTactico = false;
                 objective = NavArrivalPolicy.objetivoTrasLlegada(llegada, objective, misionFinal);
+                objetivoPermiteConstruccion = false;
                 plannedFrom = null;
                 route = null;
                 routeIndex = 0;
@@ -2138,26 +2623,37 @@ public final class NavExecutor {
      * permanente-mente invalido (ni la mision ni el objetivo son celdas de pie) o si se agoto el presupuesto.
      */
     private void intentarRearmeTerminal(long now) {
+        if (NavTrace.on()) {
+            NavTrace.ev("A2_REARM_ENTER", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " state=" + state + " rearmes=" + rearmesTerminales + "/" + MAX_TERMINAL_REARMS
+                    + " definitive=" + falloDefinitivoTerminal + " next=" + nextRearmAt
+                    + " motivo={" + motivoFalloTerminal + "} objetivo=" + objective
+                    + " mision=" + misionFinal + " pos=" + mob.blockPosition().toShortString());
+        }
         if (objective == null || misionFinal == null) {
             motivoFalloTerminal = "sin objetivo/mision que rearmar";
             return;
         }
-        // A2 REMEDIACIÓN 2 · primero los atajos que NO mutan nada. Un fallo definitivo ya cerrado no puede
-        // volver a concatenar texto ni evaluar el mundo en cada tick.
         if (rearmesTerminales >= MAX_TERMINAL_REARMS) {
+            if (NavTrace.on()) NavTrace.ev("A2_REARM_REJECTED", "uuid=" + mob.getUUID()
+                    + " reason=MAX_REARMES");
             return;
         }
         if (falloDefinitivoTerminal) {
+            if (NavTrace.on()) NavTrace.ev("A2_REARM_REJECTED", "uuid=" + mob.getUUID()
+                    + " reason=FAILED_DEFINITIVE motivo={" + motivoFalloTerminal + "}");
             return;
         }
         if (now < nextRearmAt) {
+            if (NavTrace.on()) NavTrace.ev("A2_REARM_REJECTED", "uuid=" + mob.getUUID()
+                    + " reason=COOLDOWN now=" + now + " next=" + nextRearmAt);
             return;
         }
-        // A2 FASE 2/3 · EL PRESUPUESTO AGOTADO SIN PROGRESO NO ES REARMABLE. No es un fallo transitorio:
-        // repetir la misma busqueda no puede dar otro resultado. Solo un cambio de terreno, progreso o una
-        // mision nueva reinician el contador duro (y entonces el rearme vuelve a estar permitido).
         if (motivoFalloTerminal.contains("presupuesto")
                 && presupuestosSinProgresoTotal >= MAX_BUDGET_RETRIES) {
+            if (NavTrace.on()) NavTrace.ev("A2_REARM_REJECTED", "uuid=" + mob.getUUID()
+                    + " reason=BUDGET_NO_PROGRESS total=" + presupuestosSinProgresoTotal
+                    + " motivo={" + motivoFalloTerminal + "}");
             motivoFalloTerminal = NavTerminalDiagnostics.appendOnce(motivoFalloTerminal,
                     " (no rearmable sin progreso)");
             falloDefinitivoTerminal = true;
@@ -2168,13 +2664,18 @@ public final class NavExecutor {
         NavRecoveryPolicy.Decision decision =
                 NavRecoveryPolicy.trasFallo(rearmesTerminales, MAX_TERMINAL_REARMS, now, nextRearmAt, destinoPosible);
         if (decision.terminal()) {
-            // Una sola escritura: a partir de aqui `falloDefinitivoTerminal` corta cualquier reevaluacion.
+            if (NavTrace.on()) NavTrace.ev("A2_REARM_REJECTED", "uuid=" + mob.getUUID()
+                    + " reason=POLICY_TERMINAL destinoPosible=" + destinoPosible
+                    + " motivo={" + decision.motivo() + "}");
             motivoFalloTerminal = decision.motivo() + " | ultimoFallo=" + motivoFalloTerminal;
             falloDefinitivoTerminal = true;
             nextRearmAt = Long.MAX_VALUE;
             return;
         }
         if (!decision.rearmar()) {
+            if (NavTrace.on()) NavTrace.ev("A2_REARM_REJECTED", "uuid=" + mob.getUUID()
+                    + " reason=POLICY_WAIT destinoPosible=" + destinoPosible
+                    + " motivo={" + decision.motivo() + "}");
             return;
         }
         rearmesTerminales++;
@@ -2191,6 +2692,7 @@ public final class NavExecutor {
         budgetBackoff = MIN_BUDGET_BACKOFF_TICKS;
         budgetRetries = 0;
         mejorDistEnPresupuesto = Double.MAX_VALUE;
+        escalonesDeObjetivo = 0;
         fallosDeEscalonDeObjetivo = 0;
         globalCache = null;
         globalDesde = null;
@@ -2211,9 +2713,35 @@ public final class NavExecutor {
 
     /** A2 FASE 2/3 · unica puerta a {@link NavState#FAILED}: deja SIEMPRE un motivo explicito. */
     private void fallar(final String motivo) {
+        if (NavTrace.on()) {
+            NavTrace.ev("A2_FALLAR_ENTER", "uuid=" + mob.getUUID() + " tick="
+                    + mob.level().getGameTime() + " local=" + escalonesDeObjetivo
+                    + "/" + MAX_ESCALONES_DE_OBJETIVO + " fallos=" + fallosDeEscalonDeObjetivo
+                    + "/" + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO + " motivo={" + motivo + "}");
+        }
         motivoFalloTerminal = motivo;
         falloDefinitivoTerminal = false; // este fallo es nuevo: la recuperacion vuelve a poder evaluarse
-        state = NavState.FAILED;
+        boolean limiteLocalAgotadoEnFallo = escalonesDeObjetivo >= MAX_ESCALONES_DE_OBJETIVO
+                && fallosDeEscalonDeObjetivo >= MAX_FALLOS_DE_ESCALON_DE_OBJETIVO;
+        if (NavTerrainRearmPolicy.shouldRearm(cambioTerrenoPendienteRearme,
+                limiteLocalAgotadoEnFallo, rearmadoPorCambioDeTerreno)) {
+            escalonesDeObjetivo = 0;
+            fallosDeEscalonDeObjetivo = 0;
+            ultimoEscalonDeObjetivo = "rearme unico por BREAK previo y limite local agotado";
+            rearmadoPorCambioDeTerreno = true;
+            cambioTerrenoPendienteRearme = false;
+            motivoFalloTerminal = "rearme unico por BREAK previo; replanificar";
+            falloDefinitivoTerminal = false;
+            state = NavState.PLANNING;
+            nextPlanAt = mob.level().getGameTime();
+            if (NavTrace.on()) {
+                NavTrace.ev("NAV_TERRAIN_REARM", "uuid=" + mob.getUUID()
+                        + " tick=" + mob.level().getGameTime()
+                        + " mission=" + misionFinal.toShortString()
+                        + " reason=" + motivo);
+            }
+            return;
+        }        state = NavState.FAILED;
         if (NavTrace.on()) {
             NavTrace.ev("NAV_FAIL", "uuid=" + mob.getUUID() + " pos=" + mob.blockPosition().toShortString()
                     + " motivo={" + motivo + "} rearmes=" + rearmesTerminales + "/" + MAX_TERMINAL_REARMS);
@@ -2223,6 +2751,15 @@ public final class NavExecutor {
     }
 
     private void tryPlan(long now) {
+        if (NavTrace.on()) {
+            NavTrace.ev("A2_TRYPLAN_ENTER", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " state=" + state + " pos=" + mob.blockPosition().toShortString()
+                    + " objetivo=" + objective + " mision=" + misionFinal
+                    + " local=" + escalonesDeObjetivo + "/" + MAX_ESCALONES_DE_OBJETIVO
+                    + " fallos=" + fallosDeEscalonDeObjetivo + "/" + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO
+                    + " replans=" + replans + "/" + MAX_REPLANS_PER_DESTINATION
+                    + " budget=" + presupuestosSinProgresoTotal + "/" + MAX_BUDGET_RETRIES);
+        }
         if (Boolean.getBoolean("devilrpg.a2n.diagJump")) {
             com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPDBG] PLAN objective={} misionFinal={}",
                     objective, misionFinal);
@@ -2267,9 +2804,24 @@ public final class NavExecutor {
         // una posicion de PIE utilizable; si no, se deriva un OBJETIVO LOCAL acotado; si no existe ninguno
         // valido, se agota un presupuesto propio de intentos y se TERMINA con motivo explicito.
         // ==========================================================================================
+        boolean accionLocalValida = esAccionLocalValida(objective);
         boolean objetivoUtilizable = objective != null && dentroDeLaVentana(mob.blockPosition(), objective)
-                && esPieValido(objective);
+                && (esPieValido(objective) || objetivoPermiteConstruccion || accionLocalValida);
         if (!objetivoUtilizable) {
+            if (mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity) {
+                BlockPos stair = intentarConstruirEscalonSinWaypoint(
+                        objective != null ? objective : misionFinal,
+                        mob.blockPosition(), "objetivo no utilizable");
+                if (stair != null) {
+                    return;
+                }
+                if (ultimoResultadoEscalon == StairBuildResult.ACCESS_CLEARED) {
+                    // Terrain changed, but no stair exists. Retry from the updated world next
+                    // tick without consuming the accepted-step budget.
+                    nextPlanAt = now;
+                    return;
+                }
+            }
             if (!escalonarObjetivoLocal()) {
                 if (fallosDeEscalonDeObjetivo >= MAX_FALLOS_DE_ESCALON_DE_OBJETIVO) {
                     noPlanifica("escalonado sin objetivo valido (" + fallosDeEscalonDeObjetivo + " fallos)");
@@ -2285,7 +2837,7 @@ public final class NavExecutor {
                 return;
             }
             if (objective == null || !dentroDeLaVentana(mob.blockPosition(), objective)
-                    || !esPieValido(objective)) {
+                    || (!esPieValido(objective) && !objetivoPermiteConstruccion && !accionLocalValida)) {
                 // A2 FASE 2 · ESTE era el punto ciego: `escalonarObjetivoLocal()` puede devolver true SIN
                 // cambiar nada (misma celda = idempotente) y, si esa celda NO es utilizable, se salia por aqui
                 // en CADA tick sin planificar nunca: `state=PLANNING`, `route=-`, `plans` congelado.
@@ -2314,7 +2866,8 @@ public final class NavExecutor {
             }
         }
         NavPlanner.Result result = NavPlanner.plan(mob.level(), mob, mob.blockPosition(), objective,
-                HORIZONTAL_RANGE, VERTICAL_RANGE, MAX_EXPANSIONS_PER_PLAN, policies, construidas);
+                HORIZONTAL_RANGE, VERTICAL_RANGE, MAX_EXPANSIONS_PER_PLAN, policies, construidas,
+                exclusionesDescenso);
         plansRun++;
         expansionsLast = result.expansions();
         expansionsTotal += result.expansions();
@@ -2415,25 +2968,130 @@ public final class NavExecutor {
      * suelo firme debajo. Así no se puede "dar por bajado" un escalón por estar cerca de él en el aire.
      */
     private boolean nodoAlcanzado(final NavRoute.Node node) {
-        if (node.transition() == NavRoute.Transition.JUMP_UP) {
-            return false; // el salto solo avanza cuando el controlador confirma el aterrizaje
-        }
-        if (mob.distanceToSqr(node.pos().getX() + 0.5D, node.pos().getY() + 0.5D,
-                node.pos().getZ() + 0.5D) > ARRIVE_DISTANCE_SQR) {
-            return false;
-        }
-        if (node.transition() != NavRoute.Transition.DROP) {
-            return true;
-        }
-        boolean alcanzado = mob.blockPosition().getY() <= node.pos().getY()
+        com.chipoodle.devilrpg.entity.AggressiveZombieEntity zombie =
+                mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az ? az : null;
+        boolean escalonPendiente = zombie != null
+                && node.pos().equals(zombie.objetivoSobreUltimoEscalon());
+        boolean escalonOcupado = zombie != null && zombie.escalonPendienteOcupado();
+        boolean dentroTolerancia = mob.distanceToSqr(node.pos().getX() + 0.5D, node.pos().getY() + 0.5D,
+                node.pos().getZ() + 0.5D) <= ARRIVE_DISTANCE_SQR;
+        boolean aterrizajeDropValido = mob.blockPosition().getY() <= node.pos().getY()
                 && NavObstruction.hasSolidFace(mob.level(), mob.blockPosition().below());
-        if (alcanzado && NavTrace.on()) {
+        boolean alcanzado = NavArrivalPolicy.waypointReached(
+                node.transition() == NavRoute.Transition.JUMP_UP,
+                node.transition() == NavRoute.Transition.DROP,
+                escalonPendiente,
+                dentroTolerancia,
+                escalonOcupado,
+                aterrizajeDropValido);
+        if (escalonPendiente && alcanzado && NavTrace.on()) {
+            NavTrace.ev("STAIR_NODE_PHYSICALLY_REACHED", "uuid=" + mob.getUUID()
+                    + " node=" + node.pos().toShortString()
+                    + " pos=" + mob.blockPosition().toShortString());
+        }
+        if (node.transition() == NavRoute.Transition.DROP && alcanzado && NavTrace.on()) {
             NavTrace.ev("DROP_DONE", "uuid=" + mob.getUUID() + " idxRuta=" + routeIndex
                     + " aterrizaje=" + node.pos().toShortString() + " pos=" + mob.blockPosition().toShortString());
         }
         return alcanzado;
     }
 
+    /**
+     * Run22: evidencia el comando que realmente recibe la navegacion vanilla, no solo el waypoint elegido.
+     * Se emite al cambiar el destino/transicion y como maximo cada 10 ticks; incluye ruta vanilla y Goals activos.
+     */
+    private void trazarComandoMovimiento(final NavRoute.Node node, final String motivo,
+            final double x, final double y, final double z, final double speed) {
+        if (!NavTrace.on()) {
+            return;
+        }
+        long tick = mob.level().getGameTime();
+        String key = motivo + ":" + (node == null ? "-" : node.pos().toShortString() + ":" + node.transition());
+        if (key.equals(lastMoveTraceKey) && lastMoveTraceTick >= 0L && tick - lastMoveTraceTick < 10L) {
+            return;
+        }
+        net.minecraft.world.entity.ai.navigation.PathNavigation navigation = mob.getNavigation();
+        net.minecraft.world.level.pathfinder.Path path = navigation.getPath();
+        String pathInfo = "-";
+        if (path != null) {
+            StringBuilder nodes = new StringBuilder();
+            int first = Math.max(0, path.getNextNodeIndex());
+            int limit = Math.min(path.getNodeCount(), first + 4);
+            for (int i = first; i < limit; i++) {
+                net.minecraft.world.level.pathfinder.Node pathNode = path.getNode(i);
+                BlockPos pathPos = new BlockPos(pathNode.x, pathNode.y, pathNode.z);
+                if (nodes.length() > 0) {
+                    nodes.append('|');
+                }
+                nodes.append(pathPos.toShortString())
+                        .append("{feet=").append(mob.level().getBlockState(pathPos).getBlock())
+                        .append(",head=").append(mob.level().getBlockState(pathPos.above()).getBlock())
+                        .append(",support=").append(mob.level().getBlockState(pathPos.below()).getBlock())
+                        .append('}');
+            }
+            BlockPos requestedCell = BlockPos.containing(x, y, z);
+            pathInfo = path.getTarget() + "/n=" + path.getNodeCount()
+                    + "/next=" + path.getNextNodeIndex() + "/canReach=" + path.canReach()
+                    + "/nodes=" + nodes
+                    + "/requestedCell=" + requestedCell.toShortString()
+                    + "{feet=" + mob.level().getBlockState(requestedCell).getBlock()
+                    + ",head=" + mob.level().getBlockState(requestedCell.above()).getBlock()
+                    + ",support=" + mob.level().getBlockState(requestedCell.below()).getBlock() + "}";
+        }
+        String goals = mob.goalSelector.getAvailableGoals().stream()
+                .filter(wrapped -> wrapped.isRunning())
+                .map(wrapped -> wrapped.getGoal().getClass().getSimpleName())
+                .sorted().collect(java.util.stream.Collectors.joining(","));
+        String delta = Double.isNaN(lastMoveTraceX) ? "-" : String.format(java.util.Locale.ROOT,
+                "%.2f,%.2f,%.2f", mob.getX() - lastMoveTraceX, mob.getY() - lastMoveTraceY,
+                mob.getZ() - lastMoveTraceZ);
+        NavTrace.ev("MOVE_COMMAND", "uuid=" + mob.getUUID() + " tick=" + tick
+                + " reason=" + motivo + " node=" + (node == null ? "-" : node.pos().toShortString())
+                + " transition=" + (node == null ? "-" : node.transition())
+                + " requested=" + String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f", x, y, z)
+                + " speed=" + speed + " pos=" + String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
+                        mob.getX(), mob.getY(), mob.getZ())
+                + " deltaSinceTrace=" + delta + " navDone=" + navigation.isDone()
+                + " navInProgress=" + navigation.isInProgress() + " path=" + pathInfo
+                + " activeGoals=" + (goals.isEmpty() ? "-" : goals));
+        lastMoveTraceKey = key;
+        lastMoveTraceTick = tick;
+        lastMoveTraceX = mob.getX();
+        lastMoveTraceY = mob.getY();
+        lastMoveTraceZ = mob.getZ();
+    }
+
+    /**
+     * PathNavigation can return an empty, already-complete path when the mob's bounding box overlaps
+     * an adjacent validated cell. Keep the physical-arrival invariant, but nudge the mob into that
+     * cell through MoveControl instead of falsely advancing the route.
+     */
+    private void aplicarAcercamientoAdyacente(NavRoute.Node node, Vec3 aim, double speed) {
+        if (node == null || !mob.getNavigation().isDone()) {
+            return;
+        }
+        boolean movementNode = node.transition() != NavRoute.Transition.BREAK
+                && node.transition() != NavRoute.Transition.BRIDGE
+                && node.transition() != NavRoute.Transition.BUILD;
+        int distance = mob.blockPosition().distManhattan(node.pos());
+        int maxDistance = node.transition() == NavRoute.Transition.DROP ? 3 : 2;
+        if (!NavAdjacentApproachPolicy.shouldNudge(true, movementNode, distance, maxDistance,
+                NavObstruction.fits(mob.level(), mob, node.pos()),
+                NavObstruction.hasSupport(mob.level(), node.pos()))) {
+            return;
+        }
+        mob.getMoveControl().setWantedPosition(aim.x, aim.y, aim.z, speed);
+        lastMoveTarget = node.pos().toShortString() + ":ACERCAMIENTO-DIRECTO-ADYACENTE";
+        if (NavTrace.on() && mob.level().getGameTime() % 10L == 0L) {
+            NavTrace.ev("NAV_ADJACENT_NUDGE", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime()
+                    + " node=" + node.pos().toShortString()
+                    + " transition=" + node.transition()
+                    + " pos=" + mob.blockPosition().toShortString()
+                    + " distance=" + distance
+                    + " speed=" + speed);
+        }
+    }
     private void traverse(long now) {
         if (route == null) {
             state = NavState.PLANNING;
@@ -2452,6 +3110,7 @@ public final class NavExecutor {
         // fisicamente en el aterrizaje (a su altura o por debajo) y con suelo, no solo cerca.
         while (node != null && nodoAlcanzado(node)) {
             routeIndex++;
+            replanteosPorGuarda = 0;
             intentosDeDescenso = 0;
             node = route.currentNode(routeIndex);
         }
@@ -2469,6 +3128,8 @@ public final class NavExecutor {
                 if (distMisionAhora < mejorDistMision - PROGRESO_MINIMO_DE_OBJETIVO) {
                     mejorDistMision = distMisionAhora;
                     escalonesDeObjetivo = 0;
+        rearmadoPorCambioDeTerreno = false;
+        cambioTerrenoPendienteRearme = false;
                     ultimoEscalonDeObjetivo = "progreso verificado al cerrar tramo: dMision="
                             + String.format(java.util.Locale.ROOT, "%.1f", distMisionAhora)
                             + " -> contador de escalones reiniciado";
@@ -2508,12 +3169,18 @@ public final class NavExecutor {
         lastMoveTarget = node.pos().toShortString() + ":" + node.transition();
         switch (node.transition()) {
             case JUMP_UP -> {
-                if (!iniciarSalto(node)) {
+                boolean iniciado = iniciarSalto(node);
+                trazarComandoMovimiento(node, "JUMP_UP-" + (iniciado ? "INICIADO" : "RECHAZADO"),
+                        aim.x, aim.y, aim.z, 1.0D);
+                if (!iniciado) {
                     state = NavState.OBSTRUCTED;
                 }
                 return;
             }
-            case STEP_UP -> mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 1.0D);
+            case STEP_UP -> {
+                mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 1.0D);
+                trazarComandoMovimiento(node, "STEP_UP", aim.x, aim.y, aim.z, 1.0D);
+            }
             case DROP -> {
                 // A2 Stage 6F · DESCENSO EXPLICITO Y VERIFICADO. El nodo es el ATERRIZAJE: se describe y se valida
                 // (contigüidad, holgura de pies y cuerpo, soporte con colisión —construido y VERIFICADO si es obra
@@ -2542,6 +3209,8 @@ public final class NavExecutor {
                     // existing contiguity/support checks remain authoritative once the origin is reached.
                     mob.getNavigation().moveTo(origenPlan.getX() + 0.5D, origenPlan.getY(),
                             origenPlan.getZ() + 0.5D, 1.0D);
+                    trazarComandoMovimiento(node, "ACERCARSE-ORIGEN-DROP", origenPlan.getX() + 0.5D,
+                            origenPlan.getY(), origenPlan.getZ() + 0.5D, 1.0D);
                     lastMoveTarget = origenPlan.toShortString() + ":ACERCARSE-ORIGEN-DROP";
                     return;
                 }
@@ -2559,11 +3228,62 @@ public final class NavExecutor {
                         NavTrace.ev("DROP_REJECTED", "uuid=" + mob.getUUID() + " idxRuta=" + routeIndex
                                 + " nodo=" + node.pos().toShortString() + " motivo={" + descenso.rechazo() + "}");
                     }
+                    // Si la columna de caída está tapada por un bloque sólido MINABLE y al alcance, despejar
+                    // exactamente ese bloque usando la misma acción BREAK del asedio (sin saltar protecciones).
+                    BlockPos obstaculoCaida = primerBloqueoEnCaminoDeCaida(node.pos());
+                    if (obstaculoCaida != null
+                            && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az
+                            && az.puedeRomperNodoDeNavegacion(obstaculoCaida)
+                            && recoveryAction != null) {
+                        boolean accion = recoveryAction.run(node.pos(), obstaculoCaida, NavRoute.Transition.BREAK);
+                        boolean despejado = mob.level().getBlockState(obstaculoCaida).isAir();
+                        if (accion && despejado) {
+                            ultimaAccionDeRuta = obstaculoCaida.toShortString()
+                                    + ":DROP-OBSTRUCTION-BREAK-VERIFICADO";
+                            lastMoveTarget = ultimaAccionDeRuta;
+                            if (NavTrace.on()) {
+                                NavTrace.ev("DROP_OBSTRUCTION_CLEARED", "uuid=" + mob.getUUID()
+                                        + " nodoDrop=" + node.pos().toShortString()
+                                        + " bloque=" + obstaculoCaida.toShortString() + " verified=true");
+                            }
+                            route = null;
+                            routeIndex = 0;
+                            lastRouteSignature = 0;
+                            globalCache = null;
+                            globalMision = null;
+                            globalDesde = null;
+                            state = NavState.PLANNING;
+                            nextPlanAt = 0L;
+                            return;
+                        }
+                    }
                     BlockPos desde = origenPlan != null ? origenPlan : mob.blockPosition();
+                    long huellaDrop = huellaTerreno(node.pos());
                     exclusionesDescenso.excluir(NavDropExclusionPolicy.clave(
                             desde.getX(), desde.getY(), desde.getZ(),
                             node.pos().getX(), node.pos().getY(), node.pos().getZ()),
-                            huellaTerreno(node.pos()));
+                            huellaDrop);
+                    // A blocked fall corridor is a property of the landing column, not of one take-off edge.
+                    // Exclude this landing for every adjacent origin so A* must route around non-breakable foliage.
+                    if (obstaculoCaida != null) {
+                        long claveDestinoDrop = NavDropExclusionPolicy.claveDestino(
+                                node.pos().getX(), node.pos().getY(), node.pos().getZ());
+                        boolean nuevaExclusion = !exclusionesDescenso.contiene(claveDestinoDrop);
+                        exclusionesDescenso.excluir(claveDestinoDrop, huellaDrop);
+                        if (nuevaExclusion && NavTrace.on()) {
+                            NavTrace.ev("DROP_DESTINATION_EXCLUDED", "uuid=" + mob.getUUID()
+                                    + " landing=" + node.pos().toShortString()
+                                    + " obstacle=" + obstaculoCaida.toShortString()
+                                    + " obstacleState=" + mob.level().getBlockState(obstaculoCaida)
+                                    + " fingerprint=" + huellaDrop
+                                    + " entries=" + exclusionesDescenso.tamano());
+                        }
+                    } else if (NavTrace.on()) {
+                        NavTrace.ev("DROP_REJECTION_NO_COLUMN_BLOCK", "uuid=" + mob.getUUID()
+                                + " landing=" + node.pos().toShortString()
+                                + " pos=" + mob.blockPosition().toShortString()
+                                + " reason=" + descenso.rechazo());
+                    }
                     // La exclusion evita reejecutar el mismo DROP; invalidar la ruta permite un replan acotado.
                     route = null;
                     routeIndex = 0;
@@ -2592,6 +3312,8 @@ public final class NavExecutor {
                 }
                 // Descenso: se deja caer al borde en vez de saltar.
                 mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 0.9D);
+                aplicarAcercamientoAdyacente(node, aim, 0.9D);
+                trazarComandoMovimiento(node, "DROP", aim.x, aim.y, aim.z, 0.9D);
             }
             case BUILD -> {
                 // A2 Stage 4Q · CONSTRUIR DESDE LA RUTA. El nodo es la celda donde se coloca el bloque; la posicion
@@ -2621,6 +3343,31 @@ public final class NavExecutor {
                 // Medido en `a2n-20261016-170218`: la ruta empezaba en `0:BREAK@120,84,-9` y el ejecutor se limitaba
                 // a pasar a RECOVERING; la recuperacion solo recibia el OBJETIVO, asi que ese nodo NUNCA se rompia y
                 // el ente se quedaba en `idx=0` enviando `moveTo` sin ejecutar la transicion (10 envios, 0 avance).
+                // Primero comprobar el estado REAL del bloque. Si BREAK ya quedó en aire, o BRIDGE
+                // ya quedó sólido, avanzar sin exigir que el mob alcance una celda que ya no es objetivo.
+                boolean targetIsAir = mob.level().getBlockState(node.pos()).isAir();
+                if (NavObjectivePolicy.accionResuelta(node.transition() == NavRoute.Transition.BREAK, targetIsAir)) {
+                    routeIndex++;
+                    replanteosPorGuarda = 0;
+                    // A verified BREAK changes the terrain. The old local objective may still
+                    // point above the attacker after the broken block is gone; force a fresh
+                    // local selection instead of spending the no-progress budget on it.
+                    objetivoPermiteConstruccion = false;
+                    objetivoTransicionLocal = null;
+                    objective = null;
+                    plannedFrom = null;
+                    globalCache = null;
+                    globalDesde = null;
+                    state = NavState.PLANNING;
+                    ultimaAccionDeRuta = node.pos().toShortString() + ":" + node.transition()
+                            + "-YA-RESUELTO-REPLAN";
+                    if (NavTrace.on()) {
+                        NavTrace.ev("VERTICAL_TRANSITION_FAILED", "uuid=" + mob.getUUID()
+                                + " tick=" + mob.level().getGameTime() + " transition=" + node.transition()
+                                + " target=" + node.pos().toShortString() + " reason=BREAK_VERIFIED_REPLAN");
+                    }
+                    return;
+                }
                 double distNodoSqr = mob.distanceToSqr(node.pos().getX() + 0.5D, node.pos().getY() + 0.5D,
                         node.pos().getZ() + 0.5D);
                 if (distNodoSqr > ALCANCE_DE_ACCION_SQR) {
@@ -2628,7 +3375,43 @@ public final class NavExecutor {
                     // navegacion no puede acercarlo, se declara obstruido y decide la recuperacion acotada.
                     mob.getNavigation().moveTo(node.pos().getX() + 0.5D, node.pos().getY(),
                             node.pos().getZ() + 0.5D, 1.0D);
+                    trazarComandoMovimiento(node, "ACERCARSE-ACCION", node.pos().getX() + 0.5D,
+                            node.pos().getY(), node.pos().getZ() + 0.5D, 1.0D);
                     moveSubmissions++;
+                    // PathNavigation no puede caminar hasta un bloque BREAK sólido. Si el Path no llega,
+                    // delegamos el primer bloque del raycast (el objetivo mismo o una obstrucción anterior)
+                    // al RecoveryAction existente; BlockInteractionPolicy sigue autorizando la rotura.
+                    net.minecraft.world.level.pathfinder.Path approachPath = mob.getNavigation().getPath();
+                    boolean pathCanReach = approachPath != null && approachPath.canReach();
+                    if (node.transition() == NavRoute.Transition.BREAK && recoveryAction != null && !pathCanReach) {
+                        BlockPos blocker = primerBloqueoEnLineaDeVision(node.pos());
+                        boolean blockerInReach = blocker != null && mob.distanceToSqr(
+                                blocker.getX() + 0.5D, blocker.getY() + 0.5D, blocker.getZ() + 0.5D)
+                                <= ALCANCE_DE_ACCION_SQR;
+                        if (NavActionApproachPolicy.debeDelegarPrimerBloque(
+                                pathCanReach, blockerInReach, node.transition() == NavRoute.Transition.BREAK)) {
+                            nodoDeRecuperacionOverride = blocker.immutable();
+                            nodoDeRecuperacion = blocker.immutable();
+                            mob.getNavigation().stop();
+                            nextRecoveryAt = Math.max(nextRecoveryAt, mob.level().getGameTime());
+                            state = NavState.RECOVERING;
+                            lastMoveTarget = node.pos().toShortString() + ":BREAK-FIRST-HIT-" + blocker.toShortString();
+                            ultimaAccionDeRuta = node.pos().toShortString() + ":BREAK-PRIMER-BLOQUE-DELEGADO "
+                                    + blocker.toShortString();
+                            if (NavTrace.on()) {
+                                NavTrace.ev("BREAK_APPROACH_OCCLUSION", "uuid=" + mob.getUUID()
+                                        + " tick=" + mob.level().getGameTime()
+                                        + " target=" + node.pos().toShortString()
+                                        + " blocker=" + blocker.toShortString()
+                                        + " targetHit=" + blocker.equals(node.pos())
+                                        + " pathCanReach=" + pathCanReach
+                                        + " blockerDistance=" + String.format(java.util.Locale.ROOT, "%.2f",
+                                                Math.sqrt(mob.distanceToSqr(blocker.getX() + 0.5D,
+                                                        blocker.getY() + 0.5D, blocker.getZ() + 0.5D))));
+                            }
+                            return;
+                        }
+                    }
                     lastMoveTarget = node.pos().toShortString() + ":ACERCARSE-AL-NODO";
                     ultimaAccionDeRuta = node.pos().toShortString() + ":" + node.transition()
                             + "-ACERCARSE (dist=" + String.format(java.util.Locale.ROOT, "%.2f", Math.sqrt(distNodoSqr)) + ")";
@@ -2637,22 +3420,16 @@ public final class NavExecutor {
                     }
                     return;
                 }
-                boolean resuelto = node.transition() == NavRoute.Transition.BREAK
-                        ? mob.level().getBlockState(node.pos()).isAir()
-                        : !mob.level().getBlockState(node.pos()).isAir();
-                if (resuelto) {
-                    // La transicion YA esta satisfecha en el mundo (verificado, no supuesto): la ruta AVANZA.
-                    routeIndex++;
-                    ultimaAccionDeRuta = node.pos().toShortString() + ":" + node.transition()
-                            + "-YA-RESUELTO-AVANZA";
-                    return;
-                }
                 nodoDeRecuperacion = node.pos().immutable();
                 ultimaAccionDeRuta = node.pos().toShortString() + ":" + node.transition() + "-DELEGADO (bloque="
                         + mob.level().getBlockState(node.pos()).getBlock().getName().getString() + ")";
                 state = NavState.RECOVERING;
             }
-            default -> mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 1.0D);
+            default -> {
+                mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 1.0D);
+                aplicarAcercamientoAdyacente(node, aim, 1.0D);
+                trazarComandoMovimiento(node, "DEFAULT", aim.x, aim.y, aim.z, 1.0D);
+            }
         }
         // A4.2 · RUTA STALE: si vanilla termino y no hay avance hacia un nodo no-BREAK/BRIDGE, no se
         // sigue enviando el mismo nodo ni se deja que la guarda de recuperacion consuma sus 6 intentos
@@ -2746,24 +3523,23 @@ public final class NavExecutor {
      * A2 Stage 7G · ¿la recuperacion generica esta siendo rechazada por la guarda de ruta? Se comprueba sobre la
      * celda que la recuperacion iba a tratar (nodo de recuperacion o, en su defecto, el objetivo).
      */
-    private boolean rechazoPorGuardaDeRuta() {        BlockPos celdaDeRecuperacion = nodoDeRecuperacion != null ? nodoDeRecuperacion : objective;
+    private boolean rechazoPorGuardaDeRuta() {
+        BlockPos celdaDeRecuperacion = nodoDeRecuperacion != null ? nodoDeRecuperacion : objective;
         if (celdaDeRecuperacion == null) {
             return false;
         }
-        // A2 Stage 7H · UNA ACCION AUTORIZADA DE LA RUTA NO ES "RECUPERACION GENERICA". Medido en
-        // `a2n-20261017-135158` (stage6e): el nodo activo era `BREAK@522,110,388`, `traverse` lo delego a
-        // recuperacion y esta transicion lo intercepto como rechazo de guarda: invalido la ruta y replanifico en vez
-        // de romper el muro (`muroAire=false`, `BREAK-DELEGADO`). Si el nodo ACTIVO es BREAK/BRIDGE y coincide con la
-        // celda de recuperacion, es ejecucion LEGITIMA de la ruta: el rechazo de guarda NO aplica.
-        if (route != null) {
-            NavRoute.Node activo = route.currentNode(routeIndex);
-            if (activo != null && activo.pos().equals(celdaDeRecuperacion)
-                    && (activo.transition() == NavRoute.Transition.BREAK
-                    || activo.transition() == NavRoute.Transition.BRIDGE)) {
-                return false;
-            }
-        }
-        return celdaDeRutaActiva(celdaDeRecuperacion);
+        // A2 Stage 7H · la acción del propio nodo BREAK/BRIDGE conserva su exención histórica.
+        NavRoute.Node activo = route == null ? null : route.currentNode(routeIndex);
+        boolean exencionNodoActivo = activo != null && activo.pos().equals(celdaDeRecuperacion)
+                && (activo.transition() == NavRoute.Transition.BREAK
+                || activo.transition() == NavRoute.Transition.BRIDGE);
+        // Run27: el primer bloque opaco puede ser vecino del nodo BREAK y, por ello, también
+        // pertenecer a la huella de la ruta activa. Solo el override exacto delegado como BREAK
+        // queda exento; la RecoveryAction/BlockInteractionPolicy sigue decidiendo si puede romperse.
+        boolean exencionOverrideBreak = nodoDeRecuperacionOverride != null
+                && nodoDeRecuperacionOverride.equals(celdaDeRecuperacion);
+        boolean celdaActiva = celdaDeRutaActiva(celdaDeRecuperacion);
+        return NavRecoveryGuardPolicy.debeRechazar(celdaActiva, exencionNodoActivo, exencionOverrideBreak);
     }
 
     /** A2 Stage 7G · replanteos consumidos por rechazo de guarda (diagnostico). */
@@ -2784,10 +3560,13 @@ public final class NavExecutor {
     public String guardaDiag() {
         NavRoute.Node activo = route == null ? null : route.currentNode(routeIndex);
         BlockPos recuperacion = nodoDeRecuperacion != null ? nodoDeRecuperacion : objective;
-        boolean exencionBreak = activo != null && recuperacion != null
+        boolean exencionNodoActivo = activo != null && recuperacion != null
                 && activo.pos().equals(recuperacion)
                 && (activo.transition() == NavRoute.Transition.BREAK
                 || activo.transition() == NavRoute.Transition.BRIDGE);
+        boolean exencionOverrideBreak = nodoDeRecuperacionOverride != null && recuperacion != null
+                && nodoDeRecuperacionOverride.equals(recuperacion);
+        boolean exencionBreak = exencionNodoActivo || exencionOverrideBreak;
         boolean celdaActiva = recuperacion != null && celdaDeRutaActiva(recuperacion);
         boolean rechaza = rechazoPorGuardaDeRuta();
         return "activo=" + (activo == null ? "-" : activo.pos().toShortString() + ":" + activo.transition())
@@ -2799,6 +3578,7 @@ public final class NavExecutor {
                 + " ticksSinAvance=" + ticksSinAvance
                 + " retriesGuarda=" + replanteosPorGuarda + "/" + MAX_REPLANTEOS_POR_GUARDA
                 + " exencionBreak=" + exencionBreak
+                + " exencionOverrideBreak=" + exencionOverrideBreak
                 + " celdaActiva=" + celdaActiva
                 + " rechaza=" + rechaza;
     }
@@ -2822,7 +3602,7 @@ public final class NavExecutor {
         // explicito, de modo que no se oscila indefinidamente con el mismo fallo. El tope generico sigue vigente en
         // cuanto no hay construccion pendiente o su presupuesto se ha agotado.
         boolean tocaConstruir = planMision != null && mob.blockPosition().getY() > planMision.getY()
-                && !construccionAgotada && !descensoBloqueado;
+                && !construccionAgotada && !descensoBloqueado && nodoDeRecuperacionOverride == null;
         if (tocaConstruir) {
             if (pasoDeConstruccion()) {
                 recoveryCooldown = RECOVERY_COOLDOWN_TICKS;
@@ -2979,7 +3759,11 @@ public final class NavExecutor {
         NavRoute.Node actual = route == null ? null : route.currentNode(routeIndex);
         BlockPos nodo = null;
         NavRoute.Transition transicion = null;
-        if (actual != null && (actual.transition() == NavRoute.Transition.BREAK
+        if (nodoDeRecuperacionOverride != null) {
+            nodo = nodoDeRecuperacionOverride;
+            transicion = NavRoute.Transition.BREAK;
+            nodoDeRecuperacionOverride = null;
+        } else if (actual != null && (actual.transition() == NavRoute.Transition.BREAK
                 || actual.transition() == NavRoute.Transition.BRIDGE)) {
             nodo = actual.pos().immutable();
             transicion = actual.transition();
@@ -3099,6 +3883,29 @@ public final class NavExecutor {
         // enfriamiento (el mundo ya no es el que hizo fallar). El presupuesto de rearmes sigue siendo el tope.
         // A2 REMEDIACIÓN 2 · pero un fallo por PRESUPUESTO AGOTADO SIN PROGRESO no se reabre por terreno:
         // el contador duro solo lo reinician el progreso o una mision nueva.
+        boolean limiteLocalAgotado = escalonesDeObjetivo >= MAX_ESCALONES_DE_OBJETIVO
+                && fallosDeEscalonDeObjetivo >= MAX_FALLOS_DE_ESCALON_DE_OBJETIVO;
+        cambioTerrenoPendienteRearme = true;
+        if (NavTerrainRearmPolicy.shouldResetLocalStairBudget(true, limiteLocalAgotado,
+                rearmesLocalesDeEscalera, MAX_REARMES_LOCALES_DE_ESCALERA)) {
+            escalonesDeObjetivo = 0;
+            fallosDeEscalonDeObjetivo = 0;
+            rearmesLocalesDeEscalera++;
+            ultimoEscalonDeObjetivo = "rearme local de escalera por terreno verificado ("
+                    + rearmesLocalesDeEscalera + "/" + MAX_REARMES_LOCALES_DE_ESCALERA + ")";
+            if (NavTrace.on()) {
+                NavTrace.ev("NAV_LOCAL_STAIR_REARM", "uuid=" + mob.getUUID()
+                        + " tick=" + mob.level().getGameTime() + " resets=" + rearmesLocalesDeEscalera);
+            }
+        }
+        if (NavTerrainRearmPolicy.shouldRearm(cambioTerrenoPendienteRearme, limiteLocalAgotado,
+                rearmadoPorCambioDeTerreno)) {
+            escalonesDeObjetivo = 0;
+            fallosDeEscalonDeObjetivo = 0;
+            ultimoEscalonDeObjetivo = "rearme unico por BREAK de terreno verificado";
+            rearmadoPorCambioDeTerreno = true;
+            cambioTerrenoPendienteRearme = false;
+        }
         if (state == NavState.FAILED
                 && !(motivoFalloTerminal.contains("presupuesto")
                 && presupuestosSinProgresoTotal >= MAX_BUDGET_RETRIES)) {

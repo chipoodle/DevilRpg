@@ -19,6 +19,64 @@ This document is an audit and roadmap, not a redesign. It distinguishes:
 Forestry Block 1 is closed: see
 [FORESTRY-BLOCK-1-ACCEPTANCE.md](FORESTRY-BLOCK-1-ACCEPTANCE.md).
 
+## Current handoff — 2026-11-12 21:10
+
+- **Lumberjack Phase 1 persistence: ACCEPTED within scope.** A5-01..A5-12
+  normal lifecycle and malformed-NBT variants PASS; Forestry Block 1 A1-A7
+  COMPLETE; forced sapling-placement rejection and Bone Meal API-false refund
+  now have runtime PASS. Abrupt process-crash atomicity is explicitly out of
+  scope. Evidence: `LUMBERJACK-PHASE-1-ACCEPTANCE.md`.
+- **Food Economy 3.1 and 3.2: COMPLETE/CLOSED.** The 24,000-tick runtime,
+  real sleep transaction, both farmer harvest paths, pantry accounting and
+  post-reload meal continuation are accepted. Evidence:
+  `FOOD-ECONOMY-BLOCK-3.1-ACCEPTANCE.md` and
+  `FOOD-ECONOMY-BLOCK-3.2-ACCEPTANCE.md`.
+- **C1 — Food chain: ACCEPTED** by Food Economy 3.1/3.2 evidence.
+- **C2 — Resource-to-repair accounting: ACCEPTED.** Run
+  `c2-repair-accounting-r2-20261112-202200` proves no-material no-change,
+  one-item stone-brick repair and no withdrawal for an already-repaired target.
+  Evidence: `C2-REPAIR-ACCOUNTING-ACCEPTANCE.md`.
+- **C3 — Workforce under pressure: ACCEPTED for forestry.** Historical Run 81
+  proves distinct goals/controllers/targets, preemption cleanup and reacquisition.
+  No second-profession extension is currently required by the C3 criterion.
+  Evidence: `FORESTRY-BLOCK-1-ACCEPTANCE.md`.
+- **C5 — Village persistence: ACCEPTED.** Run r3 proves two centers,
+  UUIDs/professions, four exact warehouse quantities, active TALAR restoration,
+  32.55 blocks of resumed work and zero duplicate Goals. Evidence:
+  `C5-VILLAGE-PERSISTENCE-ACCEPTANCE.md`.
+- **C4 / A2 defense and recovery: ACCEPTED (2026-11-12, run8).** Final callback
+  variant passed in `c4-full8-20261112-2240`: 4/4 guards engaged, 12/12 living
+  professionals resumed, 16 villagers alive, 0 worker casualties/unresolved
+  UUIDs, 12/12 profession Goals, JOB_SITE 0 orphaned/duplicates, 15 guard hits,
+  6 attacker deaths (5 guard-attributed, 1 iron-golem), 2 removed for recovery. Full evidence and cleanup record:
+  `A2-C4-HEADLESS-ACCEPTANCE-20261112.md`.
+- **C4 casualty semantics:** no zero-casualty threshold exists in the contract.
+  The acceptance predicate now requires every living professional worker to
+  resume its Goal, every missing initial worker to have a recorded death event,
+  zero unresolved worker UUIDs, 4/4 guard engagement, a surviving village and
+  clean JOB_SITE ownership. Casualties are explicit metrics, never silently
+  treated as resumed workers.
+- **Death instrumentation:** the harness now subscribes to
+  `LivingDeathEvent` for the 12 initial worker UUIDs and logs UUID, profession,
+  name, position, DamageSource message ID, attacker and direct entity. Final
+  metrics separate expected/live/resumed/dead/unresolved workers. Compile
+  passed. Final callback variant accepted by run8; see the C4 acceptance record.
+- Run4 and run5 recorded 16 guard hits; run3 recorded none. Run5 had five
+  attacker deaths and three attackers removed for recovery. The production wall
+  remained 496 columns × 2 continuous layers = 992/992; JOB_SITE had 0 orphaned
+  and 0 duplicate owners.
+- Foundation repair remains PASS in its separate disposable world; manifests
+  and hashes are in `A2-FOUNDATION-REPAIR-20261112-ACCEPTANCE.md`.
+- **C1, C2, C3, C4 and C5 are accepted.** The C1-C5 acceptance gate is
+  closed. Block 6 multi-day soak is the next separate task and has not yet run.
+- **Automation/recovery rule:** A2/C4 runs are independent headless processes
+  with per-run logs and `fin.txt`. Use
+  `tools/a2n/consultar-c4.ps1 -RunId <id> -Wait` to poll every 15 seconds
+  without restarting/stopping the run. After dropped remote calls, I retry
+  transient failures up to three times with increasing delay. A fully offline
+  remote agent/PC cannot be reconnected by the chat. Never relaunch an existing
+  RunId. `.partial` remains protected.
+
 ## B. Existing system inventory
 
 ### B.1 Village core and generation
@@ -130,7 +188,7 @@ Key dependency chains:
 | Forestry planner | Complete | Automated + runtime | `ForestryWorkPlannerTest`, Runs 57/58 |
 | Farm plot ownership | Complete | Automated only | `VillageFarmOwnershipTest` |
 | Farm workflow | Complete | **Unverified integration** | no end-to-end farm run |
-| Food consumption/shortage | `VillageManager.repartirRaciones`, `pasarHambre` | Runtime verified, but 24 meals/day and item overdraw fail intended daily design | `FOOD-ECONOMY-AUDIT.md`; Run 84 |
+| Food consumption/shortage | `VillageManager.repartirRaciones`, `pasarHambre` | **Runtime verified / Food Economy 3.1+3.2 COMPLETE** | `FOOD-ECONOMY-BLOCK-3.1-ACCEPTANCE.md`; `FOOD-ECONOMY-BLOCK-3.2-ACCEPTANCE.md` |
 | Cook/tavern | Implemented | Unverified integration | source only |
 | Miner/smith/cleric/fisher | Implemented | Unverified integration | source only |
 | Animal husbandry | Implemented | Unverified integration | source only |
@@ -140,10 +198,11 @@ Key dependency chains:
 | Guard/raid | Implemented | Partial; A2 open | `ESTADO-ACTUAL.md`, unit tests |
 | Village navigation | Implemented | Policy test; A2 open | `VillageTaskNavigationPolicyTest` |
 | Goal scheduling | Implemented | **Runtime verified A6** | Run 81 |
+| Resource trace (A8-01) | Diagnostic ledger + SYSTEM events | **COMPLETE** (A–E, B2, S, G PASS; SYSTEM pre-baseline boundary documented) | `A8-01-RESOURCE-TRACE.md`; runs `res-a8*` |
 | Cross-worker same-tree claim (D4) | **Implemented** (ephemeral, world-scoped) | **Runtime verified D4-A–E** | `LUMBERJACK-PHASE-1-ACCEPTANCE.md` D4 post-fix; runs `claim-d4a…e-20261110-201309` |
 | Equal-priority profession policy (D5) | **Explicit tiers implemented** | **Runtime verified D5-A–E** | `LUMBERJACK-PHASE-1-ACCEPTANCE.md` D5 post-fix; runs `policy-d5a…e-20261110-203455` |
 | Agent-owned forestry navigation (A8-F03) | Complete | **Runtime verified post-fix** | `A8-F03-FRESH-SESSION-EXECUTION.md` §14 |
-| Persistence | Implemented | Reload scenarios partial | `xp-reload`, `multi-village-reload` scenarios |
+| Persistence | Implemented | **Lumberjack Phase 1 ACCEPTED; C5 village-level identity/active-job acceptance pending** | `LUMBERJACK-PHASE-1-ACCEPTANCE.md`; next: C5 |
 | Village generation/terrain | Implemented | Automated | `VillageTerrainPolicyTest`, layout test |
 
 ## F. Cross-system acceptance scenarios
@@ -170,6 +229,7 @@ Keep the suite small. Each scenario must prove production outcomes, not startup.
   and block-state change.
 - **PASS evidence:** structure repaired, stored material decreases exactly once.
 - **FAIL:** repair without materials, duplicated withdrawal, or no block change.
+- **Status: PASS (2026-11-12).** Run `c2-repair-accounting-r2-20261112-202200`; see `C2-REPAIR-ACCOUNTING-ACCEPTANCE.md`.
 - **Note:** new construction is out of scope until a production builder exists.
 
 ### C3 — Workforce under pressure
@@ -179,8 +239,10 @@ Keep the suite small. Each scenario must prove production outcomes, not startup.
 - **Execution:** Run 81 equivalent plus a second task type if available.
 - **PASS evidence:** distinct controllers/targets; A cleaned; B unchanged;
   A reacquires and delivers.
-- **Status:** already proven for forestry; extend only when a second profession
-  shares the same lifecycle risk.
+- **Status: PASS for forestry (Run 81).** Distinct goals/controllers/targets,
+  A cleanup, B unchanged, and A reacquisition/delivery are accepted in
+  `FORESTRY-BLOCK-1-ACCEPTANCE.md`. Extend only if a second profession is shown
+  to share the same lifecycle risk.
 
 ### C4 — Defense and recovery
 
@@ -190,8 +252,21 @@ Keep the suite small. Each scenario must prove production outcomes, not startup.
 - **PASS evidence:** guards engage, village survives or falls deterministically,
   villagers resume professions, no orphaned assignments.
 - **FAIL:** guards idle, resources duplicated, or work never resumes.
-- **Dependency:** A2 raid navigation is still open; do not claim defense
-  acceptance before it closes.
+- **Status: foundation PASS; full defense acceptance remains OPEN.** The
+  read-only probe and separately authorized second-world repair are accepted
+  within their narrow scope; exact before/after evidence is in
+  `A2-FOUNDATION-PROBE-20261112-ACCEPTANCE.md` and
+  `A2-FOUNDATION-REPAIR-20261112-ACCEPTANCE.md`.
+- The repaired disposable world has 400/400 first-non-air ring columns with
+  non-empty runtime collision shapes. Exactly 33 water→stone changes; 367
+  columns unchanged; zero unexpected changes or missing chunks.
+- **Still pending:** contract a semantic PASS/FAIL verdict, instrument guard
+  engagement and post-raid profession/assignment recovery, reconcile the
+  launcher/parser, then run one full A2 raid. Read-only findings:
+  `A2-EDIT5-READONLY-AUDIT-20261112.md`. Do not modify protected
+  `A2NavHarness.java` / `.partial` or launch the raid without separate explicit
+  owner approval. Do not use fallback `629`, historical worlds, or `run/saves`.
+- **Dependency:** A2 raid navigation; do not claim defense acceptance before it closes.
 
 ### C5 — Persistence
 
@@ -203,6 +278,7 @@ Keep the suite small. Each scenario must prove production outcomes, not startup.
 - **PASS evidence:** identities and storage match; work resumes without duplicate
   ownership.
 - **FAIL:** merged villages, lost storage, duplicated workers, or permanent idle.
+- **Status: PASS (2026-11-12).** See `C5-VILLAGE-PERSISTENCE-ACCEPTANCE.md`.
 - **Complements:** existing reload scenarios; does not replace them.
 
 ## G. Defect backlog
@@ -212,12 +288,12 @@ Keep the suite small. Each scenario must prove production outcomes, not startup.
 | ID | Priority | Finding | Source/evidence | Correction |
 |---|---|---|---|---|
 | D1 | P1 | A2 raid navigation cannot complete its construction/traversal fixture | `docs/autonomous-village/ESTADO-ACTUAL.md`; `NavExecutor` | Keep A2 separate; fix construction placement/traversal before defense acceptance |
-| D2 | P1 | C1 food chain exists in source but has no end-to-end runtime scenario | `VillageManager.repartirRaciones`; `FOOD-AUTONOMY-BLOCK-2-ACCEPTANCE.md` | Build one bounded food-autonomy scenario; do not add another consumption system |
+| D2 | CLOSED | Food production/harvest, pantry accounting, sleep transaction and post-reload meal continuation were not previously integrated | `FOOD-ECONOMY-BLOCK-3.1-ACCEPTANCE.md`; `FOOD-ECONOMY-BLOCK-3.2-ACCEPTANCE.md` | No new consumption system; keep accepted Food 3.1/3.2 regressions |
 | D3 | P1 | No general construction system; only repair | `VillagerRepairGoal`; source search | Define construction scope separately; do not overload repair |
-| D4 | P1 (suspected) | Forestry has no cross-worker target claim; two goals can choose the same tree | `VillagerLumberjackGoal.descubrirTrabajo`; per-goal controller | Add a minimal village-level claim or deterministic task partitioning; prove with two-worker same-tree fixture |
-| D5 | P2 (suspected) | All profession goals register at priority 0; real preemption among equal priorities is not proven | goal registrations; Run 81 used test priority -1 | Audit flag conflicts; define explicit priority policy; add a real competing-goal test |
+| D4 | CLOSED | Two lumberjacks could select the same tree; a world-scoped tree claim now serializes ownership | `ForestryTreeClaims`; D4-A–E runtime PASS, `LUMBERJACK-PHASE-1-ACCEPTANCE.md` | Keep owner+task release and TTL cleanup; regress only on claim invariant changes |
+| D5 | CLOSED | Explicit goal priority tiers and MOVE/LOOK ownership are implemented and runtime verified | `VillageGoalPriority`; D5-A–E runtime PASS, `LUMBERJACK-PHASE-1-ACCEPTANCE.md` | Preserve explicit tier/flag policy; regress only on scheduling changes |
 | D6 | P2 | Farm coordinator is unit-tested but has no runtime multi-farmer proof | `VillageFarmCoordinator`, `VillageFarmOwnershipTest` | C1-style two-farmer plot assignment run |
-| D7 | P2 (suspected) | Goal-local assignments are transient; reload behavior is not proven for active jobs | `ForestryTaskController`, `VillageSavedData` | C5 reload with active job; document reacquisition semantics |
+| D7 | P2 (partially resolved) | Lumberjack active-task NBT/reacquisition is runtime accepted; broader village identity/storage separation still lacks C5 proof | `LUMBERJACK-PHASE-1-ACCEPTANCE.md`; `VillageSavedData` | C5 multi-village reload with known storage and active job; document reacquisition semantics |
 | D8 | P3 | Many profession workflows have no end-to-end acceptance | inventory above | Add only the C1/C2/C4 scenarios that cover multiple professions |
 
 ### Unverified suspicions (do not treat as confirmed defects)
@@ -287,6 +363,16 @@ fixture goal removal, flag-gated navigation at PROFESSION, tavern hunger not tri
 2. Verify identities, professions, storage, and reacquisition.
 3. Add a bounded multi-day soak only after C1–C5 pass.
 4. Record any divergence as a defect with exact tick/state evidence.
+
+**Block 6 progress — 2026-11-12.** C5 save/reload is **PASS**:
+two village centers remained distinct; both worker UUIDs/professions and both
+warehouse fingerprints survived; an active TALAR task restored at the normal
+village-life poll, ran for 260 ticks, moved 32.55 blocks and retained
+duplicateGoals=0/0. See `C5-VILLAGE-PERSISTENCE-ACCEPTANCE.md`.
+Block 6 steps 1–2 are complete. C1–C5 are now all accepted, including C4
+(run8, `c4-full8-20261112-2240`). Step 3 (bounded multi-day soak) is therefore
+unblocked and is the next task; it has not yet been executed. C4 final evidence
+is in `A2-C4-HEADLESS-ACCEPTANCE-20261112.md`.
 
 ## I. Regression policy
 
@@ -377,10 +463,20 @@ targets are abandoned through the existing lifecycle; `navegar()` validates imme
 before authorization and `syncNavigationLease()` refuses invalid TALAR targets. ENTREGAR
 ownership, gate geometry and NBT behavior are unchanged.
 
-A8-01 (resource trace) and A7-12 (OFF/AUDIT equivalence) remain open/partial and are **not**
-closed by A8-F03. Next: **A6-03 remaining runtime** (R2 blocked; R5-A/D, R6, R7 not tested;
-R4 160/200 cap not verified) and **§H Block 4** (D4 cross-worker claim, D5 priority audit).
-See `LUMBERJACK-PHASE-1-ACCEPTANCE.md` §A6-03 and the newest entry of `docs/CONTINUAR.md`.
+A8-01 (resource trace) and A7-12 (OFF/AUDIT equivalence) are **COMPLETE** in their declared
+scopes; A7-12 preserves the Campaign 6 non-reproduced AUDIT one-off as a limitation.
+
+**Historical checkpoint (superseded).** Before the 2026-11-10 closures this paragraph listed
+A6-03 remaining runtime (R2 blocked, R5-A/D/R6/R7 untested, R4 caps unverified) and Block 4
+D4/D5 as next. Those items are now CLOSED/COMPLETED; see “A6-03 runtime closed” and Block 4
+below. They are not active work.
+
+**Historical checkpoint — superseded 2026-11-12.** The Food Economy 3.1/3.2
+residuals were subsequently closed; see their acceptance files. Lumberjack Phase 1
+is accepted within scope; C5 village persistence and C2 repair/resource accounting
+are now PASS; C3 is accepted by historical Run81. The next required item is
+**C4 defense/recovery via A2**, blocked until the owner approves fixture 661,71,533.
+Do not treat this 2026-11-10 food checkpoint as current.
 
 ## 2026-11-10 — A6-03 runtime closed; D4 confirmed; D5 audited
 
@@ -398,14 +494,16 @@ accepted from Runs 186/185/182/192.
 **D4 confirmed** (`a6-d4b-20261110-195518`): two lumberjacks selected the same tree
 `98,98,0` with distinct task IDs and independent per-agent leases; A harvested/delivered 5,
 B still targeted the missing tree and later recovered. No cross-worker claim exists. Block 4
-step 1 is complete; **step 2 (smallest claim consistent with farm plots) is the next
-production task**.
+step 1 is complete; **historical checkpoint: step 2 was then next, but the minimal claim was
+subsequently implemented and D4-A–E PASS; this is superseded by “Block 4 status: COMPLETED.”**
 
 **D5 audited** (`a6-d5b-20261110-200117`): equal-priority goals resolve by insertion order and
 MOVE/LOOK flag ownership, not priority preemption (A ran lumberjack, B ran the first-added
-competing goal); an explicit profession-priority policy is still pending.
+competing goal). **Historical checkpoint: this audit preceded the explicit
+`VillageGoalPriority` policy; D5-A–E subsequently PASS and Block 4 is COMPLETED.**
 
-A8-01 and A7-12 remain open/partial and are not closed by this campaign. No production
+A8-01 and A7-12 are COMPLETE (A7-12 with the Campaign 6 non-reproduced AUDIT one-off
+documented as a limitation). No production
 behavior changed in A6-03/Block 4; the new fixtures are test-only in the git-ignored debug
 controller.
 
@@ -441,3 +539,45 @@ tavern 1 and flagless utility goals coexisting, plus a zombie-triggered flee pre
 (`policy-d5a8…d…e3-20261110-203455`). No D4 claim,
 A8-F03, ENTREGAR or NBT change. Legacy `VillageNavigationGoal` remains flag-gated at
 PROFESSION; documented as a limitation.
+
+## 2026-11-10 — A8-01 per-actor resource ledger (historical checkpoint — superseded)
+
+A default-off, bounded ledger now traces the autonomous forestry lifecycle per worker:
+harvest, inventory insert, warehouse deposit/drop, pickup, and fuel consumption. Transfer
+quantities are actual (`before - remainder`); `INVENTORY_INSERT` is informational; actor,
+warehouse and global equations are checked; truncation or unattributed events force
+INCOMPLETE. Runtime A–E: single, two-worker shared, partial deposit, pickup, OFF and AUDIT all
+complete (`res-a8*`). The first two-worker run exposed a real +1 sink: the cook burned one
+warehouse log as fuel; `VillageStorage.quitarLena` now records `CONSUMED` with the consuming
+villager. **Historical checkpoint (superseded 2026-11-11):** this paragraph predates the final
+A8-01 closure. Current status is A8-01 **COMPLETE** (post-initialization autonomous scope;
+system events and G/S evidence accepted); A7-12 is **COMPLETE** with the Campaign 6
+non-reproduced limitation.
+
+## 2026-11-11 — Next block: Food Economy 3.1/3.2 residual
+
+Food 3.2 is CLOSED (Runs 98/105/109/110/128/130/132): normal 60 feeding, 25-point meal,
+active-raid guard feeding + defense resumption, critical effects/death, pantry credit
+persistence and daytime post-reload second meal all PASS. One documented limitation remains:
+no automated NBT serialization test.
+
+Food 3.1 is PARTIAL. Residual acceptance criteria:
+
+1. Work-dependent hunger policy/accumulator — **implemented and unit-tested**, runtime pending.
+2. Meal gated on the real sleep transition (bedtime handshake) — **forced-sleep path done**;
+   normal vanilla `SleepInBed` remains unintegrated.
+3. Automated pantry-credit tests (credit consumption, mixed denominations, insufficient
+   stock, identities, save/load, retry idempotence) — **not added**.
+4. Automated NBT serialization test for hunger/pantry credit (also the 3.2 limitation).
+5. Post-change runtime after 1–2: a 24,000-tick food run proving the new policy, bedtime
+   ordering and conservation.
+
+Dependencies: current `VillageManager`/`FoodHungerPolicy`/`VillagePantry`/`VillageSavedData`
+and `FoodHungerPolicyTest`; no A2, C5 or architecture work. Runtime needs disposable A5WALL
+copies, one client at a time, full resource/pantry evidence, save/reload where relevant.
+Do not mark 3.1 COMPLETE until all five criteria have evidence; 3.2 remains CLOSED.
+
+
+## Actualización de aceptación — C4 headless (2026-11-12)
+
+C4 — fixture de aldea de producción, asedio headless, combate de guardias y recuperación profesional — queda **ACEPTADO** tras dos ejecuciones independientes consecutivas PASS: c4-full7-20261112-0230 y c4-full8-20261112-2240. Run8 verificó muro 992/992; 4/4 guardias con objetivo, 15 impactos y 5 bajas atribuidas; 12/12 trabajadores vivos/reanudados; 0 bajas y 0 UUID no resueltos; 16 aldeanos vivos; JOB_SITE 1 asignación, 0 huérfanas y 0 duplicados; 6 atacantes muertos y 2 retirados para recuperación; 0 fallos de instrumentación y guardado normal. Evidencia completa y hashes: docs/autonomous-village/A2-C4-HEADLESS-ACCEPTANCE-20261112.md, sección 9. Esto no cierra A2 global ni autoriza saltar el soak multi-día; sus gates siguen abiertos. Sin commit/push.

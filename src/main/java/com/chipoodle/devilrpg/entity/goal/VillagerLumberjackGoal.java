@@ -2,6 +2,8 @@ package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.agent.ForestryTaskSnapshot;
+import com.chipoodle.devilrpg.agent.ForestryResourceTraceMinecraft;
+import com.chipoodle.devilrpg.agent.ForestryNavTrace;
 import com.chipoodle.devilrpg.agent.ForestryTreeClaims;
 import com.chipoodle.devilrpg.agent.TalarStepBarrier;
 import com.chipoodle.devilrpg.agent.TalarStepPlanner;
@@ -19,6 +21,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -108,6 +111,9 @@ public class VillagerLumberjackGoal extends Goal {
     private static final int STUCK_LIMIT = 160;
     /** Troncos que lleva encima antes de ir al almacén a descargar. */
     private static volatile boolean suppressRenewalForTest;
+    /** Deterministic failure injection for disposable A5 resource-conservation fixtures only. */
+    private static volatile boolean rejectSaplingPlacementForTest;
+    private static volatile boolean rejectBoneMealForTest;
     private static final int LLEVAR_TRONCOS = 12;
     /** Semillas de árbol que se lleva del almacén para replantar. */
     private static final int SEMILLAS_POR_VIAJE = 16;
@@ -180,6 +186,9 @@ public class VillagerLumberjackGoal extends Goal {
     private UUID claimedTask;
     @Nullable
     private String claimedDimension;
+    private int navTraceLastNode = -1;
+    private boolean navTraceArrived;
+    private BlockPos navTraceTarget;
     @Nullable
     private UUID agentTaskId;
     @Nullable
@@ -229,6 +238,32 @@ public class VillagerLumberjackGoal extends Goal {
     private static final int TAREA_VERSION = 1;
     private boolean tareaDesconocida;
 
+    /** Remove a persisted v1 forestry task and any installed lumberjack Goal when the villager loses the profession. */
+    public static void clearTaskIfProfessionChanged(Villager villager) {
+        if (villager.getVillagerData().getProfession() == VillagerProfession.FLETCHER) return;
+        boolean hasTask = villager.getPersistentData().contains(TAREA_TAG);
+        boolean removedGoal = false;
+        for (var wrapped : List.copyOf(villager.goalSelector.getAvailableGoals())) {
+            if (wrapped.getGoal() instanceof VillagerLumberjackGoal) {
+                villager.goalSelector.removeGoal(wrapped.getGoal());
+                removedGoal = true;
+            }
+        }
+        boolean removedTask = false;
+        if (hasTask) {
+            CompoundTag saved = villager.getPersistentData().getCompound(TAREA_TAG);
+            // Preserve unknown future schemas; only discard versions this implementation understands.
+            if (saved.getInt("Version") <= TAREA_VERSION) {
+                villager.getPersistentData().remove(TAREA_TAG);
+                removedTask = true;
+            }
+        }
+        if (removedGoal || removedTask) {
+            DevilRpg.LOGGER.info("[LUMBER-TASK] profession-mismatch uuid={} profession={} goalRemoved={} taskRemoved={}",
+                    villager.getUUID(), villager.getVillagerData().getProfession(), removedGoal, removedTask);
+        }
+    }
+
     private void guardarTarea() {
         if (tareaDesconocida) return;
         CompoundTag t = new CompoundTag();
@@ -248,6 +283,10 @@ public class VillagerLumberjackGoal extends Goal {
         for (Hueco h : pendientes) {
             CompoundTag x = new CompoundTag();
             x.putLong("Pos", h.pos().asLong());
+            if (h.semilla() != null) {
+                ResourceLocation seedId = BuiltInRegistries.ITEM.getKey(h.semilla());
+                if (seedId != null) x.putString("Seed", seedId.toString());
+            }
             huecos.add(x);
         }
         t.put("Holes", huecos);
@@ -287,22 +326,58 @@ public class VillagerLumberjackGoal extends Goal {
             this.pendientes.clear();
             ListTag huecos = t.getList("Holes", 10);
             for (int i = 0; i < Math.min(huecos.size(), MAX_PENDIENTES); i++) {
-                BlockPos pos = BlockPos.of(huecos.getCompound(i).getLong("Pos"));
-                if (com.chipoodle.devilrpg.survival.ObjectiveTargets.horizontalDistSqr(pos, center) <= 128.0D * 128.0D) this.pendientes.add(new Hueco(pos, null));
+                CompoundTag savedHole = huecos.getCompound(i);
+                if (!savedHole.contains("Pos", Tag.TAG_LONG)) continue;
+                BlockPos pos = BlockPos.of(savedHole.getLong("Pos"));
+                if (!esHuecoPersistidoValido(pos)) continue;
+                Item seed = null;
+                if (savedHole.contains("Seed")) {
+                    String seedId = savedHole.getString("Seed");
+                    ResourceLocation key = ResourceLocation.tryParse(seedId);
+                    if (key == null) continue;
+                    seed = BuiltInRegistries.ITEM.getOptional(key).orElse(null);
+                    if (seed == null || !new ItemStack(seed).is(ItemTags.SAPLINGS)) continue;
+                }
+                this.pendientes.add(new Hueco(pos, seed));
             }
             this.turnoDeBusqueda = Math.max(0, t.getInt("SearchTurn"));
             this.turnoArea = Math.max(0, Math.min(1, t.getInt("AreaTurn")));
             this.buscarInteriorPrimero = t.getBoolean("InsideFirst");
             this.entregarTrasTalar = t.getBoolean("DeliverAfterChop");
-            cargarPlanner(t, "PlannerInside", forestryPlannerDentro);
-            forestryPlannerDentroReady = t.getCompound("PlannerInside").getBoolean("Ready");
-            cargarPlanner(t, "PlannerOutside", forestryPlannerFuera);
-            forestryPlannerFueraReady = t.getCompound("PlannerOutside").getBoolean("Ready");
+            boolean insideReady = t.getCompound("PlannerInside").getBoolean("Ready");
+            boolean outsideReady = t.getCompound("PlannerOutside").getBoolean("Ready");
+            cargarPlanner(t, "PlannerInside", forestryPlannerDentro, true, insideReady);
+            forestryPlannerDentroReady = insideReady;
+            cargarPlanner(t, "PlannerOutside", forestryPlannerFuera, false, outsideReady);
+            forestryPlannerFueraReady = outsideReady;
             if (objetivo != null) {
                 if (com.chipoodle.devilrpg.survival.ObjectiveTargets.horizontalDistSqr(objetivo, center) > 160.0D * 160.0D) {
                     this.target = null; this.fase = Fase.TALAR; taskController.scouting();
-                } else taskController.restore(s, objetivo.getX(), objetivo.getY(), objetivo.getZ());
+                } else {
+                    taskController.restore(s, objetivo.getX(), objetivo.getY(), objetivo.getZ());
+                    // Tree claims are intentionally transient. Reacquire before a restored TALAR target
+                    // can navigate or harvest; two workers may have persisted the same target before shutdown.
+                    if (f == Fase.TALAR && villager.level() instanceof ServerLevel serverLevel) {
+                        if (!TalarStepPlanner.isValidTalarTarget(serverLevel, objetivo)
+                                || !aceptarTalar(serverLevel, objetivo)) {
+                            DevilRpg.LOGGER.info("[TREE-CLAIM] event=RESTORE-DENIED uuid={} tree={} owner={} tick={}",
+                                    villager.getUUID(), objetivo.toShortString(),
+                                    ForestryTreeClaims.ownerOf(dimId(serverLevel), objetivo.asLong(),
+                                            serverLevel.getGameTime()), serverLevel.getGameTime());
+                            this.target = null;
+                            this.fase = Fase.TALAR;
+                            taskController.scouting();
+                        } else {
+                            DevilRpg.LOGGER.info("[TREE-CLAIM] event=RESTORE-ACQUIRED uuid={} tree={} task={} tick={}",
+                                    villager.getUUID(), objetivo.toShortString(), claimedTask,
+                                    serverLevel.getGameTime());
+                        }
+                    }
+                }
             }
+            // Persist the sanitized state immediately: invalid holes/planners/contested claims must not
+            // reappear on another reload.
+            guardarTarea();
         } catch (RuntimeException e) {
             datos.remove(TAREA_TAG);
             this.target = null; this.fase = Fase.TALAR; taskController.scouting();
@@ -320,9 +395,61 @@ public class VillagerLumberjackGoal extends Goal {
         };
     }
 
-    private static void cargarPlanner(CompoundTag t, String key, ForestryWorkPlanner p) {
+    private boolean esHuecoPersistidoValido(BlockPos pos) {
+        double distanceSquared = com.chipoodle.devilrpg.survival.ObjectiveTargets.horizontalDistSqr(pos, center);
+        boolean geometryValid = pos.getY() >= villager.level().getMinBuildHeight()
+                && pos.getY() < villager.level().getMaxBuildHeight()
+                && distanceSquared <= 128.0D * 128.0D
+                && seReplantaAqui(pos);
+        if (!geometryValid) {
+            DevilRpg.LOGGER.warn("[LUMBER-TASK] invalid persisted hole geometry uuid={} pos={} distance={} minRadius={} y={}..{}",
+                    villager.getUUID(), pos, Math.sqrt(distanceSquared), RADIO_MINIMO,
+                    villager.level().getMinBuildHeight(), villager.level().getMaxBuildHeight());
+            return false;
+        }
+        if (villager.level() instanceof ServerLevel serverLevel && serverLevel.isLoaded(pos)) {
+            boolean validBlock = esHuecoDeTierra(serverLevel, pos);
+            if (!validBlock) {
+                DevilRpg.LOGGER.warn("[LUMBER-TASK] invalid persisted hole blocks uuid={} pos={} at={} above={} below={} loaded=true",
+                        villager.getUUID(), pos, serverLevel.getBlockState(pos).getBlock(),
+                        serverLevel.getBlockState(pos.above()).getBlock(),
+                        serverLevel.getBlockState(pos.below()).getBlock());
+            }
+            return validBlock;
+        }
+        return true;
+    }
+
+    private void cargarPlanner(CompoundTag t, String key, ForestryWorkPlanner p,
+            boolean inside, boolean ready) {
         CompoundTag q = t.getCompound(key);
-        p.restore(q.getInt("OriginX"), q.getInt("OriginZ"), q.getInt("Ring"), q.getInt("Cursor"), q.getBoolean("Finished"));
+        if (!ready) return;
+        int originX = q.getInt("OriginX");
+        int originZ = q.getInt("OriginZ");
+        int ring = q.getInt("Ring");
+        int cursor = q.getInt("Cursor");
+        int maxRing = (int) Math.ceil(RADIO_MAXIMO) + 2;
+        long dx = (long) originX - center.getX();
+        long dz = (long) originZ - center.getZ();
+        long originDistanceSquared = dx * dx + dz * dz;
+        boolean originValid = Math.abs(originX) <= 30_000_000 && Math.abs(originZ) <= 30_000_000
+                && originDistanceSquared <= 160L * 160L
+                && (!inside || (originX == center.getX() && originZ == center.getZ()));
+        boolean ringValid = ring >= 0 && ring <= maxRing + 1;
+        int perimeter = ringValid ? (ring == 0 ? 1 : ring * 8) : 0;
+        boolean cursorValid = ringValid && cursor >= 0
+                && (ring == maxRing + 1 ? cursor == 0 : cursor < perimeter);
+        boolean typed = q.contains("OriginX", Tag.TAG_INT) && q.contains("OriginZ", Tag.TAG_INT)
+                && q.contains("Ring", Tag.TAG_INT) && q.contains("Cursor", Tag.TAG_INT)
+                && q.contains("Finished", Tag.TAG_BYTE);
+        if (!typed || !originValid || !ringValid || !cursorValid) {
+            BlockPos fallback = inside ? center : villager.blockPosition();
+            p.reset(fallback.getX(), fallback.getZ());
+            DevilRpg.LOGGER.warn("[LUMBER-TASK] invalid planner reset uuid={} key={} origin={},{} ring={} cursor={} ready={}",
+                    villager.getUUID(), key, originX, originZ, ring, cursor, ready);
+            return;
+        }
+        p.restore(originX, originZ, ring, cursor, q.getBoolean("Finished"));
     }
 
     private static int l2CanUseCount;
@@ -594,6 +721,13 @@ public class VillagerLumberjackGoal extends Goal {
     public static void suppressRenewalForTest(boolean suppress) {
         suppressRenewalForTest = suppress;
     }
+
+    /** Test-only deterministic rejection at the two external mutation boundaries. */
+    public static void setResourceFailureInjectionForTest(boolean rejectPlacement, boolean rejectBoneMeal) {
+        rejectSaplingPlacementForTest = rejectPlacement;
+        rejectBoneMealForTest = rejectBoneMeal;
+    }
+
     private VillagerAgent agentOrNull() {
         return VillagerAgentRegistry.agent(villager.getUUID()).orElse(null);
     }
@@ -641,10 +775,20 @@ public class VillagerLumberjackGoal extends Goal {
             ForestryNavigationGateway.moveTo(agent, villager, navigationTaskId,
                     objetivo, level.getGameTime(), VELOCIDAD);
         }
+        ForestryNavTrace.event("NAV_REQUEST", villager.getUUID(), navigationTaskId,
+                ForestryNavigationGateway.mode().name(), objetivo.toShortString(),
+                level.getGameTime(), "phase=" + fase);
+        var path = villager.getNavigation().getPath();
+        ForestryNavTrace.event("PATH_CREATED", villager.getUUID(), navigationTaskId,
+                ForestryNavigationGateway.mode().name(), objetivo.toShortString(),
+                level.getGameTime(), path == null ? "path=null" : "nodes=" + path.getNodeCount());
     }
 
     private void pararNavegacion(ServerLevel level) {
         VillagerAgent agent = agentOrNull();
+        ForestryNavTrace.event("NAV_STOP", villager.getUUID(), navigationTaskId,
+                ForestryNavigationGateway.mode().name(),
+                target == null ? "-" : target.toShortString(), level.getGameTime(), "reason=stop");
         if (ForestryNavigationGateway.mode() == ForestryNavigationGateway.Mode.ENFORCE
                 && agent != null) {
             agent.stopNavigation(villager, level.getGameTime());
@@ -656,7 +800,19 @@ public class VillagerLumberjackGoal extends Goal {
     private void releaseNavigationLease() {
         if (navigationTaskId == null) return;
         VillagerAgent agent = agentOrNull();
-        if (agent != null) agent.navigationLease().release(agent.entityId(), navigationTaskId);
+        UUID releasedTask = navigationTaskId;
+        boolean released = false;
+        if (agent != null) {
+            agent.navigationLease().release(agent.entityId(), navigationTaskId);
+            released = agent.navigationLease().currentOwner(
+                    villager.level() instanceof ServerLevel s ? s.getGameTime() : 0L).isEmpty();
+        }
+        if (ForestryNavTrace.enabled()) {
+            ForestryNavTrace.event("LEASE_RELEASE_RESULT", villager.getUUID(), releasedTask,
+                    ForestryNavigationGateway.mode().name(), "-",
+                    villager.level() instanceof ServerLevel s ? s.getGameTime() : 0L,
+                    "result=" + (released ? "RELEASED" : "FAILED"));
+        }
         navigationTaskId = null;
     }
 
@@ -833,6 +989,26 @@ public class VillagerLumberjackGoal extends Goal {
             abandonarObjetivoInvalido(level);
             return;
         }
+        if (ForestryNavTrace.enabled()) {
+            var path = villager.getNavigation().getPath();
+            if (path != null && path.getNextNodeIndex() != navTraceLastNode) {
+                navTraceLastNode = path.getNextNodeIndex();
+                ForestryNavTrace.event("ROUTE_PROGRESS", villager.getUUID(), navigationTaskId,
+                        ForestryNavigationGateway.mode().name(),
+                        target == null ? "-" : target.toShortString(), level.getGameTime(),
+                        "node=" + navTraceLastNode + "/" + path.getNodeCount());
+            }
+            boolean arrived = target != null
+                    && villager.blockPosition().closerThan(target, 3.0D)
+                    && villager.getNavigation().isDone();
+            if (arrived && !navTraceArrived) {
+                ForestryNavTrace.event("NAV_ARRIVAL", villager.getUUID(), navigationTaskId,
+                        ForestryNavigationGateway.mode().name(),
+                        target == null ? "-" : target.toShortString(), level.getGameTime(),
+                        "pos=" + villager.blockPosition().toShortString());
+            }
+            navTraceArrived = arrived;
+        }
         if (target == null) {
             releaseTalarClaim();
             releaseNavigationLease();
@@ -929,6 +1105,20 @@ public class VillagerLumberjackGoal extends Goal {
             return;
         }
         VillageManager.parar(villager);
+        if (ForestryNavTrace.enabled()) {
+            if (navTraceTarget == null || !navTraceTarget.equals(target)) {
+                navTraceTarget = target.immutable();
+                navTraceArrived = false;
+            }
+            if (!navTraceArrived) {
+                navTraceArrived = true;
+                ForestryNavTrace.event("ARRIVAL_CONDITION_MET", villager.getUUID(),
+                        navigationTaskId, ForestryNavigationGateway.mode().name(),
+                        target.toShortString(), level.getGameTime(),
+                        "distance=" + String.format(java.util.Locale.ROOT, "%.2f", distancia)
+                                + " reach=" + alcance + " phase=" + fase);
+            }
+        }
         villager.swing(InteractionHand.MAIN_HAND);
         if (fase == Fase.TALAR && taskController.state() != ForestryTaskController.State.HARVESTING) {
             taskController.harvesting();
@@ -981,7 +1171,22 @@ public class VillagerLumberjackGoal extends Goal {
             return; // GROWING persists to the next tick boundary
         }
         releaseTalarClaim();
+        UUID traceTaskBeforeRelease = navigationTaskId;
+        if (ForestryNavTrace.enabled()) {
+            ForestryNavTrace.event("TALAR_CLEAR", villager.getUUID(), traceTaskBeforeRelease,
+                    ForestryNavigationGateway.mode().name(),
+                    target == null ? "-" : target.toShortString(), level.getGameTime(),
+                    "phase=" + fase + " carried=" + troncosEnMano()
+                            + " targetBlock=" + (target == null ? "-"
+                            : level.getBlockState(target).getBlock()));
+        }
         releaseNavigationLease();
+        if (ForestryNavTrace.enabled()) {
+            ForestryNavTrace.event("TASK_STEP_ADVANCED", villager.getUUID(),
+                    traceTaskBeforeRelease, ForestryNavigationGateway.mode().name(),
+                    target == null ? "-" : target.toShortString(), level.getGameTime(),
+                    "phase=" + fase + " carried=" + troncosEnMano());
+        }
         target = null;
         restTicks = REST_TICKS;
         if (taskController.state() != ForestryTaskController.State.SCOUTING) {
@@ -992,6 +1197,12 @@ public class VillagerLumberjackGoal extends Goal {
 
     @Override
     public void stop() {
+        if (ForestryNavTrace.enabled()) {
+            ForestryNavTrace.event("GOAL_STOP", villager.getUUID(), navigationTaskId,
+                    ForestryNavigationGateway.mode().name(),
+                    target == null ? "-" : target.toShortString(),
+                    villager.level() instanceof ServerLevel s ? s.getGameTime() : 0L, "reason=stop");
+        }
         if (villager.level() instanceof ServerLevel sl) {
             pararNavegacion(sl);
             releaseNavigationLease();
@@ -1056,6 +1267,15 @@ public class VillagerLumberjackGoal extends Goal {
                 apuntarHueco(hueco, misma); // sin semilla a mano: el sitio queda pendiente, no se pierde
             }
         }
+        if (ForestryNavTrace.enabled()) {
+            ForestryNavTrace.event(troncos > 0 ? "TALAR_HARVEST_RESULT" : "TALAR_NO_HARVEST",
+                    villager.getUUID(), snapshot().taskId(),
+                    ForestryNavigationGateway.mode().name(), target.toShortString(),
+                    level.getGameTime(), "base=" + troncoBase.getBlock()
+                            + " column=" + talados.size() + " branches=" + ramas
+                            + " total=" + troncos + " targetNow="
+                            + level.getBlockState(target).getBlock());
+        }
         if (troncos > 0) {
             entregarTrasTalar = true;
             target = null; // el árbol ya no existe: libera la tarea para elegir la siguiente
@@ -1079,16 +1299,21 @@ public class VillagerLumberjackGoal extends Goal {
         }
         VillageManager.premiarOficio(villager, 1);
         level.playSound(null, p, tronco.getSoundType().getBreakSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+        UUID traceTask = snapshot().taskId();
         for (ItemStack drop : drops) {
+            String flow = ForestryResourceTraceMinecraft.harvest(villager, traceTask, level, p, drop);
             ItemStack resto = guardarEnInventario(drop);
+            ForestryResourceTraceMinecraft.inventoryInsert(villager, traceTask, level, drop, resto, flow);
             if (!resto.isEmpty()) {
                 // I166 · AL SUELO NO SE TIRA NADA. Antes soltaba un `ItemEntity` encima del tronco talado (y lo mismo
                 // con los plantones): así es como quedan ítems tirados por el pueblo que nadie recoge. El sobrante va
                 // al ALMACÉN de la aldea, que es donde el pueblo guarda y de donde reparte.
                 ItemStack sobra = VillageStorage.guardar(level, center, resto);
+                ForestryResourceTraceMinecraft.deposit(villager, traceTask, level, center, resto, sobra, flow);
                 if (!sobra.isEmpty()) {
                     // Último recurso: si el almacén también está lleno, el tronco no se pierde; queda en el suelo
                     // como un ItemEntity normal, que se puede recoger.
+                    ForestryResourceTraceMinecraft.drop(villager, traceTask, level, sobra, flow);
                     villager.spawnAtLocation(sobra);
                 }
             }
@@ -1283,7 +1508,12 @@ public class VillagerLumberjackGoal extends Goal {
         if (!(semilla.getItem() instanceof BlockItem blockItem)) {
             return; // no le quedan semillas de árbol (otro goal las habrá usado)
         }
-        plantarSemilla(level, hueco, blockItem);
+        if (!plantarSemilla(level, hueco, blockItem)) {
+            devolverSemilla(level, semilla);
+            DevilRpg.LOGGER.warn("[LENADOR-PLANTAR] uuid={} target={} placementRejected=true saplingsReturned={}",
+                    villager.getUUID(), hueco.toShortString(), semillasEnMano());
+            return;
+        }
         pendientes.removeIf(h -> h.pos().equals(hueco));
         VillageManager.ponerSuceso(villager, "Planto un arbol");
         DevilRpg.LOGGER.info("[Village] El lenador: planto un arbol en {} (le quedan {} semillas)", hueco,
@@ -1303,16 +1533,37 @@ public class VillagerLumberjackGoal extends Goal {
         if (!(semilla.getItem() instanceof BlockItem blockItem)) {
             return false;
         }
-        plantarSemilla(level, base, blockItem);
+        if (!plantarSemilla(level, base, blockItem)) {
+            devolverSemilla(level, semilla);
+            DevilRpg.LOGGER.warn("[LENADOR-REPLANTAR] uuid={} target={} placementRejected=true saplingsReturned={}",
+                    villager.getUUID(), base.toShortString(), semillasEnMano());
+            return false;
+        }
         VillageManager.ponerSuceso(villager, "Replanto el arbol");
         return true;
     }
 
-    /** Pone el bloque de la semilla y su sonido. */
-    private static void plantarSemilla(ServerLevel level, BlockPos pos, BlockItem semilla) {
+    /** Pone el bloque de la semilla y solo confirma la operación si el estado quedó instalado. */
+    private static boolean plantarSemilla(ServerLevel level, BlockPos pos, BlockItem semilla) {
         BlockState plantado = semilla.getBlock().defaultBlockState();
-        level.setBlock(pos, plantado, Block.UPDATE_ALL);
-        level.playSound(null, pos, plantado.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+        if (rejectSaplingPlacementForTest) return false;
+        boolean changed = level.setBlock(pos, plantado, Block.UPDATE_ALL);
+        if (!level.getBlockState(pos).equals(plantado)) return false;
+        if (changed) {
+            level.playSound(null, pos, plantado.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
+        }
+        return true;
+    }
+
+    /** A failed world placement must not consume the worker's sapling. */
+    private void devolverSemilla(ServerLevel level, ItemStack semilla) {
+        if (semilla.isEmpty()) return;
+        ItemStack resto = guardarEnInventario(semilla);
+        if (!resto.isEmpty()) {
+            Container almacen = VillageStorage.almacen(level, center);
+            resto = VillagePantry.guardar(almacen, resto);
+        }
+        if (!resto.isEmpty()) villager.spawnAtLocation(resto);
     }
 
     /**
@@ -1341,7 +1592,14 @@ public class VillagerLumberjackGoal extends Goal {
         }
         BlockState antes = level.getBlockState(target);
         int harinaAntes = harina.getCount();
-        boolean aplicada = net.minecraft.world.item.BoneMealItem.growCrop(harina, level, target);
+        boolean aplicada;
+        if (rejectBoneMealForTest) {
+            // Simulate the harsh boundary: API reports false after mutating its argument.
+            harina.shrink(1);
+            aplicada = false;
+        } else {
+            aplicada = net.minecraft.world.item.BoneMealItem.growCrop(harina, level, target);
+        }
         BlockState despues = level.getBlockState(target);
         boolean crecio = !despues.equals(antes);
         if (aplicada && crecio) {
@@ -1352,17 +1610,25 @@ public class VillagerLumberjackGoal extends Goal {
                     villager.getUUID(), target.toShortString(), antes, despues,
                     harinaAntes - harina.getCount(), harinaEnMano());
         } else {
-            if (!harina.isEmpty()) {
-                ItemStack resto = guardarEnInventario(harina);
-                if (!resto.isEmpty()) {
-                    Container origen = harinaEnElAlmacen ? VillageStorage.almacen(level, center)
-                            : VillagePantry.despensa(level, center);
-                    VillagePantry.guardar(origen, resto);
-                }
+            // No successful growth means no Bone Meal charge, even if the API mutated its argument.
+            int consumidas = Math.max(0, harinaAntes - harina.getCount());
+            ItemStack devolver;
+            if (harina.isEmpty()) {
+                devolver = consumidas > 0 ? new ItemStack(Items.BONE_MEAL, consumidas) : ItemStack.EMPTY;
+            } else {
+                devolver = harina.copy();
+                if (consumidas > 0) devolver.grow(consumidas);
             }
-            DevilRpg.LOGGER.info("[LENADOR-ABONO] uuid={} target={} SIN_CRECIMIENTO antes={} despues={} api={} consumidas={} devueltas={}",
+            ItemStack resto = guardarEnInventario(devolver);
+            if (!resto.isEmpty()) {
+                Container origen = harinaEnElAlmacen ? VillageStorage.almacen(level, center)
+                        : VillagePantry.despensa(level, center);
+                resto = VillagePantry.guardar(origen, resto);
+            }
+            if (!resto.isEmpty()) villager.spawnAtLocation(resto);
+            DevilRpg.LOGGER.info("[LENADOR-ABONO] uuid={} target={} SIN_CRECIMIENTO antes={} despues={} api={} consumidas={} devueltas={} inventario={}",
                     villager.getUUID(), target.toShortString(), antes, despues, aplicada,
-                    harinaAntes - harina.getCount(), harina.getCount());
+                    consumidas, devolver.getCount(), harinaEnMano());
         }
         return true;
     }
@@ -1576,12 +1842,15 @@ public class VillagerLumberjackGoal extends Goal {
         boolean deposited = false;
         int antes = troncosEnMano();
         int almacenAntes = VillagePantry.contar(VillageStorage.almacen(level, center), s -> s.is(ItemTags.LOGS));
+        UUID traceTask = snapshot().taskId();
         for (int i = 0; i < villager.getInventory().getContainerSize(); i++) {
             ItemStack s = villager.getInventory().getItem(i);
             if (s.isEmpty() || !s.is(ItemTags.LOGS)) {
                 continue;
             }
+            ItemStack antesStack = s.copy();
             ItemStack resto = VillageStorage.guardar(level, center, s.copy());
+            ForestryResourceTraceMinecraft.deposit(villager, traceTask, level, center, antesStack, resto, null);
             villager.getInventory().setItem(i, resto);
             if (resto.getCount() < s.getCount()) {
                 deposited = true;
@@ -1884,6 +2153,11 @@ public class VillagerLumberjackGoal extends Goal {
             }
             if (!ForestryTreeClaims.isAvailable(dimId(level), base.asLong(), villager.getUUID(),
                     level.getGameTime())) {
+                if (Boolean.getBoolean("devilrpg.claimdiag")) {
+                    DevilRpg.LOGGER.info("[TREE-CLAIM] event=EXCLUDED uuid={} tree={} tick={}"
+                                    + " reason=claimed-by-other",
+                            villager.getUUID(), base.toShortString(), level.getGameTime());
+                }
                 return null; // another worker owns this tree; discovery must choose another
             }
             return base;

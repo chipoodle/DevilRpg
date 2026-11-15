@@ -99,9 +99,16 @@ public class VillagerClericGoal extends Goal {
     private final Villager villager;
     private final BlockPos center;
     private final int objectiveIndex;
-    /** El soporte de pociones (su puesto de trabajo, en la iglesia): la celda a la que va a trabajar. */
+    /** El soporte de pociones (su puesto de trabajo, en la iglesia): destino de la ida actual. */
     @Nullable
     private BlockPos soporte;
+    /**
+     * Último puesto JOB_SITE válido observado. Vanilla puede borrar esa memoria cuando el clérigo se aleja
+     * más de su radio de validación mientras cura a un guardia. La curación no debe borrar su asignación
+     * profesional: conserva la posición y vuelve a trabajar allí cuando termina de atender al herido.
+     */
+    @Nullable
+    private GlobalPos soporteAsignado;
     /** La celda de AGUA a la que va a llenar las botellas de cristal (se busca cuando le hacen falta). */
     @Nullable
     private BlockPos agua;
@@ -139,19 +146,47 @@ public class VillagerClericGoal extends Goal {
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
+    /**
+     * Conserva la estación real aunque el Brain borre JOB_SITE al acompañar a un herido fuera del radio vanilla.
+     * Solo se cachea una posición que siga conteniendo un soporte de pociones en la dimensión del aldeano.
+     */
+    private void actualizarSoporteAsignado(ServerLevel level) {
+        Optional<GlobalPos> jobSite = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+        if (jobSite.isPresent() && jobSite.get().dimension().equals(level.dimension())) {
+            BlockPos candidate = jobSite.get().pos();
+            if (level.getBlockState(candidate).is(Blocks.BREWING_STAND)) {
+                soporteAsignado = jobSite.get();
+            }
+        }
+        if (soporteAsignado != null && (!soporteAsignado.dimension().equals(level.dimension())
+                || !level.getBlockState(soporteAsignado.pos()).is(Blocks.BREWING_STAND))) {
+            soporteAsignado = null;
+        }
+    }
+
+    /** El repartidor de estaciones registra el puesto inmediatamente, antes del siguiente tick del Brain vanilla. */
+    public void registrarSoporteAsignado(BlockPos pos) {
+        if (villager.level() instanceof ServerLevel level && level.getBlockState(pos).is(Blocks.BREWING_STAND)) {
+            soporteAsignado = GlobalPos.of(level.dimension(), pos);
+        }
+    }
+
     @Override
     public boolean canUse() {
         if (curacionEspera > 0) {
             curacionEspera--;
         }
-        if (restTicks > 0) {
-            restTicks--;
-            return false;
-        }
         if (villager.isBaby() || !(villager.level() instanceof ServerLevel level)) {
             return false;
         }
         if (villager.getVillagerData().getProfession() != VillagerProfession.CLERIC) {
+            return false;
+        }
+        // Captura el JOB_SITE incluso durante el descanso corto posterior a una curación. Si se espera a que
+        // termine restTicks, Vanilla puede borrar la memoria por distancia antes de que el Goal la observe.
+        actualizarSoporteAsignado(level);
+        if (restTicks > 0) {
+            restTicks--;
             return false;
         }
         // 1) SANAR MANDA, y VALE TAMBIÉN DE NOCHE SI LA ALDEA ESTÁ EN ASALTO (que es cuando de verdad hace falta): si
@@ -169,12 +204,14 @@ public class VillagerClericGoal extends Goal {
         if (VillageManager.isVillageUnderAttack(level, objectiveIndex) || VillageManager.estaDescansando(villager)) {
             return false;
         }
-        // Su puesto de trabajo es el SOPORTE DE POCIONES (lo reclama el latido: ver `reclamarEstacionesDelPueblo`).
-        Optional<GlobalPos> puesto = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
-        if (puesto.isEmpty() || !puesto.get().dimension().equals(level.dimension())) {
-            return false; // sin soporte (o en otra dimensión) no hay nada que hacer
+        // Su puesto es el SOPORTE DE POCIONES. Si vanilla borró JOB_SITE durante la curación, usa la
+        // última posición válida capturada antes de salir a sanar; no deja al clérigo en IDLE para siempre.
+        actualizarSoporteAsignado(level);
+        if (soporteAsignado == null || !soporteAsignado.dimension().equals(level.dimension())) {
+            soporteAsignado = null;
+            return false; // sin soporte físico válido no hay nada que hacer
         }
-        soporte = puesto.get().pos();
+        soporte = soporteAsignado.pos();
         if (VillageManager.esPuntoFallido(villager, soporte)) {
             restTicks = IDLE_REST_TICKS; // no llegó hace poco: espera en vez de empujar la misma pared (I33)
             return false;
@@ -241,6 +278,8 @@ public class VillagerClericGoal extends Goal {
         if (!(villager.level() instanceof ServerLevel level)) {
             return;
         }
+        // Mantiene la asignación incluso si el Brain perdió JOB_SITE durante el desplazamiento al herido.
+        actualizarSoporteAsignado(level);
         // LA RONDA DEL SANADOR VA PRIMERO: un herido manda sobre el soporte y sobre el viaje al agua.
         if (paciente != null) {
             atenderAlHerido(level);
