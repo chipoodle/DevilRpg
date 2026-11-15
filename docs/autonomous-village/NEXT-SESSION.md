@@ -7,7 +7,13 @@ Read first:
 - `docs/CONTINUAR.md`
 - `docs/PENDIENTE.md`
 
-Baseline: branch `feature/autonomous-village`, HEAD `03e4e387d0cdfb74e99182d6c42998b160d43126` (remote synchronized), dirty tree otherwise preserved.
+Baseline: branch `feature/autonomous-village`, HEAD `e4012ec51fab346043af9886bc733048bc02745e` (phase-2 fixes), remote synchronized after this checkpoint.
+
+Phase 2 status (2026-11-15):
+- A2 focused `150410`: 8/8 entered, bell/conquest verified at tick 1284; `145020`: 5/8. IDX8 BREAK support fix in place; convergence improved but still variable.
+- C4: `145020` and `150410` both PASS 12/12 after the return goal; 2/2 in this configuration.
+- Full 12k not run.
+- Worlds unchanged: see `2026-11-15-PHASE2-FIXES.md`.
 
 ## Immediate work
 
