@@ -2701,6 +2701,14 @@ public final class NavExecutor {
     public boolean recoveryBacktrackUsed() { return recoveryController.backtrackUsed(); }
     public BlockPos recoveryBacktrackTarget() { return recoveryController.lastBacktrack(); }
 
+    /** True only while the same stand->target edge fingerprint is still excluded in current terrain. */
+    public boolean isBreakEdgeExcluded(BlockPos stand, BlockPos target) {
+        return stand != null && target != null
+                && exclusionesBreak.excluded(stand, target, NavPlanner.huellaBreak(mob.level(), stand, target));
+    }
+
+    public int breakExclusionCount() { return exclusionesBreak.size(); }
+
     public String metrics() {
         return "plans=" + plansRun + " expansionsUltima=" + expansionsLast + " expansionsTotal=" + expansionsTotal
                 + " rutasRechazadas=" + routesRejected + " recuperaciones=" + recoveriesRun
