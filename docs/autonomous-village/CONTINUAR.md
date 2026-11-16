@@ -1,5 +1,7 @@
 # Continuación activa — 2026-11-16 (Phase19 BREAK)
 
+Checkpoint code/documentation HEAD: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; fetch the live branch head before synchronization.
+
 ## 2026-11-16 — Phase19 BREAK runtime PASS + next independent fixtures
 
 Harness run `a2n-20261116-174648` on `8b389672` returned **PASS (fixture COMPLETO)** for `break-runtime`: both targets air, exact 40-tick retry, both mobs at validated stands and both strategic missions resumed. This is not A2 siege acceptance.
