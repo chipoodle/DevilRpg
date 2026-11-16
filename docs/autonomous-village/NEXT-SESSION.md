@@ -97,7 +97,7 @@ Read first, in order:
    git diff --check
    ```
 3. Build the A2 diagnostic variant with `-Pa2nDiagnostics=true`, then run a new disposable world with
-   `-Da2n.mode=break-runtime -Dn4.trace=true` and a unique run ID. Confirm planner route contains BREAK,
+   `-Da2n.mode=break-runtime -Ddevilrpg.a2n.traceNav=true` and a unique run ID. Confirm planner route contains BREAK,
    stand approach occurs, both targets become air, retry delta is exactly 40 ticks, and both missions resume.
 4. Persist full logs, trace and `fin.txt`/ `estado.txt`; report exact tested SHA. If the fixture is INVALIDO
    or BLOCKED, do not change code locally or weaken its geometry—return evidence to ChatGPT.
