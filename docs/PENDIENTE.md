@@ -1,6 +1,14 @@
-# ESTADO ACTUAL — 2026-11-15 (leer primero)
+# ESTADO ACTUAL — 2026-11-16 (checkpoint operativo)
 
-> **Aviso de vigencia:** este documento conserva historia operativa antigua. La continuación activa es `docs/autonomous-village/NEXT-SESSION.md`; la política obligatoria de colaboración es `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`. Las instrucciones y HEAD históricos de abajo (incluido `518fee13…`) son registro, no órdenes vigentes, salvo que el último informe verificado los reconfirme. Rama actual `feature/autonomous-village`; HEAD publicado verificado al escribir esto `64d05e88847a315d82ead3c6886f187985d704b0`. Verificar siempre HEAD local/remoto antes de operar.
+> **Fuente vigente:** la continuación activa es `docs/autonomous-village/NEXT-SESSION.md`. La política permanente es `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`; el reparto de responsabilidades y protocolo de handoff están en `docs/autonomous-village/CHATGPT-HARNESS-WORKFLOW.md`. Los registros históricos de este archivo se conservan como evidencia y no son instrucciones vigentes si contradicen el checkpoint actual.
+
+> **Roles obligatorios:** ChatGPT modifica el código de producción directamente en GitHub y publica commits. Harness sincroniza, preserva trabajo local, ejecuta compilaciones/pruebas/lint/runtime, mide y genera reportes. Harness no implementa correcciones de producción; devuelve evidencia a ChatGPT. Ninguno declara validado un SHA sin ejecutar y documentar los checks sobre ese SHA exacto.
+
+> **Checkpoint de código pendiente de validación:** `600b78b4f628cadf894be2cb38015d0c4ffb512d` en `feature/autonomous-village`. Verificar siempre el HEAD real local/remoto; commits documentales posteriores pueden mover la rama sin cambiar ese checkpoint de código.
+
+> **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
+
+> **A2:** último focused `a2n-20261116-112413`: 5/8 estrictos, 6/8 perímetro; gate OPEN. No ejecutar 12k hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** focused PASS en ese run; save/reload OPEN.
 
 # Estado de cola actualizado — 2026-11-12 22:43
 
