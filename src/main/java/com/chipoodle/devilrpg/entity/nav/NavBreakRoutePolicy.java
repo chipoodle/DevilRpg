@@ -1,4 +1,4 @@
-package com.choodle.devilrpg.entity.nav;
+package com.chipoodle.devilrpg.entity.nav;
 
 import net.minecraft.core.BlockPos;
 
