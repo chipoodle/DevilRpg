@@ -1989,6 +1989,35 @@ public final class NavExecutor {
         return meleeHoldDiagnostico;
     }
 
+    private String ultimoBreakDecision = "-";
+    private long ultimoBreakDecisionTick = Long.MIN_VALUE;
+    private String ultimoDropDecision = "-";
+    private long ultimoDropDecisionTick = Long.MIN_VALUE;
+
+    private void traceBreakDecision(String decision, String detail, long now) {
+        if (!NavTrace.on()) {
+            return;
+        }
+        if (!decision.equals(ultimoBreakDecision) || now - ultimoBreakDecisionTick >= 100L) {
+            ultimoBreakDecision = decision;
+            ultimoBreakDecisionTick = now;
+            NavTrace.ev("BREAK_DECISION", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " decision=" + decision + " " + detail);
+        }
+    }
+
+    private void traceDropDecision(String decision, String detail, long now) {
+        if (!NavTrace.on()) {
+            return;
+        }
+        if (!decision.equals(ultimoDropDecision) || now - ultimoDropDecisionTick >= 100L) {
+            ultimoDropDecision = decision;
+            ultimoDropDecisionTick = now;
+            NavTrace.ev("DROP_DECISION", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " decision=" + decision + " " + detail);
+        }
+    }
+
     public boolean setTacticalObjective(BlockPos target) {
         if (target == null) {
             return false;
@@ -3268,6 +3297,22 @@ public final class NavExecutor {
                     return;
                 }
                 ultimoDescenso = descenso.resumen();
+                long dropNow = mob.level().getGameTime();
+                traceDropDecision(descenso.valido() ? "DROP_VALID" : "DROP_REJECTED",
+                        "nodo=" + node.pos().toShortString()
+                                + " takeoff=" + descenso.salida().toShortString()
+                                + " dy=" + descenso.dy()
+                                + " reason={" + descenso.rechazo() + "}"
+                                + " constructed=" + descenso.aterrizajeConstruido()
+                                + " idxRuta=" + routeIndex + "/" + (route == null ? "-" : route.length())
+                                + " pathCanReach=" + (mob.getNavigation().getPath() != null
+                                && mob.getNavigation().getPath().canReach())
+                                + " pathDone=" + mob.getNavigation().isDone()
+                                + " attempts=" + intentosDeDescenso + "/" + MAX_INTENTOS_DESCENSO
+                                + " failures=" + fallosDeDescenso
+                                + " nextRecoveryAt=" + nextRecoveryAt
+                                + " pos=" + mob.blockPosition().toShortString()
+                                + " state=" + state, dropNow);
                 if (NavTrace.on()) {
                     NavTrace.ev("DROP_CANDIDATE", "uuid=" + mob.getUUID() + " idxRuta=" + routeIndex
                             + " sig=" + (route != null ? route.signature() : "-")
@@ -3363,6 +3408,13 @@ public final class NavExecutor {
                             + " aterrizaje=" + node.pos().toShortString() + " salida=" + descenso.salida().toShortString()
                             + " dy=" + descenso.dy() + " construido=" + descenso.aterrizajeConstruido());
                 }
+                traceDropDecision("DROP_COMMAND",
+                        "takeoff=" + descenso.salida().toShortString()
+                                + " attempts=" + intentosDeDescenso + "/" + MAX_INTENTOS_DESCENSO
+                                + " distanceToLanding=" + String.format(java.util.Locale.ROOT, "%.3f",
+                                Math.sqrt(mob.distanceToSqr(node.pos().getX() + 0.5D,
+                                        node.pos().getY() + 0.5D, node.pos().getZ() + 0.5D))),
+                        mob.level().getGameTime());
                 // Descenso: se deja caer al borde en vez de saltar.
                 mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 0.9D);
                 aplicarAcercamientoAdyacente(node, aim, 0.9D);
@@ -3436,13 +3488,41 @@ public final class NavExecutor {
                     // al RecoveryAction existente; BlockInteractionPolicy sigue autorizando la rotura.
                     net.minecraft.world.level.pathfinder.Path approachPath = mob.getNavigation().getPath();
                     boolean pathCanReach = approachPath != null && approachPath.canReach();
-                    if (node.transition() == NavRoute.Transition.BREAK && recoveryAction != null && !pathCanReach) {
-                        BlockPos blocker = primerBloqueoEnLineaDeVision(node.pos());
-                        boolean blockerInReach = blocker != null && mob.distanceToSqr(
-                                blocker.getX() + 0.5D, blocker.getY() + 0.5D, blocker.getZ() + 0.5D)
-                                <= ALCANCE_DE_ACCION_SQR;
-                        if (NavActionApproachPolicy.debeDelegarPrimerBloque(
-                                pathCanReach, blockerInReach, node.transition() == NavRoute.Transition.BREAK)) {
+                    BlockPos blocker = node.transition() == NavRoute.Transition.BREAK
+                            ? primerBloqueoEnLineaDeVision(node.pos()) : null;
+                    boolean blockerInReach = blocker != null && mob.distanceToSqr(
+                            blocker.getX() + 0.5D, blocker.getY() + 0.5D, blocker.getZ() + 0.5D)
+                            <= ALCANCE_DE_ACCION_SQR;
+                    boolean debeDelegar = NavActionApproachPolicy.debeDelegarPrimerBloque(
+                            pathCanReach, blockerInReach, node.transition() == NavRoute.Transition.BREAK);
+                    long breakNow = mob.level().getGameTime();
+                    String decision = distNodoSqr <= ALCANCE_DE_ACCION_SQR
+                            ? "ACTION_RANGE_REACHED"
+                            : pathCanReach ? "PATH_CAN_REACH"
+                            : recoveryAction == null ? "RECOVERY_ACTION_UNAVAILABLE"
+                            : blocker == null ? "BLOCKER_NULL"
+                            : !blockerInReach ? "BLOCKER_OUT_OF_REACH"
+                            : !debeDelegar ? "DELEGATION_POLICY_REJECTED"
+                            : "DELEGATION_ACCEPTED";
+                    traceBreakDecision(decision,
+                            "target=" + node.pos().toShortString() + " transition=" + node.transition()
+                                    + " distSqr=" + String.format(java.util.Locale.ROOT, "%.4f", distNodoSqr)
+                                    + " actionRangeSqr=" + ALCANCE_DE_ACCION_SQR
+                                    + " pathNull=" + (approachPath == null)
+                                    + " pathCanReach=" + pathCanReach
+                                    + " pathDone=" + mob.getNavigation().isDone()
+                                    + " blocker=" + (blocker == null ? "-" : blocker.toShortString())
+                                    + " blockerState=" + (blocker == null ? "-" : mob.level().getBlockState(blocker))
+                                    + " blockerDistSqr=" + (blocker == null ? "-"
+                                    : String.format(java.util.Locale.ROOT, "%.4f",
+                                    mob.distanceToSqr(blocker.getX() + 0.5D, blocker.getY() + 0.5D,
+                                            blocker.getZ() + 0.5D)))
+                                    + " blockerInReach=" + blockerInReach
+                                    + " policyDelegate=" + debeDelegar
+                                    + " recoveryAction=" + (recoveryAction != null)
+                                    + " idxRuta=" + routeIndex + "/"
+                                    + (route == null ? "-" : route.length()) + " state=" + state, breakNow);
+                    if (debeDelegar) {
                             nodoDeRecuperacionOverride = blocker.immutable();
                             nodoDeRecuperacion = blocker.immutable();
                             mob.getNavigation().stop();
@@ -3464,7 +3544,6 @@ public final class NavExecutor {
                             }
                             return;
                         }
-                    }
                     lastMoveTarget = node.pos().toShortString() + ":ACERCARSE-AL-NODO";
                     ultimaAccionDeRuta = node.pos().toShortString() + ":" + node.transition()
                             + "-ACERCARSE (dist=" + String.format(java.util.Locale.ROOT, "%.2f", Math.sqrt(distNodoSqr)) + ")";

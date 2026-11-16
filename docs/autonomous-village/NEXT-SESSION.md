@@ -17,11 +17,12 @@ Read first, in order:
 13. `docs/autonomous-village/2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md`
 14. `docs/autonomous-village/2026-11-16-PHASE10-A2-MIGRATION-REGRESSION.md`
 15. `docs/autonomous-village/2026-11-16-PHASE11-STRATEGIC-NAVIGATION-FORENSICS.md`
+16. `docs/autonomous-village/2026-11-16-PHASE12-NAVEXECUTOR-REFUSAL-FORENSICS.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-16-PHASE11-STRATEGIC-NAVIGATION-FORENSICS.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-16-PHASE12-NAVEXECUTOR-REFUSAL-FORENSICS.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -37,22 +38,21 @@ Read first, in order:
   `MovementOwnership` are deleted. All tests pass.
 - Phase10 melee-only tactical ownership (`002550`): 6/8 perimeter, 5/8 strict; C4 12/12.
 - Phase11 diagnostic `005739`: same 6/8 perimeter, 5/8 strict. Combat inactive for idx5/7/8.
-  - idx5: `RECOVERING` DROP stall at `632,71,476`.
-  - idx7: terminal `FAILED` at BREAK approach `726,68,476` (dist 2.99).
-  - idx8: `PLANNING` BREAK approach `747,68,539` (dist 2.70).
+- Phase12 diagnostic `022656`: 5/8 perimeter, 4/8 strict; C4 12/12.
+  - idx7 first refusal `BLOCKER_OUT_OF_REACH` at ~3.16 blocks (action radius 2.5), later budget-exhausted.
+  - idx8 first refusal `BLOCKER_OUT_OF_REACH` at ~3.03 blocks; stalled approach.
+  - idx5 stuck in generic `RECOVERING`; no BREAK/DROP decision in trace.
 - A2 focused remains **OPEN**; full 12k not run.
-- Canonical focused gate for this phase is five consecutive **8/8 strict `DENTRO-PARED`** runs (latest explicit task); 6/8 is preserved as historical, not the current gate.
+- Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Instrument `NavExecutor` BREAK approach for idx7/idx8: node distance, `ALCANCE_DE_ACCION`,
-   `pathCanReach`, selected blocker and blocker distance; determine why no BREAK is acted at 2.70–2.99
-   blocks. Instrument idx5's DROP recovery refusal at `632,71,476`.
-2. Do not restore the legacy planner or weaken collision/budgets/acceptance/action range until that
-   refusal is proven.
-3. C4 save/reload remains OPEN.
-4. Only after focused strict entry reaches the documented five-run 8/8 gate should the full
-   12,000-tick campaign run.
+1. Instrument `recover()` for idx5: `nextRecoveryAt`, `recoveryActions`, guard rejection,
+   `attemptOneRecovery`, route/cache invalidation.
+2. Instrument pre-delegation approach for idx7/idx8: why `moveTo(node)` never reduces
+   `distNodoSqr` below 6.25 (path null/canReach, actuator movement).
+3. Do not change action range or budgets until an in-range incorrect refusal is demonstrated.
+4. C4 save/reload remains OPEN; full 12k only after the strict-entry gate.
 
 ## Worlds (preserve; do not overwrite)
 
