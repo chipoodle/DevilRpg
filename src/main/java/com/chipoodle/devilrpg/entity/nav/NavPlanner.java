@@ -185,6 +185,11 @@ public final class NavPlanner {
             }
         }
         if (kind == NavObstruction.Kind.BREAKABLE) {
+            // The post-break successor must still be a supported feet cell; the attack stand is
+            // validated separately and is the position from which the action is executed.
+            if (!NavObstruction.hasSupport(level, candidate)) {
+                return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
+            }
             BlockPos stand = new BlockPos(from.getX(), piesDesde, from.getZ());
             if (!NavBreakActionPolicy.executable(level, mob, stand, candidate, policies,
                     NavBreakActionPolicy.ACTION_REACH_SQR)) {

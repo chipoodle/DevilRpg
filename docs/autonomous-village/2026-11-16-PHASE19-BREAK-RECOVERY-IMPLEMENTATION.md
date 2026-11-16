@@ -55,3 +55,6 @@ Planner validates the predecessor at its tracked feet Y; executor validates the 
 
 - Verified terrain changes also rearm the recovery controller, not just movement toward the strategic mission. This matches the progress contract: a confirmed BREAK/build/terrain mutation is real progress even before the mob has moved closer.
 - Backtrack markers are cleared if another tactical controller cancels the objective or a new strategic mission replaces it.
+
+
+- Preserved the original support requirement for the post-break successor cell. The predecessor attack stand and the cell occupied after the block is removed are validated independently; a BREAK edge cannot lead into an unsupported hole.
