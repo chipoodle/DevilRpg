@@ -2,6 +2,8 @@
 
 Date: 2026-11-16
 
+Current branch HEAD for Harness synchronization: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf` (before this documentation-only handoff update).
+
 ## Baseline accepted by Harness
 
 Harness run `a2n-20261116-174648`, tested on `8b3896725d896e5a136813ae4a4bac6275fd4ed4`, returned **PASS (fixture COMPLETO)**:
