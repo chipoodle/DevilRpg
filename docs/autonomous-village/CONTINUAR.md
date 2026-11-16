@@ -372,3 +372,14 @@ Status: **PENDING HARNESS**. ChatGPT has not run static validation or runtime on
 - `break-runtime` `a2n-20261116-172549`: nudge emitted, both mobs reach exact stands, both panes air, retry delta exactly 40, success mission resumed.
 - Fixture closes at retry-air tick before the retry mob moves (`x=736`, target `x=737`), so `retryMissionResumed=false` is fixture acceptance timing, not a nudge/BREAK failure.
 - Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-STAND-NUDGE-RUNTIME.md. A2 remains OPEN; no 12k.
+
+
+## 2026-11-16 — Phase19 BREAK retry fixture timing correction
+
+Harness run `a2n-20261116-172549` confirmed the stand nudge, exact stand occupancy, both BREAK target-air results and exactly 40 ticks between the first unverified actuator and retry. Scenario A resumed its strategic mission. The only failure was that the fixture evaluated Scenario B mission progress in the same tick that the retry actuator destroyed the block.
+
+ChatGPT changed only `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` in commit `4c3f446aeaa893db7ff7bcfc1c5f690f94e37332`: retry mission-progress evaluation now starts only after `now > breakRetrySecondTick`, and the fixture allows up to 20 ticks after destruction for the same objective + physical-progress predicate. If it still does not resume by the deadline, the fixture reports FAIL. Production source is unchanged.
+
+Detailed report: `2026-11-16-PHASE19-BREAK-RETRY-FIXTURE-TIMING.md`.
+
+Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle tests, strict lint, diff-check and diagnostics compile, then execute a new disposable `break-runtime`. Require both targets air, exactly 40 ticks, and both mission-resumption flags. Preserve all artifacts and original worlds. A2 remains OPEN; no 12k until five consecutive strict 8/8 runs. C4 save/reload remains OPEN.
