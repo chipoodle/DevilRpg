@@ -14,15 +14,46 @@ public final class NavBreakActionPolicy {
 
     private NavBreakActionPolicy() { }
 
+    private static int diagnosticEvents;
+
+    private static void trace(String reason, BlockPos stand, BlockPos target, Vec3 eye,
+                              Vec3 rayEnd, BlockHitResult hit, double distanceSqr,
+                              double tEnter, double legacyAimY) {
+        if (!NavTrace.on() || diagnosticEvents >= 128) return;
+        diagnosticEvents++;
+        NavTrace.ev("BREAK_LOS_DIAG", "reason=" + reason
+                + " stand=" + (stand == null ? "-" : stand.toShortString())
+                + " target=" + (target == null ? "-" : target.toShortString())
+                + " eye=" + eye
+                + " distanceSqr=" + distanceSqr
+                + " legacyTEnter=" + tEnter
+                + " legacyAimY=" + legacyAimY
+                + " legacyRayEnd=" + (target == null ? "-" : new Vec3(target.getX() + 0.5D,
+                        legacyAimY, target.getZ() + 0.5D))
+                + " rayEnd=" + rayEnd
+                + " hitType=" + (hit == null ? "-" : hit.getType())
+                + " hitBlock=" + (hit == null ? "-" : hit.getBlockPos().toShortString()));
+    }
+
     public static boolean executable(CollisionGetter level, Mob mob, BlockPos stand, BlockPos target,
                                      NavObstruction.Policies policies, double actionReachSqr) {
-        if (level == null || mob == null || stand == null || target == null || policies == null) return false;
-        if (policies.isProtected(target) || !policies.canBreak(target)
-                || !NavObstruction.fits(level, mob, stand)
-                || !NavObstruction.hasSupport(level, stand)) return false;
+        if (level == null || mob == null || stand == null || target == null || policies == null) {
+            trace("NULL_INPUT", stand, target, null, null, null, -1.0D, -1.0D, Double.NaN);
+            return false;
+        }
+        boolean protectedTarget = policies.isProtected(target);
+        boolean breakAllowed = policies.canBreak(target);
+        boolean standFits = NavObstruction.fits(level, mob, stand);
+        boolean standSupported = NavObstruction.hasSupport(level, stand);
+        if (protectedTarget || !breakAllowed || !standFits || !standSupported) {
+            trace("PRECONDITION_REJECT protected=" + protectedTarget + " breakAllowed=" + breakAllowed
+                    + " standFits=" + standFits + " standSupported=" + standSupported,
+                    stand, target, null, null, null, -1.0D, -1.0D, Double.NaN);
+            return false;
+        }
 
-        // Keep the existing action-range metric (mob feet position -> target center).
-        // During planning use the hypothetical cell center; during execution use the mob's exact position.
+        // Preserve the established action-range metric (mob feet -> target center).
+        // Planning uses the hypothetical stand-cell center; execution uses the mob's exact position.
         boolean actualStand = mob.blockPosition().equals(stand);
         double feetX = actualStand ? mob.getX() : stand.getX() + 0.5D;
         double feetY = actualStand ? mob.getY() : stand.getY();
@@ -36,10 +67,12 @@ public final class NavBreakActionPolicy {
         double dy = targetCenter.y - feetY;
         double dz = targetCenter.z - feetZ;
         double distanceSqr = dx * dx + dy * dy + dz * dz;
-        if (!NavBreakReachPolicy.reachable(stand.getY(), target.getY(), distanceSqr, actionReachSqr)) return false;
+        if (!NavBreakReachPolicy.reachable(stand.getY(), target.getY(), distanceSqr, actionReachSqr)) {
+            trace("REACH_REJECT", stand, target, eye, null, null, distanceSqr, -1.0D, Double.NaN);
+            return false;
+        }
 
-        // Aim through the center of the target's near face. A direct eye->block-center ray
-        // can pass just above/below an adjacent block because the mob's eyes are elevated.
+        // Keep the former ray calculation in diagnostics so the geometric failure is measurable.
         double tEnter = 1.0D;
         if (Math.abs(dx) > 1.0E-7D) {
             double faceX = dx > 0.0D ? target.getX() : target.getX() + 1.0D;
@@ -51,12 +84,19 @@ public final class NavBreakActionPolicy {
             double tZ = (faceZ - eyeZ) / dz;
             if (tZ > 0.0D) tEnter = Math.min(tEnter, tZ);
         }
-        if (tEnter <= 0.0D || tEnter >= 1.0D) return false;
-        double aimY = eyeY + (target.getY() + 0.5D - eyeY) / tEnter;
-        Vec3 rayEnd = new Vec3(targetCenter.x, aimY, targetCenter.z);
+        double legacyAimY = tEnter > 0.0D && tEnter < 1.0D
+                ? eyeY + (target.getY() + 0.5D - eyeY) / tEnter : Double.NaN;
+
+        // Raycast to the target's interior center. The previous near-voxel-face projection
+        // assumed a full-cube collision shape; for a thin pane it projected the endpoint below
+        // the block, so the ray missed the pane's narrow central collision shape.
+        Vec3 rayEnd = targetCenter;
         BlockHitResult hit = level.clip(new ClipContext(eye, rayEnd,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mob));
-        return hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(target);
+        boolean accepted = hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(target);
+        trace(accepted ? "ACCEPT" : "RAYCAST_REJECT", stand, target, eye, rayEnd, hit,
+                distanceSqr, tEnter, legacyAimY);
+        return accepted;
     }
 
     static boolean valid(boolean standClear, boolean supported, boolean targetProtected,
