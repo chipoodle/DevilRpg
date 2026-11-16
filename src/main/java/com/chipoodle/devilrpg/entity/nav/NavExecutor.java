@@ -1585,10 +1585,10 @@ public final class NavExecutor {
                         || exclusionesDescenso.excluida(NavDropExclusionPolicy.claveDestino(
                                 n.pos().getX(), n.pos().getY(), n.pos().getZ()),
                                 huellaTerreno(n.pos())))) {
-                previoRuta = n.pos();
+                previoRuta = n.transition() == NavRoute.Transition.BREAK ? n.actionTarget() : n.pos();
                 continue;
             }
-            previoRuta = n.pos();
+            previoRuta = n.transition() == NavRoute.Transition.BREAK ? n.actionTarget() : n.pos();
             boolean requiereConstruccion = NavClimbPolicy.requiereConstruccion(n.transition());
             boolean accionBreak = n.transition() == NavRoute.Transition.BREAK;
             boolean accionBridge = n.transition() == NavRoute.Transition.BRIDGE;
