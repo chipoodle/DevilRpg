@@ -1965,6 +1965,30 @@ public final class NavExecutor {
      *
      * @return {@code true} si el ejecutor acepta el destino tactico (siempre, salvo entrada nula)
      */
+    private boolean meleeHoldDiagnostico;
+
+    /** Stop directed movement while the attacker attacks in melee; the tactical mission is preserved. */
+    public void holdForMelee() {
+        meleeHoldDiagnostico = true;
+        route = null;
+        routeIndex = 0;
+        plannedFrom = null;
+        ticksSinAvance = 0;
+        if (mob != null) {
+            mob.getNavigation().stop();
+        }
+    }
+
+    /** Release melee hold and let the preserved tactical/strategic objective replan. */
+    public void releaseMeleeHold() {
+        meleeHoldDiagnostico = false;
+        nextPlanAt = 0L;
+    }
+
+    public boolean meleeHoldDiag() {
+        return meleeHoldDiagnostico;
+    }
+
     public boolean setTacticalObjective(BlockPos target) {
         if (target == null) {
             return false;
@@ -2519,6 +2543,10 @@ public final class NavExecutor {
                 mob.getUUID(), motivo, mob.blockPosition().toShortString(), saltoTicks, misionFinal);
     }
     public void tick() {
+        if (meleeHoldDiagnostico) {
+            mob.getNavigation().stop();
+            return;
+        }
         suspendidoDiagnostico = false;
         long now = mob.level().getGameTime();
         tickCalls++;

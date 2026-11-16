@@ -14,11 +14,12 @@ Read first, in order:
 10. `docs/autonomous-village/2026-11-15-PHASE7-A2-9000-OBSERVATION.md`
 11. `docs/autonomous-village/2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`
 12. `docs/autonomous-village/2026-11-15-PHASE9-IDX8-MOVEMENT-OWNERSHIP.md`
+13. `docs/autonomous-village/2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-15-PHASE9-IDX8-MOVEMENT-OWNERSHIP.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -30,19 +31,22 @@ Read first, in order:
 
 ## Current status
 
-- Latest substantive report: `2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`.
-- A2 focused strict enclosure-entry sequence remains **5, 7, 7, 7, 7** (145020, 150410, 184205, 185459, 194632).
-- Phase-7 observation `a2n-20261115-203001` (9000, OBSERVATION — NOT ACCEPTANCE): IDX4 resumed after 6000 but stopped at `603,71,507`; IDX8 stalled at `710,59,469`.
-- Phase-9 diagnostic `a2n-20261115-214638` (9000, DIAGNOSTIC): 8/8 perimeter, all died; IDX8 entered at 2279, no outcrop stall. Expanded ownership/planner probe confirmed combat can suspend the executor near a target, but did not reproduce the Phase-7 stall.
-- C4 official focused: **5/5 PASS**; no save/reload acceptance path.
-- A2 full 12k OPEN; no production navigation change.
+- `NavExecutor` is the single movement authority; legacy planner, `NavFeature` and
+  `MovementOwnership` are deleted. All tests pass.
+- Migration runs: `234037` and `235237` reached 5/8 perimeter, 4/8 strict; `000755` (6-block combat
+  leash) reached 5/8 perimeter, 3/8 strict; C4 12/12 in all three.
+- A2 entry is reproducibly below the pre-migration 7/8 result. A2 focused remains **OPEN/BLOCKED**;
+  no full 12k run.
+- C4 official focused historical baseline remains 5/5; no save/reload path.
 
 ## Immediate work
 
-1. Repeat the 9000-tick diagnostic with the expanded probe in a **new** disposable world until the eastern-outcrop stall is captured, or document a fixed number of non-reproductions and treat it as non-deterministic.
-2. If reproduced, correlate legacy `pathPlanner` (`plan`, waypoint, retry) with `navSuspendido`, `combateActivo`, target UUID/distance and position delta; do not change navigation until the full chain is shown.
-3. C4 save/reload remains OPEN (requires a reload driver).
-4. Only after a demonstrated cause and a documented focused standard, run full 12,000-tick A2.
+1. Investigate the migrated intent for non-entrant idx4/7/8 at closure: active goal, `combateActivo`,
+   tactical objective, melee hold, `navExecutor.state()`, and whether the 6-block leash prevents
+   the final approach. Correct the smallest proven coordination defect; do not restore the old planner.
+2. Add a regression test for any coordination correction.
+3. C4 save/reload remains OPEN.
+4. Only after A2 entry is reproducibly restored should the full 12,000-tick campaign run.
 
 ## Worlds (preserve; do not overwrite)
 

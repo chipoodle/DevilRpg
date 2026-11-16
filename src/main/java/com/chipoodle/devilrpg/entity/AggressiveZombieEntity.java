@@ -2,7 +2,6 @@ package com.chipoodle.devilrpg.entity;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.nav.AdvanceUnderFirePolicy;
-import com.chipoodle.devilrpg.entity.nav.MovementOwnership;
 import com.chipoodle.devilrpg.entity.nav.NavBellObjectivePolicy;
 import com.chipoodle.devilrpg.entity.nav.NavStairTrace;
 import com.chipoodle.devilrpg.entity.nav.NavTrace;
@@ -68,13 +67,10 @@ public class AggressiveZombieEntity extends Zombie {
     // Los limites de distancia (200..1500) y la base/escala de atributos viven en
     // AggressiveZombieSpawnProfile (SpawnScaleProfile), compartidos con su spawnRule sin acoplamiento.
     private static final SpawnScaleProfile SPAWN_PROFILE = AggressiveZombieSpawnProfile.INSTANCE;
-    /** Planificador por pasos: los goals deciden el destino y los traversers siguen encargándose del terreno. */
-    private final AggressiveZombiePathPlanner pathPlanner = new AggressiveZombiePathPlanner(this);
 
     /**
-     * A2 · Navegación propia (APAGADA por defecto; ver {@link NavFeature}). Cuando está encendida, es el ÚNICO
-     * dueño del movimiento. Las políticas se construyen delegando en las reglas que ya existen en esta clase
-     * ({@link #protegidoPorLaAldea(BlockPos)}) para NO duplicar ni debilitar la protección de la aldea.
+     * Único dueño del movimiento dirigido. Los goals envían intenciones estratégicas o tácticas; este
+     * ejecutor planifica, ejecuta, supervisa y recupera el desplazamiento.
      */
     private final com.chipoodle.devilrpg.entity.nav.NavExecutor navExecutor;
     private final com.chipoodle.devilrpg.entity.nav.NavObstruction.Policies navPolicies;
@@ -543,9 +539,6 @@ public class AggressiveZombieEntity extends Zombie {
      * {@code true} si el ejecutor propio está al mando (y por tanto el goal NO debe llamar a su planner).
      */
     public boolean navegarConEjecutorPropio(final BlockPos destino) {
-        if (!com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation()) {
-            return false;
-        }
         navExecutor.setObjective(destino);
         // A2 Stage 6A · la MISION del plan de construccion es el destino original; el plan solo produce
         // sub-objetivos temporales y al terminar se vuelve a planificar hacia esta misma mision.
@@ -560,9 +553,6 @@ public class AggressiveZombieEntity extends Zombie {
      * ser la mision y el asedio se "completara" en el agua.
      */
     public boolean navegarTacticamente(final BlockPos destino) {
-        if (!com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation()) {
-            return false;
-        }
         return navExecutor.setTacticalObjective(destino);
     }
 
@@ -1299,7 +1289,7 @@ public class AggressiveZombieEntity extends Zombie {
             roturasFallidas = 0;
             ultimoIntentoDeRotura = null;
             siguienteIntentoDeRecuperacion = now + 40L;
-            pathPlanner.terrainChanged();
+            navExecutor.terrainChanged();
         } else {
             fallosDeRecuperacion++;
             int backoff = Math.min(200, 20 << Math.min(fallosDeRecuperacion, 3));
@@ -1847,7 +1837,7 @@ public class AggressiveZombieEntity extends Zombie {
             tunelRestante--;
             tunelEspera = TUNEL_ENTRE_BLOQUES;
             // Route-break mutates terrain outside normal tunnel/bridge goals: invalidate both planners.
-            pathPlanner.terrainChanged();
+            navExecutor.terrainChanged();
             navExecutor.terrainChanged();
             if (Boolean.getBoolean("n4.trace")) {
                 DevilRpg.LOGGER.info("[NAV] TERRAIN_CHANGED_BY_ROUTE_BREAK uuid={} block={} executorState={}",
@@ -2728,20 +2718,10 @@ public class AggressiveZombieEntity extends Zombie {
             }
             retiradaActiva = tickRetiradaTactica();
         }
-        if (com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation() && !this.level().isClientSide) {
-            if (retiradaActiva) {
-                // RETIRADA owns movement this tick; the mission route is preserved for later.
-                this.navExecutor.suspendMovementForRetreat();
-            } else {
-                boolean combate = pursueTargetGoal != null && pursueTargetGoal.estaActivo();
-                boolean combateEnAlcance = combate && getTarget() != null
-                        && distanceToSqr(getTarget()) <= AdvanceUnderFirePolicy.MELEE_RANGE_SQR;
-                if (MovementOwnership.executorMayMove(true, combate, combateEnAlcance)) {
-                    this.navExecutor.tick();
-                } else if (combate) {
-                    this.navExecutor.suspendForCombat();
-                }
-            }
+        if (!this.level().isClientSide) {
+            // NavExecutor is the single authority for directed movement. Combat and retreat submit
+            // tactical intents; they never issue a second path.
+            this.navExecutor.tick();
         }
         // I359 · LAS DOS MEDIDAS DEL OBJETIVO, EN EL REGISTRO (lo pidio el jugador). Aqui, cada tick, para verlo tambien
         // cuando NO esta picando (que es justo el caso bueno: el que entra andando). "ENTRO en el recinto" sale UNA vez; el
@@ -3052,12 +3032,12 @@ public class AggressiveZombieEntity extends Zombie {
         retiradaDestino = null;
         retiradaUltimaPos = null;
         retiradaTicksSinAvance = 0;
+        navExecutor.clearTacticalObjective();
     }
 
     private void reemitirRetirada() {
         if (retiradaDestino != null) {
-            getNavigation().moveTo(retiradaDestino.getX() + 0.5D, retiradaDestino.getY(),
-                    retiradaDestino.getZ() + 0.5D, 1.25D);
+            navegarTacticamente(retiradaDestino);
         }
     }
 
@@ -3073,8 +3053,7 @@ public class AggressiveZombieEntity extends Zombie {
             }
         }
         if (retiradaDestino != null) {
-            getNavigation().moveTo(retiradaDestino.getX() + 0.5D, retiradaDestino.getY(),
-                    retiradaDestino.getZ() + 0.5D, 1.25D);
+            navegarTacticamente(retiradaDestino);
         }
         // Measured escape: reissuing the same path cannot separate a body locked in melee.
         if (retiradaUltimaPos != null && blockPosition().distSqr(retiradaUltimaPos) < 0.25D) {
@@ -3541,12 +3520,8 @@ public class AggressiveZombieEntity extends Zombie {
             // SOMETE el objetivo (la orilla) y no navega por su cuenta; si no, se conserva el comportamiento
             // de siempre. No se elimina la funcionalidad de salir del agua.
             if (!zombie.navegarTacticamente(shore)) {
-                zombie.getNavigation().moveTo(shore.getX(), shore.getY(), shore.getZ(), 1.2D);
-                if (Boolean.getBoolean("n4.trace")) {
-                    DevilRpg.LOGGER.info("[N4TRACE] uuid={} shore={} custom=false fallback=vanilla nav={} obj={}",
-                            zombie.getUUID(), shore.toShortString(), zombie.navExecutor().state(),
-                            zombie.navExecutor().objective());
-                }
+                DevilRpg.LOGGER.warn("[Siege] asaltante #{}: NavExecutor rechazo la orilla {}",
+                        zombie.getId(), shore.toShortString());
             } else if (Boolean.getBoolean("n4.trace")) {
                 DevilRpg.LOGGER.info("[N4TRACE] uuid={} shore={} custom=true nav={} obj={}",
                         zombie.getUUID(), shore.toShortString(), zombie.navExecutor().state(),
@@ -3831,7 +3806,7 @@ public class AggressiveZombieEntity extends Zombie {
                     if (++accionesDePicadoSinAvance >= MAX_BREAK_ACTIONS_WITHOUT_PROGRESS) {
                         excavacionPausada = true;
                     }
-                    zombie.pathPlanner.terrainChanged();
+                    zombie.navExecutor.terrainChanged();
                     // A2 REMEDIACIÓN 2 · la brecha cambia el mundo: ademas del planificador heredado, se
                     // invalida la ruta/cache del ejecutor propio para que no siga una arista obsoleta.
                     zombie.navExecutor().terrainChanged();
@@ -4162,7 +4137,7 @@ public class AggressiveZombieEntity extends Zombie {
                 // The block helpers already enforce their own 10/20-tick success cooldown. Do not add another
                 // 40 ticks here or the effective wall traversal rate drops to one action every 50 ticks.
                 enfriamiento = 0;
-                zombie.pathPlanner.terrainChanged();
+                zombie.navExecutor.terrainChanged();
                 // A2 REMEDIACIÓN 2 · el atravesador también cambia el mundo; la ruta global del ejecutor
                 // no puede sobrevivir a ese cambio.
                 zombie.navExecutor().terrainChanged();
@@ -4190,21 +4165,14 @@ public class AggressiveZombieEntity extends Zombie {
         return pursueTargetGoal != null && pursueTargetGoal.estaActivo();
     }
 
-    /** Read-only diagnostic: legacy planner state. */
-    public String pathPlannerDiagA2() {
-        return pathPlanner.debugState();
-    }
-
-    /** Read-only diagnostic: whether the strategic executor was suspended this tick. */
+    /** Read-only diagnostic: strategic executor suspension state. */
     public boolean navExecutorSuspendedA2() {
         return navExecutor.suspendidoDiag();
     }
 
     static class MoveToVillageCenterGoal extends Goal {
         private static final double ARRIVE_DIST = 3.0D * 3.0D;
-        private static final int TICKS_BEFORE_RECOVERY = 80;
         private final AggressiveZombieEntity zombie;
-        private int ticksWithoutRoute;
 
         MoveToVillageCenterGoal(AggressiveZombieEntity zombie) {
             this.zombie = zombie;
@@ -4214,13 +4182,6 @@ public class AggressiveZombieEntity extends Zombie {
         @Override
         public boolean canUse() {
             if (!zombie.isGoToCenterActive() || zombie.getHomePos() != null) {
-                return false;
-            }
-            LivingEntity target = zombie.getTarget();
-            boolean hasLiveTarget = target != null && target.isAlive();
-            double targetDistance = hasLiveTarget ? zombie.distanceToSqr(target) : 0.0D;
-            if (!AdvanceUnderFirePolicy.shouldMarchToVillage(zombie.objetivoCampanaActivo(),
-                    hasLiveTarget, targetDistance)) {
                 return false;
             }
             BlockPos center = zombie.getVillageCenter();
@@ -4234,13 +4195,10 @@ public class AggressiveZombieEntity extends Zombie {
 
         @Override
         public void start() {
-            zombie.pathPlanner.reset();
-            ticksWithoutRoute = 0;
         }
 
         @Override
         public void stop() {
-            zombie.pathPlanner.reset();
         }
 
         @Override
@@ -4249,29 +4207,10 @@ public class AggressiveZombieEntity extends Zombie {
             if (center == null) {
                 return;
             }
-            // A2 · con la navegación propia encendida, este goal SOLO envía el objetivo: el movimiento lo ejecuta
-            // NavExecutor (dueño único). Así los goals dejan de competir por MOVE.
-            // Y el objetivo NO es el centro: el centro es PROTECTED y el planificador nunca lo encola (medido:
-            // metaEncolada=false -> 0/8). Se envía el punto de APROXIMACIÓN, por fuera del muro, en el rumbo del
-            // propio asaltante.
-            if (com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation()) {
-                // A2 · CADENA de etapas a radios decrecientes. `setObjectiveChain` es IDEMPOTENTE: si el contenido no
-                // ha cambiado, no toca nada. Eso corrige la regresion medida en `a2n-20261015-212315`, donde el
-                // envio por tick reiniciaba las etapas (plans=89, moves=0-3).
-                java.util.List<BlockPos> cadena = zombie.cadenaDeAproximacion(center);
-                if (!cadena.isEmpty()) {
-                    zombie.navExecutor().setObjectiveChain(cadena);
-                }
-                return;
-            }
-            AggressiveZombiePathPlanner.Result result = zombie.pathPlanner.navigateTo(center, 1.0D);
-            if (result == AggressiveZombiePathPlanner.Result.STALLED
-                    || (result == AggressiveZombiePathPlanner.Result.NO_ROUTE
-                    && ++ticksWithoutRoute >= TICKS_BEFORE_RECOVERY)) {
-                zombie.recoverNavigation(center);
-                ticksWithoutRoute = 0;
-            } else if (result != AggressiveZombiePathPlanner.Result.NO_ROUTE) {
-                ticksWithoutRoute = 0;
+            // Strategic intent only: NavExecutor plans and executes every directed step.
+            java.util.List<BlockPos> cadena = zombie.cadenaDeAproximacion(center);
+            if (!cadena.isEmpty()) {
+                zombie.navExecutor().setObjectiveChain(cadena);
             }
         }
 
@@ -4288,13 +4227,12 @@ public class AggressiveZombieEntity extends Zombie {
         private static final double FLANK_RANGE_SQR = 36.0D;
         private static final double FLANK_RADIUS = 3.5D;
         private static final int DESTINATION_REFRESH_TICKS = 20;
-        private static final int TICKS_BEFORE_RECOVERY = 80;
         private final AggressiveZombieEntity zombie;
         private LivingEntity selectedTarget;
         private BlockPos selectedDestination;
+        private BlockPos lastTacticalDestination;
         private int destinationRefreshTicks;
         private int attackTicks;
-        private int ticksWithoutRoute;
         private boolean inAttackRange;
         /** A2 REMEDIACIÓN 2 · refleja si ESTE goal posee MOVE ahora mismo (no solo si hay target). */
         private boolean activo;
@@ -4315,8 +4253,12 @@ public class AggressiveZombieEntity extends Zombie {
                 return false;
             }
             // The bell is the strategic objective: do not chase guards far away from it.
+            // After conquest, only nearby threats take tactical ownership; distant threats leave
+            // the strategic mission with NavExecutor.
             return AdvanceUnderFirePolicy.shouldChase(zombie.objetivoCampanaActivo(),
-                    zombie.distanceToSqr(target));
+                    zombie.distanceToSqr(target))
+                    && com.chipoodle.devilrpg.entity.nav.NavCombatIntentPolicy.withinTacticalLeash(
+                            zombie.distanceToSqr(target));
         }
 
         @Override
@@ -4327,23 +4269,24 @@ public class AggressiveZombieEntity extends Zombie {
         @Override
         public void start() {
             activo = true;
-            zombie.pathPlanner.reset();
             selectedTarget = null;
             selectedDestination = null;
+            lastTacticalDestination = null;
             destinationRefreshTicks = 0;
             attackTicks = 0;
-            ticksWithoutRoute = 0;
             inAttackRange = false;
+            zombie.navExecutor().releaseMeleeHold();
         }
 
         @Override
         public void stop() {
             activo = false;
-            zombie.pathPlanner.reset();
             selectedTarget = null;
             selectedDestination = null;
-            ticksWithoutRoute = 0;
+            lastTacticalDestination = null;
             inAttackRange = false;
+            zombie.navExecutor().releaseMeleeHold();
+            zombie.navExecutor().clearTacticalObjective();
         }
 
         @Override
@@ -4353,18 +4296,19 @@ public class AggressiveZombieEntity extends Zombie {
                 return;
             }
             if (selectedTarget != target) {
-                zombie.pathPlanner.reset();
                 selectedTarget = target;
                 selectedDestination = null;
+                lastTacticalDestination = null;
                 destinationRefreshTicks = 0;
-                ticksWithoutRoute = 0;
                 inAttackRange = false;
             }
             zombie.getLookControl().setLookAt(target, 30.0F, 30.0F);
-            if (zombie.distanceToSqr(target) <= ATTACK_RANGE_SQR) {
+            if (com.chipoodle.devilrpg.entity.nav.NavCombatIntentPolicy.holdInMelee(
+                    zombie.distanceToSqr(target))) {
                 if (!inAttackRange) {
-                    zombie.pathPlanner.reset();
                     inAttackRange = true;
+                    // Attack in place; keep the strategic/tactical objective intact.
+                    zombie.navExecutor().holdForMelee();
                 }
                 if (--attackTicks <= 0) {
                     zombie.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -4374,19 +4318,19 @@ public class AggressiveZombieEntity extends Zombie {
                 return;
             }
             inAttackRange = false;
+            zombie.navExecutor().releaseMeleeHold();
 
             if (selectedDestination == null || --destinationRefreshTicks <= 0) {
                 selectedDestination = chooseDestination(target);
                 destinationRefreshTicks = DESTINATION_REFRESH_TICKS;
             }
-            AggressiveZombiePathPlanner.Result result = zombie.pathPlanner.navigateTo(selectedDestination, 1.2D);
-            if (result == AggressiveZombiePathPlanner.Result.STALLED
-                    || (result == AggressiveZombiePathPlanner.Result.NO_ROUTE
-                    && ++ticksWithoutRoute >= TICKS_BEFORE_RECOVERY)) {
-                zombie.recoverNavigation(selectedDestination);
-                ticksWithoutRoute = 0;
-            } else if (result != AggressiveZombiePathPlanner.Result.NO_ROUTE) {
-                ticksWithoutRoute = 0;
+            if (com.chipoodle.devilrpg.entity.nav.NavCombatIntentPolicy.tacticalDestinationChanged(
+                    lastTacticalDestination == null ? Integer.MIN_VALUE : lastTacticalDestination.getX(),
+                    lastTacticalDestination == null ? Integer.MIN_VALUE : lastTacticalDestination.getY(),
+                    lastTacticalDestination == null ? Integer.MIN_VALUE : lastTacticalDestination.getZ(),
+                    selectedDestination.getX(), selectedDestination.getY(), selectedDestination.getZ())) {
+                zombie.navExecutor().setTacticalObjective(selectedDestination);
+                lastTacticalDestination = selectedDestination;
             }
         }
 
@@ -4417,7 +4361,6 @@ public class AggressiveZombieEntity extends Zombie {
      */
     static class PatrolHomeGoal extends Goal {
         private final AggressiveZombieEntity zombie;
-        private static final double SPEED = 1.0D;
         private static final int WANDER_INTERVAL_TICKS = 60; // cada 3 s elige un nuevo punto de ronda
         private int wanderTicks = 0;
         private double wanderX, wanderZ;
@@ -4457,11 +4400,7 @@ public class AggressiveZombieEntity extends Zombie {
             }
             // 1) Si se alejó demasiado, volver al hogar.
             if (outsideRadius(home)) {
-                // A2 Stage 4Q · AUTORIDAD UNICA: con el ejecutor propio al mando se SOMETE el objetivo (el hogar)
-                // y no se navega aqui; si no, comportamiento de siempre.
-                if (!zombie.navegarConEjecutorPropio(home)) {
-                    zombie.getNavigation().moveTo(home.getX(), home.getY(), home.getZ(), SPEED);
-                }
+                zombie.navegarConEjecutorPropio(home);
                 return;
             }
             // 2) Si tiene objetivo, el ataque manda (este goal no interfiere).
@@ -4469,14 +4408,14 @@ public class AggressiveZombieEntity extends Zombie {
                 return;
             }
             // 3) Sin objetivo: rondar un punto aleatorio dentro del radio del hogar.
-            if (--wanderTicks <= 0 || zombie.getNavigation().isDone()) {
+            if (--wanderTicks <= 0) {
                 java.util.Random random = new java.util.Random();
                 double angle = random.nextDouble() * Math.PI * 2.0;
                 double dist = random.nextDouble() * zombie.getHomeRadius();
                 wanderX = home.getX() + Math.cos(angle) * dist;
                 wanderZ = home.getZ() + Math.sin(angle) * dist;
                 wanderTicks = WANDER_INTERVAL_TICKS;
-                zombie.getNavigation().moveTo(wanderX, home.getY(), wanderZ, SPEED);
+                zombie.navegarTacticamente(new BlockPos((int) wanderX, home.getY(), (int) wanderZ));
             }
         }
 

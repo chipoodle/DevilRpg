@@ -1343,13 +1343,8 @@ public final class A2NavHarness {
 
     private static void prepararRaidAsaltantes(final MinecraftServer server) {
         var nivelR = server.overworld();
-        // Configuracion EFECTIVA de navegacion custom: entradas documentadas por NavFeature.
-        String prop = System.getProperty(com.chipoodle.devilrpg.entity.nav.NavFeature.PROPERTY);
-        String env = System.getenv(com.chipoodle.devilrpg.entity.nav.NavFeature.ENV);
-        boolean efectivo = com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation();
-        rNavConfig = "propiedad=" + com.chipoodle.devilrpg.entity.nav.NavFeature.PROPERTY + "=" + prop
-                + " env=" + com.chipoodle.devilrpg.entity.nav.NavFeature.ENV + "=" + env
-                + " navCustomEfectivo=" + com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation();
+        // Single-authority navigation: there is no fallback flag anymore.
+        rNavConfig = "navCustomEfectivo=true (NavExecutor unique authority)";
         log("NAVCUSTOM " + rNavConfig);
         // Edit 32 · los puntos de asalto deben estar en SUPERFICIE real, no en una plataforma
         // artificial dentro de una montaña. La ventana vertical admite hasta 80 bloques sobre el centro.
@@ -1758,7 +1753,7 @@ public final class A2NavHarness {
             java.nio.file.Files.createDirectories(dir);
             trOut = java.nio.file.Files.newBufferedWriter(dir.resolve("nav-trace.log"));
             trOut.write("# schema=a2n-navtrace/1 run=" + run + " traceNav=" + TRACE_NAV
-                    + " navCustom=" + com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation() + "\n");
+                    + " navCustom=true (single authority)\n");
             trOut.write("# cols=tickServidor,raidTick,idx,uuid,tipo,x,y,z,bbox,objetivo,dist2D,dist3D,movio,estado,cambioEstado,rutaAccion,descenso\n");
             log("TRACE NAV habilitado: " + dir.resolve("nav-trace.log"));
             // Edit 11(b): puente produccion -> este artefacto. NavTrace no hace nada si la bandera esta
@@ -2014,11 +2009,7 @@ public final class A2NavHarness {
                             ? "-" : dos(Math.sqrt(a.distanceToSqr(a.getTarget()))))
                             + " combateActivo=" + a.persiguiendoActivoA2()
                             + " navSuspendido=" + a.navExecutorSuspendedA2()
-                            + " planner={" + a.pathPlannerDiagA2() + "}"
-                            + " executorMayMove=" + com.chipoodle.devilrpg.entity.nav.MovementOwnership
-                            .executorMayMove(true, a.persiguiendoActivoA2(), a.getTarget() != null
-                                    && a.distanceToSqr(a.getTarget())
-                                    <= com.chipoodle.devilrpg.entity.nav.AdvanceUnderFirePolicy.MELEE_RANGE_SQR)
+                            + " executorMayMove=" + !a.navExecutorSuspendedA2()
                             + " ruta={" + a.navExecutor().rutaAccionDiag() + "}");
                 }
             }
