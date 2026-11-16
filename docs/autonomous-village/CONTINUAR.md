@@ -40,7 +40,8 @@ No modificar presupuestos, cooldowns, rangos, protección, colisiones, mundos or
 ## 2026-11-14 10:02 — Perimeter-aware retreat focused: FAIL
 
 - Added AttackerRetreatDestinationPolicy.preservesInterior: an attacker already inside may not choose an outside retreat destination; search expanded to 8–32 blocks. Test 12/12.
-- Focused run 2n-20261114-095200 completed with fin: C4 PASS, but ntraron=4/8, ivos=4, muertos=4, dentroParedAhora=0.
+- Focused run 2n-20261114-095200 completed with fin: C4 PASS, but ntraron=4/8,
+ivos=4, muertos=4, dentroParedAhora=0.
 - Four deaths all minecraft:mob_attack: ticks 884, 1117, 1709, 1819. Retreat still does not keep entrants alive to the closing snapshot.
 - No full acceptance run was launched after this negative focused result. A2 remains FAIL; C4 PASS preserved.
 - Next: death timing shows guards kill entrants before/around retreat; a general inside-combat/evasion solution (or authorized survival mechanism) is still required. Do not change threshold/C4.
@@ -61,7 +62,8 @@ Future (not implemented): move temporal progression configuration into each crea
 - Temporal difficulty is ThreatLevel.current(level()) captured at spawn; existing entities retain spawn-time attributes. Matches owner design.
 - Custom zombie, siege attacker (same class), and FrostVex all use the same nearest-player-anchor lookup. A2 harness overrides the fake player's anchor (-5000) as test instrumentation.
 - SpawnProfile is immutable and holds distance parameters; temporal global config lives in ThreatLevel. Proposed per-creature TemporalDifficultyProfile documented, preserving current zombie defaults (1.0→1.8, 3h).
-- AggressiveVex rename inventory documented. Java/display rename can be compatibility-safe; changing registry ID rost_vex is high risk without a save migration.
+- AggressiveVex rename inventory documented. Java/display rename can be compatibility-safe; changing registry ID
+rost_vex is high risk without a save migration.
 - No gameplay code, attributes, registry IDs, entity names, A2/C4 criteria or saves changed. Full design: WORLD-GLOBAL-DIFFICULTY-AND-SPAWNPROFILE-DESIGN.md.
 
 ## 2026-11-14 12:05 — Shared world spawn invariant implemented
@@ -77,7 +79,9 @@ Future (not implemented): move temporal progression configuration into each crea
 ## 2026-11-14 12:30 — A2 acceptance with shared-world-spawn scaling: FAIL, C4 PASS
 
 - Run 2n-20261114-121647, completed normally with fin.txt (full 12000 ticks).
-- spawneados=8/8, allosSpawn=0, ivos=3, muertos=5, desaparecidos=0, ntraronPerimetroEver=5, dentroParedAhora=0.
+- spawneados=8/8,
+allosSpawn=0,
+ivos=3, muertos=5, desaparecidos=0, ntraronPerimetroEver=5, dentroParedAhora=0.
 - Survivors: idx3 617,86,600 health 17.56; idx4 588,79,507 health 16.84; idx8 748,63,533 health 18.24. idx7 entered at t=9783, was inside at t=10476, died t=11078; five attackers died.
 - A2 FAIL: criterion 2 (5/8 < 6), criterion 3 (0 inside), criterion 4 (no external survivor enclosure progress; idx3/idx4 static, idx8 far).
 - C4 PASS: 16 survivors, 12/12 workers alive/resumed, 0 casualties, jobSite [8,0,0], 3 removed for recovery, 0 instrument failures.
@@ -91,14 +95,16 @@ Future (not implemented): move temporal progression configuration into each crea
   - idx8: repeated BREAK-VERIFIED at 746,65,533/534 while local objective stayed 747,68,535; terminal presupuesto agotado sin progreso (10/10). Reach gate rejects some nodes but the cached route/objective is retained; broad redesign required.
   - idx3: candidate 618,86,600 moved away from mission 616,71,578; rejection was correct. Final run regressed to 607,95,601 on rearm.
   - idx4: candidate 589,79,508 was closer horizontally (dx 8 vs 9, dz 25 vs 26) but old policy rejected it. Added direction-aware acceptance (7/7 test).
-- Focused run 2n-20261114-123936 completed with fin: C4 PASS, but A2 ivos=4, muertos=4, ntraron=4/8, dentroParedAhora=0; idx3 607,95,601; idx4 588,79,507. No improvement.
+- Focused run 2n-20261114-123936 completed with fin: C4 PASS, but A2
+ivos=4, muertos=4, ntraron=4/8, dentroParedAhora=0; idx3 607,95,601; idx4 588,79,507. No improvement.
 - No full acceptance after this negative focused result. A2 remains FAIL; C4 PASS.
 
 ## 2026-11-14 13:02 — Enclosure-aware retreat + verified-BREAK replan: focused partial PASS
 
 - Retreat interior check now uses the production wall predicate dentroDeLaAldea → VillageManager.dentroDelRecinto(pos, villageCenter, cota, FENCE_RADIUS), not the broader protected-area predicate. idx7-style start-inside → dest-outside is now rejected.
 - Verified BREAK (NavObjectivePolicy.accionResuelta with target air) now advances route index and forces objective=null, objetivoPermiteConstruccion=false, globalCache=null, state=PLANNING; obsolescent above-attacker objective is not retried. Trace VERTICAL_TRANSITION_FAILED reason=BREAK_VERIFIED_REPLAN.
-- Focused run 2n-20261114-125345 completed with fin: C4 PASS, ntraronPerimetroEver=6 (criterion 2 met), but ivos=2, muertos=6, dentroParedAhora=0.
+- Focused run 2n-20261114-125345 completed with fin: C4 PASS, ntraronPerimetroEver=6 (criterion 2 met), but
+ivos=2, muertos=6, dentroParedAhora=0.
 - idx8 reached inside during the run (663,71,496 dist36.96) but died before the closing snapshot; idx3 607,95,601 and idx4 588,79,507 remain outside.
 - Repair audit (source): VillagerRepairGoal.canUse false under attack; 	ickVillageLife gated; segurarMuro skips when AggressiveZombie within FENCE_RADIUS+4. No evidence of wall reconstruction during this siege; gate automation is not block replacement. No repair change made.
 - A2 remains FAIL (criterion 3 and 4); C4 PASS. No full acceptance after the focused negative survival result.
@@ -123,7 +129,8 @@ Future (not implemented): move temporal progression configuration into each crea
 ## 2026-11-14 14:41 — Bell approach integrated; focused still no destruction
 
 - cadenaDeAproximacion now uses destinoAproximacionCampana(centro): scans ±2 around the actual bell, validates interior standability, and selects the closest adjacent cell. Fallback is the old interior destination.
-- Focused 2n-20261114-143051 completed with fin: C4 PASS, 8/8 spawned, 5/8 entered, ivos=3, muertos=5, dentroParedAhora=0.
+- Focused 2n-20261114-143051 completed with fin: C4 PASS, 8/8 spawned, 5/8 entered,
+ivos=3, muertos=5, dentroParedAhora=0.
 - BELL_APPROACH_SELECTED ... bell=661,72,533 approach=660,72,533 observed for two attackers; no BELL_DESTROYED.
 - idx8 entered at t=2992 (720,71,516), died t=3631 at 693,71,524; idx3/4/7 survived outside. No attacker reached/attacked the bell.
 - Root blocker is combat survival/approach, not bell discovery/approach selection. A2 remains FAIL; no full acceptance.
