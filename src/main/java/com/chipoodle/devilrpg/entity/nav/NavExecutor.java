@@ -3706,11 +3706,11 @@ public final class NavExecutor {
                 lastMoveTarget = node.pos().toShortString() + ":BUILD-VERIFICADO";
                 return;
             }
-            case BREAK, BRIDGE -> {
-                if (node.transition() == NavRoute.Transition.BREAK) {
-                    ejecutarBreakDesdePosicionDeAtaque(node, now);
-                    return;
-                }
+            case BREAK -> {
+                ejecutarBreakDesdePosicionDeAtaque(node, now);
+                return;
+            }
+            case BRIDGE -> {
                 // A2 Stage 6E · FIX B · LA TRANSICION ACTUA SOBRE SU NODO, NO SOBRE LA MISION LEJANA.
                 // Medido en `a2n-20261016-170218`: la ruta empezaba en `0:BREAK@120,84,-9` y el ejecutor se limitaba
                 // a pasar a RECOVERING; la recuperacion solo recibia el OBJETIVO, asi que ese nodo NUNCA se rompia y

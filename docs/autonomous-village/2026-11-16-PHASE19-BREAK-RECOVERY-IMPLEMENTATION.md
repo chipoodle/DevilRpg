@@ -58,3 +58,6 @@ Planner validates the predecessor at its tracked feet Y; executor validates the 
 
 
 - Preserved the original support requirement for the post-break successor cell. The predecessor attack stand and the cell occupied after the block is removed are validated independently; a BREAK edge cannot lead into an unsupported hole.
+
+
+- BREAK and BRIDGE are now separate switch branches. The legacy solid-node approach/delegation code remains only in BRIDGE; BREAK can no longer fall through to any `moveTo(node.pos())` path.
