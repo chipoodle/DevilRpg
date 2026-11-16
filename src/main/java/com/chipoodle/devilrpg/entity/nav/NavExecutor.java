@@ -2082,9 +2082,9 @@ public final class NavExecutor {
 
     private boolean intentarBacktrackTrasFallo(long now, String reason) {
         if (recoveryController.onNoProgress() != NavRecoveryController.Decision.BACKTRACK) return false;
-        BlockPos backtrack = recoveryController.chooseBacktrack(mob.blockPosition(), p ->
+        BlockPos backtrack = recoveryController.chooseBacktrack(mob.blockPosition(), ARRIVE_DISTANCE_SQR, p ->
                 esPieValido(p) && NavObstruction.fits(mob.level(), mob, p));
-        if (backtrack == null || backtrack.distSqr(mob.blockPosition()) <= ARRIVE_DISTANCE_SQR) return false;
+        if (backtrack == null) return false;
 
         recoveryController.markBacktrack(backtrack);
         mob.getNavigation().stop();
