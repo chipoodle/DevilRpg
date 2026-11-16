@@ -49,4 +49,3 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 ## Local-only artifacts
 
 `.a2-backups/`, `src/foodTest/`, `tools/a2n/A2NavHarness.java.partial`, launcher helper scripts. Do not commit indiscriminately.
-
