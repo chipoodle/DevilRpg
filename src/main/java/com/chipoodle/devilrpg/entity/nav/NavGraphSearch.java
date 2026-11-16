@@ -15,11 +15,20 @@ import java.util.Set;
 /**
  * Núcleo de busqueda A* acotada, sin Minecraft. La validacion de movimiento sigue viviendo en el
  * adaptador de produccion; aqui solo se decide que sucesores ya validados entran en la busqueda.
+ *
+ * A BREAK edge has two different positions: {@code to} is the post-break traversable state
+ * (the formerly solid target), while {@code standPos} is the physical attack cell. They must not
+ * share a search-state key: reaching the attack cell by WALK does not mean the obstruction was removed.
  */
 public final class NavGraphSearch {
-    public record Edge(long to, double cost, NavRoute.Transition transition, int feet, BlockPos actionPos) {
+    public record Edge(long to, double cost, NavRoute.Transition transition, int feet,
+                       BlockPos actionPos, BlockPos standPos) {
         public Edge(long to, double cost, NavRoute.Transition transition, int feet) {
-            this(to, cost, transition, feet, null);
+            this(to, cost, transition, feet, null, null);
+        }
+
+        public Edge(long to, double cost, NavRoute.Transition transition, int feet, BlockPos actionPos) {
+            this(to, cost, transition, feet, actionPos, null);
         }
     }
 
@@ -33,9 +42,14 @@ public final class NavGraphSearch {
         double distance(long state);
     }
 
-    public record Step(long state, NavRoute.Transition transition, int feet, BlockPos actionPos) {
+    public record Step(long state, NavRoute.Transition transition, int feet,
+                       BlockPos actionPos, BlockPos standPos) {
         public Step(long state, NavRoute.Transition transition, int feet) {
-            this(state, transition, feet, null);
+            this(state, transition, feet, null, null);
+        }
+
+        public Step(long state, NavRoute.Transition transition, int feet, BlockPos actionPos) {
+            this(state, transition, feet, actionPos, null);
         }
     }
 
@@ -57,6 +71,7 @@ public final class NavGraphSearch {
         Map<Long, Long> cameFrom = new HashMap<>();
         Map<Long, NavRoute.Transition> transitionTo = new HashMap<>();
         Map<Long, BlockPos> actionTo = new HashMap<>();
+        Map<Long, BlockPos> standTo = new HashMap<>();
         Map<Long, Integer> feetTo = new HashMap<>();
         Set<Long> closed = new HashSet<>();
         double h0 = graph.heuristic(start);
@@ -103,6 +118,7 @@ public final class NavGraphSearch {
                 cameFrom.put(edge.to(), from);
                 transitionTo.put(edge.to(), edge.transition());
                 actionTo.put(edge.to(), edge.actionPos());
+                standTo.put(edge.to(), edge.standPos());
                 double h = graph.heuristic(edge.to());
                 open.add(new Node(edge.to(), tentative, tentative + h, h));
             });
@@ -115,7 +131,7 @@ public final class NavGraphSearch {
                 break;
             }
             route.add(new Step(cursor, transitionTo.getOrDefault(cursor, NavRoute.Transition.WALK),
-                    feetTo.getOrDefault(cursor, startFeet), actionTo.get(cursor)));
+                    feetTo.getOrDefault(cursor, startFeet), actionTo.get(cursor), standTo.get(cursor)));
             cursor = prev;
         }
         Collections.reverse(route);
