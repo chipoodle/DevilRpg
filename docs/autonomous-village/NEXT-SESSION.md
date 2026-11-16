@@ -60,15 +60,17 @@ Read first, in order:
   requires verified air before advancing.
 - Focused `a2n-20261116-101718`, merged `103331`, post-integration `110238`: 6/8 perimeter,
   5/8 strict, C4 PASS `[1,0,0]`/`[3,0,0]`.
-- Phase19 verification: BREAK executor integration fixed to use `actionTarget()`; tests PASS; no
-  runtime `BREAK_EXECUTED_FROM_STAND` event yet, so direct execution remains unproven.
+- Phase19 verification: BREAK executor integration fixed to use `actionTarget()`. Follow-up review
+  constrains planner-selected attack stands to one legal move from the predecessor and delegates
+  reach/LOS/protection checks to `NavBreakActionPolicy.executable`. The new policy test is not yet
+  run by Harness. No runtime BREAK event yet.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Validate the published BREAK execution and bounded recovery implementation in Phase19, including the
-   executable stand-position contract from `2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`.
+1. Harness: fetch the latest commit, preserve local-only work, run Gradle tests, strict lint and
+   diff-check for the attack-stand edge correction; then capture the full runtime BREAK sequence.
 2. Harness must fetch the latest `feature/autonomous-village` commit before touching local files; inspect
    local status and preserve every uncommitted/untracked artifact. Do not reset, clean, stash or overwrite.
 3. Run Gradle tests, strict aldea lint and diff-check. Fix compile/test regressions without changing action

@@ -89,3 +89,25 @@ Unchanged:
 2. Exercise multiple approach sides and a deliberate first-actuator failure to observe the 40-tick retry.
 3. Exercise two no-progress failures to observe backtrack and strategic-mission resumption.
 4. Add planner integration tests with a real/mock `CollisionGetter` and `Mob`.
+
+
+## Follow-up source review — executable attack-stand edge
+
+A review found that the selected attack stand was not constrained to a single legal move from the
+predecessor. The old helper could select a farther or vertically different neighbouring cell after
+validating the predecessor, while the graph charged only one BREAK edge. Its separate LOS helper
+also treated a raycast MISS as visible.
+
+Corrected in the follow-up source commit:
+
+- Candidate attack stands must be at the same feet Y and within one horizontal graph step of the
+  predecessor.
+- Diagonal stand approaches obey the existing corner-clearance rule.
+- The selected stand itself is checked by NavBreakActionPolicy.executable, enforcing production
+  reach, protection, break permission, AABB/support and target-first raycast.
+- BREAK edge exclusion is keyed to the actual selected (stand,target) pair.
+- Added NavBreakAttackPositionPolicyTest for cardinal/diagonal one-step eligibility, same-cell,
+  two-cell, vertical mismatch, feet-level mismatch and candidate-set size.
+
+These are source and deterministic policy changes only. Harness must run Gradle tests, strict lint,
+diff-check and then targeted runtime. No runtime BREAK or A2 acceptance PASS is claimed.

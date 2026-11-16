@@ -43,6 +43,17 @@ public final class NavBreakAttackPositionPolicy {
         return standPos.distSqr(actionPos) <= ACTION_REACH_SQR;
     }
 
+    /** The attack stand must be reached by one already-supported local graph move. */
+    public static boolean isSingleStepReachable(final BlockPos from, final BlockPos standPos,
+                                                final int feetY) {
+        if (from == null || standPos == null || from.getY() != feetY || standPos.getY() != feetY) {
+            return false;
+        }
+        int dx = Math.abs(standPos.getX() - from.getX());
+        int dz = Math.abs(standPos.getZ() - from.getZ());
+        return Math.max(dx, dz) == 1;
+    }
+
     /** Pure coordinate form used by deterministic tests without a Minecraft classpath. */
     public static boolean withinActionReach(final int dx, final int dy, final int dz) {
         return NavBreakContractPolicy.withinReach(dx, dy, dz);

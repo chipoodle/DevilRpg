@@ -3,11 +3,6 @@ package com.chipoodle.devilrpg.entity.nav;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.CollisionGetter;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -194,26 +189,19 @@ public final class NavPlanner {
                 return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
             }
         }
+        BlockPos standPos = null;
         if (kind == NavObstruction.Kind.BREAKABLE) {
-            // The post-break successor must still be a supported feet cell; the attack stand is
-            // validated separately and is the position from which the action is executed.
+            // The post-break successor must remain supported. The action stand is a separate,
+            // actually reachable neighbouring cell; it is never inferred from the solid target.
             if (!NavObstruction.hasSupport(level, candidate)) {
                 return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
             }
-            BlockPos stand = new BlockPos(from.getX(), piesDesde, from.getZ());
-            if (!NavBreakActionPolicy.executable(level, mob, stand, candidate, policies,
-                    NavBreakActionPolicy.ACTION_REACH_SQR)) {
-                return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
-            }
-            if (exclusionesBreak != null && exclusionesBreak.excluded(stand, candidate,
-                    huellaBreak(level, stand, candidate))) {
-                return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
-            }
-        }
-        BlockPos standPos = null;
-        if (kind == NavObstruction.Kind.BREAKABLE) {
-            standPos = buscarPosicionDeAtaque(level, mob, candidate, from, policies);
+            standPos = buscarPosicionDeAtaque(level, mob, candidate, from, piesDesde, policies);
             if (standPos == null) {
+                return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
+            }
+            if (exclusionesBreak != null && exclusionesBreak.excluded(standPos, candidate,
+                    huellaBreak(level, standPos, candidate))) {
                 return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
             }
         }
@@ -244,34 +232,31 @@ public final class NavPlanner {
      * ejecutable. No se acepta el bloque solido como destino de navegacion.
      */
     private static BlockPos buscarPosicionDeAtaque(CollisionGetter level, Mob mob, BlockPos actionPos,
-                                                   BlockPos from, NavObstruction.Policies policies) {
+                                                   BlockPos from, int piesDesde,
+                                                   NavObstruction.Policies policies) {
         for (BlockPos stand : NavBreakAttackPositionPolicy.candidates(actionPos, from)) {
-            if (!NavBreakAttackPositionPolicy.withinActionReach(stand, actionPos)) {
+            if (!NavBreakAttackPositionPolicy.withinActionReach(stand, actionPos)
+                    || !NavBreakAttackPositionPolicy.isSingleStepReachable(from, stand, piesDesde)) {
                 continue;
             }
-            if (!NavObstruction.fits(level, mob, stand) || !NavObstruction.hasSupport(level, stand)) {
-                continue;
+            int dx = stand.getX() - from.getX();
+            int dz = stand.getZ() - from.getZ();
+            if (Math.abs(dx) == 1 && Math.abs(dz) == 1) {
+                BlockPos sideX = new BlockPos(stand.getX(), piesDesde, from.getZ());
+                BlockPos sideZ = new BlockPos(from.getX(), piesDesde, stand.getZ());
+                if (!NavObstruction.fits(level, mob, sideX)
+                        && !NavObstruction.fits(level, mob, sideZ)) {
+                    continue;
+                }
             }
-            if (policies.isProtected(stand)) {
-                continue;
-            }
-            if (!lineaDeVision(level, mob, stand, actionPos)) {
+            if (policies.isProtected(stand)
+                    || !NavBreakActionPolicy.executable(level, mob, stand, actionPos, policies,
+                    NavBreakActionPolicy.ACTION_REACH_SQR)) {
                 continue;
             }
             return stand.immutable();
         }
         return null;
-    }
-
-    private static boolean lineaDeVision(CollisionGetter level, Mob mob, BlockPos stand, BlockPos actionPos) {
-        if (!(level instanceof Level world)) {
-            return true;
-        }
-        Vec3 eye = new Vec3(stand.getX() + 0.5D, stand.getY() + 1.6D, stand.getZ() + 0.5D);
-        Vec3 target = Vec3.atCenterOf(actionPos);
-        BlockHitResult hit = world.clip(new ClipContext(eye, target, ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE, mob));
-        return hit.getType() == HitResult.Type.MISS || hit.getBlockPos().equals(actionPos);
     }
 
     /**
