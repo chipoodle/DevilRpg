@@ -1994,9 +1994,20 @@ public final class A2NavHarness {
                     }
                     double dx = a.getX() - rAncla.getX();
                     double dz = a.getZ() - rAncla.getZ();
+                    var np = a.getNavigation().getPath();
                     log("RAID TARGETPROBE idx=" + (k + 1) + " t=" + rTicks
                             + " pos=" + a.blockPosition().toShortString()
                             + " exact=" + dos(a.getX()) + "," + dos(a.getY()) + "," + dos(a.getZ())
+                            + " velocity=" + dos(a.getDeltaMovement().x) + ","
+                            + dos(a.getDeltaMovement().y) + "," + dos(a.getDeltaMovement().z)
+                            + " onGround=" + a.onGround() + " inWater=" + a.isInWater()
+                            + " pathNull=" + (np == null)
+                            + " pathCanReach=" + (np != null && np.canReach())
+                            + " pathDone=" + a.getNavigation().isDone()
+                            + " pathNodes=" + (np == null ? -1 : np.getNodeCount())
+                            + " pathIndex=" + (np == null ? -1 : np.getNextNodeIndex())
+                            + " pathNext=" + (np == null || np.getNextNodeIndex() >= np.getNodeCount()
+                            ? "-" : np.getNextNode().asBlockPos().toShortString())
                             + " dist=" + dos(Math.sqrt(dx * dx + dz * dz))
                             + " estado=" + a.navExecutor().state()
                             + " objetivo=" + (a.navExecutor().objective() == null
