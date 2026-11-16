@@ -29,9 +29,14 @@ public final class NavRecoveryControllerTest {
         check("mission progress rearms two-failure sequence",
                 controller.onNoProgress() == NavRecoveryController.Decision.REPLAN
                         && controller.onNoProgress() == NavRecoveryController.Decision.BACKTRACK);
+        for (int i = 0; i < 24; i++) {
+            controller.recordReached(new BlockPos(100 + i, 64, 0));
+        }
+        check("physical history remains bounded at sixteen cells",
+                controller.historySize() == NavRecoveryController.MAX_HISTORY);
         controller.reset();
         check("reset clears history", controller.historySize() == 0);
-        System.out.println("NAV_RECOVERY_CONTROLLER_TEST: OK (9 assertions)");
+        System.out.println("NAV_RECOVERY_CONTROLLER_TEST: OK (10 assertions)");
     }
     private static void check(String name, boolean value) {
         if (!value) throw new AssertionError(name);
