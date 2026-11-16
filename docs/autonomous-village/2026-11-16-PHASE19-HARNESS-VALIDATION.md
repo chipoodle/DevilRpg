@@ -153,11 +153,11 @@ ChatGPT reviewed the actual source and identified that the BREAK route could be 
 
 ChatGPT published corrections and a deterministic runtime fixture in code checkpoint:
 
-`1a7028abc138f5b53d1313155dee23fceb20ed78`
+`6d5dc7b1d1f72a366d4f6b05626147b9e932481c`
 
 New tests authored and registered (not yet run):
 - `NavBreakGraphStateTest` — 7 assertions.
-- `NavBreakRoutePolicyTest` — 10 assertions.
+- `NavBreakRoutePolicyTest` — 11 assertions.
 
 New runtime mode:
 `A2NavHarness` with `-Da2n.mode=break-runtime`, compiled with `-Pa2nDiagnostics=true` and launched with `-Ddevilrpg.a2n.traceNav=true` in a new disposable world. It exercises a production-actuator success path and a controlled first-failure/second-success path whose retry must be exactly 40 ticks.
@@ -170,4 +170,4 @@ The source changes, fixture design, expected trace events, and exact Harness ins
 
 ### Additional correction — generic recovery target
 
-A subsequent review found one remaining generic recovery path that still passed `actual.pos()` to the BREAK actuator. Since `pos()` is the stand, that path could act on the wrong block. It now passes `actual.actionTarget()` and verifies the actual target state. The graph search also rejects malformed BREAK edges that do not carry both stand and action positions. These changes are included in code checkpoint `1a7028abc138f5b53d1313155dee23fceb20ed78` and are also pending Harness validation.
+A subsequent review found one remaining generic recovery path that still passed `actual.pos()` to the BREAK actuator. Since `pos()` is the stand, that path could act on the wrong block. It now passes `actual.actionTarget()` and verifies the actual target state. The graph search also rejects malformed BREAK edges that do not carry both stand and action positions. These changes are included in code checkpoint `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` and are also pending Harness validation.
