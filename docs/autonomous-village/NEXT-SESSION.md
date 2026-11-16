@@ -29,6 +29,7 @@ Read first, in order:
 25. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
 26. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-VERIFICATION.md`
 27. `docs/autonomous-village/2026-11-16-PHASE19-HARNESS-VALIDATION.md`
+28. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`
 
 ## Permanent collaboration workflow
 
@@ -42,8 +43,8 @@ Read first, in order:
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Last code implementation SHA: `f43eb11eab618ed1e19f8b795c1663bc0c619331` (follow-up BREAK attack-stand edge fix). The subsequent commits in this documentation checkpoint define the permanent collaboration workflow; always fetch and verify the actual branch HEAD before acting.
-- Latest substantive report: `2026-11-16-PHASE19-HARNESS-VALIDATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Code implementation awaiting validation: `600b78b4f628cadf894be2cb38015d0c4ffb512d` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
+- Latest technical report: `2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`. The preceding `PHASE19-HARNESS-VALIDATION.md` records the prior `ecdfaff6` validation and remains historical evidence, not validation of this new code.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -56,9 +57,9 @@ Read first, in order:
 ## Current status
 
 - `NavExecutor` is the single movement authority; legacy planner, `NavFeature` and
-  `MovementOwnership` are deleted. Harness reported Gradle tests, strict lint and diff-check PASS
-  for the Phase19 baseline at `14df0115`. Follow-up attack-stand edge correction at `f43eb11e`
-  has **not yet been compiled or executed by Harness**.
+  `MovementOwnership` are deleted. Harness passed Gradle tests, strict lint and diff-check on the
+  prior tree at `ecdfaff6`; those results do **not** validate the later code checkpoint `600b78b4`.
+  The new graph-state/route/executor changes and two new tests are **not yet compiled or executed by Harness**.
 - Phase10 melee-only tactical ownership (`002550`): 6/8 perimeter, 5/8 strict; C4 12/12.
 - Phase11 diagnostic `005739`: same 6/8 perimeter, 5/8 strict. Combat inactive for idx5/7/8.
 - Phase12 diagnostic `022656`: 5/8 perimeter, 4/8 strict; C4 12/12.
@@ -76,24 +77,35 @@ Read first, in order:
 - Phase19 verification: BREAK executor integration fixed to use `actionTarget()`. Follow-up review
   constrains planner-selected attack stands to one legal move from the predecessor and delegates
   reach/LOS/protection checks to `NavBreakActionPolicy.executable`.
-- Harness validation at `ecdfaff6`: Gradle tests, strict lint and diff-check PASS. All five BREAK/recovery
-  policy tests executed (5/7/8/6/7 assertions).
-- Focused `a2n-20261116-112413`: 6/8 perimeter, 5/8 strict, C4 PASS `[1,0,0]`; **no BREAK/backtrack
-  runtime events**, so direct execution, retry, alternatives and backtrack remain unproven.
+- Harness validation at `ecdfaff6`: Gradle tests, strict lint and diff-check PASS. The five prior BREAK/recovery
+  tests executed (5/7/8/6/7 assertions); this is not evidence for code added after `ecdfaff6`.
+- Focused `a2n-20261116-112413`: 6/8 perimeter, 5/8 strict, C4 PASS `[1,0,0]`; no BREAK/backtrack
+  runtime events. New graph-state root cause and deterministic fixture are documented in the latest report.
+- New tests `NavBreakGraphStateTest` (6 assertions) and `NavBreakRoutePolicyTest` (10 assertions) are authored,
+  registered, and pending Harness execution. `A2NavHarness` now supports `-Da2n.mode=break-runtime`.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Harness has completed the required checks at `ecdfaff6`; next build a deterministic runtime fixture
-   that forces a route BREAK edge (valid stand) and records `BREAK_STAND_APPROACH` → target air →
-   route advance.
-2. Force one actuator false return to observe the 40-tick retry, then two no-progress failures to
-   observe `NAV_BACKTRACK` and strategic mission resumption.
-3. Add the real/mock `CollisionGetter` + `Mob` planner integration fixture; do not substitute policy-only tests.
-4. Run focused A2/C4 only after targeted BREAK checks. Do not run 12k until five consecutive 8/8 strict
-   `DENTRO-PARED` runs are achieved.
-5. IDX7 remains BLOCKED; IDX5 boundary UNKNOWN; C4 save/reload OPEN.
+1. Harness: fetch the current branch HEAD and verify it contains code checkpoint
+   `600b78b4f628cadf894be2cb38015d0c4ffb512d`. Preserve all local-only artifacts.
+2. Run on the exact fetched tree:
+   ```powershell
+   .\gradlew.bat test
+   python tools/lint_aldea.py --strict
+   git diff --check
+   ```
+3. Build the A2 diagnostic variant with `-Pa2nDiagnostics=true`, then run a new disposable world with
+   `-Da2n.mode=break-runtime -Dn4.trace=true` and a unique run ID. Confirm planner route contains BREAK,
+   stand approach occurs, both targets become air, retry delta is exactly 40 ticks, and both missions resume.
+4. Persist full logs, trace and `fin.txt`/ `estado.txt`; report exact tested SHA. If the fixture is INVALIDO
+   or BLOCKED, do not change code locally or weaken its geometry—return evidence to ChatGPT.
+5. After successful BREAK runtime, design separate deterministic coverage for second actuator failure /
+   `BREAK_EDGE_EXCLUDED` and two no-progress failures / `NAV_BACKTRACK`. Those are not covered by the
+   current success/retry fixture.
+6. A2 remains OPEN at 5/8 strict; do not run 12k until five consecutive 8/8 strict
+   `DENTRO-PARED` runs. C4 save/reload remains OPEN.
 
 ## Worlds (preserve; do not overwrite)
 
