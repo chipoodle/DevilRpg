@@ -48,3 +48,6 @@ Planner validates the predecessor at its tracked feet Y; executor validates the 
 
 
 - The same two-consecutive-failure backtrack gate is also fed by a fully exhausted no-route search (not by a hit-budget/inconclusive search), so recovery is not limited to cases where vanilla had already produced a stale route.
+
+
+- LOS ray now aims through the center of the target's near face. A direct eye-to-block-center ray can graze above/below an adjacent block due to the mob's elevated eye position; the corrected ray endpoint is computed from the first horizontal face intersection and still requires the first collision hit to be the intended target.

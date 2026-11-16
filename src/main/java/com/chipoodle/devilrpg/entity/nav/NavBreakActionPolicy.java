@@ -38,7 +38,23 @@ public final class NavBreakActionPolicy {
         double distanceSqr = dx * dx + dy * dy + dz * dz;
         if (!NavBreakReachPolicy.reachable(stand.getY(), target.getY(), distanceSqr, actionReachSqr)) return false;
 
-        BlockHitResult hit = level.clip(new ClipContext(eye, targetCenter,
+        // Aim through the center of the target's near face. A direct eye->block-center ray
+        // can pass just above/below an adjacent block because the mob's eyes are elevated.
+        double tEnter = 1.0D;
+        if (Math.abs(dx) > 1.0E-7D) {
+            double faceX = dx > 0.0D ? target.getX() : target.getX() + 1.0D;
+            double tX = (faceX - eyeX) / dx;
+            if (tX > 0.0D) tEnter = Math.min(tEnter, tX);
+        }
+        if (Math.abs(dz) > 1.0E-7D) {
+            double faceZ = dz > 0.0D ? target.getZ() : target.getZ() + 1.0D;
+            double tZ = (faceZ - eyeZ) / dz;
+            if (tZ > 0.0D) tEnter = Math.min(tEnter, tZ);
+        }
+        if (tEnter <= 0.0D || tEnter >= 1.0D) return false;
+        double aimY = eyeY + (target.getY() + 0.5D - eyeY) / tEnter;
+        Vec3 rayEnd = new Vec3(targetCenter.x, aimY, targetCenter.z);
+        BlockHitResult hit = level.clip(new ClipContext(eye, rayEnd,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mob));
         return hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(target);
     }
