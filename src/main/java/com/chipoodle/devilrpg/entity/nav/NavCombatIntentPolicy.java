@@ -3,7 +3,7 @@ package com.chipoodle.devilrpg.entity.nav;
 /** Pure combat-intent decisions used by the single-authority navigation migration. */
 public final class NavCombatIntentPolicy {
     public static final double MELEE_RANGE_SQR = 4.0D;
-    public static final double TACTICAL_LEASH_SQR = 36.0D;
+    public static final double TACTICAL_LEASH_SQR = 4.0D;
 
     private NavCombatIntentPolicy() {
     }

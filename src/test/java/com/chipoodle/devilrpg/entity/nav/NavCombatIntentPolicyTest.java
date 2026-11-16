@@ -8,8 +8,8 @@ public final class NavCombatIntentPolicyTest {
                 1, 2, 3, 1, 2, 4));
         comprobar("same destination is idempotent", !NavCombatIntentPolicy.tacticalDestinationChanged(
                 1, 2, 3, 1, 2, 3));
-        comprobar("near target inside tactical leash", NavCombatIntentPolicy.withinTacticalLeash(36.0D));
-        comprobar("far target outside tactical leash", !NavCombatIntentPolicy.withinTacticalLeash(36.01D));
+        comprobar("near target inside tactical leash", NavCombatIntentPolicy.withinTacticalLeash(4.0D));
+        comprobar("far target outside tactical leash", !NavCombatIntentPolicy.withinTacticalLeash(4.01D));
         System.out.println("NAV_COMBAT_INTENT_POLICY_TEST: OK (6 assertions)");
     }
 
