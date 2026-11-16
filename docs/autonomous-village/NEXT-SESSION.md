@@ -24,11 +24,12 @@ Read first, in order:
 20. `docs/autonomous-village/2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`
 21. `docs/autonomous-village/2026-11-16-PHASE17-ISOLATED-EVALUATOR-IDX7-FORENSICS.md`
 22. `docs/autonomous-village/2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`
+23. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -41,7 +42,8 @@ Read first, in order:
 ## Current status
 
 - `NavExecutor` is the single movement authority; legacy planner, `NavFeature` and
-  `MovementOwnership` are deleted. All tests pass.
+  `MovementOwnership` are deleted. Baseline through Phase18 passed its recorded tests; Phase19
+  gameplay changes and newly added policy tests have **not yet been compiled or executed by Harness**.
 - Phase10 melee-only tactical ownership (`002550`): 6/8 perimeter, 5/8 strict; C4 12/12.
 - Phase11 diagnostic `005739`: same 6/8 perimeter, 5/8 strict. Combat inactive for idx5/7/8.
 - Phase12 diagnostic `022656`: 5/8 perimeter, 4/8 strict; C4 12/12.
