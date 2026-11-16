@@ -106,6 +106,12 @@ public final class NavGraphSearch {
             final long from = current.state();
             final int fromFeet = feet;
             graph.expand(from, fromFeet, edge -> {
+                // A BREAK edge without both positions cannot be executed safely. Never fall back
+                // to treating the solid target or a missing stand as a movement waypoint.
+                if (edge.transition() == NavRoute.Transition.BREAK
+                        && (edge.actionPos() == null || edge.standPos() == null)) {
+                    return;
+                }
                 double tentative = current.g() + edge.cost();
                 Double known = bestG.get(edge.to());
                 if (known != null && known <= tentative) {
