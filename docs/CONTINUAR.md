@@ -15,11 +15,11 @@ ChatGPT es responsable de modificar código de producción directamente en GitHu
 ## Checkpoint actual
 
 - Rama: `feature/autonomous-village`.
-- Código Phase19 pendiente de validación: `600b78b4f628cadf894be2cb38015d0c4ffb512d`.
+- Código Phase19 pendiente de validación: `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`.
 - Hallazgo: el grafo A* colapsaba el estado BREAK post-acción con el estado WALK al stand; además, BREAK podía avanzar por proximidad sin ejecutar el actuador.
 - Corrección publicada: estado post-BREAK y stand separados, nodo BREAK no alcanzado por proximidad, ocupación física exacta del stand, transferencia del action target a la ruta local y reanudación de misión estratégica.
 - Fixture determinista agregado: `A2NavHarness` modo `break-runtime`; pruebas nuevas registradas, aún no ejecutadas.
-- Siguiente acción: Harness ejecuta Gradle, lint, diff-check y el fixture runtime en un mundo desechable con `-Da2n.mode=break-runtime -Dn4.trace=true`. Reportar SHA, logs y eventos; no tocar código de producción.
+- Siguiente acción: Harness ejecuta Gradle, lint, diff-check y el fixture runtime en un mundo desechable con `-Da2n.mode=break-runtime -Ddevilrpg.a2n.traceNav=true`. Reportar SHA, logs y eventos; no tocar código de producción.
 - A2 permanece OPEN en 5/8 estricto; no ejecutar campaña 12k hasta cinco corridas consecutivas 8/8 estrictas. C4 save/reload OPEN.
 
 Este bloque es el checkpoint vigente. El resto del archivo conserva los registros históricos y no sustituye los documentos activos indicados arriba.
@@ -4115,12 +4115,12 @@ No hacer cambios especulativos ni debilitar protección de bloques. Investigar e
 ## Siguiente ejecución obligatoria
 
 - Ejecutar Run32 con el mismo fixture/semilla/budgets, mundo desechable nuevo y sin GUI.
-- Añadir `-Dn4.trace=true` para registrar `shore`, `custom`, `nav` y `obj` del `EscapeWaterGoal`; no cambiar budgets ni protecciones.
+- Añadir `-Ddevilrpg.a2n.traceNav=true` para registrar `shore`, `custom`, `nav` y `obj` del `EscapeWaterGoal`; no cambiar budgets ni protecciones.
 - Aceptación parcial: idx4 debe abandonar el escalón obsoleto sin falsear travesía y ejecutar la acción BREAK; idx7 debe mostrar selección de orilla y progreso horizontal verificable. A2 permanece OPEN hasta cumplir los criterios completos.
 
 ## Run32 — resultado y siguiente diagnóstico (2026-11-13)
 
-- Run: `build/a2n/a2n-20261113-135710`; `Modo=raid`; seed `12345`; `FaseA=3000`; `FaseB=12000` (tick absoluto final); local budget `900`; global budget `8000`; sin pared/rampa/perfil/inundación adicionales; `-Dn4.trace=true`.
+- Run: `build/a2n/a2n-20261113-135710`; `Modo=raid`; seed `12345`; `FaseA=3000`; `FaseB=12000` (tick absoluto final); local budget `900`; global budget `8000`; sin pared/rampa/perfil/inundación adicionales; `-Ddevilrpg.a2n.traceNav=true`.
 - **A2 FAIL / OPEN**: 8/8 spawneados; al tick 12000: 3 vivos, 5 muertos, 0 desaparecidos; 5 entraron alguna vez al perímetro y 0 permanecían dentro. Supervivientes: idx3 `608,95,599` (FAILED); idx4 `583,111,523` (RECOVERING); idx7 `698,63,455` (PLANNING).
 - idx3 (`46fe8501-c77e-47ca-9f81-cecdc85a9395`): el DROP sí avanzó de `608,96,599` a `608,95,599`; el bloqueo posterior es el WALK hacia el escalón pendiente `608,95,598` sobre `608,94,598`. `PathNavigation` devuelve ruta vacía/`navDone=true` en `pos=608.66,95,599.50` aunque el destino está una celda al sur, con pies/cabeza libres y soporte cobblestone. La política de llegada exige ocupación física del escalón, así que no se debe relajar esa invariante; corregir el acercamiento de un bloque.
 - idx4 (`bc42feec-2905-46da-9fdb-c29a41d03e80`): continúa en `583,111,523`; presupuesto global agotado `8000/8000`; 18 fallos de descenso; 60 candidatos de escalera rechazados porque las celdas de pies están ocupadas. La traza repite `DROP_LOCAL_EXCLUSION_HIT` para `landing=584,108,520`, fingerprint `1213646834920530`; investigar cómo se propaga la exclusión y cómo se sale de ese bucle. No aumentar budgets.
@@ -4141,14 +4141,14 @@ No hacer cambios especulativos ni debilitar protección de bloques. Investigar e
 
 ## Próximos pasos
 
-1. Run33 con mismo fixture/seed/budgets y `-Dn4.trace=true`; comprobar que `N4TRACE` ya no alterna entre shore y misión, y que idx7 sale del agua.
+1. Run33 con mismo fixture/seed/budgets y `-Ddevilrpg.a2n.traceNav=true`; comprobar que `N4TRACE` ya no alterna entre shore y misión, y que idx7 sale del agua.
 2. Corregir el acercamiento al escalón pendiente cuando vanilla `PathNavigation` devuelve ruta vacía aunque el agente aún no ocupa la celda.
 3. Resolver el bucle de `DROP_LOCAL_EXCLUSION_HIT` y el acceso por terreno sólido de idx4, sin subir presupuestos ni relajar protección de muro.
 4. A2 sigue OPEN hasta que los atacantes completen el asedio y se verifique el estado de trabajadores/guardias.
 
 ## Run33 — corrección de acercamiento adyacente en validación
 
-- Run: `build/a2n/a2n-20261113-141800`; seed `12345`; `FaseA=3000`; `FaseB=12000` (tick absoluto final); local `900`; global `8000`; `-Dn4.trace=true`; mundo desechable nuevo, sin GUI.
+- Run: `build/a2n/a2n-20261113-141800`; seed `12345`; `FaseA=3000`; `FaseB=12000` (tick absoluto final); local `900`; global `8000`; `-Ddevilrpg.a2n.traceNav=true`; mundo desechable nuevo, sin GUI.
 - Se conserva la corrección táctica de Run32: reenviar la misma misión ya no cancela `objetivoTactico`.
 - Nueva corrección: `NavAdjacentApproachPolicy` + `NavExecutor.aplicarAcercamientoAdyacente`. Cuando vanilla `PathNavigation` declara la ruta terminada sin mover al mob a una celda adyacente, se usa `MoveControl` únicamente si la celda de destino cabe, tiene soporte, es un nodo de movimiento validado y está a distancia Manhattan 1–2. No se avanza la ruta por proximidad; `nodoAlcanzado` sigue exigiendo llegada física.
 - Verificación previa a Run33: `compileJava compileTestJava` BUILD SUCCESSFUL; `NavStairProgressPolicyTest` 5/5; `NavTacticalObjectivePolicyTest` 4/4; `NavAdjacentApproachPolicyTest` 8/8; lint estricto OK; `git diff --check` exit 0.
@@ -4224,7 +4224,7 @@ No hacer cambios especulativos ni debilitar protección de bloques. Investigar e
 ### Run34 activo — `a2n-20261113-143545`
 
 - Carpeta: `build/a2n/a2n-20261113-143545`; inicio 14:35:45 del 13-Nov-2026.
-- Configuración igual a Run33: fixture `arena-repair1-20261112-205206`, seed `12345`, raid, `FaseA=3000`, `FaseB=12000`, local `900`, global `8000`, pared/rampa/perfil/inundación `0`, `NavCustom=true`, `-Ddevilrpg.a2n.traceNav=true`, `-Dn4.trace=true`.
+- Configuración igual a Run33: fixture `arena-repair1-20261112-205206`, seed `12345`, raid, `FaseA=3000`, `FaseB=12000`, local `900`, global `8000`, pared/rampa/perfil/inundación `0`, `NavCustom=true`, `-Ddevilrpg.a2n.traceNav=true`, `-Ddevilrpg.a2n.traceNav=true`.
 - Usa mundo desechable nuevo; no GUI; `run/saves` intacto.
 - Watcher remoto PID `35004` escribe `run34-watch.txt` cada 30 s y termina al detectar `fin.txt` (máximo 15 min).
 - Al checkpoint 14:36:10, Gradle estaba iniciando `runServer`; `fin.txt` aún no existía. No hay resultado runtime todavía.
@@ -4260,7 +4260,7 @@ No hacer cambios especulativos ni debilitar protección de bloques. Investigar e
 
 ## Run35 — excavación segura del volumen de escalera
 
-- RunId: `a2n-20261113-145338`; mundo desechable nuevo en `build/a2n/a2n-20261113-145338/game/a2n`; fixture `arena-repair1-20261112-205206`; seed `12345`; `FaseA=3000`, `FaseB=12000`; local `900`, global `8000`; `-Dn4.trace=true`; sin GUI y sin tocar `run/saves`.
+- RunId: `a2n-20261113-145338`; mundo desechable nuevo en `build/a2n/a2n-20261113-145338/game/a2n`; fixture `arena-repair1-20261112-205206`; seed `12345`; `FaseA=3000`, `FaseB=12000`; local `900`, global `8000`; `-Ddevilrpg.a2n.traceNav=true`; sin GUI y sin tocar `run/saves`.
 - Parche añadido: `NavStairVolumeClearancePolicy` + `AggressiveZombieEntity.registrarObstruccionDeVolumenDeEscalon`. Si la celda del peldaño o uno de sus dos bloques de cabeza está ocupado, registra SOLO la primera obstrucción del volumen para despeje, siempre que la celda candidata sea exterior/no protegida y tenga soporte. La acción real sigue pasando por `puedeRomperNodoDeNavegacion`, `alAlcanceDeRotura` y `romperNodoDeRuta`; se rompe como máximo un bloque por intento y se reevalúa el mundo antes de colocar.
 - Preflight: `compileJava compileTestJava` BUILD SUCCESSFUL; tests `NavStairProgressPolicyTest` 5/5, `NavTacticalObjectivePolicyTest` 4/4, `NavAdjacentApproachPolicyTest` 10/10, `NavStairVolumeClearancePolicyTest` 8/8; lint estricto OK; `git diff --check` exit 0.
 - Respaldo previo: `.a2-backups/run35-before-stair-volume-clearance/AggressiveZombieEntity.java`.
@@ -4459,7 +4459,7 @@ Run39 mostró que `objetivoDeAproximacion` recalcula el waypoint exterior desde 
 
 **Run39 (`a2n-20261113-155051`) finalizado.** En el límite contratado de fase B, t=12000: 8/8 atacantes spawneados, 3 vivos, 5 muertos, 0 desaparecidos, 5/8 entraron alguna vez al perímetro y 0 permanecían dentro del muro. A2 = **FAIL**. Los snapshots posteriores (t=12300 y t=12600) muestran 0 vivos, 5 muertos y 3 desaparecidos; no cambian el veredicto en el límite t=12000. El `fin.txt` del harness contiene **C4_PASS**: guardasCombatieron=true; supervivientes=15; 12 trabajadores esperados, 11 vivos y reanudados, 1 baja, 0 no resueltos; asignacionesJobSite limpias (9,0,0); 3 atacantes retirados para recuperación; 0 fallos de instrumento. El servidor PID 26668 terminó correctamente. La traza de Run39 alcanzó ~93 MB por la instrumentación `DROP_UNSAFE` anterior al filtro.
 
-**Run40 arrancado automáticamente** por `auto-run40-after-run39.ps1` después de detectar `fin.txt` y la salida del servidor de Run39. RunId `a2n-20261113-160443`, servidor PID 34412, mundo desechable `build\\a2n\\a2n-20261113-160443\\game`. Se confirmó en `JDK_JAVA_OPTIONS` la presencia de `-Ddevilrpg.a2n.traceNav=true -Dn4.trace=true`, semilla 12345, fase A=3000, fase B=12000, NavCustom=true, presupuesto local 900 y global 8000. Al último chequeo estaba en arranque/carga de NeoForge; todavía no había `nav-trace.log`, `fin.txt` ni veredicto. No lanzar otra instancia mientras PID 34412 siga activo.
+**Run40 arrancado automáticamente** por `auto-run40-after-run39.ps1` después de detectar `fin.txt` y la salida del servidor de Run39. RunId `a2n-20261113-160443`, servidor PID 34412, mundo desechable `build\\a2n\\a2n-20261113-160443\\game`. Se confirmó en `JDK_JAVA_OPTIONS` la presencia de `-Ddevilrpg.a2n.traceNav=true -Ddevilrpg.a2n.traceNav=true`, semilla 12345, fase A=3000, fase B=12000, NavCustom=true, presupuesto local 900 y global 8000. Al último chequeo estaba en arranque/carga de NeoForge; todavía no había `nav-trace.log`, `fin.txt` ni veredicto. No lanzar otra instancia mientras PID 34412 siga activo.
 
 **Qué verificar en Run40:** (1) eventos `MISSION_CHAIN_RETAINED` para raíz estable con etapas exteriores pendientes; (2) que la meta exterior ya no se desplace continuamente con la posición del atacante; (3) que no se repita el agotamiento 64/64 sin progreso; (4) snapshot A2 en t=12000 y permanencia dentro del muro; (5) cierre C4 y `fin.txt`; (6) tamaño de `nav-trace.log` y ausencia del spam `DROP_UNSAFE` por defecto. A2 sigue **OPEN** hasta aceptación runtime completa. C4 de Run39 se conserva como PASS; no cambiar las políticas de recuperación ni debilitar el muro.
 
