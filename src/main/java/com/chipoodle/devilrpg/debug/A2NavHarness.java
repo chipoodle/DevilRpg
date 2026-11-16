@@ -1986,6 +1986,31 @@ public final class A2NavHarness {
                         + " descenso={" + a.navExecutor().descensoDiag() + "}");
                 rDistPrevia[k] = pdist;
             }
+            if (Boolean.getBoolean("a2n.probeTargets")) {
+                for (int k : new int[]{3, 7}) {
+                    if (k >= n) {
+                        continue;
+                    }
+                    AggressiveZombieEntity a = rAsaltantes.get(k);
+                    if (a == null || a.isRemoved() || !a.isAlive()) {
+                        log("RAID TARGETPROBE idx=" + (k + 1) + " t=" + rTicks
+                                + " alive=false removed=" + (a == null || a.isRemoved()));
+                        continue;
+                    }
+                    double dx = a.getX() - rAncla.getX();
+                    double dz = a.getZ() - rAncla.getZ();
+                    log("RAID TARGETPROBE idx=" + (k + 1) + " t=" + rTicks
+                            + " pos=" + a.blockPosition().toShortString()
+                            + " exact=" + dos(a.getX()) + "," + dos(a.getY()) + "," + dos(a.getZ())
+                            + " dist=" + dos(Math.sqrt(dx * dx + dz * dz))
+                            + " estado=" + a.navExecutor().state()
+                            + " objetivo=" + (a.navExecutor().objective() == null
+                            ? "-" : a.navExecutor().objective().toShortString())
+                            + " target=" + (a.getTarget() == null
+                            ? "-" : a.getTarget().getType().toString())
+                            + " ruta={" + a.navExecutor().rutaAccionDiag() + "}");
+                }
+            }
         }
         if (rTicks % 300 == 0) {
             log("RAID SNAPSHOT t=" + rTicks + " " + resumenRaid());

@@ -11,6 +11,7 @@ Read first, in order:
 7. `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
 8. `docs/autonomous-village/2026-11-15-PHASE5-A2-VARIABILITY.md`
 9. `docs/autonomous-village/2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md`
+10. `docs/autonomous-village/2026-11-15-PHASE7-A2-9000-OBSERVATION.md`
 
 ## Verified baseline
 
@@ -27,19 +28,19 @@ Read first, in order:
 
 ## Current status
 
-- A2 focused strict enclosure-entry sequence (`DENTRO-PARED`): **5, 7, 7, 7, 7** across `145020, 150410, 184205, 185459, 194632`.
-- All five valid runs spawned 8/8 and destroyed the bell with exactly one `SIEGE_COMPLETED`.
-- Phase-6 forensics: non-entrant IDX4 is **stalled** at `588,86,509` in 145020/184205/194632 (zero displacement ≥900 ticks), not merely slow. IDX8 is stalled at `700–702,456/457` in 145020/185459; only 150410 shows real progress cut off by the 6000 window (perimeter-only).
-- A2 is OPEN; no full 12k run.
-- C4 focused: **12/12 on five consecutive valid runs** (same IDs). No save/reload acceptance path.
-- Elevated-BREAK and worker-return fixes are published.
+- A2 focused strict enclosure-entry sequence (`DENTRO-PARED`): **5, 7, 7, 7, 7**.
+- Phase-7 observation `a2n-20261115-203001` (9000 ticks, OBSERVATION — NOT ACCEPTANCE):
+  - IDX4: frozen 5000–6000 at `588,86,509`; resumed after 6000, reached `603,71,507` (dist 63.35), then stopped just outside strict entry.
+  - IDX8: moved until ~6000, then only 3 unique positions over 3000 ticks at `710,59,469` (dist 80.49), targeting a villager, state `PLANNING`.
+- C4 at 9000 observation: 12/12; official focused C4 remains 5/5.
+- No full 12k; no production code changed.
 
 ## Immediate work
 
-1. Run the separate **9000-tick observation experiment** (not acceptance) described in `2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md` to distinguish stall from timeout.
-2. Preserve the 6000-tick focused results as current evidence; do not silently extend the standard.
-3. C4 save/reload remains OPEN; a reload driver is required.
-4. Only after the discriminating experiment and a documented focused standard, run full 12,000-tick A2.
+1. Instrument the **IDX8 villager-target/`PLANNING`** interaction at `710,59,469` to prove whether combat targeting suppresses waypoint execution; do not change navigation yet.
+2. Treat IDX4 as a 6000-window timeout/delayed route, not a permanent stall; do not extend the official focused standard silently.
+3. C4 save/reload remains OPEN (no reload acceptance path).
+4. Only after an evidence-backed IDX8 correction and a documented focused standard, run full 12,000-tick A2.
 
 ## Worlds (preserve; do not overwrite)
 
