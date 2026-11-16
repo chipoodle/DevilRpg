@@ -262,3 +262,13 @@ un\saves\DevilRpg-A2-Prueba; LevelName=DevilRpg-A2-Prueba, spawn 96,144,-32, no 
 - C4: 9/12 resumed. Failed workers: weaponsmith 254f3367 at 652,62,431 (no site); fisherman f170acc0 at 678,62,436 (site 682,71,572); mason 615e8c86 at 698,62,454 (site 692,71,502). All idle on north shore; C4 intermittent.
 - Worlds: DevilRpg-A2-IDX8-Diagnostico and DevilRpg-C4-WorkerResume-Diagnostico in %APPDATA%/.minecraft/saves and
 un/saves; hashes match; structural verification only.
+
+
+## 2026-11-16 — Phase19 BREAK + recovery implementation published
+
+- Base remote HEAD: `8f5a74fb9137abbac0a53dc44c981e81d22f9062`; implementation commit recorded in Phase19 report.
+- BREAK planning now validates the predecessor's full AABB/support, target protection/breakability, existing reach and a raycast to the intended block.
+- BREAK execution acts from the physical stand cell, never calls `moveTo` on the solid block, verifies air, then replans.
+- Failed stand->target edges are fingerprint-excluded (max 32) until geometry changes; alternate approach edges remain searchable.
+- Recovery history stores at most 16 physically occupied, valid feet cells. First no-progress failure replans; second may backtrack once to a still-valid prior cell as a tactical objective, preserving the strategic mission. Mission progress rearms the mechanism.
+- Added pure policy tests; **not run by ChatGPT**. Harness must fetch this commit first, run Gradle/lint/diff-check, then targeted runtime and A2/C4 acceptance checks. No PASS claimed.

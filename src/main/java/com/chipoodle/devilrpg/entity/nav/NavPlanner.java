@@ -105,7 +105,8 @@ public final class NavPlanner {
      */
     private static Arista validarArista(CollisionGetter level, Mob mob, BlockPos from, BlockPos candidate,
                                         int piesDesde, NavObstruction.Policies policies,
-                                        java.util.Set<BlockPos> construidas) {
+                                        java.util.Set<BlockPos> construidas,
+                                        NavBreakExclusionPolicy exclusionesBreak) {
         NavObstruction.Kind kind = NavObstruction.classify(level, mob, candidate, policies);
         boolean diagBorde = DIAG_DROP && DIAG_START != null && from.equals(DIAG_START);
         if (diagBorde) {
@@ -183,8 +184,16 @@ public final class NavPlanner {
                 return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
             }
         }
-        if (kind == NavObstruction.Kind.BREAKABLE && !NavObstruction.hasSupport(level, candidate)) {
-            return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
+        if (kind == NavObstruction.Kind.BREAKABLE) {
+            BlockPos stand = new BlockPos(from.getX(), piesDesde, from.getZ());
+            if (!NavBreakActionPolicy.executable(level, mob, stand, candidate, policies,
+                    NavBreakActionPolicy.ACTION_REACH_SQR)) {
+                return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
+            }
+            if (exclusionesBreak != null && exclusionesBreak.excluded(stand, candidate,
+                    huellaBreak(level, stand, candidate))) {
+                return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
+            }
         }
         boolean escalada = kind == NavObstruction.Kind.STEP_UP || kind == NavObstruction.Kind.JUMP_UP;
         if (escalada) {
@@ -232,6 +241,16 @@ public final class NavPlanner {
                                           NavObstruction.Policies policies,
                                           java.util.Set<BlockPos> construidas,
                                           NavDropExclusionPolicy exclusiones) {
+        return planGlobal(level, mob, start, objetivo, maxRadio, verticalRange, maxExpansions,
+                policies, construidas, exclusiones, null);
+    }
+
+    public static GlobalResult planGlobal(CollisionGetter level, Mob mob, BlockPos start, BlockPos objetivo,
+                                          int maxRadio, int verticalRange, int maxExpansions,
+                                          NavObstruction.Policies policies,
+                                          java.util.Set<BlockPos> construidas,
+                                          NavDropExclusionPolicy exclusiones,
+                                          NavBreakExclusionPolicy exclusionesBreak) {
         if (start.equals(objetivo)) {
             return new GlobalResult(new NavRoute(List.of(new NavRoute.Node(objetivo, NavRoute.Transition.WALK)),
                     objetivo), objetivo, true, 0, false, "inicio==fin",
@@ -253,7 +272,8 @@ public final class NavPlanner {
                                 || Math.abs(candidate.getZ() - start.getZ()) > maxRadio) {
                             continue;
                         }
-                        Arista arista = validarArista(level, mob, pos, candidate, feet, policies, construidas);
+                        Arista arista = validarArista(level, mob, pos, candidate, feet, policies,
+                                construidas, exclusionesBreak);
                         contadores[0]++;
                         if (!arista.valida()) {
                             continue;
@@ -408,6 +428,15 @@ public final class NavPlanner {
      * landing is essential: a leaf/overhang at landing+2 must invalidate the exclusion when it changes.
      * The fixed height makes the fingerprint independent of which adjacent take-off cell found the landing.
      */
+    static long huellaBreak(CollisionGetter level, BlockPos stand, BlockPos target) {
+        long h = 17L;
+        BlockPos[] cells = {stand, stand.above(), stand.below(), target, target.above(),
+                new BlockPos((stand.getX() + target.getX()) / 2, (stand.getY() + target.getY()) / 2,
+                        (stand.getZ() + target.getZ()) / 2)};
+        for (BlockPos cell : cells) h = h * 31L + level.getBlockState(cell).hashCode();
+        return h;
+    }
+
     static long huellaTerreno(CollisionGetter level, BlockPos p, int maxSafeDrop) {
         long h = level.getBlockState(p).hashCode();
         h = h * 31L + level.getBlockState(p.above()).hashCode();
@@ -494,6 +523,16 @@ public final class NavPlanner {
                               NavObstruction.Policies policies,
                               java.util.Set<BlockPos> construidas,
                               NavDropExclusionPolicy exclusiones) {
+        return plan(level, mob, start, goal, horizontalRange, verticalRange, maxExpansions,
+                policies, construidas, exclusiones, null);
+    }
+
+    public static Result plan(CollisionGetter level, Mob mob, BlockPos start, BlockPos goal,
+                              int horizontalRange, int verticalRange, int maxExpansions,
+                              NavObstruction.Policies policies,
+                              java.util.Set<BlockPos> construidas,
+                              NavDropExclusionPolicy exclusiones,
+                              NavBreakExclusionPolicy exclusionesBreak) {
         DIAG_START = DIAG_DROP ? start.immutable() : null;
         if (start.equals(goal)) {
             return new Result(new NavRoute(List.of(new NavRoute.Node(goal, NavRoute.Transition.WALK)), goal), 0, false,
@@ -552,7 +591,7 @@ public final class NavPlanner {
                     // A2 Stage 7C · la validacion de arista vive en UN solo sitio (`validarArista`) y la comparten
                     // la busqueda local y la global: mismo grafo, mismas reglas, mismos contadores.
                     Arista arista = validarArista(level, mob, pos, candidate,
-                            piesDe.getOrDefault(pos, pos.getY()), policies, construidas);
+                            piesDe.getOrDefault(pos, pos.getY()), policies, construidas, exclusionesBreak);
                     NavObstruction.Kind kind = arista.kind();
                     evaluados++;
                     porCategoria[kind.ordinal()]++;

@@ -58,11 +58,16 @@ Read first, in order:
 
 ## Immediate work
 
-1. Design (not implement) an action-aware route: BREAK edge must terminate at a validated standing
-   attack position with AABB/support/LOS/range/protection and fallback alternatives. Recommended Option A
-   in the Phase-18 report; Option B only as temporary executor fallback.
-2. Do not change action range, budgets, recovery, collision or acceptance.
-3. C4 contract unchanged; IDX7 remains BLOCKED (not reproduced); IDX5 boundary UNKNOWN.
+1. Validate the published BREAK execution and bounded recovery implementation in Phase19.
+2. Harness must fetch the latest `feature/autonomous-village` commit before touching local files; inspect
+   local status and preserve every uncommitted/untracked artifact. Do not reset, clean, stash or overwrite.
+3. Run Gradle tests, strict aldea lint and diff-check. Fix compile/test regressions without changing action
+   range, existing budgets, collision/protection rules or acceptance.
+4. Runtime: focused BREAK from multiple approach sides, failed-edge exclusion and terrain-fingerprint
+   invalidation; then bounded backtrack after two no-progress route failures. Verify strategic mission resumes.
+5. Run focused A2 and C4 12/12 only after targeted checks. Do not run the 12k campaign until the canonical
+   five consecutive 8/8 strict `DENTRO-PARED` gate is satisfied.
+6. C4 contract unchanged; IDX7 remains BLOCKED (not reproduced); IDX5 boundary UNKNOWN.
 
 ## Worlds (preserve; do not overwrite)
 

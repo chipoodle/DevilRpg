@@ -1,0 +1,34 @@
+# Phase 19 — BREAK execution and bounded navigation recovery
+
+## Baseline and scope
+
+- Branch: `feature/autonomous-village`
+- Base HEAD: `8f5a74fb9137abbac0a53dc44c981e81d22f9062`
+- Scope: BREAK edge executability, failed-edge memory, bounded recovery/backtracking.
+- ChatGPT did not access the local PC, PowerShell, Gradle, Minecraft runtime, Harness, or diagnostic worlds.
+
+## BREAK contract
+
+- Shared local/global planner validation requires the predecessor (at its tracked feet Y) to be a valid attack stand: full AABB clearance, support, breakable/unprotected target, existing action/vertical reach, and a collision raycast whose first hit is the intended target.
+- A failed stand->target edge is held in a bounded exclusion map (32 entries) while its relevant terrain fingerprint remains unchanged. Changed geometry makes it eligible again.
+- Executor handles BREAK before the legacy BRIDGE branch. It never calls `moveTo` on the solid target. It revalidates the physical stand, invokes the existing RecoveryAction on the target, verifies the target is air, and invalidates plans/caches before replanning. Failed actions exclude only that edge so another approach side can be searched.
+
+## Recovery and backtracking
+
+- `NavRecoveryController` retains at most 16 physically occupied positions. The executor records only currently valid, supported, collision-clear feet cells.
+- First consecutive no-progress route invalidation: replan from the actual position.
+- Second consecutive failure: permit one backtrack to a previously reached cell that is still valid and differs from current/last backtrack.
+- The selected cell becomes a tactical objective; the strategic mission remains preserved and arrival handling resumes it.
+- Measured progress toward the strategic mission rearms the bounded backtrack.
+- Existing expansion, recovery, action-range, collision and acceptance budgets are unchanged.
+
+## Tests added (not executed here)
+
+- `NavBreakActionPolicyTest`: 8 pure assertions for clearance, support, protection, break permission, reach, LOS and vertical reach.
+- `NavRecoveryControllerTest`: 7 assertions for retry stages, historical selection, one-backtrack bound, progress rearm and reset.
+
+Harness must execute Gradle tests, strict lint and diff-check, followed by targeted runtime validation. No A2/C4 PASS is claimed. The canonical A2 gate remains five consecutive 8/8 strict `DENTRO-PARED` runs; no 12k campaign before that gate.
+
+## Runtime verification boundary
+
+Planner validates the predecessor at its tracked feet Y; executor validates the actual occupied cell when the BREAK node becomes active. Runtime must verify this handoff especially after DROP/BUILD. If the mob is not at a valid predecessor, preserve the rejection and report exact transition/coordinates; never navigate to the solid target or weaken the contract.
