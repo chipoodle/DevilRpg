@@ -1,6 +1,6 @@
 # NEXT SESSION — A2 / C4 Stability
 
-Current branch HEAD at checkpoint: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; fetch the live branch head before synchronization because documentation may advance it.
+Code checkpoint SHA: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; subsequent handoff commits are documentation-only. Always fetch the live branch HEAD before synchronization.
 
 ## Latest checkpoint — 2026-11-16 Phase19 independent exclusion/backtrack fixtures
 
