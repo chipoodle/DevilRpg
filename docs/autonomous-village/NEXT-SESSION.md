@@ -43,6 +43,7 @@ Read first, in order:
 27. `docs/autonomous-village/2026-11-16-PHASE19-HARNESS-VALIDATION.md`
 28. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`
 29. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RUNTIME-INVALID.md`
+30. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-LOS-RUNTIME-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -57,7 +58,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-PHASE19-BREAK-RUNTIME-INVALID.md`. The preceding `PHASE19-BREAK-GRAPH-STATE-FIX.md` documents the implementation; `PHASE19-HARNESS-VALIDATION.md` is historical evidence for `ecdfaff6`.
+- Latest technical report: `2026-11-16-PHASE19-BREAK-LOS-RUNTIME-FAIL.md`. LOS acceptance is proven; stand approach is the current runtime blocker.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -91,22 +92,24 @@ Read first, in order:
   constrains planner-selected attack stands to one legal move from the predecessor and delegates
   reach/LOS/protection checks to `NavBreakActionPolicy.executable`.
 - Harness validation at `d440b3e7` (implementation `6d5dc7b1`): Gradle tests, strict lint, diff-check and
-  diagnostic compile PASS. All new tests executed: graph-state 7, route-policy 11, attack-position 7.
-- `break-runtime` fixture `a2n-20261116-160714`: **INVALIDO** before spawning. Both production planner
-  routes were empty (`breakTargetFound=false`), `encolados=9`, `exp=10/512`,
-  `rechazadasPorNodoNoPisable=42`.
-- No BREAK/retry/backtrack runtime events. Candidate LOS/aim defect returned to ChatGPT; no code change by Harness.
+  diagnostic compile PASS. New tests executed: graph-state 7, route-policy 11, attack-position 7.
+- `break-runtime` `a2n-20261116-160714` was INVALIDO (empty plans); LOS correction `9200ac31` at
+  `76d3466c` fixed planning: `BREAK_LOS_DIAG` accepts both panes with `hitBlock` equal to `actionPos`.
+- Latest `break-runtime` `a2n-20261116-163239` is **FAIL/blocked by stand approach**: plans contain
+  BREAK, but both mobs remain at `696/736,184,568` while `moveTo(stand=696/736,184,567)` returns a
+  one-node path marked done; `retryCalls=0`, no target air, no mission resumption.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. ChatGPT: inspect `NavBreakActionPolicy.executable` for the fixture geometry — `stand=696/736,184,568`,
-   `target=697/737,184,568`. Emit `tEnter`, `eye`, `aimY`, `rayEnd`, clip hit and the exact rejection branch.
-2. Correct the fixture geometry or LOS/aim computation, publish a new SHA, and return it to Harness.
-3. Harness: rerun `break-runtime` on the exact new SHA; only then evaluate retry delta exactly 40 ticks and
-   mission resumption. Do not weaken geometry, reach, budgets or acceptance.
-4. After a successful BREAK runtime, add separate deterministic coverage for failed-edge exclusion and
+1. ChatGPT: inspect why `NavExecutor.ejecutarBreakDesdePosicionDeAtaque` cannot move the mob from
+   `696/736,184,568` to its adjacent stand `696/736,184,567`. `moveTo` returns a one-node path marked
+   done (`pathNodes=1`, `pathIndex=1`) with no displacement; exact stand occupancy never occurs.
+2. Correct the stand-approach/coordinate issue without changing reach, cooldown, budgets or acceptance,
+   publish a new SHA, and return it to Harness.
+3. Harness: rerun `break-runtime` on the exact new SHA; then validate Scenario A/B and 40-tick retry.
+4. After a successful BREAK runtime, add deterministic coverage for failed-edge exclusion and
    two no-progress failures/`NAV_BACKTRACK`.
 5. A2 remains OPEN; do not run 12k until five consecutive 8/8 strict `DENTRO-PARED`. C4 save/reload OPEN.
 

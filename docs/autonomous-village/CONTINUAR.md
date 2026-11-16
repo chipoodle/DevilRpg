@@ -346,3 +346,10 @@ un/saves; hashes match; structural verification only.
 - `break-runtime` fixture `a2n-20261116-160714` returned **INVALIDO**: both production planner routes empty (`breakTargetFound=false`), `encolados=9`, `exp=10/512`, `rechazadasPorNodoNoPisable=42`. No BREAK/retry/backtrack events.
 - Harness did not change code. Candidate LOS/aim defect returned to ChatGPT. A2 remains OPEN; no 12k.
 - Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-RUNTIME-INVALID.md.
+
+## 2026-11-16 — Phase19 LOS correction runtime
+
+- Synced `1e25b777` -> `76d3466c` by fast-forward; LOS source `9200ac31`.
+- Static PASS: Gradle, strict lint, diff-check, diagnostics compile.
+- `break-runtime` `a2n-20261116-163239`: **FAIL** (fixture timeout labelled BLOCKED). Both plans contain BREAK and LOS hits `697/737,184,568`, but mobs never move from `696/736,184,568` to stand `696/736,184,567`; one-node path marked done, `retryCalls=0`, no target air.
+- Harness did not change production code. Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-LOS-RUNTIME-FAIL.md. A2 remains OPEN; no 12k.

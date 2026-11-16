@@ -101,3 +101,10 @@ Do not mark the LOS correction as validated until Harness tests the exact new SH
 **Harness:** synchronize, execute, measure and document the exact source SHA. Do not implement production fixes.
 
 **ChatGPT:** review Harness evidence and make any required production correction directly on GitHub in `feature/autonomous-village`.
+
+## Harness validation result — 2026-11-16
+
+- Static checks PASS on `76d3466c` (LOS source `9200ac31`): Gradle, strict lint, diff-check, diagnostics compile.
+- `BREAK_LOS_DIAG` accepts both panes; `hitType=BLOCK`, `hitBlock=697/737,184,568`; both plans contain BREAK.
+- `break-runtime` `a2n-20261116-163239`: **FAIL** — mobs stay at `696/736,184,568`; `moveTo` to `696/736,184,567` returns a one-node path marked done, no displacement, `retryCalls=0`; fixture timeout.
+- LOS correction validated; stand approach is the current blocker. Report: `2026-11-16-PHASE19-BREAK-LOS-RUNTIME-FAIL.md`.
