@@ -53,6 +53,21 @@ public final class A2NavHarness {
     private static int fallosDeInstrumento;
     private static final StringBuilder DETALLE = new StringBuilder();
 
+    // Deterministic BREAK runtime fixture state (disposable harness world only).
+    private static boolean breakRuntimePrepared;
+    private static int breakRuntimeTicks;
+    private static AggressiveZombieEntity breakSuccessMob;
+    private static AggressiveZombieEntity breakRetryMob;
+    private static BlockPos breakSuccessTarget;
+    private static BlockPos breakRetryTarget;
+    private static BlockPos breakSuccessGoal;
+    private static BlockPos breakRetryGoal;
+    private static int breakRetryCalls;
+    private static long breakRetryFirstTick = -1L;
+    private static long breakRetrySecondTick = -1L;
+    private static boolean breakSuccessMissionResumed;
+    private static boolean breakRetryMissionResumed;
+
     private A2NavHarness() {
     }
 
@@ -65,6 +80,10 @@ public final class A2NavHarness {
     @SubscribeEvent
     public static void alTick(final ServerTickEvent.Pre evento) {
         if (hecho || nivel == null) {
+            return;
+        }
+        if ("break-runtime".equals(MODE)) {
+            tickBreakRuntime(evento.getServer());
             return;
         }
         if ("raid".equals(MODE)) {
@@ -368,6 +387,251 @@ public final class A2NavHarness {
                 ? "INVALIDO" : "COMPLETO";
         cerrar(veredicto, "casos=" + casosOk + "/" + casosTotal + " fallosDeInstrumento=" + fallosDeInstrumento,
                 evento.getServer());
+    }
+
+    // ================================================================================================
+    // Deterministic runtime fixture: real planner + real NavExecutor + real AggressiveZombieEntity.
+    // The retry mob injects only a controlled actuator response; navigation, stand selection, retry
+    // timing, route verification and mission resumption remain production code.
+    // ================================================================================================
+    private static void tickBreakRuntime(final MinecraftServer server) {
+        if (!breakRuntimePrepared) {
+            breakRuntimePrepared = true;
+            prepararBreakRuntime(server);
+            return;
+        }
+        if (hecho) {
+            return;
+        }
+        breakRuntimeTicks++;
+        long now = nivel.getGameTime();
+
+        if (breakSuccessMob != null && !breakSuccessMob.isRemoved()) {
+            NavRoute.Node node = breakSuccessMob.navExecutor().nodoDeRutaActual();
+            if (node != null && node.transition() == NavRoute.Transition.BREAK
+                    && breakSuccessTicksLogged.add("success")) {
+                log("BREAK_FIXTURE_ROUTE success stand=" + node.standPos().toShortString()
+                        + " action=" + node.actionTarget().toShortString()
+                        + " tick=" + now);
+            }
+            if (nivel.getBlockState(breakSuccessTarget).isAir() && !breakSuccessMissionResumed) {
+                breakSuccessMissionResumed = breakSuccessMob.navExecutor().objective() != null
+                        && breakSuccessMob.navExecutor().objective().equals(breakSuccessGoal)
+                        && breakSuccessMob.blockPosition().getX() > breakSuccessTarget.getX();
+                if (breakSuccessMissionResumed) {
+                    log("BREAK_FIXTURE_MISSION_RESUMED success pos="
+                            + breakSuccessMob.blockPosition().toShortString()
+                            + " mission=" + breakSuccessGoal.toShortString() + " tick=" + now);
+                }
+            }
+        }
+        if (breakRetryMob != null && !breakRetryMob.isRemoved()) {
+            NavRoute.Node node = breakRetryMob.navExecutor().nodoDeRutaActual();
+            if (node != null && node.transition() == NavRoute.Transition.BREAK
+                    && breakRetryTicksLogged.add("retry")) {
+                log("BREAK_FIXTURE_ROUTE retry stand=" + node.standPos().toShortString()
+                        + " action=" + node.actionTarget().toShortString()
+                        + " tick=" + now);
+            }
+            if (nivel.getBlockState(breakRetryTarget).isAir() && !breakRetryMissionResumed) {
+                breakRetryMissionResumed = breakRetryMob.navExecutor().objective() != null
+                        && breakRetryMob.navExecutor().objective().equals(breakRetryGoal)
+                        && breakRetryMob.blockPosition().getX() > breakRetryTarget.getX();
+                if (breakRetryMissionResumed) {
+                    log("BREAK_FIXTURE_MISSION_RESUMED retry pos="
+                            + breakRetryMob.blockPosition().toShortString()
+                            + " mission=" + breakRetryGoal.toShortString() + " tick=" + now);
+                }
+            }
+        }
+
+        if (breakRuntimeTicks % 20 == 0) {
+            log("BREAK_FIXTURE_SAMPLE tick=" + now
+                    + " successPos=" + (breakSuccessMob == null ? "-" : breakSuccessMob.blockPosition().toShortString())
+                    + " successState=" + (breakSuccessMob == null ? "-" : breakSuccessMob.navExecutor().state())
+                    + " successAir=" + (breakSuccessTarget != null && nivel.getBlockState(breakSuccessTarget).isAir())
+                    + " retryPos=" + (breakRetryMob == null ? "-" : breakRetryMob.blockPosition().toShortString())
+                    + " retryState=" + (breakRetryMob == null ? "-" : breakRetryMob.navExecutor().state())
+                    + " retryAir=" + (breakRetryTarget != null && nivel.getBlockState(breakRetryTarget).isAir())
+                    + " retryCalls=" + breakRetryCalls);
+        }
+
+        boolean successAir = nivel.getBlockState(breakSuccessTarget).isAir();
+        boolean retryAir = nivel.getBlockState(breakRetryTarget).isAir();
+        if (successAir && retryAir && breakRetryCalls >= 2) {
+            long retryDelta = breakRetrySecondTick - breakRetryFirstTick;
+            boolean retryTimingExact = breakRetryCalls == 2 && retryDelta == 40L;
+            boolean accepted = retryTimingExact && breakSuccessMissionResumed && breakRetryMissionResumed;
+            hecho = true;
+            cerrar(accepted ? "COMPLETO" : "FAIL",
+                    "successAir=" + successAir
+                            + " retryAir=" + retryAir
+                            + " retryCalls=" + breakRetryCalls
+                            + " retryDeltaTicks=" + retryDelta
+                            + " retryTimingExact=" + retryTimingExact
+                            + " successMissionResumed=" + breakSuccessMissionResumed
+                            + " retryMissionResumed=" + breakRetryMissionResumed,
+                    server);
+            return;
+        }
+        if (breakRuntimeTicks >= 1200) {
+            hecho = true;
+            cerrar("BLOCKED", "timeoutTicks=" + breakRuntimeTicks
+                    + " successAir=" + successAir + " retryAir=" + retryAir
+                    + " retryCalls=" + breakRetryCalls
+                    + " retryDeltaTicks=" + (breakRetrySecondTick - breakRetryFirstTick)
+                    + " successDiag=" + (breakSuccessMob == null ? "-" : breakSuccessMob.navExecutor().describe())
+                    + " retryDiag=" + (breakRetryMob == null ? "-" : breakRetryMob.navExecutor().describe()),
+                    server);
+        }
+    }
+
+    private static final java.util.Set<String> breakSuccessTicksLogged = new java.util.HashSet<>();
+    private static final java.util.Set<String> breakRetryTicksLogged = new java.util.HashSet<>();
+
+    private static void prepararBreakRuntime(final MinecraftServer server) {
+        BlockPos base = nivel.getSharedSpawnPos().offset(600, 40, 600);
+        int x0 = base.getX();
+        int x1 = x0 + 40;
+        int y = base.getY();
+        int z = base.getZ();
+        forzar(x0 - 8, z - 8, x0 + 52, z + 8, y);
+        crearBreakArena(x0, y, z);
+        crearBreakArena(x1, y, z);
+
+        breakSuccessTarget = new BlockPos(x0 + 1, y, z);
+        breakSuccessGoal = new BlockPos(x0 + 5, y, z);
+        breakRetryTarget = new BlockPos(x1 + 1, y, z);
+        breakRetryGoal = new BlockPos(x1 + 5, y, z);
+        nivel.setBlockAndUpdate(breakSuccessTarget, Blocks.GLASS_PANE.defaultBlockState());
+        nivel.setBlockAndUpdate(breakRetryTarget, Blocks.GLASS_PANE.defaultBlockState());
+
+        breakSuccessMob = sonda(x0, y, z);
+        breakRetryMob = sonda(x1, y, z);
+        if (breakSuccessMob == null || breakRetryMob == null) {
+            fallosDeInstrumento++;
+            hecho = true;
+            cerrar("INVALIDO", "no se pudieron crear ambos mobs de BREAK runtime", server);
+            return;
+        }
+        breakSuccessMob.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
+        breakRetryMob.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
+
+        NavPlanner.Result successPlan = NavPlanner.plan(nivel, breakSuccessMob,
+                new BlockPos(x0, y, z), breakSuccessGoal, 12, 2, 512, policiesForBreak(breakSuccessMob));
+        NavPlanner.Result retryPlan = NavPlanner.plan(nivel, breakRetryMob,
+                new BlockPos(x1, y, z), breakRetryGoal, 12, 2, 512, policiesForBreak(breakRetryMob));
+        boolean successPlanHasBreak = containsBreakTarget(successPlan.route(), breakSuccessTarget);
+        boolean retryPlanHasBreak = containsBreakTarget(retryPlan.route(), breakRetryTarget);
+        log("BREAK_FIXTURE_PLAN success=" + successPlan.summary()
+                + " route=" + successPlan.route().describe()
+                + " breakTargetFound=" + successPlanHasBreak);
+        log("BREAK_FIXTURE_PLAN retry=" + retryPlan.summary()
+                + " route=" + retryPlan.route().describe()
+                + " breakTargetFound=" + retryPlanHasBreak);
+        if (successPlan.hitBudget() || retryPlan.hitBudget() || !successPlanHasBreak || !retryPlanHasBreak) {
+            fallosDeInstrumento++;
+            hecho = true;
+            cerrar("INVALIDO", "planner did not produce both expected BREAK edges; success={"
+                    + successPlan.summary() + "} retry={" + retryPlan.summary() + "}", server);
+            return;
+        }
+
+        breakRetryMob.navExecutor().setRecoveryAction((towards, node, transition) -> {
+            if (transition != NavRoute.Transition.BREAK || node == null || !node.equals(breakRetryTarget)) {
+                log("BREAK_FIXTURE_UNEXPECTED_ACTUATOR towards=" + towards + " node=" + node
+                        + " transition=" + transition);
+                return false;
+            }
+            breakRetryCalls++;
+            long tick = nivel.getGameTime();
+            if (breakRetryCalls == 1) {
+                breakRetryFirstTick = tick;
+                log("BREAK_FIXTURE_RETRY_FIRST tick=" + tick + " target=" + node.toShortString()
+                        + " result=UNVERIFIED");
+                return false;
+            }
+            if (breakRetryCalls == 2) {
+                breakRetrySecondTick = tick;
+                boolean destroyed = nivel.destroyBlock(node, false);
+                log("BREAK_FIXTURE_RETRY_SECOND tick=" + tick + " delta="
+                        + (breakRetrySecondTick - breakRetryFirstTick)
+                        + " target=" + node.toShortString() + " destroyed=" + destroyed);
+                return destroyed;
+            }
+            return false;
+        });
+
+        breakSuccessMob.navExecutor().setObjective(breakSuccessGoal);
+        breakRetryMob.navExecutor().setObjective(breakRetryGoal);
+        log("BREAK_FIXTURE_READY seed-world=" + nivel.dimension().location()
+                + " successStart=" + breakSuccessMob.blockPosition().toShortString()
+                + " successStandExpected=" + new BlockPos(x0 + 1, y, z + 1).toShortString()
+                + " successTarget=" + breakSuccessTarget.toShortString()
+                + " successGoal=" + breakSuccessGoal.toShortString()
+                + " retryStart=" + breakRetryMob.blockPosition().toShortString()
+                + " retryTarget=" + breakRetryTarget.toShortString()
+                + " retryGoal=" + breakRetryGoal.toShortString()
+                + " trace=" + Boolean.getBoolean("n4.trace"));
+    }
+
+    private static NavObstruction.Policies policiesForBreak(final AggressiveZombieEntity mob) {
+        return new NavObstruction.Policies() {
+            @Override
+            public boolean isProtected(BlockPos pos) {
+                return false;
+            }
+
+            @Override
+            public boolean canBreak(BlockPos pos) {
+                return mob.puedeRomperNodoDeNavegacion(pos);
+            }
+
+            @Override
+            public boolean canPlace(BlockPos pos) {
+                return false;
+            }
+
+            @Override
+            public int maxSafeDrop() {
+                return 3;
+            }
+
+            @Override
+            public int waterDepthForSafeDrop() {
+                return 2;
+            }
+        };
+    }
+
+    private static boolean containsBreakTarget(final NavRoute route, final BlockPos target) {
+        return route.nodes().stream().anyMatch(node -> node.transition() == NavRoute.Transition.BREAK
+                && target.equals(node.actionTarget())
+                && node.pos().distManhattan(target) <= 2);
+    }
+
+    private static void crearBreakArena(final int x0, final int y, final int z0) {
+        // Narrow, supported corridor with one non-supporting collision obstruction.
+        // The only forward route is through the glass pane at (x0+1,y,z0).
+        for (int x = x0 - 3; x <= x0 + 8; x++) {
+            for (int z = z0 - 2; z <= z0 + 2; z++) {
+                for (int dy = 0; dy <= 3; dy++) {
+                    aire(x, y + dy, z);
+                }
+                solido(x, y - 1, z);
+                for (int dy = 0; dy <= 3; dy++) {
+                    solido(x, y + dy, z0 - 2);
+                    solido(x, y + dy, z0 + 2);
+                }
+            }
+        }
+        // Remove the alternative attack stand and close the diagonal bypass beyond the stand.
+        for (int dy = 0; dy <= 3; dy++) {
+            solido(x0 + 1, y + dy, z0 - 1);
+            solido(x0 + 2, y + dy, z0 + 1);
+        }
     }
 
     // ================================================================================================
