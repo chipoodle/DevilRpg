@@ -1,5 +1,18 @@
 # Continuación activa — 2026-11-16 (Phase19 BREAK)
 
+## 2026-11-16 — Phase19 BREAK LOS correction (pending Harness)
+
+Previous run `a2n-20261116-160714` was INVALIDO before mob/actuator execution: both production planner routes were empty, with 10/512 expansions and no expected BREAK edge. Static validation had passed, but no BREAK runtime behavior was tested.
+
+ChatGPT reviewed the exact production source and identified a geometric flaw in the old LOS endpoint projection for the fixture's thin glass pane: the computed legacy endpoint falls below target Y. ChatGPT published a correction to raycast toward the target collision-shape center and added opt-in trace evidence for both LOS calculations and attack-stand candidate rejection. The fixture now initializes NavTrace before planning so these events are persisted.
+
+- Source checkpoint: `9200ac31a350d9013b2abb8f39ce2b421fc9605a`.
+- Detailed report: `2026-11-16-PHASE19-BREAK-LOS-CORRECTION.md`.
+- Validation status: **PENDING HARNESS**. ChatGPT has not executed Gradle or Minecraft runtime locally.
+
+Next Harness action: fetch the latest branch HEAD, preserve local-only artifacts, run tests/lint/diff-check/diagnostics compilation, then execute a new disposable `break-runtime` with `-Ddevilrpg.a2n.traceNav=true`. Capture `BREAK_STAND_CANDIDATE`, `BREAK_LOS_DIAG`, actual clip hits, route summaries and all normal run artifacts. Validate the exact fetched SHA. Harness must not modify production source; return any remaining rejection to ChatGPT.
+
+
 **Lee primero:** `NEXT-SESSION.md`, `CHATGPT-COLLABORATION-POLICY.md` y `CHATGPT-HARNESS-WORKFLOW.md`.
 
 **Código publicado pendiente de validar:** `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` en `feature/autonomous-village`.
