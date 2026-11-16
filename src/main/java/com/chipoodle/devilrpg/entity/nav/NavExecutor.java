@@ -1155,6 +1155,11 @@ public final class NavExecutor {
     private final NavRecoveryController recoveryController = new NavRecoveryController();
     /** Non-null only while the one-shot tactical backtrack is active; protects it from mission refreshes. */
     private BlockPos recoveryBacktrackObjective;
+    /** One transient retry is allowed for the existing BREAK actuator cooldown. */
+    private BlockPos ultimoBreakFallidoStand;
+    private BlockPos ultimoBreakFallidoTarget;
+    private int fallosBreakSinResolucion;
+    private long nextBreakRetryAt;
     /** A2 Stage 7G · replanteos consumidos por rechazo de la guarda de ruta (acotado). */
     private int replanteosPorGuarda;
     private BlockPos nodoSeguido;
@@ -2067,18 +2072,27 @@ public final class NavExecutor {
         BlockPos target = node.pos();
         BlockPos stand = mob.blockPosition();
         if (mob.level().getBlockState(target).isAir()) {
+            limpiarEstadoBreak();
             resolverBreakVerificado(target, stand);
             return;
         }
         if (!NavBreakActionPolicy.executable(mob.level(), mob, stand, target, policies, ALCANCE_DE_ACCION_SQR)) {
+            limpiarEstadoBreak();
             excluirAristaBreakYReplanificar(stand, target, "precondicion de ataque invalida", now);
             return;
         }
+        if (ultimoBreakFallidoStand == null || !ultimoBreakFallidoStand.equals(stand)
+                || !target.equals(ultimoBreakFallidoTarget)) {
+            limpiarEstadoBreak();
+        }
+        if (now < nextBreakRetryAt) return;
+
         mob.getNavigation().stop();
         boolean invoked = recoveryAction != null
                 && recoveryAction.run(objective, target, NavRoute.Transition.BREAK);
         boolean verified = mob.level().getBlockState(target).isAir();
         if (verified) {
+            limpiarEstadoBreak();
             exclusionesBreak.resolve(stand, target);
             if (NavTrace.on()) {
                 NavTrace.ev("BREAK_EXECUTED_FROM_STAND", "uuid=" + mob.getUUID()
@@ -2086,9 +2100,30 @@ public final class NavExecutor {
                         + " invoked=" + invoked + " verified=true");
             }
             resolverBreakVerificado(target, stand);
+        } else if (!invoked && fallosBreakSinResolucion == 0) {
+            // romperNodoDeRuta shares the tunnel actuator's existing 40-tick inter-block cooldown.
+            // A false return can be transient, so wait once before blacklisting this stand->target edge.
+            ultimoBreakFallidoStand = stand.immutable();
+            ultimoBreakFallidoTarget = target.immutable();
+            fallosBreakSinResolucion = 1;
+            nextBreakRetryAt = now + RECOVERY_COOLDOWN_TICKS;
+            if (NavTrace.on()) {
+                NavTrace.ev("BREAK_ACTUATOR_RETRY_WAIT", "uuid=" + mob.getUUID()
+                        + " stand=" + stand.toShortString() + " target=" + target.toShortString()
+                        + " retryAt=" + nextBreakRetryAt + " reason=first_unverified_attempt");
+            }
         } else {
-            excluirAristaBreakYReplanificar(stand, target, "accion no verificada (invoked=" + invoked + ")", now);
+            limpiarEstadoBreak();
+            excluirAristaBreakYReplanificar(stand, target,
+                    "segunda accion no verificada (invoked=" + invoked + ")", now);
         }
+    }
+
+    private void limpiarEstadoBreak() {
+        ultimoBreakFallidoStand = null;
+        ultimoBreakFallidoTarget = null;
+        fallosBreakSinResolucion = 0;
+        nextBreakRetryAt = 0L;
     }
 
     private void resolverBreakVerificado(BlockPos target, BlockPos stand) {
@@ -2410,6 +2445,7 @@ public final class NavExecutor {
             this.misionFinal = immutable;
             recoveryController.reset();
             exclusionesBreak.clear();
+            limpiarEstadoBreak();
             // A2 FASE 2 · un CAMBIO DE MISION justifica rearmar: se reinicia el presupuesto terminal. Pero una
             // etapa intermedia de la MISMA aldea NO es una mision nueva: `noReiniciarRearmes` conserva el tope.
             if (!noReiniciarRearmes) {
@@ -2501,6 +2537,7 @@ public final class NavExecutor {
         misionFinal = null;
         recoveryController.reset();
         exclusionesBreak.clear();
+        limpiarEstadoBreak();
         escalonesDeObjetivo = 0;
         rearmadoPorCambioDeTerreno = false;
         cambioTerrenoPendienteRearme = false;
