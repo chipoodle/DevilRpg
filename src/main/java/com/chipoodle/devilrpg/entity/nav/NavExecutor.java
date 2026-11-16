@@ -2066,7 +2066,21 @@ public final class NavExecutor {
         }
     }
 
-    public void suspendForCombat() {        route = null;
+    private boolean suspendidoDiagnostico;
+    private long ultimoSuspendidoTick = -1L;
+
+    public boolean suspendidoDiag() {
+        return suspendidoDiagnostico;
+    }
+
+    public long ultimoSuspendidoTickDiag() {
+        return ultimoSuspendidoTick;
+    }
+
+    public void suspendForCombat() {
+        suspendidoDiagnostico = true;
+        ultimoSuspendidoTick = mob.level().getGameTime();
+        route = null;
         routeIndex = 0;
         plannedFrom = null;
         lastRouteSignature = 0;
@@ -2505,6 +2519,7 @@ public final class NavExecutor {
                 mob.getUUID(), motivo, mob.blockPosition().toShortString(), saltoTicks, misionFinal);
     }
     public void tick() {
+        suspendidoDiagnostico = false;
         long now = mob.level().getGameTime();
         tickCalls++;
         lastTickAt = now;

@@ -4190,6 +4190,16 @@ public class AggressiveZombieEntity extends Zombie {
         return pursueTargetGoal != null && pursueTargetGoal.estaActivo();
     }
 
+    /** Read-only diagnostic: legacy planner state. */
+    public String pathPlannerDiagA2() {
+        return pathPlanner.debugState();
+    }
+
+    /** Read-only diagnostic: whether the strategic executor was suspended this tick. */
+    public boolean navExecutorSuspendedA2() {
+        return navExecutor.suspendidoDiag();
+    }
+
     static class MoveToVillageCenterGoal extends Goal {
         private static final double ARRIVE_DIST = 3.0D * 3.0D;
         private static final int TICKS_BEFORE_RECOVERY = 80;

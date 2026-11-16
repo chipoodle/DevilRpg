@@ -13,11 +13,12 @@ Read first, in order:
 9. `docs/autonomous-village/2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md`
 10. `docs/autonomous-village/2026-11-15-PHASE7-A2-9000-OBSERVATION.md`
 11. `docs/autonomous-village/2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`
+12. `docs/autonomous-village/2026-11-15-PHASE9-IDX8-MOVEMENT-OWNERSHIP.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-15-PHASE5-A2-VARIABILITY.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-15-PHASE9-IDX8-MOVEMENT-OWNERSHIP.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -32,16 +33,16 @@ Read first, in order:
 - Latest substantive report: `2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`.
 - A2 focused strict enclosure-entry sequence remains **5, 7, 7, 7, 7** (145020, 150410, 184205, 185459, 194632).
 - Phase-7 observation `a2n-20261115-203001` (9000, OBSERVATION — NOT ACCEPTANCE): IDX4 resumed after 6000 but stopped at `603,71,507`; IDX8 stalled at `710,59,469`.
-- Phase-8 diagnostic `a2n-20261115-205715` did **not** reproduce the outcrop stall; IDX8 entered at 2347 and died in combat. Source ownership mechanism confirmed, cause of the stall not proven.
+- Phase-9 diagnostic `a2n-20261115-214638` (9000, DIAGNOSTIC): 8/8 perimeter, all died; IDX8 entered at 2279, no outcrop stall. Expanded ownership/planner probe confirmed combat can suspend the executor near a target, but did not reproduce the Phase-7 stall.
 - C4 official focused: **5/5 PASS**; no save/reload acceptance path.
 - A2 full 12k OPEN; no production navigation change.
 
 ## Immediate work
 
-1. Run a **9000-tick observation with `-Da2n.probeTargets=true`** in a new disposable world to catch the eastern-outcrop stall with `combateActivo`, `executorMayMove`, target UUID/distance and route state active.
-2. Do not change navigation behavior until that trace proves the cause.
+1. Repeat the 9000-tick diagnostic with the expanded probe in a **new** disposable world until the eastern-outcrop stall is captured, or document a fixed number of non-reproductions and treat it as non-deterministic.
+2. If reproduced, correlate legacy `pathPlanner` (`plan`, waypoint, retry) with `navSuspendido`, `combateActivo`, target UUID/distance and position delta; do not change navigation until the full chain is shown.
 3. C4 save/reload remains OPEN (requires a reload driver).
-4. Only after a demonstrated cause and focused standard, run full 12,000-tick A2.
+4. Only after a demonstrated cause and a documented focused standard, run full 12,000-tick A2.
 
 ## Worlds (preserve; do not overwrite)
 

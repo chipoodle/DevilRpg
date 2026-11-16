@@ -2013,6 +2013,8 @@ public final class A2NavHarness {
                             + " targetDist=" + (a.getTarget() == null
                             ? "-" : dos(Math.sqrt(a.distanceToSqr(a.getTarget()))))
                             + " combateActivo=" + a.persiguiendoActivoA2()
+                            + " navSuspendido=" + a.navExecutorSuspendedA2()
+                            + " planner={" + a.pathPlannerDiagA2() + "}"
                             + " executorMayMove=" + com.chipoodle.devilrpg.entity.nav.MovementOwnership
                             .executorMayMove(true, a.persiguiendoActivoA2(), a.getTarget() != null
                                     && a.distanceToSqr(a.getTarget())
