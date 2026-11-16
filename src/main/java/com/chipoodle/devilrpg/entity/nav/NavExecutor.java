@@ -2128,8 +2128,33 @@ public final class NavExecutor {
         if (!mob.blockPosition().equals(standRuta)) {
             mob.getNavigation().moveTo(standRuta.getX() + 0.5D, standRuta.getY(),
                     standRuta.getZ() + 0.5D, 1.0D);
-            traceActuatorCommand("BREAK_STAND_APPROACH", standRuta, mob.level().getGameTime());
-            ultimaAccionDeRuta = standRuta.toShortString() + ":BREAK-ACERCARSE-STAND";
+            long approachTick = mob.level().getGameTime();
+            traceActuatorCommand("BREAK_STAND_APPROACH", standRuta, approachTick);
+
+            // Vanilla can return a one-node Path already marked done when the requested stand is
+            // immediately adjacent (notably a horizontal step at the same feet Y). In that case
+            // repeatedly issuing moveTo cannot move the mob: the path is considered complete even
+            // though the mob is not physically in the validated stand cell. Use the same bounded,
+            // support/AABB-guarded adjacent nudge already used for ordinary movement nodes.
+            int standDistance = mob.blockPosition().distManhattan(standRuta);
+            boolean mayNudge = NavAdjacentApproachPolicy.shouldNudge(
+                    mob.getNavigation().isDone(), true, standDistance, 2,
+                    NavObstruction.fits(mob.level(), mob, standRuta),
+                    NavObstruction.hasSupport(mob.level(), standRuta));
+            if (mayNudge) {
+                mob.getMoveControl().setWantedPosition(standRuta.getX() + 0.5D, standRuta.getY(),
+                        standRuta.getZ() + 0.5D, 1.0D);
+                if (NavTrace.on()) {
+                    NavTrace.ev("BREAK_STAND_NUDGE", "uuid=" + mob.getUUID()
+                            + " tick=" + approachTick
+                            + " from=" + mob.blockPosition().toShortString()
+                            + " stand=" + standRuta.toShortString()
+                            + " manhattan=" + standDistance
+                            + " reason=navigation_done_without_physical_occupancy");
+                }
+            }
+            ultimaAccionDeRuta = standRuta.toShortString() + (mayNudge
+                    ? ":BREAK-ACERCARSE-STAND-DIRECTO" : ":BREAK-ACERCARSE-STAND");
             return;
         }
         BlockPos stand = mob.blockPosition();
