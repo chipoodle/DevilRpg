@@ -364,3 +364,11 @@ ChatGPT published `11be611d90c4d65772813550c2a365a524ee5147` in `NavExecutor.eje
 New trace: `BREAK_STAND_NUDGE`. Detailed report: `2026-11-16-PHASE19-BREAK-STAND-APPROACH-FIX.md`.
 
 Status: **PENDING HARNESS**. ChatGPT has not run static validation or runtime on this correction. Harness must fetch exact current branch HEAD, preserve local artifacts/worlds, run tests/lint/diff-check/diagnostics compile and then execute a new disposable `break-runtime`. Validate both targets become air, actuator events, exactly 40 ticks between failed first attempt and retry, and strategic mission resumption. A2 remains OPEN; no 12k until five consecutive strict 8/8 runs. C4 save/reload remains OPEN.
+
+## 2026-11-16 — Phase19 BREAK stand nudge runtime
+
+- Synced `d0f9c7a5` -> `0d8fc521` by fast-forward; production fix `11be611d`.
+- Static PASS: Gradle, strict lint, diff-check, diagnostics compile.
+- `break-runtime` `a2n-20261116-172549`: nudge emitted, both mobs reach exact stands, both panes air, retry delta exactly 40, success mission resumed.
+- Fixture closes at retry-air tick before the retry mob moves (`x=736`, target `x=737`), so `retryMissionResumed=false` is fixture acceptance timing, not a nudge/BREAK failure.
+- Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-STAND-NUDGE-RUNTIME.md. A2 remains OPEN; no 12k.
