@@ -65,6 +65,7 @@ Read first, in order:
 29. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RUNTIME-INVALID.md`
 30. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-LOS-RUNTIME-FAIL.md`
 31. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-STAND-NUDGE-RUNTIME.md`
+32. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-RUNTIME-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -79,7 +80,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-PHASE19-BREAK-STAND-NUDGE-RUNTIME.md`. Nudge/BREAK works; only retry mission-resumption fixture timing remains.
+- Latest technical report: `2026-11-16-PHASE19-BREAK-RETRY-RUNTIME-FAIL.md`. Stand nudge, both target-air checks and 40-tick retry pass; retry mission resumption still fails fixture predicate.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -116,18 +117,18 @@ Read first, in order:
   diagnostic compile PASS. New tests executed: graph-state 7, route-policy 11, attack-position 7.
 - `break-runtime` `a2n-20261116-160714` was INVALIDO (empty plans); LOS correction `9200ac31` at
   `76d3466c` fixed planning: `BREAK_LOS_DIAG` accepts both panes with `hitBlock` equal to `actionPos`.
-- `break-runtime` `a2n-20261116-172549` on nudge code `11be611d` (HEAD `0d8fc521`):
-  **PASS for stand occupancy, both target-air checks, 40-tick retry and success mission resumption.**
-  Only `retryMissionResumed=false` because the fixture evaluates `x > target.x` at the same tick the
-  retry target becomes air (mob still at x=736 before moving). This is fixture acceptance timing.
+- `break-runtime` `a2n-20261116-173828` on retry-fixture HEAD `08cf0e8c`: both targets air,
+  retry delta exactly 40, success mission resumed. After the 20-tick deadline the retry mob is at
+  `737,184,568` (target `737,184,568`), so `x > target.x` is false although navigation is moving
+  toward 738/739. **FAIL only on fixture retry mission-resumption predicate.**
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. ChatGPT: fix only the fixture acceptance timing for retry mission resumption — wait at least one
-   movement tick after `retryAir`, or use the same event-based mission-resumption condition as success.
-   This is not a production BREAK/nudge correction.
+1. ChatGPT: fix the fixture's retry mission-resumption acceptance. The mob is at target x=737 after
+   the 20-tick deadline and moving toward 738/739; allow it to cross the target column or use the same
+   objective/mission event as the success mob. This is not a production BREAK/nudge defect.
 2. Rerun `break-runtime` on the exact new SHA and require both mission-resumption events.
 3. Add deterministic coverage for `BREAK_EDGE_EXCLUDED` (second failed action) and
    `NAV_BACKTRACK` (two no-progress failures).

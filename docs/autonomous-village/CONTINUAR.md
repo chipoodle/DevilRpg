@@ -383,3 +383,10 @@ ChatGPT changed only `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.ja
 Detailed report: `2026-11-16-PHASE19-BREAK-RETRY-FIXTURE-TIMING.md`.
 
 Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle tests, strict lint, diff-check and diagnostics compile, then execute a new disposable `break-runtime`. Require both targets air, exactly 40 ticks, and both mission-resumption flags. Preserve all artifacts and original worlds. A2 remains OPEN; no 12k until five consecutive strict 8/8 runs. C4 save/reload remains OPEN.
+
+## 2026-11-16 — Phase19 BREAK retry runtime
+
+- Synced `81a3b2f1` -> `08cf0e8c` by fast-forward.
+- Static PASS: Gradle, strict lint, diff-check, diagnostics compile.
+- `break-runtime` `a2n-20261116-173828`: both targets air, retry exactly 40 ticks, success mission resumed; retry `MISSION_RESUMED` false after 20 ticks because mob at x=737/target x=737 but moving toward 738/739.
+- Fixture acceptance timing remains; no production change by Harness. Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-RUNTIME-FAIL.md. A2 remains OPEN; no 12k.
