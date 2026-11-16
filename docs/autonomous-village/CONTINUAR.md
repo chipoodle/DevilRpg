@@ -2,7 +2,7 @@
 
 **Lee primero:** `NEXT-SESSION.md`, `CHATGPT-COLLABORATION-POLICY.md` y `CHATGPT-HARNESS-WORKFLOW.md`.
 
-**Código publicado pendiente de validar:** `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a` en `feature/autonomous-village`.
+**Código publicado pendiente de validar:** `1a7028abc138f5b53d1313155dee23fceb20ed78` en `feature/autonomous-village`.
 
 ## División de trabajo obligatoria
 
