@@ -1,60 +1,51 @@
-# NEXT SESSION — A2 IDX8 / C4
+# NEXT SESSION — A2 / C4 Stability
 
-Read first:
+Read first, in order:
 
-- `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
-- `docs/autonomous-village/CONTINUAR.md`
-- `docs/CONTINUAR.md`
-- `docs/PENDIENTE.md`
+1. `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`
+2. `docs/autonomous-village/NEXT-SESSION.md` (this file)
+3. `docs/autonomous-village/CONTINUAR.md`
+4. `docs/CONTINUAR.md`
+5. `docs/PENDIENTE.md`
+6. `docs/autonomous-village/2026-11-15-PHASE2-FIXES.md`
+7. `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
 
-Baseline: branch `feature/autonomous-village`, HEAD `e4012ec51fab346043af9886bc733048bc02745e` (phase-2 fixes), remote synchronized after this checkpoint.
+## Verified baseline
 
-Phase 2 status (2026-11-15):
-- A2 focused `150410`: 8/8 entered, bell/conquest verified at tick 1284; `145020`: 5/8. IDX8 BREAK support fix in place; convergence improved but still variable.
-- C4: `145020` and `150410` both PASS 12/12 after the return goal; 2/2 in this configuration.
-- Full 12k not run.
-- Worlds unchanged: see `2026-11-15-PHASE2-FIXES.md`.
+- Branch: `feature/autonomous-village`
+- Verified HEAD before Phase 3: `8a7b0b9112ee3757f3eda58158de5f99626d5c4f`
+- Remote branch must be fetched and checked before any change.
+- Working tree may contain local-only untracked artifacts; read the final report of the latest session.
+
+## Completed investigations
+
+- IDX8 elevated-BREAK support-floor selection: fixed by `NavBreakTargetPolicy` and regression test.
+- C4 displaced workers beyond 72 blocks: fixed by `VillagerReturnPolicy`/`VillagerReturnGoal`; 2/2 focused passes.
+- Existing diagnostic worlds remain authoritative; do not recreate.
+
+## Current status
+
+- A2 focused: variable entry counts (5/8 and 8/8); bell conquest verified. Full 12k OPEN.
+- C4 focused: 12/12 on the two Phase-2 runs; stability still being measured.
+- Phase-3 repeated validation is the next task; do not rerun the obsolete original failures as if unfixed.
 
 ## Immediate work
 
-### 1. IDX8
+1. Run repeated focused A2 and C4 scenarios with identical seed/config.
+2. Record every run, including failures: spawn, entry, IDX8, bell/conquest, C4 12/12, job sites.
+3. Verify no `VillagerReturnGoal` remains stuck and that fishing still resumes.
+4. Only after a documented reproducible focused standard, run full 12,000-tick A2.
+5. Do not increase budgets, force job sites/survival, or weaken criteria.
 
-- Run `a2n-20261115-024825`, UUID `0fa7101a-5d7d-45cd-906a-b90ae8c1001d`.
-- Reproduce the local-target oscillation around `736,64,575` (`BREAK-DELEGADO Stone`) and final `RECOVERING` target `689,66,450`.
-- Instrument `NavExecutor` local target selection and BREAK delegation for this UUID. Determine why the local target remains outside/behind the enclosure while the global mission is the village center.
-- Do not increase budgets, weaken collision, teleport, or force entry.
-- Deliverable to inspect: `DevilRpg-A2-IDX8-Diagnostico`.
+## Worlds (preserve; do not overwrite)
 
-### 2. C4
+- `C:\Users\Christian\AppData\Roaming\.minecraft\saves\DevilRpg-A2-IDX8-Diagnostico`
+- `D:\Documents\DevilRpg-autonomous\run\saves\DevilRpg-A2-IDX8-Diagnostico`
+- `C:\Users\Christian\AppData\Roaming\.minecraft\saves\DevilRpg-C4-WorkerResume-Diagnostico`
+- `D:\Documents\DevilRpg-autonomous\run\saves\DevilRpg-C4-WorkerResume-Diagnostico`
 
-- Reproduce 9/12 with the same scenario; inspect:
-  - weaponsmith `254f3367-795c-4c7b-afdb-75fb0a7115f2` at 652,62,431, no job site;
-  - fisherman `f170acc0-a486-4c5f-8f0e-6e6833fa1c71` at 678,62,436, valid site 682,71,572;
-  - mason `615e8c86-2d7b-4f3a-bdc4-c8756d370c6d` at 698,62,454, site 692,71,502.
-- Instrument worker return/recovery when more than 80 blocks from center, and goal restart after reload.
-- Do not weaken 12/12 or force job sites.
-- Deliverable to inspect: `DevilRpg-C4-WorkerResume-Diagnostico`.
+Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 
-### 3. Worlds
+## Local-only artifacts
 
-Both are in standard launcher saves and `run/saves`:
-
-```text
-%APPDATA%\.minecraft\saves\DevilRpg-A2-IDX8-Diagnostico
-%APPDATA%\.minecraft\saves\DevilRpg-C4-WorkerResume-Diagnostico
-D:\Documents\DevilRpg-autonomous\run\saves\DevilRpg-A2-IDX8-Diagnostico
-D:\Documents\DevilRpg-autonomous\run\saves\DevilRpg-C4-WorkerResume-Diagnostico
-```
-
-A2 inspection: `/tp @s 720 80 540` then look east/north at `747,63,536`.
-C4 inspection: spawn `661,80,590`; failed workers at `652,62,431`, `678,62,436`, `698,62,454`.
-
-### 4. Validation
-
-```text
-gradlew test
-python tools/lint_aldea.py --strict
-git diff --check
-```
-
-Do not run full 12k until focused corrections are reproducible.
+`.a2-backups/`, `src/foodTest/`, `tools/a2n/A2NavHarness.java.partial`, launcher helper scripts. Do not commit indiscriminately.
