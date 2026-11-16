@@ -18,7 +18,7 @@ public final class NavBreakRoutePolicy {
      */
     public static NavRoute attachFinalBreak(NavRoute route, BlockPos standPos, BlockPos actionPos) {
         if (route == null || route.isEmpty() || standPos == null || actionPos == null
-                || standPos.equals(actionPos)) {
+                || standPos.equals(actionPos) || !standPos.equals(route.destination())) {
             return null;
         }
         List<NavRoute.Node> nodes = new ArrayList<>(route.nodes());
