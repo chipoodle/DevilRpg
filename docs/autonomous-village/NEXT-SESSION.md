@@ -4,35 +4,45 @@ Read first, in order:
 
 1. `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`
 2. `docs/autonomous-village/NEXT-SESSION.md` (this file)
-3. `docs/autonomous-village/CONTINUAR.md`
-4. `docs/CONTINUAR.md`
-5. `docs/PENDIENTE.md`
-6. `docs/autonomous-village/2026-11-15-PHASE2-FIXES.md`
-7. `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
-8. `docs/autonomous-village/2026-11-15-PHASE5-A2-VARIABILITY.md`
-9. `docs/autonomous-village/2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md`
-10. `docs/autonomous-village/2026-11-15-PHASE7-A2-9000-OBSERVATION.md`
-11. `docs/autonomous-village/2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`
-12. `docs/autonomous-village/2026-11-15-PHASE9-IDX8-MOVEMENT-OWNERSHIP.md`
-13. `docs/autonomous-village/2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md`
-14. `docs/autonomous-village/2026-11-16-PHASE10-A2-MIGRATION-REGRESSION.md`
-15. `docs/autonomous-village/2026-11-16-PHASE11-STRATEGIC-NAVIGATION-FORENSICS.md`
-16. `docs/autonomous-village/2026-11-16-PHASE12-NAVEXECUTOR-REFUSAL-FORENSICS.md`
-17. `docs/autonomous-village/2026-11-16-PHASE13-RECOVERY-ACTUATOR-FORENSICS.md`
-18. `docs/autonomous-village/2026-11-16-PHASE14-MOVEMENT-C4-FORENSICS.md`
-19. `docs/autonomous-village/2026-11-16-PHASE15-NAVIGATION-ROOT-CAUSE-FORENSICS.md`
-20. `docs/autonomous-village/2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`
-21. `docs/autonomous-village/2026-11-16-PHASE17-ISOLATED-EVALUATOR-IDX7-FORENSICS.md`
-22. `docs/autonomous-village/2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`
-23. `docs/autonomous-village/2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`
-24. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
-25. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-VERIFICATION.md`
-26. `docs/autonomous-village/2026-11-16-PHASE19-HARNESS-VALIDATION.md`
+3. `docs/autonomous-village/CHATGPT-HARNESS-WORKFLOW.md` (permanent division of responsibilities and handoff protocol)
+4. `docs/autonomous-village/CONTINUAR.md`
+5. `docs/CONTINUAR.md`
+6. `docs/PENDIENTE.md`
+7. `docs/autonomous-village/2026-11-15-PHASE2-FIXES.md`
+8. `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
+9. `docs/autonomous-village/2026-11-15-PHASE5-A2-VARIABILITY.md`
+10. `docs/autonomous-village/2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md`
+11. `docs/autonomous-village/2026-11-15-PHASE7-A2-9000-OBSERVATION.md`
+12. `docs/autonomous-village/2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`
+13. `docs/autonomous-village/2026-11-15-PHASE9-IDX8-MOVEMENT-OWNERSHIP.md`
+14. `docs/autonomous-village/2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md`
+15. `docs/autonomous-village/2026-11-16-PHASE10-A2-MIGRATION-REGRESSION.md`
+16. `docs/autonomous-village/2026-11-16-PHASE11-STRATEGIC-NAVIGATION-FORENSICS.md`
+17. `docs/autonomous-village/2026-11-16-PHASE12-NAVEXECUTOR-REFUSAL-FORENSICS.md`
+18. `docs/autonomous-village/2026-11-16-PHASE13-RECOVERY-ACTUATOR-FORENSICS.md`
+19. `docs/autonomous-village/2026-11-16-PHASE14-MOVEMENT-C4-FORENSICS.md`
+20. `docs/autonomous-village/2026-11-16-PHASE15-NAVIGATION-ROOT-CAUSE-FORENSICS.md`
+21. `docs/autonomous-village/2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`
+22. `docs/autonomous-village/2026-11-16-PHASE17-ISOLATED-EVALUATOR-IDX7-FORENSICS.md`
+23. `docs/autonomous-village/2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`
+24. `docs/autonomous-village/2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`
+25. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
+26. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-VERIFICATION.md`
+27. `docs/autonomous-village/2026-11-16-PHASE19-HARNESS-VALIDATION.md`
+
+## Permanent collaboration workflow
+
+- Read `docs/autonomous-village/CHATGPT-HARNESS-WORKFLOW.md` and follow it in every session.
+- ChatGPT owns production source implementation and publishes changes directly to GitHub on this branch.
+- Harness owns local synchronization, preservation, builds/tests/lints, automated runtime measurement, logs and validation reports. Harness must not independently implement production source fixes.
+- Harness returns evidence and reproducible failures; ChatGPT reviews and makes source corrections; Harness validates the exact new SHA.
+- Neither agent may claim work performed by the other or mark a commit validated without evidence for that exact SHA.
+- This is a permanent workflow rule, not a one-session instruction. It must survive new conversations and agent handoffs.
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Current published HEAD: `f43eb11eab618ed1e19f8b795c1663bc0c619331` (follow-up BREAK attack-stand edge fix).
+- Last code implementation SHA: `f43eb11eab618ed1e19f8b795c1663bc0c619331` (follow-up BREAK attack-stand edge fix). The subsequent commits in this documentation checkpoint define the permanent collaboration workflow; always fetch and verify the actual branch HEAD before acting.
 - Latest substantive report: `2026-11-16-PHASE19-HARNESS-VALIDATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
@@ -75,16 +85,15 @@ Read first, in order:
 
 ## Immediate work
 
-1. Build a deterministic runtime fixture that forces a route BREAK edge (valid stand) and records
-   `BREAK_STAND_APPROACH` → target air → route advance.
+1. Harness has completed the required checks at `ecdfaff6`; next build a deterministic runtime fixture
+   that forces a route BREAK edge (valid stand) and records `BREAK_STAND_APPROACH` → target air →
+   route advance.
 2. Force one actuator false return to observe the 40-tick retry, then two no-progress failures to
    observe `NAV_BACKTRACK` and strategic mission resumption.
-3. Add the real/mock `CollisionGetter` + `Mob` planner integration fixture; do not substitute
-   policy-only tests.
-4. Run focused A2/C4 only after targeted BREAK checks. Do not run 12k until five consecutive 8/8 strict.
+3. Add the real/mock `CollisionGetter` + `Mob` planner integration fixture; do not substitute policy-only tests.
+4. Run focused A2/C4 only after targeted BREAK checks. Do not run 12k until five consecutive 8/8 strict
+   `DENTRO-PARED` runs are achieved.
 5. IDX7 remains BLOCKED; IDX5 boundary UNKNOWN; C4 save/reload OPEN.
-   consecutive 8/8 strict `DENTRO-PARED` runs are achieved.
-6. IDX7 remains BLOCKED (not reproduced); IDX5 boundary UNKNOWN; C4 contract unchanged.
 
 ## Worlds (preserve; do not overwrite)
 
