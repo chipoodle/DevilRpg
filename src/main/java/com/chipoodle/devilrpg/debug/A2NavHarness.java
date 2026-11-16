@@ -4,6 +4,7 @@ import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
 import com.chipoodle.devilrpg.entity.nav.NavObstruction;
 import com.chipoodle.devilrpg.entity.nav.NavPlanner;
+import com.chipoodle.devilrpg.entity.nav.NavRecoveryController;
 import com.chipoodle.devilrpg.entity.nav.NavRoute;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -583,8 +584,6 @@ public final class A2NavHarness {
                         cerrar("FAIL", "planner reused excluded BREAK edge stand="
                                 + breakEdgeFailedStand.toShortString() + " target="
                                 + breakEdgeFailedTarget.toShortString()
-                                + " fingerprint=" + NavPlanner.huellaBreak(nivel,
-                                        breakEdgeFailedStand, breakEdgeFailedTarget)
                                 + " route=" + route.describe(), server);
                         return;
                     }
@@ -604,8 +603,6 @@ public final class A2NavHarness {
                                 + " breakIndex=" + i
                                 + " rejectedPair=" + breakEdgeFailedStand.toShortString()
                                 + "->" + breakEdgeFailedTarget.toShortString()
-                                + " rejectedFingerprint=" + NavPlanner.huellaBreak(
-                                        nivel, breakEdgeFailedStand, breakEdgeFailedTarget)
                                 + " rejectedStillSolid=true alternativeStillSolid=true");
                         cerrar("COMPLETO", "calls=" + breakEdgeCalls
                                 + " retryDeltaTicks=" + (breakEdgeSecondTick - breakEdgeFirstTick)
@@ -744,8 +741,6 @@ public final class A2NavHarness {
                 + " goal=" + breakEdgeGoal.toShortString()
                 + " expectedStand=" + breakEdgeExpectedStand.toShortString()
                 + " expectedTarget=" + breakEdgeExpectedTarget.toShortString()
-                + " expectedFingerprint=" + NavPlanner.huellaBreak(
-                        nivel, breakEdgeExpectedStand, breakEdgeExpectedTarget)
                 + " preflight={" + preflight.summary() + "} route=" + preflight.route().describe());
     }
 
