@@ -4,7 +4,7 @@
 
 - Harness run `a2n-20261116-174648` on `8b389672`: `break-runtime` **PASS**. Both targets air, exact 40-tick retry, exact stand occupancy and both strategic missions resumed. This is fixture validation, not A2 siege acceptance.
 - Current code adds independent modes `-Da2n.mode=break-edge-excluded` and `-Da2n.mode=nav-backtrack` in `A2NavHarness.java`. They must run in separate disposable worlds with trace enabled.
-- Code review found a backtrack selector edge case: it selected the latest valid history cell even when within arrival tolerance, then aborted without trying older cells. ChatGPT added a distance-aware selector overload; executor now skips too-near cells using the existing 2.25 squared arrival tolerance. Added two unit assertions.
+- Code review found a backtrack selector edge case: it selected the latest valid history cell even when within arrival tolerance, then aborted without trying older cells. ChatGPT added a distance-aware selector overload; executor now skips too-near cells using the existing 2.25 squared arrival tolerance. Added three unit assertions, including the 16-cell history bound.
 - Added read-only runtime diagnostics for recovery history/backtrack state and current BREAK fingerprint exclusion.
 - Fixture acceptance is strict: BREAK requires two unverified actions on the same edge 40 ticks apart, active unchanged fingerprint exclusion, a different BREAK edge selected, both blocks still solid and cursor not past BREAK. Backtrack requires two no-progress failures, exactly one selected historical cell, history <=16, exact physical return, <=1.5 blocks/tick, strategic mission preserved and resumed.
 - Detailed report: `2026-11-16-PHASE19-BREAK-EXCLUSION-BACKTRACK-FIXTURES.md`.
