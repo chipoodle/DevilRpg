@@ -71,6 +71,36 @@ public final class A2NavHarness {
     private static boolean breakSuccessMissionResumed;
     private static boolean breakRetryMissionResumed;
 
+    // Independent BREAK_EDGE_EXCLUDED runtime fixture state.
+    private static boolean breakEdgePrepared;
+    private static int breakEdgeTicks;
+    private static AggressiveZombieEntity breakEdgeMob;
+    private static BlockPos breakEdgeGoal;
+    private static BlockPos breakEdgeExpectedStand;
+    private static BlockPos breakEdgeExpectedTarget;
+    private static BlockPos breakEdgeFailedStand;
+    private static BlockPos breakEdgeFailedTarget;
+    private static long breakEdgeFirstTick = -1L;
+    private static long breakEdgeSecondTick = -1L;
+    private static int breakEdgeCalls;
+    private static int breakEdgeUnexpectedCalls;
+
+    // Independent NAV_BACKTRACK runtime fixture state.
+    private static boolean backtrackPrepared;
+    private static int backtrackTicks;
+    private static AggressiveZombieEntity backtrackMob;
+    private static BlockPos backtrackGoal;
+    private static BlockPos backtrackBarrier;
+    private static boolean backtrackBarrierPlaced;
+    private static boolean backtrackSelectedSeen;
+    private static int backtrackSelectionCount;
+    private static BlockPos backtrackSelectedTarget;
+    private static boolean backtrackMissionResumed;
+    private static double backtrackMaxStepDistance;
+    private static double backtrackPreviousX = Double.NaN;
+    private static double backtrackPreviousY = Double.NaN;
+    private static double backtrackPreviousZ = Double.NaN;
+
     private A2NavHarness() {
     }
 
@@ -87,6 +117,14 @@ public final class A2NavHarness {
         }
         if ("break-runtime".equals(MODE)) {
             tickBreakRuntime(evento.getServer());
+            return;
+        }
+        if ("break-edge-excluded".equals(MODE)) {
+            tickBreakEdgeExcluded(evento.getServer());
+            return;
+        }
+        if ("nav-backtrack".equals(MODE)) {
+            tickNavBacktrack(evento.getServer());
             return;
         }
         if ("raid".equals(MODE)) {
@@ -517,6 +555,402 @@ public final class A2NavHarness {
 
     private static final java.util.Set<String> breakSuccessTicksLogged = new java.util.HashSet<>();
     private static final java.util.Set<String> breakRetryTicksLogged = new java.util.HashSet<>();
+
+    // ================================================================================================
+    // Independent fixture: two failed BREAK actions exclude one stand->target edge and force an alternate.
+    // ================================================================================================
+    private static void tickBreakEdgeExcluded(final MinecraftServer server) {
+        if (!breakEdgePrepared) {
+            breakEdgePrepared = true;
+            prepararBreakEdgeExcluded(server);
+            return;
+        }
+        if (hecho || breakEdgeMob == null || breakEdgeMob.isRemoved()) return;
+        breakEdgeTicks++;
+        long now = nivel.getGameTime();
+
+        if (breakEdgeCalls == 2 && breakEdgeSecondTick >= 0L) {
+            NavRoute route = breakEdgeMob.navExecutor().route();
+            if (route != null) {
+                for (int i = 0; i < route.length(); i++) {
+                    NavRoute.Node node = route.currentNode(i);
+                    if (node.transition() != NavRoute.Transition.BREAK
+                            || node.standPos() == null || node.actionTarget() == null) continue;
+                    boolean sameRejectedPair = node.standPos().equals(breakEdgeFailedStand)
+                            && node.actionTarget().equals(breakEdgeFailedTarget);
+                    if (sameRejectedPair) {
+                        hecho = true;
+                        cerrar("FAIL", "planner reused excluded BREAK edge stand="
+                                + breakEdgeFailedStand.toShortString() + " target="
+                                + breakEdgeFailedTarget.toShortString()
+                                + " fingerprint=" + NavPlanner.huellaBreak(nivel,
+                                        breakEdgeFailedStand, breakEdgeFailedTarget)
+                                + " route=" + route.describe(), server);
+                        return;
+                    }
+                    boolean rejectedBlockStillSolid =
+                            !nivel.getBlockState(breakEdgeFailedTarget).isAir();
+                    boolean alternativeBlockStillSolid =
+                            !nivel.getBlockState(node.actionTarget()).isAir();
+                    boolean cursorBeforeAction = breakEdgeMob.navExecutor().indiceDeRuta() <= i;
+                    boolean strategicMissionPreserved =
+                            breakEdgeGoal.equals(breakEdgeMob.navExecutor().objective());
+                    if (rejectedBlockStillSolid && alternativeBlockStillSolid
+                            && cursorBeforeAction && strategicMissionPreserved) {
+                        log("BREAK_EDGE_FIXTURE_ALTERNATIVE_SELECTED stand="
+                                + node.standPos().toShortString()
+                                + " target=" + node.actionTarget().toShortString()
+                                + " routeIndex=" + breakEdgeMob.navExecutor().indiceDeRuta()
+                                + " breakIndex=" + i
+                                + " rejectedPair=" + breakEdgeFailedStand.toShortString()
+                                + "->" + breakEdgeFailedTarget.toShortString()
+                                + " rejectedFingerprint=" + NavPlanner.huellaBreak(
+                                        nivel, breakEdgeFailedStand, breakEdgeFailedTarget)
+                                + " rejectedStillSolid=true alternativeStillSolid=true");
+                        cerrar("COMPLETO", "calls=" + breakEdgeCalls
+                                + " retryDeltaTicks=" + (breakEdgeSecondTick - breakEdgeFirstTick)
+                                + " retryTimingExact=" + (breakEdgeSecondTick - breakEdgeFirstTick == 40L)
+                                + " excludedPairNotReused=true alternativeSelected=true"
+                                + " rejectedBlockStillSolid=" + rejectedBlockStillSolid
+                                + " alternativeBlockStillSolid=" + alternativeBlockStillSolid
+                                + " routeIndex=" + breakEdgeMob.navExecutor().indiceDeRuta()
+                                + " breakIndex=" + i
+                                + " strategicMissionPreserved=" + strategicMissionPreserved, server);
+                        return;
+                    }
+                }
+            }
+            if (now - breakEdgeSecondTick > 600L) {
+                hecho = true;
+                cerrar("FAIL", "alternative BREAK edge not selected within 600 ticks"
+                        + " calls=" + breakEdgeCalls
+                        + " rejectedStand=" + breakEdgeFailedStand
+                        + " rejectedTarget=" + breakEdgeFailedTarget
+                        + " rejectedAir=" + nivel.getBlockState(breakEdgeFailedTarget).isAir()
+                        + " state=" + breakEdgeMob.navExecutor().state()
+                        + " objective=" + breakEdgeMob.navExecutor().objective()
+                        + " execution={" + breakEdgeMob.navExecutor().describe() + "}"
+                        + " route=" + breakEdgeMob.navExecutor().rutaDiag(), server);
+                return;
+            }
+        }
+        if (breakEdgeFirstTick >= 0L && breakEdgeSecondTick < 0L
+                && now - breakEdgeFirstTick > 60L) {
+            hecho = true;
+            cerrar("FAIL", "second BREAK attempt did not occur within bounded wait"
+                    + " calls=" + breakEdgeCalls + " firstTick=" + breakEdgeFirstTick
+                    + " state=" + breakEdgeMob.navExecutor().state()
+                    + " execution={" + breakEdgeMob.navExecutor().describe() + "}", server);
+            return;
+        }
+        if (breakEdgeTicks % 40 == 0) {
+            log("BREAK_EDGE_FIXTURE_SAMPLE tick=" + now
+                    + " calls=" + breakEdgeCalls
+                    + " pos=" + breakEdgeMob.blockPosition().toShortString()
+                    + " objective=" + breakEdgeMob.navExecutor().objective()
+                    + " state=" + breakEdgeMob.navExecutor().state()
+                    + " routeIndex=" + breakEdgeMob.navExecutor().indiceDeRuta()
+                    + " route=" + breakEdgeMob.navExecutor().rutaDiag());
+        }
+        if (breakEdgeTicks >= 1600) {
+            hecho = true;
+            cerrar("BLOCKED", "fixture timeout ticks=" + breakEdgeTicks
+                    + " calls=" + breakEdgeCalls
+                    + " state=" + breakEdgeMob.navExecutor().state()
+                    + " objective=" + breakEdgeMob.navExecutor().objective()
+                    + " execution={" + breakEdgeMob.navExecutor().describe() + "}", server);
+        }
+    }
+
+    private static void prepararBreakEdgeExcluded(final MinecraftServer server) {
+        BlockPos base = nivel.getSharedSpawnPos().offset(720, 40, 620);
+        int x = base.getX();
+        int y = base.getY();
+        int z = base.getZ();
+        forzar(x - 8, z - 8, x + 20, z + 8, y);
+        crearBreakEdgeArena(x, y, z);
+        breakEdgeGoal = new BlockPos(x + 7, y, z);
+        breakEdgeMob = sonda(x, y, z);
+        if (breakEdgeMob == null) {
+            fallosDeInstrumento++;
+            hecho = true;
+            cerrar("INVALIDO", "could not spawn BREAK_EDGE_EXCLUDED mob", server);
+            return;
+        }
+        breakEdgeMob.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
+        traceInit();
+        NavPlanner.Result preflight = NavPlanner.plan(nivel, breakEdgeMob, breakEdgeMob.blockPosition(),
+                breakEdgeGoal, H, V, PRESUPUESTO, policiesForBreak(breakEdgeMob));
+        NavRoute.Node expected = null;
+        for (int i = 0; i < preflight.route().length(); i++) {
+            NavRoute.Node node = preflight.route().currentNode(i);
+            if (node.transition() == NavRoute.Transition.BREAK
+                    && node.standPos() != null && node.actionTarget() != null) {
+                expected = node;
+                break;
+            }
+        }
+        if (preflight.hitBudget() || expected == null) {
+            fallosDeInstrumento++;
+            hecho = true;
+            cerrar("INVALIDO", "fixture has no initial BREAK edge: " + preflight.summary()
+                    + " route=" + preflight.route().describe(), server);
+            return;
+        }
+        breakEdgeExpectedStand = expected.standPos().immutable();
+        breakEdgeExpectedTarget = expected.actionTarget().immutable();
+        breakEdgeMob.navExecutor().setRecoveryAction((towards, target, transition) -> {
+            if (transition != NavRoute.Transition.BREAK || target == null) {
+                breakEdgeUnexpectedCalls++;
+                log("BREAK_EDGE_FIXTURE_UNEXPECTED_ACTUATOR transition=" + transition
+                        + " target=" + target);
+                return false;
+            }
+            long tick = nivel.getGameTime();
+            if (breakEdgeCalls == 0) {
+                breakEdgeCalls = 1;
+                breakEdgeFirstTick = tick;
+                breakEdgeFailedStand = breakEdgeMob.blockPosition().immutable();
+                breakEdgeFailedTarget = target.immutable();
+                log("BREAK_EDGE_FIXTURE_FIRST tick=" + tick
+                        + " stand=" + breakEdgeFailedStand.toShortString()
+                        + " target=" + breakEdgeFailedTarget.toShortString()
+                        + " expectedPair=" + breakEdgeExpectedStand.toShortString()
+                        + "->" + breakEdgeExpectedTarget.toShortString()
+                        + " result=UNVERIFIED");
+                return false;
+            }
+            if (breakEdgeCalls == 1) {
+                breakEdgeCalls = 2;
+                breakEdgeSecondTick = tick;
+                log("BREAK_EDGE_FIXTURE_SECOND tick=" + tick
+                        + " delta=" + (breakEdgeSecondTick - breakEdgeFirstTick)
+                        + " stand=" + breakEdgeMob.blockPosition().toShortString()
+                        + " target=" + target.toShortString()
+                        + " samePair=" + (breakEdgeFailedStand.equals(breakEdgeMob.blockPosition())
+                                && breakEdgeFailedTarget.equals(target))
+                        + " destroyed=" + nivel.getBlockState(target).isAir());
+                return false;
+            }
+            breakEdgeUnexpectedCalls++;
+            log("BREAK_EDGE_FIXTURE_LATER_ACTUATOR tick=" + tick
+                    + " target=" + target.toShortString()
+                    + " callsAfterExclusion=" + breakEdgeUnexpectedCalls);
+            return false;
+        });
+        breakEdgeMob.navExecutor().setObjective(breakEdgeGoal);
+        log("BREAK_EDGE_FIXTURE_READY start=" + breakEdgeMob.blockPosition().toShortString()
+                + " goal=" + breakEdgeGoal.toShortString()
+                + " expectedStand=" + breakEdgeExpectedStand.toShortString()
+                + " expectedTarget=" + breakEdgeExpectedTarget.toShortString()
+                + " expectedFingerprint=" + NavPlanner.huellaBreak(
+                        nivel, breakEdgeExpectedStand, breakEdgeExpectedTarget)
+                + " preflight={" + preflight.summary() + "} route=" + preflight.route().describe());
+    }
+
+    private static void crearBreakEdgeArena(final int x, final int y, final int z) {
+        for (int dx = -4; dx <= 10; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                aire(x + dx, y, z + dz);
+                aire(x + dx, y + 1, z + dz);
+                solido(x + dx, y - 1, z + dz);
+                bedrock(x + dx, y + 2, z + dz);
+            }
+        }
+        for (int dx = -4; dx <= 10; dx++) {
+            for (int dy = 0; dy <= 1; dy++) {
+                bedrock(x + dx, y + dy, z - 3);
+                bedrock(x + dx, y + dy, z + 3);
+            }
+        }
+        for (int dz = -3; dz <= 3; dz++) {
+            for (int dy = 0; dy <= 1; dy++) {
+                bedrock(x - 4, y + dy, z + dz);
+                bedrock(x + 10, y + dy, z + dz);
+            }
+        }
+        // Five-wide sealed wall: three glass targets provide distinct BREAK edges; bedrock
+        // closes both bypass lanes. Every target remains solid until the fixture shuts down.
+        for (int dz = -2; dz <= 2; dz++) {
+            if (Math.abs(dz) <= 1) {
+                nivel.setBlockAndUpdate(new BlockPos(x + 1, y, z + dz),
+                        Blocks.GLASS_PANE.defaultBlockState());
+            } else {
+                bedrock(x + 1, y, z + dz);
+                bedrock(x + 1, y + 1, z + dz);
+            }
+        }
+    }
+
+    // ================================================================================================
+    // Independent fixture: two no-progress failures select one bounded physical backtrack.
+    // ================================================================================================
+    private static void tickNavBacktrack(final MinecraftServer server) {
+        if (!backtrackPrepared) {
+            backtrackPrepared = true;
+            prepararNavBacktrack(server);
+            return;
+        }
+        if (hecho || backtrackMob == null || backtrackMob.isRemoved()) return;
+        backtrackTicks++;
+        long now = nivel.getGameTime();
+
+        if (!Double.isNaN(backtrackPreviousX)) {
+            double dx = backtrackMob.getX() - backtrackPreviousX;
+            double dy = backtrackMob.getY() - backtrackPreviousY;
+            double dz = backtrackMob.getZ() - backtrackPreviousZ;
+            backtrackMaxStepDistance = Math.max(backtrackMaxStepDistance,
+                    Math.sqrt(dx * dx + dy * dy + dz * dz));
+        }
+        backtrackPreviousX = backtrackMob.getX();
+        backtrackPreviousY = backtrackMob.getY();
+        backtrackPreviousZ = backtrackMob.getZ();
+        if (backtrackMaxStepDistance > 4.0D) {
+            hecho = true;
+            cerrar("FAIL", "unexpected displacement suggests teleport maxStep="
+                    + backtrackMaxStepDistance + " pos=" + backtrackMob.position(), server);
+            return;
+        }
+
+        if (!backtrackBarrierPlaced
+                && backtrackMob.blockPosition().getX() >= backtrackBarrier.getX() - 1) {
+            backtrackBarrierPlaced = true;
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int dy = 0; dy <= 1; dy++) {
+                    bedrock(backtrackBarrier.getX(), backtrackBarrier.getY() + dy,
+                            backtrackBarrier.getZ() + dz);
+                }
+            }
+            log("NAV_BACKTRACK_FIXTURE_BARRIER_PLACED tick=" + now
+                    + " barrier=" + backtrackBarrier.toShortString()
+                    + " mob=" + backtrackMob.blockPosition().toShortString());
+        }
+
+        if (backtrackMob.navExecutor().recoveryBacktrackUsed() && !backtrackSelectedSeen) {
+            backtrackSelectedSeen = true;
+            backtrackSelectionCount++;
+            backtrackSelectedTarget = backtrackMob.navExecutor().recoveryBacktrackTarget();
+            boolean historyBounded = backtrackMob.navExecutor().recoveryHistorySize()
+                    <= NavRecoveryController.MAX_HISTORY;
+            boolean targetDistinct = backtrackSelectedTarget != null
+                    && !backtrackSelectedTarget.equals(backtrackMob.blockPosition())
+                    && backtrackSelectedTarget.distSqr(backtrackMob.blockPosition()) > 2.25D;
+            boolean missionPreserved = backtrackMob.navExecutor().recoveryDiag()
+                    .contains("strategicMission=" + backtrackGoal.toShortString());
+            log("NAV_BACKTRACK_FIXTURE_SELECTED tick=" + now
+                    + " current=" + backtrackMob.blockPosition().toShortString()
+                    + " target=" + backtrackSelectedTarget
+                    + " recovery={" + backtrackMob.navExecutor().recoveryDiag() + "}"
+                    + " historyBounded=" + historyBounded
+                    + " targetDistinct=" + targetDistinct
+                    + " missionPreserved=" + missionPreserved);
+            if (!historyBounded || !targetDistinct || !missionPreserved
+                    || backtrackMob.navExecutor().recoveryConsecutiveNoProgress() < 2) {
+                hecho = true;
+                cerrar("FAIL", "backtrack selected with invalid bounds/history/mission"
+                        + " recovery={" + backtrackMob.navExecutor().recoveryDiag() + "}", server);
+                return;
+            }
+        }
+
+        if (backtrackSelectedSeen && backtrackSelectedTarget != null
+                && backtrackGoal.equals(backtrackMob.navExecutor().objective())
+                && backtrackMob.blockPosition().distSqr(backtrackSelectedTarget) <= 2.25D) {
+            backtrackMissionResumed = true;
+            boolean oneBacktrack = backtrackSelectionCount == 1
+                    && backtrackMob.navExecutor().recoveryBacktrackUsed();
+            boolean historyBounded = backtrackMob.navExecutor().recoveryHistorySize()
+                    <= NavRecoveryController.MAX_HISTORY;
+            boolean missionPreserved = backtrackMob.navExecutor().recoveryDiag()
+                    .contains("strategicMission=" + backtrackGoal.toShortString());
+            boolean noTeleport = backtrackMaxStepDistance <= 4.0D;
+            log("NAV_BACKTRACK_FIXTURE_MISSION_RESUMED tick=" + now
+                    + " pos=" + backtrackMob.blockPosition().toShortString()
+                    + " backtrackTarget=" + backtrackSelectedTarget.toShortString()
+                    + " mission=" + backtrackGoal.toShortString()
+                    + " recovery={" + backtrackMob.navExecutor().recoveryDiag() + "}");
+            cerrar(oneBacktrack && historyBounded && missionPreserved && noTeleport
+                            ? "COMPLETO" : "FAIL",
+                    "backtrackSelected=" + backtrackSelectedSeen
+                            + " backtrackSelections=" + backtrackSelectionCount
+                            + " backtrackTarget=" + backtrackSelectedTarget.toShortString()
+                            + " physicalReturn=true"
+                            + " missionResumed=" + backtrackMissionResumed
+                            + " strategicMissionPreserved=" + missionPreserved
+                            + " historySize=" + backtrackMob.navExecutor().recoveryHistorySize()
+                            + " historyBounded=" + historyBounded
+                            + " maxStepDistance=" + backtrackMaxStepDistance
+                            + " noTeleport=" + noTeleport
+                            + " recovery={" + backtrackMob.navExecutor().recoveryDiag() + "}", server);
+            return;
+        }
+
+        if (backtrackTicks % 40 == 0) {
+            log("NAV_BACKTRACK_FIXTURE_SAMPLE tick=" + now
+                    + " pos=" + backtrackMob.blockPosition().toShortString()
+                    + " barrierPlaced=" + backtrackBarrierPlaced
+                    + " selected=" + backtrackSelectedSeen
+                    + " objective=" + backtrackMob.navExecutor().objective()
+                    + " state=" + backtrackMob.navExecutor().state()
+                    + " recovery={" + backtrackMob.navExecutor().recoveryDiag() + "}"
+                    + " execution={" + backtrackMob.navExecutor().describe() + "}");
+        }
+        if (backtrackTicks >= 1800) {
+            hecho = true;
+            cerrar("FAIL", "backtrack fixture timeout ticks=" + backtrackTicks
+                    + " barrierPlaced=" + backtrackBarrierPlaced
+                    + " selected=" + backtrackSelectedSeen
+                    + " objective=" + backtrackMob.navExecutor().objective()
+                    + " pos=" + backtrackMob.blockPosition().toShortString()
+                    + " recovery={" + backtrackMob.navExecutor().recoveryDiag() + "}"
+                    + " execution={" + backtrackMob.navExecutor().describe() + "}", server);
+        }
+    }
+
+    private static void prepararNavBacktrack(final MinecraftServer server) {
+        BlockPos base = nivel.getSharedSpawnPos().offset(840, 40, 640);
+        int x = base.getX();
+        int y = base.getY();
+        int z = base.getZ();
+        forzar(x - 8, z - 8, x + 22, z + 8, y);
+        for (int dx = -4; dx <= 14; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                aire(x + dx, y, z + dz);
+                aire(x + dx, y + 1, z + dz);
+                solido(x + dx, y - 1, z + dz);
+                bedrock(x + dx, y + 2, z + dz);
+            }
+        }
+        for (int dx = -4; dx <= 14; dx++) {
+            for (int dy = 0; dy <= 1; dy++) {
+                bedrock(x + dx, y + dy, z - 2);
+                bedrock(x + dx, y + dy, z + 2);
+            }
+        }
+        for (int dz = -2; dz <= 2; dz++) {
+            for (int dy = 0; dy <= 1; dy++) {
+                bedrock(x - 4, y + dy, z + dz);
+                bedrock(x + 14, y + dy, z + dz);
+            }
+        }
+        backtrackBarrier = new BlockPos(x + 4, y, z);
+        backtrackGoal = new BlockPos(x + 10, y, z);
+        backtrackMob = sonda(x, y, z);
+        if (backtrackMob == null) {
+            fallosDeInstrumento++;
+            hecho = true;
+            cerrar("INVALIDO", "could not spawn NAV_BACKTRACK mob", server);
+            return;
+        }
+        traceInit();
+        backtrackMob.navExecutor().setObjective(backtrackGoal);
+        log("NAV_BACKTRACK_FIXTURE_READY start=" + backtrackMob.blockPosition().toShortString()
+                + " barrier=" + backtrackBarrier.toShortString()
+                + " goal=" + backtrackGoal.toShortString()
+                + " corridor=sealed width=3 roof=bedrock"
+                + " recovery={" + backtrackMob.navExecutor().recoveryDiag() + "}");
+    }
 
     private static void prepararBreakRuntime(final MinecraftServer server) {
         BlockPos base = nivel.getSharedSpawnPos().offset(600, 40, 600);
