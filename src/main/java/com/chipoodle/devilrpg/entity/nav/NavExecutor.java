@@ -174,6 +174,8 @@ public final class NavExecutor {
     private boolean objetivoPermiteConstruccion;
     /** La transicion del waypoint local: BREAK/BRIDGE son nodos de accion, no celdas de pie. */
     private NavRoute.Transition objetivoTransicionLocal;
+    /** Solid block targeted by a global BREAK waypoint; never used as a movement objective. */
+    private BlockPos objetivoAccionLocal;
     /**
      * A2 FASE 4 · el objetivo actual es TACTICO (orilla, escape) y NO es la mision. Mientras este activo,
      * llegar a el no puede declarar {@link NavState#ARRIVED}: se vuelve a la mision.
@@ -1455,6 +1457,7 @@ public final class NavExecutor {
     private BlockPos elegirObjetivoLocal() {
         objetivoPermiteConstruccion = false;
         objetivoTransicionLocal = null;
+        objetivoAccionLocal = null;
         BlockPos mision = misionDePie();
         if (mision == null) {
             ultimoEscalonDeObjetivo = "sin mision utilizable (mision="
@@ -1570,6 +1573,7 @@ public final class NavExecutor {
         BlockPos objetivo = null;
         boolean objetivoConstruible = false;
         NavRoute.Transition objetivoTransicion = null;
+        BlockPos objetivoAccion = null;
         BlockPos previoRuta = null;
         boolean descartados = false;
         for (NavRoute.Node n : global.route().nodes()) {
@@ -1588,6 +1592,7 @@ public final class NavExecutor {
             boolean requiereConstruccion = NavClimbPolicy.requiereConstruccion(n.transition());
             boolean accionBreak = n.transition() == NavRoute.Transition.BREAK;
             boolean accionBridge = n.transition() == NavRoute.Transition.BRIDGE;
+            BlockPos actionTarget = accionBreak ? n.actionTarget() : null;
             if (!NavClimbPolicy.esWaypointSeleccionable(n.transition())) {
                 continue;
             }
@@ -1619,10 +1624,10 @@ public final class NavExecutor {
             // se salta a la siguiente de la ruta; si ninguna vale, la ruta cacheada es obsoleta y se invalida.
             // ==========================================================================================
             if (accionBreak && (!(mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az)
-                    || !az.puedeRomperNodoDeNavegacion(waypoint)
-                    || !NavBreakReachPolicy.reachable(yo.getY(), waypoint.getY(),
-                            mob.distanceToSqr(waypoint.getX() + 0.5D, waypoint.getY() + 0.5D,
-                                    waypoint.getZ() + 0.5D), ALCANCE_DE_ACCION_SQR))) {
+                    || n.actionPos() == null
+                    || !az.puedeRomperNodoDeNavegacion(actionTarget)
+                    || !NavBreakActionPolicy.executable(mob.level(), mob, waypoint, actionTarget,
+                            policies, NavBreakActionPolicy.ACTION_REACH_SQR))) {
                 descartados = true;
                 if (NavTrace.on()) {
                     NavTrace.ev("VERTICAL_TRANSITION_REJECTED", "uuid=" + mob.getUUID()
@@ -1638,6 +1643,7 @@ public final class NavExecutor {
             objetivo = waypoint;
             objetivoConstruible = requiereConstruccion;
             objetivoTransicion = n.transition();
+            objetivoAccion = actionTarget;
         }
         if (objetivo == null) {
             if (!global.hitBudget()) {
@@ -1655,7 +1661,7 @@ public final class NavExecutor {
                     + " -> se invalida la ruta global para recalcularla";
             return null;
         }
-        if (objetivo.equals(yo)) {
+        if (objetivo.equals(yo) && objetivoTransicion != NavRoute.Transition.BREAK) {
             if (!global.hitBudget()) {
                 BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo,
                         "waypoint global coincide con posicion actual");
@@ -1697,6 +1703,7 @@ public final class NavExecutor {
         }
         objetivoPermiteConstruccion = objetivoConstruible;
         objetivoTransicionLocal = objetivoTransicion;
+        objetivoAccionLocal = objetivoTransicion == NavRoute.Transition.BREAK ? objetivoAccion : null;
         ultimoEscalonDeObjetivo = "global " + (global.alcanzoMision() ? "ALCANZA la mision" : "solo frente")
                 + " -> waypoint local " + objetivo.toShortString()
                 + " (transicion=" + objetivoTransicion + " build=" + objetivoPermiteConstruccion
@@ -1794,9 +1801,13 @@ public final class NavExecutor {
         }
         boolean bridge = objetivoTransicionLocal == NavRoute.Transition.BRIDGE;
         boolean romper = objetivoTransicionLocal == NavRoute.Transition.BREAK;
+        BlockPos actionTarget = objetivoAccionLocal;
         boolean puedeRomper = romper
+                && actionTarget != null
                 && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az
-                && az.puedeRomperNodoDeNavegacion(destino);
+                && az.puedeRomperNodoDeNavegacion(actionTarget)
+                && NavBreakActionPolicy.executable(mob.level(), mob, destino, actionTarget,
+                        policies, NavBreakActionPolicy.ACTION_REACH_SQR);
         return NavObjectivePolicy.accionLocalValida(bridge, romper, puedeRomper);
     }
 
@@ -1869,6 +1880,8 @@ public final class NavExecutor {
         }
         objective = siguiente;
         objetivoPermiteConstruccion = siguientePermiteConstruccion;
+        objetivoTransicionLocal = null;
+        objetivoAccionLocal = null;
         plannedFrom = null;
         route = null;
         routeIndex = 0;
@@ -2080,6 +2093,7 @@ public final class NavExecutor {
         objetivoTactico = true;
         objetivoPermiteConstruccion = false;
         objetivoTransicionLocal = null;
+        objetivoAccionLocal = null;
         plannedFrom = null;
         globalCache = null;
         globalMision = null;
@@ -2175,6 +2189,7 @@ public final class NavExecutor {
         lastRouteSignature = 0;
         objetivoPermiteConstruccion = false;
         objetivoTransicionLocal = null;
+        objetivoAccionLocal = null;
         globalCache = null;
         globalMision = null;
         globalDesde = null;
@@ -2477,6 +2492,8 @@ public final class NavExecutor {
                 // seguir apuntando al objetivo anterior.
                 this.objective = immutable;
                 this.objetivoPermiteConstruccion = false;
+                this.objetivoTransicionLocal = null;
+                this.objetivoAccionLocal = null;
                 this.plannedFrom = null;
                 this.route = null;
                 this.routeIndex = 0;
@@ -3281,15 +3298,54 @@ public final class NavExecutor {
             state = NavState.RECOVERING;
             return;
         }
-        // Una ruta con la misma firma que una ya fallada no se reintenta.
-        if (result.route().signature() == lastRouteSignature) {
+        NavRoute acceptedRoute = result.route();
+        if (objetivoTransicionLocal == NavRoute.Transition.BREAK) {
+            BlockPos actionTarget = objetivoAccionLocal;
+            if (actionTarget == null || !NavBreakActionPolicy.executable(mob.level(), mob, objective,
+                    actionTarget, policies, NavBreakActionPolicy.ACTION_REACH_SQR)) {
+                if (NavTrace.on()) {
+                    NavTrace.ev("BREAK_LOCAL_ROUTE_REJECTED", "uuid=" + mob.getUUID()
+                            + " stand=" + objective.toShortString()
+                            + " action=" + (actionTarget == null ? "-" : actionTarget.toShortString())
+                            + " reason=precondition_changed_before_route_acceptance");
+                }
+                globalCache = null;
+                globalMision = null;
+                globalDesde = null;
+                objetivoTransicionLocal = null;
+                objetivoAccionLocal = null;
+                nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+                state = NavState.PLANNING;
+                return;
+            }
+            acceptedRoute = NavBreakRoutePolicy.attachFinalBreak(acceptedRoute, objective, actionTarget);
+            if (acceptedRoute == null) {
+                if (NavTrace.on()) {
+                    NavTrace.ev("BREAK_LOCAL_ROUTE_REJECTED", "uuid=" + mob.getUUID()
+                            + " stand=" + objective.toShortString()
+                            + " action=" + actionTarget.toShortString()
+                            + " reason=local_route_does_not_end_at_attack_stand");
+                }
+                globalCache = null;
+                globalMision = null;
+                globalDesde = null;
+                objetivoTransicionLocal = null;
+                objetivoAccionLocal = null;
+                nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+                state = NavState.PLANNING;
+                return;
+            }
+        }
+        // Una ruta con la misma firma que una ya fallada no se reintenta. Compare the executable
+        // route, including its final BREAK action target, rather than the WALK-only planning path.
+        if (acceptedRoute.signature() == lastRouteSignature) {
             routesRejected++;
             replans++;
             nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
             state = NavState.RECOVERING;
             return;
         }
-        route = result.route();
+        route = acceptedRoute;
         routeIndex = 0;
         if (Boolean.getBoolean("devilrpg.a2n.diagDrop") && !route.isEmpty()) {
             NavRoute.Node n0 = route.currentNode(0);
