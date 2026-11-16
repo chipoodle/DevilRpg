@@ -44,6 +44,8 @@ public final class A2NavHarness {
     private static final int PRESUPUESTO = Integer.getInteger("devilrpg.nav.budget", 900);
     private static final int H = 48;
     private static final int V = 6;
+    // Allow the retry mob enough bounded movement time to physically clear the target column.
+    private static final int BREAK_RETRY_MISSION_RESUME_TIMEOUT_TICKS = 100;
 
     private static ServerLevel nivel;
     private static int ticks;
@@ -449,6 +451,18 @@ public final class A2NavHarness {
                             + " mission=" + breakRetryGoal.toShortString() + " tick=" + now
                             + " ticksAfterBreak=" + (now - breakRetrySecondTick));
                 }
+                long ticksAfterBreak = now - breakRetrySecondTick;
+                if (!breakRetryMissionResumed && ticksAfterBreak > 0L && ticksAfterBreak % 10L == 0L) {
+                    NavRoute.Node retryNode = breakRetryMob.navExecutor().nodoDeRutaActual();
+                    log("BREAK_FIXTURE_RETRY_PROGRESS tick=" + now
+                            + " ticksAfterBreak=" + ticksAfterBreak
+                            + " pos=" + breakRetryMob.blockPosition().toShortString()
+                            + " objective=" + breakRetryMob.navExecutor().objective()
+                            + " goal=" + breakRetryGoal.toShortString()
+                            + " state=" + breakRetryMob.navExecutor().state()
+                            + " routeNode=" + (retryNode == null ? "none" : retryNode.pos().toShortString())
+                            + " execution={" + breakRetryMob.navExecutor().describe() + "}");
+                }
             }
         }
 
@@ -481,7 +495,11 @@ public final class A2NavHarness {
                             + " retryTimingExact=" + retryTimingExact
                             + " successMissionResumed=" + breakSuccessMissionResumed
                             + " retryMissionResumed=" + breakRetryMissionResumed
-                            + " retryMissionResumeWaitTicks=" + (now - breakRetrySecondTick),
+                            + " retryMissionResumeWaitTicks=" + (now - breakRetrySecondTick)
+                            + " retryPos=" + (breakRetryMob == null ? "-" : breakRetryMob.blockPosition().toShortString())
+                            + " retryObjective=" + (breakRetryMob == null ? "-" : breakRetryMob.navExecutor().objective())
+                            + " retryState=" + (breakRetryMob == null ? "-" : breakRetryMob.navExecutor().state())
+                            + " retryExecution={" + (breakRetryMob == null ? "-" : breakRetryMob.navExecutor().describe()) + "}",
                     server);
             return;
         }
@@ -570,7 +588,7 @@ public final class A2NavHarness {
                 breakRetrySecondTick = tick;
                 boolean destroyed = nivel.destroyBlock(node, false);
                 if (destroyed) {
-                    breakRetryMissionResumeDeadlineTick = tick + 20L;
+                    breakRetryMissionResumeDeadlineTick = tick + BREAK_RETRY_MISSION_RESUME_TIMEOUT_TICKS;
                 }
                 log("BREAK_FIXTURE_RETRY_SECOND tick=" + tick + " delta="
                         + (breakRetrySecondTick - breakRetryFirstTick)
