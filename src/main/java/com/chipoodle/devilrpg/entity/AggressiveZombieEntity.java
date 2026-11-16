@@ -4185,6 +4185,11 @@ public class AggressiveZombieEntity extends Zombie {
      * Elige el centro de la aldea solo cuando no hay objetivo de combate. La planificación y el traversal físico
      * están separados: este goal elige el destino y el planner compartido sigue rutas validadas.
      */
+    /** Read-only diagnostic: whether the combat goal currently owns MOVE. */
+    public boolean persiguiendoActivoA2() {
+        return pursueTargetGoal != null && pursueTargetGoal.estaActivo();
+    }
+
     static class MoveToVillageCenterGoal extends Goal {
         private static final double ARRIVE_DIST = 3.0D * 3.0D;
         private static final int TICKS_BEFORE_RECOVERY = 80;

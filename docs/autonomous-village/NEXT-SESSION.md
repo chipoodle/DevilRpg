@@ -12,6 +12,7 @@ Read first, in order:
 8. `docs/autonomous-village/2026-11-15-PHASE5-A2-VARIABILITY.md`
 9. `docs/autonomous-village/2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md`
 10. `docs/autonomous-village/2026-11-15-PHASE7-A2-9000-OBSERVATION.md`
+11. `docs/autonomous-village/2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`
 
 ## Verified baseline
 
@@ -28,19 +29,19 @@ Read first, in order:
 
 ## Current status
 
-- A2 focused strict enclosure-entry sequence (`DENTRO-PARED`): **5, 7, 7, 7, 7**.
-- Phase-7 observation `a2n-20261115-203001` (9000 ticks, OBSERVATION — NOT ACCEPTANCE):
-  - IDX4: frozen 5000–6000 at `588,86,509`; resumed after 6000, reached `603,71,507` (dist 63.35), then stopped just outside strict entry.
-  - IDX8: moved until ~6000, then only 3 unique positions over 3000 ticks at `710,59,469` (dist 80.49), targeting a villager, state `PLANNING`.
-- C4 at 9000 observation: 12/12; official focused C4 remains 5/5.
-- No full 12k; no production code changed.
+- Latest substantive report: `2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`.
+- A2 focused strict enclosure-entry sequence remains **5, 7, 7, 7, 7** (145020, 150410, 184205, 185459, 194632).
+- Phase-7 observation `a2n-20261115-203001` (9000, OBSERVATION — NOT ACCEPTANCE): IDX4 resumed after 6000 but stopped at `603,71,507`; IDX8 stalled at `710,59,469`.
+- Phase-8 diagnostic `a2n-20261115-205715` did **not** reproduce the outcrop stall; IDX8 entered at 2347 and died in combat. Source ownership mechanism confirmed, cause of the stall not proven.
+- C4 official focused: **5/5 PASS**; no save/reload acceptance path.
+- A2 full 12k OPEN; no production navigation change.
 
 ## Immediate work
 
-1. Instrument the **IDX8 villager-target/`PLANNING`** interaction at `710,59,469` to prove whether combat targeting suppresses waypoint execution; do not change navigation yet.
-2. Treat IDX4 as a 6000-window timeout/delayed route, not a permanent stall; do not extend the official focused standard silently.
-3. C4 save/reload remains OPEN (no reload acceptance path).
-4. Only after an evidence-backed IDX8 correction and a documented focused standard, run full 12,000-tick A2.
+1. Run a **9000-tick observation with `-Da2n.probeTargets=true`** in a new disposable world to catch the eastern-outcrop stall with `combateActivo`, `executorMayMove`, target UUID/distance and route state active.
+2. Do not change navigation behavior until that trace proves the cause.
+3. C4 save/reload remains OPEN (requires a reload driver).
+4. Only after a demonstrated cause and focused standard, run full 12,000-tick A2.
 
 ## Worlds (preserve; do not overwrite)
 
