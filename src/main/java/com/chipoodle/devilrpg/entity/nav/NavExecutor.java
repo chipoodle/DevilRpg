@@ -2684,6 +2684,18 @@ public final class NavExecutor {
                 + " rej=" + routesRejected + " recRun=" + recoveriesRun + " budget=" + budgetHits;
     }
 
+    /** Read-only recovery diagnostics for deterministic runtime fixtures and trace reports. */
+    public String recoveryDiag() {
+        BlockPos last = recoveryController.lastBacktrack();
+        return "history=" + recoveryController.historySize()
+                + " consecutiveFailures=" + recoveryController.consecutiveNoProgress()
+                + " backtrackUsed=" + recoveryController.backtrackUsed()
+                + " lastBacktrack=" + (last == null ? "-" : last.toShortString())
+                + " tacticalObjective=" + (recoveryBacktrackObjective == null
+                        ? "-" : recoveryBacktrackObjective.toShortString())
+                + " strategicMission=" + (misionFinal == null ? "-" : misionFinal.toShortString());
+    }
+
     public String metrics() {
         return "plans=" + plansRun + " expansionsUltima=" + expansionsLast + " expansionsTotal=" + expansionsTotal
                 + " rutasRechazadas=" + routesRejected + " recuperaciones=" + recoveriesRun
