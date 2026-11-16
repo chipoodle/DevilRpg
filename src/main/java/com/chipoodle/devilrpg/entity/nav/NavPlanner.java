@@ -711,7 +711,8 @@ public final class NavPlanner {
                         continue;
                     }
                     bestG.put(sucesor, tentative);
-                    // El estado es la celda de pie validada, no el candidato crudo.
+                    // Search state is the post-transition traversable cell. For BREAK this is
+                    // the solid action target after removal; standTo stores the physical attack cell.
                     piesDe.put(sucesor, piesHasta);
                     encolados++;
                     if (sucesor.equals(goal)) {
