@@ -564,6 +564,9 @@ public final class A2NavHarness {
             return false;
         });
 
+        // Install the same production NavTrace sink used by the raid harness before either
+        // entity starts ticking, so actuator events are persisted to nav-trace.log.
+        traceInit();
         breakSuccessMob.navExecutor().setObjective(breakSuccessGoal);
         breakRetryMob.navExecutor().setObjective(breakRetryGoal);
         log("BREAK_FIXTURE_READY seed-world=" + nivel.dimension().location()
@@ -574,7 +577,7 @@ public final class A2NavHarness {
                 + " retryStart=" + breakRetryMob.blockPosition().toShortString()
                 + " retryTarget=" + breakRetryTarget.toShortString()
                 + " retryGoal=" + breakRetryGoal.toShortString()
-                + " trace=" + Boolean.getBoolean("n4.trace"));
+                + " traceNav=" + Boolean.getBoolean("devilrpg.a2n.traceNav"));
     }
 
     private static NavObstruction.Policies policiesForBreak(final AggressiveZombieEntity mob) {
