@@ -18,11 +18,12 @@ Read first, in order:
 14. `docs/autonomous-village/2026-11-16-PHASE10-A2-MIGRATION-REGRESSION.md`
 15. `docs/autonomous-village/2026-11-16-PHASE11-STRATEGIC-NAVIGATION-FORENSICS.md`
 16. `docs/autonomous-village/2026-11-16-PHASE12-NAVEXECUTOR-REFUSAL-FORENSICS.md`
+17. `docs/autonomous-village/2026-11-16-PHASE13-RECOVERY-ACTUATOR-FORENSICS.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-16-PHASE12-NAVEXECUTOR-REFUSAL-FORENSICS.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-16-PHASE13-RECOVERY-ACTUATOR-FORENSICS.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -39,20 +40,19 @@ Read first, in order:
 - Phase10 melee-only tactical ownership (`002550`): 6/8 perimeter, 5/8 strict; C4 12/12.
 - Phase11 diagnostic `005739`: same 6/8 perimeter, 5/8 strict. Combat inactive for idx5/7/8.
 - Phase12 diagnostic `022656`: 5/8 perimeter, 4/8 strict; C4 12/12.
-  - idx7 first refusal `BLOCKER_OUT_OF_REACH` at ~3.16 blocks (action radius 2.5), later budget-exhausted.
-  - idx8 first refusal `BLOCKER_OUT_OF_REACH` at ~3.03 blocks; stalled approach.
-  - idx5 stuck in generic `RECOVERING`; no BREAK/DROP decision in trace.
+- Phase13 diagnostic `024118`: 6/8 perimeter, 4/8 strict; C4 **FAIL** (`jobSite=[0,0,0]`, 12/12 resumed).
+  - IDX5: `RECOVER_DECISION=WAIT`; `nextRecoveryAt=6164`, run closes 6000, actions 15/24 — deliberate cooldown.
+  - IDX7/IDX8: actuator path index advances / path reports done while position does not reach the 2.5-block action radius.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Instrument `recover()` for idx5: `nextRecoveryAt`, `recoveryActions`, guard rejection,
-   `attemptOneRecovery`, route/cache invalidation.
-2. Instrument pre-delegation approach for idx7/idx8: why `moveTo(node)` never reduces
-   `distNodoSqr` below 6.25 (path null/canReach, actuator movement).
-3. Do not change action range or budgets until an in-range incorrect refusal is demonstrated.
-4. C4 save/reload remains OPEN; full 12k only after the strict-entry gate.
+1. Add bounded post-command movement sampling (20 ticks) for idx7/idx8: position delta, path index,
+   `isDone`, distance; prove zero displacement while path advances.
+2. Investigate C4 `jobSite=[0,0,0]` despite 12/12 resumed; do not weaken `assignmentsClean`.
+3. Do not change action range, recovery cooldown or budgets until the actuator/progress predicate is proven.
+4. Full 12k only after the strict-entry gate and C4 recovery.
 
 ## Worlds (preserve; do not overwrite)
 

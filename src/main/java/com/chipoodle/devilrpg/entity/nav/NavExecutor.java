@@ -1993,6 +1993,48 @@ public final class NavExecutor {
     private long ultimoBreakDecisionTick = Long.MIN_VALUE;
     private String ultimoDropDecision = "-";
     private long ultimoDropDecisionTick = Long.MIN_VALUE;
+    private String ultimoRecoverDiag = "-";
+    private long ultimoRecoverDiagTick = Long.MIN_VALUE;
+    private String ultimoActuatorDiag = "-";
+    private long ultimoActuatorDiagTick = Long.MIN_VALUE;
+
+    private void traceRecoverDecision(String decision, String detail, long now) {
+        if (!NavTrace.on()) {
+            return;
+        }
+        if (!decision.equals(ultimoRecoverDiag) || now - ultimoRecoverDiagTick >= 100L) {
+            ultimoRecoverDiag = decision;
+            ultimoRecoverDiagTick = now;
+            NavTrace.ev("RECOVER_DECISION", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " decision=" + decision + " " + detail);
+        }
+    }
+
+    private void traceActuatorCommand(String kind, BlockPos target, long now) {
+        if (!NavTrace.on()) {
+            return;
+        }
+        net.minecraft.world.level.pathfinder.Path path = mob.getNavigation().getPath();
+        String sig = kind + "|" + target + "|" + (path == null) + "|"
+                + (path != null && path.canReach()) + "|" + (path == null ? -1 : path.getNodeCount())
+                + "|" + (path == null ? -1 : path.getNextNodeIndex()) + "|" + state;
+        if (sig.equals(ultimoActuatorDiag) && now - ultimoActuatorDiagTick < 100L) {
+            return;
+        }
+        ultimoActuatorDiag = sig;
+        ultimoActuatorDiagTick = now;
+        NavTrace.ev("ACTUATOR_COMMAND", "uuid=" + mob.getUUID() + " tick=" + now
+                + " kind=" + kind + " target=" + target.toShortString()
+                + " pos=" + mob.blockPosition().toShortString()
+                + " pathNull=" + (path == null)
+                + " pathCanReach=" + (path != null && path.canReach())
+                + " pathDone=" + mob.getNavigation().isDone()
+                + " pathNodes=" + (path == null ? -1 : path.getNodeCount())
+                + " pathIndex=" + (path == null ? -1 : path.getNextNodeIndex())
+                + " distSqr=" + String.format(java.util.Locale.ROOT, "%.4f",
+                mob.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D, target.getZ() + 0.5D))
+                + " state=" + state);
+    }
 
     private void traceBreakDecision(String decision, String detail, long now) {
         if (!NavTrace.on()) {
@@ -3417,6 +3459,7 @@ public final class NavExecutor {
                         mob.level().getGameTime());
                 // Descenso: se deja caer al borde en vez de saltar.
                 mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 0.9D);
+                traceActuatorCommand("DROP_APPROACH", BlockPos.containing(aim), mob.level().getGameTime());
                 aplicarAcercamientoAdyacente(node, aim, 0.9D);
                 trazarComandoMovimiento(node, "DROP", aim.x, aim.y, aim.z, 0.9D);
             }
@@ -3480,6 +3523,7 @@ public final class NavExecutor {
                     // navegacion no puede acercarlo, se declara obstruido y decide la recuperacion acotada.
                     mob.getNavigation().moveTo(node.pos().getX() + 0.5D, node.pos().getY(),
                             node.pos().getZ() + 0.5D, 1.0D);
+                    traceActuatorCommand("BREAK_APPROACH", node.pos(), mob.level().getGameTime());
                     trazarComandoMovimiento(node, "ACERCARSE-ACCION", node.pos().getX() + 0.5D,
                             node.pos().getY(), node.pos().getZ() + 0.5D, 1.0D);
                     moveSubmissions++;
@@ -3721,7 +3765,17 @@ public final class NavExecutor {
     }
 
     private void recover(long now) {
+        traceRecoverDecision("ENTER",
+                "pos=" + mob.blockPosition().toShortString()
+                        + " state=" + state + " objective=" + objective
+                        + " recoveryNode=" + nodoDeRecuperacion
+                        + " override=" + nodoDeRecuperacionOverride
+                        + " nextRecoveryAt=" + nextRecoveryAt + " now=" + now
+                        + " recoveryActions=" + recoveryActions + "/" + MAX_RECOVERY_ACTIONS
+                        + " routeIdx=" + routeIndex + " routeLen=" + (route == null ? -1 : route.length()), now);
         if (now < nextRecoveryAt) {
+            traceRecoverDecision("WAIT", "remaining=" + (nextRecoveryAt - now)
+                    + " nextRecoveryAt=" + nextRecoveryAt + " now=" + now, now);
             return;
         }
         // A2 Stage 6A · EL PLAN DE CONSTRUCCION VA ANTES DEL TOPE DE RECUPERACION. Medido en
@@ -3786,6 +3840,9 @@ public final class NavExecutor {
                     + " state=" + state + " " + guardaDiag());
         }
         if (rechazoPorGuardaDeRuta()) {
+            traceRecoverDecision("GUARD_REJECT", "pos=" + mob.blockPosition().toShortString()
+                    + " retries=" + replanteosPorGuarda + "/" + MAX_REPLANTEOS_POR_GUARDA
+                    + " " + guardaDiag(), now);
             if (replanteosPorGuarda < MAX_REPLANTEOS_POR_GUARDA) {
                 replanteosPorGuarda++;
                 if (NavTrace.on()) {
@@ -3854,6 +3911,9 @@ public final class NavExecutor {
             return;
         }
         // Acción acotada: un intento por llamada, con enfriamiento creciente.
+        traceRecoverDecision("ATTEMPT", "pos=" + mob.blockPosition().toShortString()
+                + " recoveryActions=" + recoveryActions + "/" + MAX_RECOVERY_ACTIONS
+                + " recoveryNode=" + nodoDeRecuperacion + " objective=" + objective, now);
         boolean acted = attemptOneRecovery();
         recoveryActions++;
         recoveriesRun++;
