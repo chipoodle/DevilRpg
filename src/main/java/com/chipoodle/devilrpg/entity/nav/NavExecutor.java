@@ -4304,7 +4304,9 @@ public final class NavExecutor {
             nodoDeRecuperacionOverride = null;
         } else if (actual != null && (actual.transition() == NavRoute.Transition.BREAK
                 || actual.transition() == NavRoute.Transition.BRIDGE)) {
-            nodo = actual.pos().immutable();
+            // BREAK acts on the solid target, never on the traversable attack stand.
+            nodo = actual.transition() == NavRoute.Transition.BREAK
+                    ? actual.actionTarget().immutable() : actual.pos().immutable();
             transicion = actual.transition();
         }
         boolean acted = recoveryAction.run(towards, nodo, transicion);
