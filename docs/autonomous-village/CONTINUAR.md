@@ -406,3 +406,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - Static PASS: Gradle, strict lint, diff-check, diagnostics compile.
 - `break-runtime` `a2n-20261116-173828`: both targets air, retry exactly 40 ticks, success mission resumed; retry `MISSION_RESUMED` false after 20 ticks because mob at x=737/target x=737 but moving toward 738/739.
 - Fixture acceptance timing remains; no production change by Harness. Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-RUNTIME-FAIL.md. A2 remains OPEN; no 12k.
+
+## 2026-11-16 — Phase19 BREAK success/retry COMPLETO
+
+- Synced `d7486315` -> `8b389672` by fast-forward; code `8f2b9138`.
+- Static PASS: Gradle, strict lint, diff-check, diagnostics compile.
+- `break-runtime` `a2n-20261116-174648` COMPLETO: both targets air, retryCalls=2, delta=40, success mission resumed, retry mission resumed at x=738 after 23 ticks.
+- Independent `BREAK_EDGE_EXCLUDED` and `NAV_BACKTRACK` fixtures still required; not executed in this run.
+- Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-PASS.md. A2 remains OPEN; no 12k.
