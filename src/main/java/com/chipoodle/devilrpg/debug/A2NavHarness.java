@@ -613,25 +613,42 @@ public final class A2NavHarness {
     }
 
     private static void crearBreakArena(final int x0, final int y, final int z0) {
-        // Narrow, supported corridor with one non-supporting collision obstruction.
-        // The only forward route is through the glass pane at (x0+1,y,z0).
+        // Fully enclosed, supported corridor in a disposable world. Bedrock prevents the planner
+        // from finding a cheaper route by mining around the single glass-pane action target.
         for (int x = x0 - 3; x <= x0 + 8; x++) {
             for (int z = z0 - 2; z <= z0 + 2; z++) {
                 for (int dy = 0; dy <= 3; dy++) {
                     aire(x, y + dy, z);
                 }
                 solido(x, y - 1, z);
-                for (int dy = 0; dy <= 3; dy++) {
-                    solido(x, y + dy, z0 - 2);
-                    solido(x, y + dy, z0 + 2);
-                }
             }
         }
-        // Remove the alternative attack stand and close the diagonal bypass beyond the stand.
-        for (int dy = 0; dy <= 3; dy++) {
-            solido(x0 + 1, y + dy, z0 - 1);
-            solido(x0 + 2, y + dy, z0 + 1);
+        for (int x = x0 - 3; x <= x0 + 8; x++) {
+            for (int dy = 0; dy <= 4; dy++) {
+                bedrock(x, y + dy, z0 - 2);
+                bedrock(x, y + dy, z0 + 2);
+            }
         }
+        for (int z = z0 - 2; z <= z0 + 2; z++) {
+            for (int dy = 0; dy <= 4; dy++) {
+                bedrock(x0 - 3, y + dy, z);
+                bedrock(x0 + 8, y + dy, z);
+            }
+        }
+        // Prevent the two bypasses adjacent to the attack stand; keep the stand cell itself clear.
+        for (int dy = 0; dy <= 3; dy++) {
+            bedrock(x0 + 1, y + dy, z0 - 1);
+            bedrock(x0 + 2, y + dy, z0 + 1);
+        }
+        for (int x = x0 - 3; x <= x0 + 8; x++) {
+            for (int z = z0 - 2; z <= z0 + 2; z++) {
+                bedrock(x, y + 4, z);
+            }
+        }
+    }
+
+    private static void bedrock(final int x, final int y, final int z) {
+        nivel.setBlockAndUpdate(new BlockPos(x, y, z), Blocks.BEDROCK.defaultBlockState());
     }
 
     // ================================================================================================
