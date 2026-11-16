@@ -1,5 +1,21 @@
 # Continuación activa — 2026-11-16 (Phase19 BREAK)
 
+## 2026-11-16 — Phase19 BREAK runtime PASS + next independent fixtures
+
+Harness run `a2n-20261116-174648` on `8b389672` returned **PASS (fixture COMPLETO)** for `break-runtime`: both targets air, exact 40-tick retry, both mobs at validated stands and both strategic missions resumed. This is not A2 siege acceptance.
+
+ChatGPT then reviewed the recovery selector and found that the newest prior cell could be too close to the mob; executor rejected it and did not search older history. Published a distance-aware selector overload which skips candidates inside the existing 2.25 squared arrival tolerance. Added unit coverage for selecting an older useful cell. No threshold or history bound changed.
+
+Two independent runtime fixtures are now published in `A2NavHarness`:
+- `-Da2n.mode=break-edge-excluded`: two unverified attempts on the same stand->target pair, exactly 40 ticks apart; active same-terrain fingerprint exclusion; planner must select a different BREAK edge while both blocks remain solid and cursor does not pass BREAK.
+- `-Da2n.mode=nav-backtrack`: corridor becomes blocked only after physical progress; require two no-progress failures, one historical backtrack, history <=16, exact physical return without teleport, and original strategic mission resumption.
+
+Read-only diagnostics were added for current BREAK fingerprint exclusion and recovery state. The fixtures run in separate new disposable worlds with trace enabled.
+
+Detailed report: `2026-11-16-PHASE19-BREAK-EXCLUSION-BACKTRACK-FIXTURES.md`.
+
+**PENDING HARNESS**: validate the exact branch HEAD with Gradle tests, strict lint, diff-check and diagnostics compile; then execute each mode independently and persist all logs and SHA. ChatGPT has not run these checks. A2 remains OPEN; no full 12k before five consecutive strict 8/8 `DENTRO-PARED` runs. C4 save/reload remains OPEN.
+
 ## 2026-11-16 — Phase19 BREAK retry observation window (pending Harness)
 
 Harness run `a2n-20261116-173828` confirmed both targets air, exact 40-tick retry and Scenario A mission resumption. Scenario B reached X=737, the target column, and remained `TRAVERSING` with movement commands toward X=738/739 when the fixture's 20-tick observation deadline expired. Its unchanged physical-crossing predicate had not yet passed.
