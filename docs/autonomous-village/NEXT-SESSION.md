@@ -1,5 +1,15 @@
 # NEXT SESSION — A2 / C4 Stability
 
+## Latest checkpoint — 2026-11-16 Phase19 BREAK stand approach correction
+
+- Harness run `a2n-20261116-163239` is a behavioral FAIL: both BREAK plans and LOS hits are valid, but `moveTo` returns a completed one-node path for the adjacent stand and the mobs do not move.
+- ChatGPT published commit `11be611d90c4d65772813550c2a365a524ee5147` in `NavExecutor.ejecutarBreakDesdePosicionDeAtaque`: when vanilla navigation is done before exact stand occupancy, it uses the existing bounded `NavAdjacentApproachPolicy` + `MoveControl.setWantedPosition` fallback, guarded by Manhattan distance, AABB fit and support.
+- Exact physical occupancy remains mandatory before the actuator. No reach, LOS, protection, collision, cooldown, planner/recovery budget or acceptance threshold changed.
+- New trace event: `BREAK_STAND_NUDGE`; existing `BREAK_STAND_APPROACH` remains.
+- Detailed handoff: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-STAND-APPROACH-FIX.md`.
+- **PENDING HARNESS**: ChatGPT has not run Gradle/lint/diagnostics compile or Minecraft runtime on this SHA. Harness must validate exact current branch HEAD, then rerun disposable `break-runtime` and capture physical positions, both target-air checks, 40-tick retry and mission resumption.
+
+
 ## Latest checkpoint — 2026-11-16 Phase19 BREAK LOS correction
 
 - Previous Harness run `a2n-20261116-160714` was **INVALIDO**: static checks passed, but both planner routes were empty and no mob/actuator started. This is not a BREAK actuator FAIL.
