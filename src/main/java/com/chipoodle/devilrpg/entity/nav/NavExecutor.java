@@ -1596,10 +1596,10 @@ public final class NavExecutor {
             if (!NavClimbPolicy.esWaypointSeleccionable(n.transition())) {
                 continue;
             }
-            // BUILD/BREAK/BRIDGE son celdas de ACCION, no posiciones de pie: el ejecutor coloca/rompe/puentea
-            // sobre ese nodo concreto. No se deben descartar con esPieValido(), que exige aire bajo los pies.
-            // BREAK ademas se revalida contra la puerta real de minado (proteccion, bloque especial y block entity).
-            BlockPos waypoint = n.pos();
+            // BREAK keeps the physical attack stand in n.pos() and the solid block in actionPos().
+            // Select and validate the stand as a movement waypoint, but authorize the action against actionTarget.
+            // BUILD/BRIDGE retain their own action-cell contracts and are not ordinary feet waypoints.
+            BlockPos waypoint = n.standPos();
             if (!dentroDeLaVentana(yo, waypoint)) {
                 if (n.transition() == NavRoute.Transition.DROP
                         && NavWaypointWindowPolicy.aceptable(waypoint.getX() - yo.getX(), waypoint.getZ() - yo.getZ(),
