@@ -1,3 +1,41 @@
+# Continuación activa — 2026-11-16 (Phase19 BREAK)
+
+**Lee primero:** `NEXT-SESSION.md`, `CHATGPT-COLLABORATION-POLICY.md` y `CHATGPT-HARNESS-WORKFLOW.md`.
+
+**Código publicado pendiente de validar:** `600b78b4f628cadf894be2cb38015d0c4ffb512d` en `feature/autonomous-village`.
+
+## División de trabajo obligatoria
+
+- ChatGPT modifica el código de producción directamente en GitHub y publica commits.
+- Harness sincroniza de forma segura, preserva el trabajo local, ejecuta pruebas/lint/runtime, mide y documenta.
+- Harness no implementa correcciones de producción. Devuelve evidencia reproducible a ChatGPT.
+- No declarar validado un SHA hasta ejecutar los checks sobre ese SHA exacto.
+
+## Estado más reciente
+
+- Harness reportó PASS de Gradle/lint/diff-check sobre `ecdfaff6`, pero runtime no observó BREAK.
+- La revisión posterior identificó que el grafo confundía el estado WALK al stand con el estado posterior a romper el bloque. También encontró que la proximidad podía avanzar un nodo BREAK antes del actuador y que el ejecutor podía aceptar una celda adyacente como stand.
+- ChatGPT publicó correcciones en `NavGraphSearch`, `NavPlanner`, `NavExecutor`, añadió `NavBreakRoutePolicy`, dos pruebas nuevas y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`.
+- Las pruebas nuevas están registradas pero **no ejecutadas**. El runtime fixture está implementado pero **no ejecutado**.
+- Informe detallado: `2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
+- A2 sigue OPEN: último focused 5/8 estricto, 6/8 perímetro. No ejecutar 12k hasta cinco corridas consecutivas 8/8 estrictas.
+- C4 focused fue PASS en `a2n-20261116-112413`; save/reload sigue OPEN.
+
+## Próxima acción
+
+Harness debe:
+1. Fetch del HEAD actual y fast-forward seguro; preservar todos los artefactos locales.
+2. Confirmar que el árbol contiene el código `600b78b4`.
+3. Ejecutar `.\gradlew.bat test`, `python tools/lint_aldea.py --strict` y `git diff --check`.
+4. Compilar diagnóstico con `-Pa2nDiagnostics=true`.
+5. Ejecutar en un mundo desechable nuevo `-Da2n.mode=break-runtime -Dn4.trace=true` con run ID único.
+6. Persistir logs, trace, `fin.txt`, `estado.txt` y SHA exacto. No modificar código de producción.
+7. Después, diseñar una fixture separada para `BREAK_EDGE_EXCLUDED` y `NAV_BACKTRACK`; no asumir que el fixture actual los cubre.
+
+No modificar presupuestos, cooldowns, rangos, protección, colisiones, mundos originales ni criterios de aceptación.
+
+---
+
 
 ## 2026-11-14 10:02 — Perimeter-aware retreat focused: FAIL
 
