@@ -25,7 +25,7 @@
 
 Harness debe:
 1. Fetch del HEAD actual y fast-forward seguro; preservar todos los artefactos locales.
-2. Confirmar que el árbol contiene el código `600b78b4`.
+2. Confirmar que el árbol contiene el código `6d5dc7b1d1f72a366d4f6b05626147b9e932481c`.
 3. Ejecutar `.\gradlew.bat test`, `python tools/lint_aldea.py --strict` y `git diff --check`.
 4. Compilar diagnóstico con `-Pa2nDiagnostics=true`.
 5. Ejecutar en un mundo desechable nuevo `-Da2n.mode=break-runtime -Ddevilrpg.a2n.traceNav=true` con run ID único.
