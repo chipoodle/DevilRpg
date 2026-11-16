@@ -353,3 +353,14 @@ un/saves; hashes match; structural verification only.
 - Static PASS: Gradle, strict lint, diff-check, diagnostics compile.
 - `break-runtime` `a2n-20261116-163239`: **FAIL** (fixture timeout labelled BLOCKED). Both plans contain BREAK and LOS hits `697/737,184,568`, but mobs never move from `696/736,184,568` to stand `696/736,184,567`; one-node path marked done, `retryCalls=0`, no target air.
 - Harness did not change production code. Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-LOS-RUNTIME-FAIL.md. A2 remains OPEN; no 12k.
+
+
+## 2026-11-16 — Phase19 BREAK adjacent stand approach correction
+
+Harness run `a2n-20261116-163239` is a behavioral FAIL: planner routes and LOS are valid, but `moveTo` returns a completed one-node path for the adjacent stand. The mob never physically occupies the stand and the BREAK actuator is never called.
+
+ChatGPT published `11be611d90c4d65772813550c2a365a524ee5147` in `NavExecutor.ejecutarBreakDesdePosicionDeAtaque`. When navigation is already done while the mob is outside the exact stand, the executor now uses the existing bounded adjacent nudge (`NavAdjacentApproachPolicy` + `MoveControl.setWantedPosition`), only if distance <=2, the AABB fits and the stand has support. Exact stand occupancy is still required. No cooldown, reach, budget, LOS, collision or acceptance criteria changed.
+
+New trace: `BREAK_STAND_NUDGE`. Detailed report: `2026-11-16-PHASE19-BREAK-STAND-APPROACH-FIX.md`.
+
+Status: **PENDING HARNESS**. ChatGPT has not run static validation or runtime on this correction. Harness must fetch exact current branch HEAD, preserve local artifacts/worlds, run tests/lint/diff-check/diagnostics compile and then execute a new disposable `break-runtime`. Validate both targets become air, actuator events, exactly 40 ticks between failed first attempt and retry, and strategic mission resumption. A2 remains OPEN; no 12k until five consecutive strict 8/8 runs. C4 save/reload remains OPEN.
