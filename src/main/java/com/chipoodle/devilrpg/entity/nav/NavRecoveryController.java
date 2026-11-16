@@ -80,4 +80,6 @@ public final class NavRecoveryController {
 
     public int consecutiveNoProgress() { return consecutiveNoProgress; }
     public int historySize() { return reached.size(); }
+    public boolean backtrackUsed() { return backtrackUsed; }
+    public BlockPos lastBacktrack() { return lastBacktrack == null ? null : lastBacktrack.immutable(); }
 }
