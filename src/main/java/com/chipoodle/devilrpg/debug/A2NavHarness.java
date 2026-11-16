@@ -1321,6 +1321,8 @@ public final class A2NavHarness {
     private static int rFundSinSoporte;
     private static int rTicks;
     private static final java.util.List<AggressiveZombieEntity> rAsaltantes = new java.util.ArrayList<>();
+    private static final java.util.Map<java.util.UUID, net.minecraft.world.phys.Vec3> rUltimaPosProbe =
+            new java.util.HashMap<>();
     private static final StringBuilder rInforme = new StringBuilder();
 
     // ================================================================================================
@@ -1995,15 +1997,40 @@ public final class A2NavHarness {
                     double dx = a.getX() - rAncla.getX();
                     double dz = a.getZ() - rAncla.getZ();
                     var np = a.getNavigation().getPath();
+                    var prevPos = rUltimaPosProbe.put(a.getUUID(),
+                            new net.minecraft.world.phys.Vec3(a.getX(), a.getY(), a.getZ()));
+                    double ddx = prevPos == null ? 0.0D : a.getX() - prevPos.x;
+                    double ddy = prevPos == null ? 0.0D : a.getY() - prevPos.y;
+                    double ddz = prevPos == null ? 0.0D : a.getZ() - prevPos.z;
+                    net.minecraft.world.phys.AABB bb = a.getBoundingBox();
+                    int solidos = 0;
+                    String primerSolido = "-";
+                    for (BlockPos bp : BlockPos.betweenClosed(
+                            BlockPos.containing(bb.minX, bb.minY, bb.minZ),
+                            BlockPos.containing(bb.maxX, bb.maxY, bb.maxZ))) {
+                        if (!a.level().getBlockState(bp).getCollisionShape(a.level(), bp).isEmpty()) {
+                            solidos++;
+                            if ("-".equals(primerSolido)) primerSolido = bp.toShortString();
+                        }
+                    }
                     log("RAID TARGETPROBE idx=" + (k + 1) + " t=" + rTicks
                             + " pos=" + a.blockPosition().toShortString()
-                            + " exact=" + dos(a.getX()) + "," + dos(a.getY()) + "," + dos(a.getZ())
+                            + " exactRaw=" + Double.toHexString(a.getX()) + "," + Double.toHexString(a.getY())
+                            + "," + Double.toHexString(a.getZ())
+                            + " exact9=" + String.format(java.util.Locale.ROOT, "%.9f,%.9f,%.9f",
+                            a.getX(), a.getY(), a.getZ())
+                            + " deltaSincePrev=" + String.format(java.util.Locale.ROOT, "%.9f,%.9f,%.9f",
+                            ddx, ddy, ddz)
+                            + " bbox=" + String.format(java.util.Locale.ROOT, "%.4f,%.4f,%.4f -> %.4f,%.4f,%.4f",
+                            bb.minX, bb.minY, bb.minZ, bb.maxX, bb.maxY, bb.maxZ)
+                            + " solidShapesInBBox=" + solidos + " firstSolid=" + primerSolido
                             + " velocity=" + dos(a.getDeltaMovement().x) + ","
                             + dos(a.getDeltaMovement().y) + "," + dos(a.getDeltaMovement().z)
                             + " onGround=" + a.onGround() + " inWater=" + a.isInWater()
                             + " pathNull=" + (np == null)
                             + " pathCanReach=" + (np != null && np.canReach())
                             + " pathDone=" + a.getNavigation().isDone()
+                            + " pathInProgress=" + a.getNavigation().isInProgress()
                             + " pathNodes=" + (np == null ? -1 : np.getNodeCount())
                             + " pathIndex=" + (np == null ? -1 : np.getNextNodeIndex())
                             + " pathNext=" + (np == null || np.getNextNodeIndex() >= np.getNodeCount()
