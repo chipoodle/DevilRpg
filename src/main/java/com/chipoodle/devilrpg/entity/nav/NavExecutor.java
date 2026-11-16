@@ -2014,6 +2014,16 @@ public final class NavExecutor {
         if (current == null || current.getNodeCount() > 1) {
             return;
         }
+        BlockPos targetPos = mob.getNavigation().getTargetPos();
+        boolean cachedByTarget = targetPos != null && targetPos.equals(target);
+        if (cachedByTarget) {
+            NavTrace.ev("PATH_TRANSACTION_CACHED_RETURN", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " requested=" + target.toShortString() + " targetPos=" + targetPos.toShortString()
+                    + " currentNodes=" + current.getNodeCount()
+                    + " currentCanReach=" + current.canReach()
+                    + " note=createPath-would-return-active-path");
+            return;
+        }
         ultimoPathTransaction = key;
         ultimoPathTransactionTick = now;
         String nodes = "-";
