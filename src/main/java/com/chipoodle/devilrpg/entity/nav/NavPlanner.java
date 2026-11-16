@@ -231,12 +231,28 @@ public final class NavPlanner {
      * A2 · el nodo BREAK debe terminar en una celda de pie desde la que la accion sea realmente
      * ejecutable. No se acepta el bloque solido como destino de navegacion.
      */
+    private static int breakStandTraceEvents;
+
+    private static void traceBreakStandCandidate(BlockPos from, BlockPos actionPos, BlockPos stand,
+                                                  String reason) {
+        if (!NavTrace.on() || breakStandTraceEvents >= 128) return;
+        breakStandTraceEvents++;
+        NavTrace.ev("BREAK_STAND_CANDIDATE", "reason=" + reason
+                + " from=" + from.toShortString()
+                + " action=" + actionPos.toShortString()
+                + " stand=" + stand.toShortString());
+    }
+
     private static BlockPos buscarPosicionDeAtaque(CollisionGetter level, Mob mob, BlockPos actionPos,
                                                    BlockPos from, int piesDesde,
                                                    NavObstruction.Policies policies) {
         for (BlockPos stand : NavBreakAttackPositionPolicy.candidates(actionPos, from)) {
-            if (!NavBreakAttackPositionPolicy.withinActionReach(stand, actionPos)
-                    || !NavBreakAttackPositionPolicy.isSingleStepReachable(from, stand, piesDesde)) {
+            if (!NavBreakAttackPositionPolicy.withinActionReach(stand, actionPos)) {
+                traceBreakStandCandidate(from, actionPos, stand, "OUT_OF_ACTION_REACH");
+                continue;
+            }
+            if (!NavBreakAttackPositionPolicy.isSingleStepReachable(from, stand, piesDesde)) {
+                traceBreakStandCandidate(from, actionPos, stand, "NOT_SINGLE_STEP_REACHABLE");
                 continue;
             }
             int dx = stand.getX() - from.getX();
@@ -246,14 +262,20 @@ public final class NavPlanner {
                 BlockPos sideZ = new BlockPos(from.getX(), piesDesde, stand.getZ());
                 if (!NavObstruction.fits(level, mob, sideX)
                         && !NavObstruction.fits(level, mob, sideZ)) {
+                    traceBreakStandCandidate(from, actionPos, stand, "DIAGONAL_PINCHED");
                     continue;
                 }
             }
-            if (policies.isProtected(stand)
-                    || !NavBreakActionPolicy.executable(level, mob, stand, actionPos, policies,
-                    NavBreakActionPolicy.ACTION_REACH_SQR)) {
+            if (policies.isProtected(stand)) {
+                traceBreakStandCandidate(from, actionPos, stand, "STAND_PROTECTED");
                 continue;
             }
+            if (!NavBreakActionPolicy.executable(level, mob, stand, actionPos, policies,
+                    NavBreakActionPolicy.ACTION_REACH_SQR)) {
+                traceBreakStandCandidate(from, actionPos, stand, "ACTION_NOT_EXECUTABLE");
+                continue;
+            }
+            traceBreakStandCandidate(from, actionPos, stand, "ACCEPTED");
             return stand.immutable();
         }
         return null;
