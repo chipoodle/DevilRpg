@@ -1982,7 +1982,7 @@ public final class A2NavHarness {
                 rDistPrevia[k] = pdist;
             }
             if (Boolean.getBoolean("a2n.probeTargets")) {
-                for (int k : new int[]{3, 7}) {
+                for (int k : new int[]{3, 4, 6, 7}) {
                     if (k >= n) {
                         continue;
                     }
