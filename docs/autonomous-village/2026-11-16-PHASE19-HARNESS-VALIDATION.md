@@ -136,3 +136,33 @@ Create a deterministic runtime fixture that forces a route BREAK edge (valid sta
 `BREAK_STAND_APPROACH` → target air → route advance; then force one actuator false return and observe the
 40-tick retry, followed by two no-progress failures to observe `NAV_BACKTRACK` and mission resumption.
 Do not change budgets or acceptance to produce the events.
+
+
+---
+
+## Addendum — ChatGPT source correction after the BLOCKED runtime report
+
+**This addendum does not change the original run result.** Run `a2n-20261116-112413` remains BLOCKED for runtime BREAK; the original measurements and missing-event observations remain valid.
+
+ChatGPT reviewed the actual source and identified that the BREAK route could be unreachable or skipped even when policy checks passed:
+
+1. A* keyed BREAK's successor by `standPos`, so a cheaper WALK edge to the same stand could dominate the BREAK edge despite not clearing the target.
+2. `nodoAlcanzado` could advance a BREAK node by proximity before the actuator ran.
+3. The actuator's old distance threshold could accept an adjacent predecessor cell as if it occupied the exact attack stand.
+4. A global BREAK waypoint's `actionPos` could be lost when local planning created a WALK-only route to the stand.
+
+ChatGPT published corrections and a deterministic runtime fixture in code checkpoint:
+
+`600b78b4f628cadf894be2cb38015d0c4ffb512d`
+
+New tests authored and registered (not yet run):
+- `NavBreakGraphStateTest` — 6 assertions.
+- `NavBreakRoutePolicyTest` — 10 assertions.
+
+New runtime mode:
+`A2NavHarness` with `-Da2n.mode=break-runtime`, compiled with `-Pa2nDiagnostics=true` and launched with `-Dn4.trace=true` in a new disposable world. It exercises a production-actuator success path and a controlled first-failure/second-success path whose retry must be exactly 40 ticks.
+
+The source changes, fixture design, expected trace events, and exact Harness instructions are documented in:
+`2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
+
+**Validation state:** no Gradle/lint/runtime command has been run by ChatGPT on `600b78b4`. Harness must fetch the latest branch, verify the exact code checkpoint, run the required commands and execute the new fixture. Edge-exclusion and `NAV_BACKTRACK` still require separate runtime coverage.
