@@ -2,7 +2,7 @@
 
 **Lee primero:** `NEXT-SESSION.md`, `CHATGPT-COLLABORATION-POLICY.md` y `CHATGPT-HARNESS-WORKFLOW.md`.
 
-**Código publicado pendiente de validar:** `600b78b4f628cadf894be2cb38015d0c4ffb512d` en `feature/autonomous-village`.
+**Código publicado pendiente de validar:** `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a` en `feature/autonomous-village`.
 
 ## División de trabajo obligatoria
 
@@ -28,7 +28,7 @@ Harness debe:
 2. Confirmar que el árbol contiene el código `600b78b4`.
 3. Ejecutar `.\gradlew.bat test`, `python tools/lint_aldea.py --strict` y `git diff --check`.
 4. Compilar diagnóstico con `-Pa2nDiagnostics=true`.
-5. Ejecutar en un mundo desechable nuevo `-Da2n.mode=break-runtime -Dn4.trace=true` con run ID único.
+5. Ejecutar en un mundo desechable nuevo `-Da2n.mode=break-runtime -Ddevilrpg.a2n.traceNav=true` con run ID único.
 6. Persistir logs, trace, `fin.txt`, `estado.txt` y SHA exacto. No modificar código de producción.
 7. Después, diseñar una fixture separada para `BREAK_EDGE_EXCLUDED` y `NAV_BACKTRACK`; no asumir que el fixture actual los cubre.
 
