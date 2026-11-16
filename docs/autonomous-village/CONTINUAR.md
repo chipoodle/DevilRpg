@@ -1,5 +1,21 @@
 # Continuación activa — 2026-11-16 (Phase19 BREAK)
 
+## 2026-11-16 — Phase19 BREAK retry observation window (pending Harness)
+
+Harness run `a2n-20261116-173828` confirmed both targets air, exact 40-tick retry and Scenario A mission resumption. Scenario B reached X=737, the target column, and remained `TRAVERSING` with movement commands toward X=738/739 when the fixture's 20-tick observation deadline expired. Its unchanged physical-crossing predicate had not yet passed.
+
+ChatGPT changed only `A2NavHarness.java` in commit `8f2b9138937b23ff853ec839a0db9f7559d0673e`:
+- bounded post-destruction observation increased to 100 ticks;
+- original predicate remains objective equals strategic goal AND physical X > target X;
+- progress samples every 10 ticks record position, objective, state, route node and executor description;
+- deadline remains a hard FAIL and now includes final retry diagnostics.
+
+No production code or gameplay acceptance criterion changed. No original A2/C4 worlds were used.
+
+Detailed report: `2026-11-16-PHASE19-BREAK-RETRY-OBSERVATION-WINDOW.md`.
+
+Next: Harness fetches and validates the exact branch HEAD, runs Gradle tests, strict lint, diff-check and diagnostics compile, then executes a new disposable `break-runtime`. Require both mission-resumption flags, both target-air results and exactly 40 retry ticks. After PASS, prepare independent fixtures for `BREAK_EDGE_EXCLUDED` and `NAV_BACKTRACK`. A2 remains OPEN; no full 12k before five consecutive strict 8/8 `DENTRO-PARED` runs.
+
 ## 2026-11-16 — Phase19 BREAK LOS correction (pending Harness)
 
 Previous run `a2n-20261116-160714` was INVALIDO before mob/actuator execution: both production planner routes were empty, with 10/512 expansions and no expected BREAK edge. Static validation had passed, but no BREAK runtime behavior was tested.
