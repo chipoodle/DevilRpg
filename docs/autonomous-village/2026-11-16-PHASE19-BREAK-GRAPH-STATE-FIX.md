@@ -1,7 +1,7 @@
 # Phase19 — BREAK graph-state correction and deterministic runtime fixture
 
 **Date:** 2026-11-16  
-**Implementation HEAD:** `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`  
+**Implementation HEAD:** `1a7028abc138f5b53d1313155dee23fceb20ed78`  
 **Branch:** `feature/autonomous-village`  
 **Status:** IMPLEMENTED / NOT YET VALIDATED BY HARNESS
 
@@ -57,6 +57,7 @@ A verified or excluded BREAK edge must not leave the executor planning indefinit
   - does not advance BREAK by proximity,
   - requires exact physical occupancy of the stand,
   - resumes the strategic mission after verification/exclusion,
+  - uses `actionTarget()` in the generic recovery path rather than accidentally treating the stand as the block to break,
   - carries post-break state correctly when scanning global route predecessors.
 - `NavBreakRoutePolicy.java`: attaches a BREAK action to a route ending at a validated stand.
 - `A2NavHarness.java`: adds `-Da2n.mode=break-runtime`, a deterministic disposable-world fixture with two real `AggressiveZombieEntity` instances and production `NavPlanner`/`NavExecutor`.
@@ -64,10 +65,10 @@ A verified or excluded BREAK edge must not leave the executor planning indefinit
 
 ## 3. New automated tests (authored, NOT YET RUN)
 
-- `NavBreakGraphStateTest` — 6 assertions. Models a cheaper WALK path to the same stand that is a dead end, while a BREAK edge to the distinct post-break target state reaches the goal. Verifies the BREAK transition, action target and stand are all preserved.
+- `NavBreakGraphStateTest` — 7 assertions. Models a cheaper WALK path to the same stand that is a dead end, while a BREAK edge to the distinct post-break target state reaches the goal. Verifies the BREAK transition, action target and stand are all preserved.
 - `NavBreakRoutePolicyTest` — 10 assertions. Verifies that the final stand waypoint becomes a BREAK node, the action target stays separate, route prefix/destination are preserved, and invalid inputs are rejected.
 
-These tests are registered in `policyTest`. ChatGPT has not run Gradle, lint or runtime; no PASS is claimed for this implementation SHA.
+These tests are registered in `policyTest`. The graph-state test also rejects a malformed BREAK edge that lacks a stand position. ChatGPT has not run Gradle, lint or runtime; no PASS is claimed for this implementation SHA.
 
 ## 4. Deterministic runtime fixture
 
@@ -97,7 +98,7 @@ The fixture does **not yet** exercise second-action failure/edge exclusion or `N
 On the local repository:
 
 1. Fetch the current `origin/feature/autonomous-village` HEAD and preserve all local-only artifacts. No reset/clean/stash/force-push.
-2. Confirm exact HEAD `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`.
+2. Confirm exact HEAD `1a7028abc138f5b53d1313155dee23fceb20ed78`.
 3. Run:
    ```powershell
    .\gradlew.bat test
@@ -121,6 +122,6 @@ On the local repository:
 
 ## 7. Next owner/action
 
-**Harness:** fetch and validate `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`, then execute the deterministic `break-runtime` fixture.
+**Harness:** fetch and validate `1a7028abc138f5b53d1313155dee23fceb20ed78`, then execute the deterministic `break-runtime` fixture.
 
 **ChatGPT:** review the resulting report and logs; correct source directly on GitHub if Harness demonstrates a defect. Harness must not independently change production source.
