@@ -13,7 +13,7 @@ Read first, in order:
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Verified HEAD before Phase 3: `8a7b0b9112ee3757f3eda58158de5f99626d5c4f`
+- Phase-3 substantive commit: `46aee02b4c35d1f775b3e586feefddd70ce25dbc` (collaboration policy + stability report). The final synchronization checkpoint is the commit containing this file; always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts; read the final report of the latest session.
 
