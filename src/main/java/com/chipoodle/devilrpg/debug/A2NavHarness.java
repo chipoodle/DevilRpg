@@ -85,6 +85,8 @@ public final class A2NavHarness {
     private static long breakEdgeSecondTick = -1L;
     private static int breakEdgeCalls;
     private static int breakEdgeUnexpectedCalls;
+    private static boolean breakEdgeFirstPairMatched;
+    private static boolean breakEdgeSecondPairMatched;
 
     // Independent NAV_BACKTRACK runtime fixture state.
     private static boolean backtrackPrepared;
@@ -594,8 +596,14 @@ public final class A2NavHarness {
                     boolean cursorBeforeAction = breakEdgeMob.navExecutor().indiceDeRuta() <= i;
                     boolean strategicMissionPreserved =
                             breakEdgeGoal.equals(breakEdgeMob.navExecutor().objective());
+                    boolean fingerprintExclusionActive = breakEdgeMob.navExecutor()
+                            .isBreakEdgeExcluded(breakEdgeFailedStand, breakEdgeFailedTarget);
+                    boolean exactRetry = breakEdgeSecondTick - breakEdgeFirstTick == 40L;
                     if (rejectedBlockStillSolid && alternativeBlockStillSolid
-                            && cursorBeforeAction && strategicMissionPreserved) {
+                            && cursorBeforeAction && strategicMissionPreserved
+                            && fingerprintExclusionActive && exactRetry
+                            && breakEdgeFirstPairMatched && breakEdgeSecondPairMatched
+                            && breakEdgeUnexpectedCalls == 0) {
                         log("BREAK_EDGE_FIXTURE_ALTERNATIVE_SELECTED stand="
                                 + node.standPos().toShortString()
                                 + " target=" + node.actionTarget().toShortString()
@@ -603,13 +611,18 @@ public final class A2NavHarness {
                                 + " breakIndex=" + i
                                 + " rejectedPair=" + breakEdgeFailedStand.toShortString()
                                 + "->" + breakEdgeFailedTarget.toShortString()
-                                + " rejectedStillSolid=true alternativeStillSolid=true");
+                                + " rejectedStillSolid=true alternativeStillSolid=true"
+                                + " fingerprintExclusionActive=" + fingerprintExclusionActive);
                         cerrar("COMPLETO", "calls=" + breakEdgeCalls
                                 + " retryDeltaTicks=" + (breakEdgeSecondTick - breakEdgeFirstTick)
                                 + " retryTimingExact=" + (breakEdgeSecondTick - breakEdgeFirstTick == 40L)
                                 + " excludedPairNotReused=true alternativeSelected=true"
                                 + " rejectedBlockStillSolid=" + rejectedBlockStillSolid
                                 + " alternativeBlockStillSolid=" + alternativeBlockStillSolid
+                                + " fingerprintExclusionActive=" + fingerprintExclusionActive
+                                + " firstPairMatchedPreflight=" + breakEdgeFirstPairMatched
+                                + " secondPairMatched=" + breakEdgeSecondPairMatched
+                                + " unexpectedActuatorCalls=" + breakEdgeUnexpectedCalls
                                 + " routeIndex=" + breakEdgeMob.navExecutor().indiceDeRuta()
                                 + " breakIndex=" + i
                                 + " strategicMissionPreserved=" + strategicMissionPreserved, server);
@@ -710,6 +723,8 @@ public final class A2NavHarness {
                 breakEdgeFirstTick = tick;
                 breakEdgeFailedStand = breakEdgeMob.blockPosition().immutable();
                 breakEdgeFailedTarget = target.immutable();
+                breakEdgeFirstPairMatched = breakEdgeExpectedStand.equals(breakEdgeFailedStand)
+                        && breakEdgeExpectedTarget.equals(breakEdgeFailedTarget);
                 log("BREAK_EDGE_FIXTURE_FIRST tick=" + tick
                         + " stand=" + breakEdgeFailedStand.toShortString()
                         + " target=" + breakEdgeFailedTarget.toShortString()
@@ -721,12 +736,14 @@ public final class A2NavHarness {
             if (breakEdgeCalls == 1) {
                 breakEdgeCalls = 2;
                 breakEdgeSecondTick = tick;
+                breakEdgeSecondPairMatched = breakEdgeFailedStand.equals(breakEdgeMob.blockPosition())
+                        && breakEdgeFailedTarget.equals(target);
                 log("BREAK_EDGE_FIXTURE_SECOND tick=" + tick
                         + " delta=" + (breakEdgeSecondTick - breakEdgeFirstTick)
                         + " stand=" + breakEdgeMob.blockPosition().toShortString()
                         + " target=" + target.toShortString()
-                        + " samePair=" + (breakEdgeFailedStand.equals(breakEdgeMob.blockPosition())
-                                && breakEdgeFailedTarget.equals(target))
+                        + " samePair=" + breakEdgeSecondPairMatched
+                        + " firstPairMatchedPreflight=" + breakEdgeFirstPairMatched
                         + " destroyed=" + nivel.getBlockState(target).isAir());
                 return false;
             }
