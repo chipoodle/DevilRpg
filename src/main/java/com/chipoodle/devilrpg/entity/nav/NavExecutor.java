@@ -2315,6 +2315,7 @@ public final class NavExecutor {
             return;
         }
         objetivoTactico = false;
+        recoveryBacktrackObjective = null;
         objective = misionFinal;
         objetivoPermiteConstruccion = false;
         plannedFrom = null;
@@ -2459,6 +2460,7 @@ public final class NavExecutor {
         // A2 Stage 7B · la MISION FINAL es la que fija el llamante y NO cambia con el escalonado. Una mision nueva
         // reinicia los contadores del escalonado (el reenvio del MISMO objetivo no toca el progreso).
         if (!immutable.equals(this.misionFinal)) {
+            recoveryBacktrackObjective = null;
             com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPUP] MISSIONCHANGE old={} new={} objective={}",
                     this.misionFinal, immutable, this.objective);
             if (this.objective != null) {
@@ -4293,6 +4295,7 @@ public final class NavExecutor {
 
     /** Se llama cuando algo externo cambió el terreno: invalida la ruta en curso. */
     public void terrainChanged() {
+        recoveryController.onVerifiedProgress();
         route = null;
         plannedFrom = null;
         // A2 REMEDIACIÓN 2 · una ruta global cacheada tambien queda obsoleta si el terreno cambio.

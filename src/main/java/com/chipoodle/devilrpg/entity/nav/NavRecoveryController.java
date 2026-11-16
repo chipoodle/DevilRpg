@@ -49,6 +49,11 @@ public final class NavRecoveryController {
     }
 
     public void onMissionProgress() {
+        onVerifiedProgress();
+    }
+
+    /** Any verified physical or terrain progress rearms the bounded recovery sequence. */
+    public void onVerifiedProgress() {
         consecutiveNoProgress = 0;
         backtrackUsed = false;
         lastBacktrack = null;

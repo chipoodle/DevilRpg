@@ -51,3 +51,7 @@ Planner validates the predecessor at its tracked feet Y; executor validates the 
 
 
 - LOS ray now aims through the center of the target's near face. A direct eye-to-block-center ray can graze above/below an adjacent block due to the mob's elevated eye position; the corrected ray endpoint is computed from the first horizontal face intersection and still requires the first collision hit to be the intended target.
+
+
+- Verified terrain changes also rearm the recovery controller, not just movement toward the strategic mission. This matches the progress contract: a confirmed BREAK/build/terrain mutation is real progress even before the mob has moved closer.
+- Backtrack markers are cleared if another tactical controller cancels the objective or a new strategic mission replaces it.
