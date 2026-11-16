@@ -355,11 +355,15 @@ public final class NavPlanner {
                         if (off[0] != 0 && off[1] != 0) {
                             cost *= 1.4142D;
                         }
-                        BlockPos estado = arista.standPos() != null ? arista.standPos()
-                                : sucesorCanonico(candidate, arista.kind(), arista.transicion(), arista.piesHasta());
+                        // The search state is the cell that will become traversable after the action.
+                        // BREAK's attack stand is carried separately on the route node; using it as
+                        // the graph key collapses BREAK into a cheaper WALK edge to the same cell.
+                        BlockPos estado = sucesorCanonico(candidate, arista.kind(),
+                                arista.transicion(), arista.piesHasta());
                         contadores[1]++;
                         out.accept(new NavGraphSearch.Edge(estado.asLong(), cost,
-                                arista.transicion(), arista.piesHasta(), arista.actionPos()));
+                                arista.transicion(), arista.piesHasta(), arista.actionPos(),
+                                arista.standPos()));
                     }
                 }
             }
@@ -404,7 +408,10 @@ public final class NavPlanner {
                     .append(" motivo=").append(motivo);
             List<NavRoute.Node> nodosFrente = new ArrayList<>();
             for (NavGraphSearch.Step paso : resultado.route()) {
-                nodosFrente.add(new NavRoute.Node(BlockPos.of(paso.state()), paso.transition(), paso.actionPos()));
+                BlockPos state = BlockPos.of(paso.state());
+                BlockPos routePos = paso.transition() == NavRoute.Transition.BREAK && paso.standPos() != null
+                        ? paso.standPos() : state;
+                nodosFrente.add(new NavRoute.Node(routePos, paso.transition(), paso.actionPos()));
             }
             resumen.append(" rutaFrente=").append(nodosFrente.size());
             return new GlobalResult(new NavRoute(nodosFrente, frente), frente, false, expansions, hitBudget,
@@ -412,7 +419,10 @@ public final class NavPlanner {
         }
         List<NavRoute.Node> nodes = new ArrayList<>();
         for (NavGraphSearch.Step paso : resultado.route()) {
-            nodes.add(new NavRoute.Node(BlockPos.of(paso.state()), paso.transition(), paso.actionPos()));
+            BlockPos state = BlockPos.of(paso.state());
+            BlockPos routePos = paso.transition() == NavRoute.Transition.BREAK && paso.standPos() != null
+                    ? paso.standPos() : state;
+            nodes.add(new NavRoute.Node(routePos, paso.transition(), paso.actionPos()));
         }
         resumen.append(" ruta=").append(nodes.size());
         return new GlobalResult(new NavRoute(nodes, objetivo), objetivo, true, expansions, hitBudget,
@@ -587,6 +597,7 @@ public final class NavPlanner {
         Map<BlockPos, BlockPos> cameFrom = new HashMap<>();
         Map<BlockPos, NavRoute.Transition> transitionTo = new HashMap<>();
         Map<BlockPos, BlockPos> actionTo = new HashMap<>();
+        Map<BlockPos, BlockPos> standTo = new HashMap<>();
         /** A2 Stage 6D · FIX 2 · nivel de PIES con el que se llega a cada nodo (no siempre es `pos.getY()`). */
         Map<BlockPos, Integer> piesDe = new HashMap<>();
         Set<BlockPos> closed = new HashSet<>();
@@ -652,8 +663,9 @@ public final class NavPlanner {
                     double cost = arista.coste();
                     NavRoute.Transition transicion = arista.transicion();
                     int piesHasta = arista.piesHasta();
-                    BlockPos sucesor = arista.standPos() != null ? arista.standPos()
-                            : sucesorCanonico(candidate, arista.kind(), transicion, piesHasta);
+                    // BREAK changes the graph state to the formerly solid action cell. The mob's
+                    // physical stand position is route metadata, not the successor state.
+                    BlockPos sucesor = sucesorCanonico(candidate, arista.kind(), transicion, piesHasta);
                     if (exclusiones != null && transicion == NavRoute.Transition.DROP) {
                         long clave = NavDropExclusionPolicy.clave(pos.getX(), pos.getY(), pos.getZ(),
                                 sucesor.getX(), sucesor.getY(), sucesor.getZ());
@@ -708,6 +720,7 @@ public final class NavPlanner {
                     cameFrom.put(sucesor, pos);
                     transitionTo.put(sucesor, transicion);
                     actionTo.put(sucesor, arista.actionPos());
+                    standTo.put(sucesor, arista.standPos());
                     open.add(new Node(sucesor, tentative, tentative + heuristic(sucesor, goal),
                             off[0], off[1]));
                     if (sucesor.equals(goal)) {
@@ -745,7 +758,12 @@ public final class NavPlanner {
         BlockPos cursor = found;
         while (cursor != null && !cursor.equals(start)) {
             NavRoute.Transition t = transitionTo.getOrDefault(cursor, NavRoute.Transition.WALK);
-            nodes.add(new NavRoute.Node(cursor, t, actionTo.get(cursor)));
+            BlockPos routePos = t == NavRoute.Transition.BREAK ? standTo.get(cursor) : cursor;
+            if (t == NavRoute.Transition.BREAK && (routePos == null || actionTo.get(cursor) == null)) {
+                return new Result(new NavRoute(List.of(), goal), expansions, hitBudget,
+                        resumen + " contratoBREAKIncompleto=true");
+            }
+            nodes.add(new NavRoute.Node(routePos == null ? cursor : routePos, t, actionTo.get(cursor)));
             cursor = cameFrom.get(cursor);
         }
         java.util.Collections.reverse(nodes);
