@@ -2,7 +2,7 @@
 
 Date: 2026-11-16
 
-Current branch HEAD for Harness synchronization: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf` (before this documentation-only handoff update).
+Source checkpoint SHA: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; subsequent handoff commits update documentation only. Harness must fetch the live branch HEAD before syncing.
 
 ## Baseline accepted by Harness
 
