@@ -4,10 +4,11 @@ Read first, in order:
 
 1. `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`
 2. `docs/autonomous-village/NEXT-SESSION.md` (this file)
-3. `docs/autonomous-village/CONTINUAR.md`
-4. `docs/CONTINUAR.md`
-5. `docs/PENDIENTE.md`
-6. `docs/autonomous-village/2026-11-15-PHASE2-FIXES.md`
+3. `docs/autonomous-village/CHATGPT-HARNESS-WORKFLOW.md` (permanent division of responsibilities and handoff protocol)
+4. `docs/autonomous-village/CONTINUAR.md`
+5. `docs/CONTINUAR.md`
+6. `docs/PENDIENTE.md`
+7. `docs/autonomous-village/2026-11-15-PHASE2-FIXES.md`
 7. `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
 8. `docs/autonomous-village/2026-11-15-PHASE5-A2-VARIABILITY.md`
 9. `docs/autonomous-village/2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md`
@@ -28,10 +29,19 @@ Read first, in order:
 24. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
 25. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-VERIFICATION.md`
 
+## Permanent collaboration workflow
+
+- Read `docs/autonomous-village/CHATGPT-HARNESS-WORKFLOW.md` and follow it in every session.
+- ChatGPT owns production source implementation and publishes changes directly to GitHub on this branch.
+- Harness owns local synchronization, preservation, builds/tests/lints, automated runtime measurement, logs and validation reports. Harness must not independently implement production source fixes.
+- Harness returns evidence and reproducible failures; ChatGPT reviews and makes source corrections; Harness validates the exact new SHA.
+- Neither agent may claim work performed by the other or mark a commit validated without evidence for that exact SHA.
+- This is a permanent workflow rule, not a one-session instruction. It must survive new conversations and agent handoffs.
+
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Current published HEAD: `f43eb11eab618ed1e19f8b795c1663bc0c619331` (follow-up BREAK attack-stand edge fix).
+- Last code implementation SHA: `f43eb11eab618ed1e19f8b795c1663bc0c619331` (follow-up BREAK attack-stand edge fix). The subsequent commits in this documentation checkpoint define the permanent collaboration workflow; always fetch and verify the actual branch HEAD before acting.
 - Latest substantive report: `2026-11-16-PHASE19-BREAK-VERIFICATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
@@ -71,7 +81,7 @@ Read first, in order:
 
 ## Immediate work
 
-1. Harness: fetch `f43eb11eab618ed1e19f8b795c1663bc0c619331`, preserve local-only work, then run
+1. Harness: fetch the current `origin/feature/autonomous-village` HEAD (including the permanent workflow documentation commits), preserve local-only work, verify ancestry and fast-forward safety, then run
    Gradle tests, strict aldea lint and diff-check. Do not reset, clean, stash or overwrite.
 2. Capture runtime BREAK from multiple approach sides: stand selection/reach, verified target air,
    route replan, first failed actuator attempt and retry exactly 40 ticks later.
