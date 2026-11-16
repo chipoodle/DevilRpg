@@ -1,7 +1,7 @@
 # Phase19 — BREAK graph-state correction and deterministic runtime fixture
 
 **Date:** 2026-11-16  
-**Implementation HEAD:** `1a7028abc138f5b53d1313155dee23fceb20ed78`  
+**Implementation HEAD:** `6d5dc7b1d1f72a366d4f6b05626147b9e932481c`  
 **Branch:** `feature/autonomous-village`  
 **Status:** IMPLEMENTED / NOT YET VALIDATED BY HARNESS
 
@@ -66,7 +66,7 @@ A verified or excluded BREAK edge must not leave the executor planning indefinit
 ## 3. New automated tests (authored, NOT YET RUN)
 
 - `NavBreakGraphStateTest` — 7 assertions. Models a cheaper WALK path to the same stand that is a dead end, while a BREAK edge to the distinct post-break target state reaches the goal. Verifies the BREAK transition, action target and stand are all preserved.
-- `NavBreakRoutePolicyTest` — 10 assertions. Verifies that the final stand waypoint becomes a BREAK node, the action target stays separate, route prefix/destination are preserved, and invalid inputs are rejected.
+- `NavBreakRoutePolicyTest` — 11 assertions. Verifies that the final stand waypoint becomes a BREAK node, the action target stays separate, route prefix/destination are preserved, and invalid inputs (including a route whose destination differs from the stand) are rejected.
 
 These tests are registered in `policyTest`. The graph-state test also rejects a malformed BREAK edge that lacks a stand position. ChatGPT has not run Gradle, lint or runtime; no PASS is claimed for this implementation SHA.
 
@@ -98,7 +98,7 @@ The fixture does **not yet** exercise second-action failure/edge exclusion or `N
 On the local repository:
 
 1. Fetch the current `origin/feature/autonomous-village` HEAD and preserve all local-only artifacts. No reset/clean/stash/force-push.
-2. Confirm exact HEAD `1a7028abc138f5b53d1313155dee23fceb20ed78`.
+2. Confirm exact HEAD `6d5dc7b1d1f72a366d4f6b05626147b9e932481c`.
 3. Run:
    ```powershell
    .\gradlew.bat test
@@ -122,6 +122,6 @@ On the local repository:
 
 ## 7. Next owner/action
 
-**Harness:** fetch and validate `1a7028abc138f5b53d1313155dee23fceb20ed78`, then execute the deterministic `break-runtime` fixture.
+**Harness:** fetch and validate `6d5dc7b1d1f72a366d4f6b05626147b9e932481c`, then execute the deterministic `break-runtime` fixture.
 
 **ChatGPT:** review the resulting report and logs; correct source directly on GitHub if Harness demonstrates a defect. Harness must not independently change production source.
