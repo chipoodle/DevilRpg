@@ -2122,8 +2122,10 @@ public final class NavExecutor {
             resolverBreakVerificado(target, mob.blockPosition());
             return;
         }
-        if (mob.distanceToSqr(standRuta.getX() + 0.5D, standRuta.getY() + 0.5D,
-                standRuta.getZ() + 0.5D) > 1.0D) {
+        // Proximity to an adjacent cell is not physical occupancy. The actuator must run
+        // from the exact validated stand cell, otherwise a one-block distance can pass the
+        // old <= 1.0 threshold and execute from the predecessor instead.
+        if (!mob.blockPosition().equals(standRuta)) {
             mob.getNavigation().moveTo(standRuta.getX() + 0.5D, standRuta.getY(),
                     standRuta.getZ() + 0.5D, 1.0D);
             traceActuatorCommand("BREAK_STAND_APPROACH", standRuta, mob.level().getGameTime());
