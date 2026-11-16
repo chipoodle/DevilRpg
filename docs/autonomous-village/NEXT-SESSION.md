@@ -13,7 +13,7 @@ Read first, in order:
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Phase-3 substantive commit: `46aee02b4c35d1f775b3e586feefddd70ce25dbc` (collaboration policy + stability report). The final synchronization checkpoint is the commit containing this file; always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Phase-4 substantive commit: `2026-11-15-PHASE4-STABILITY.md` accompanies this checkpoint. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts; read the final report of the latest session.
 
@@ -25,15 +25,15 @@ Read first, in order:
 
 ## Current status
 
-- A2 focused: variable entry counts (5/8 and 8/8); bell conquest verified. Full 12k OPEN.
-- C4 focused: 12/12 on the two Phase-2 runs; stability still being measured.
-- Phase-3 repeated validation is the next task; do not rerun the obsolete original failures as if unfixed.
+- A2 focused valid entry sequence: 5, 8, 7, 7; all valid runs destroyed the bell and emitted one conquest event. 3/4 runs reached ≥7/8; one 5/8. Full 12k OPEN.
+- C4 focused: 12/12 on four consecutive valid runs (145020, 150410, 184205, 185459). Save/reload support not established.
+- Elevated-BREAK support-floor fix and worker return goal are published.
 
 ## Immediate work
 
-1. Run repeated focused A2 and C4 scenarios with identical seed/config.
-2. Record every run, including failures: spawn, entry, IDX8, bell/conquest, C4 12/12, job sites.
-3. Verify no `VillagerReturnGoal` remains stuck and that fishing still resumes.
+1. Run at least two additional valid focused A2 repetitions and two C4 repetitions (including save/reload if supported), same seed/configuration.
+2. Record every run, including failures; do not count suspended/interrupted runs.
+3. Verify C4 12/12, fisherman restart, and no worker stuck in return goal.
 4. Only after a documented reproducible focused standard, run full 12,000-tick A2.
 5. Do not increase budgets, force job sites/survival, or weaken criteria.
 
@@ -49,3 +49,4 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 ## Local-only artifacts
 
 `.a2-backups/`, `src/foodTest/`, `tools/a2n/A2NavHarness.java.partial`, launcher helper scripts. Do not commit indiscriminately.
+

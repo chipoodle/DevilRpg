@@ -1,3 +1,7 @@
+# ESTADO ACTUAL — 2026-11-15 (leer primero)
+
+> **Aviso de vigencia:** este documento conserva historia operativa antigua. La continuación activa es `docs/autonomous-village/NEXT-SESSION.md`; la política obligatoria de colaboración es `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`. Las instrucciones y HEAD históricos de abajo (incluido `518fee13…`) son registro, no órdenes vigentes, salvo que el último informe verificado los reconfirme. Rama actual `feature/autonomous-village`; HEAD publicado verificado al escribir esto `el commit que contiene este aviso`. Verificar siempre HEAD local/remoto antes de operar.
+
 # Estado de cola actualizado — 2026-11-12 22:43
 
 **Traspaso operativo:** continuar directamente en CHRIS-PC mediante Desktop Commander; no pedir al usuario que pegue archivos/logs. Repo `D:\\Documents\\DevilRpg-autonomous`, rama `feature/autonomous-village`, HEAD verificado al retomar `518fee13fc15bfb9b92b0479d86b5c609d1947da`. No commit/push. Se preservan todos los cambios preexistentes.

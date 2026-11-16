@@ -13,9 +13,7 @@ This document is permanent and mandatory for every future ChatGPT/Harness sessio
 
 1. Identify the repository and branch above.
 2. Fetch the remote and verify local HEAD, remote HEAD and divergence.
-3. Read, in this order:
-   - `docs/autonomous-village/NEXT-SESSION.md`
-   - `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`
+3. Read this policy FIRST, then `docs/autonomous-village/NEXT-SESSION.md`, then:
    - `docs/autonomous-village/CONTINUAR.md`
    - `docs/CONTINUAR.md`
    - `docs/PENDIENTE.md`
@@ -24,6 +22,15 @@ This document is permanent and mandatory for every future ChatGPT/Harness sessio
 6. Verify the actual source against documented claims. A report saying a fix exists is not proof that the source implements it.
 7. Inspect changes since the previous checkpoint and establish the actual state of A2, C4, tests, runs and unresolved defects.
 8. Continue from the verified state; do not restart completed investigations.
+
+## Document precedence
+
+- Historical reports are preserved and are not current instructions by default.
+- The latest verified `NEXT-SESSION.md` defines the current continuation task.
+- This policy defines permanent collaboration rules.
+- The latest applicable dated evidence supersedes older status claims.
+- Do not follow a historical instruction when a later verified report explicitly supersedes it.
+- If two current documents conflict, report and reconcile the conflict; do not guess.
 
 ## Roles
 
