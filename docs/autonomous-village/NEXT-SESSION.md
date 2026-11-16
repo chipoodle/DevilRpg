@@ -9,25 +9,25 @@ Read first, in order:
 5. `docs/CONTINUAR.md`
 6. `docs/PENDIENTE.md`
 7. `docs/autonomous-village/2026-11-15-PHASE2-FIXES.md`
-7. `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
-8. `docs/autonomous-village/2026-11-15-PHASE5-A2-VARIABILITY.md`
-9. `docs/autonomous-village/2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md`
-10. `docs/autonomous-village/2026-11-15-PHASE7-A2-9000-OBSERVATION.md`
-11. `docs/autonomous-village/2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`
-12. `docs/autonomous-village/2026-11-15-PHASE9-IDX8-MOVEMENT-OWNERSHIP.md`
-13. `docs/autonomous-village/2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md`
-14. `docs/autonomous-village/2026-11-16-PHASE10-A2-MIGRATION-REGRESSION.md`
-15. `docs/autonomous-village/2026-11-16-PHASE11-STRATEGIC-NAVIGATION-FORENSICS.md`
-16. `docs/autonomous-village/2026-11-16-PHASE12-NAVEXECUTOR-REFUSAL-FORENSICS.md`
-17. `docs/autonomous-village/2026-11-16-PHASE13-RECOVERY-ACTUATOR-FORENSICS.md`
-18. `docs/autonomous-village/2026-11-16-PHASE14-MOVEMENT-C4-FORENSICS.md`
-19. `docs/autonomous-village/2026-11-16-PHASE15-NAVIGATION-ROOT-CAUSE-FORENSICS.md`
-20. `docs/autonomous-village/2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`
-21. `docs/autonomous-village/2026-11-16-PHASE17-ISOLATED-EVALUATOR-IDX7-FORENSICS.md`
-22. `docs/autonomous-village/2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`
-23. `docs/autonomous-village/2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`
-24. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
-25. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-VERIFICATION.md`
+8. `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
+9. `docs/autonomous-village/2026-11-15-PHASE5-A2-VARIABILITY.md`
+10. `docs/autonomous-village/2026-11-15-PHASE6-IDX4-IDX8-FORENSICS.md`
+11. `docs/autonomous-village/2026-11-15-PHASE7-A2-9000-OBSERVATION.md`
+12. `docs/autonomous-village/2026-11-15-PHASE8-IDX8-DECISION-TRACE.md`
+13. `docs/autonomous-village/2026-11-15-PHASE9-IDX8-MOVEMENT-OWNERSHIP.md`
+14. `docs/autonomous-village/2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md`
+15. `docs/autonomous-village/2026-11-16-PHASE10-A2-MIGRATION-REGRESSION.md`
+16. `docs/autonomous-village/2026-11-16-PHASE11-STRATEGIC-NAVIGATION-FORENSICS.md`
+17. `docs/autonomous-village/2026-11-16-PHASE12-NAVEXECUTOR-REFUSAL-FORENSICS.md`
+18. `docs/autonomous-village/2026-11-16-PHASE13-RECOVERY-ACTUATOR-FORENSICS.md`
+19. `docs/autonomous-village/2026-11-16-PHASE14-MOVEMENT-C4-FORENSICS.md`
+20. `docs/autonomous-village/2026-11-16-PHASE15-NAVIGATION-ROOT-CAUSE-FORENSICS.md`
+21. `docs/autonomous-village/2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`
+22. `docs/autonomous-village/2026-11-16-PHASE17-ISOLATED-EVALUATOR-IDX7-FORENSICS.md`
+23. `docs/autonomous-village/2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`
+24. `docs/autonomous-village/2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`
+25. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
+26. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-VERIFICATION.md`
 
 ## Permanent collaboration workflow
 
