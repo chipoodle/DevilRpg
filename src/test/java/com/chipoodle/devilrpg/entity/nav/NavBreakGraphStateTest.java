@@ -8,6 +8,7 @@ public final class NavBreakGraphStateTest {
         BlockPos stand = new BlockPos(1, 64, 1);
         BlockPos target = new BlockPos(1, 64, 0);
         BlockPos goal = new BlockPos(2, 64, 0);
+        BlockPos malformedBreakState = new BlockPos(0, 64, 2);
 
         NavGraphSearch.Result result = NavGraphSearch.search(start.asLong(), 64,
                 new NavGraphSearch.Graph() {
@@ -22,6 +23,8 @@ public final class NavBreakGraphStateTest {
                                     NavRoute.Transition.WALK, 64));
                             out.accept(new NavGraphSearch.Edge(target.asLong(), 12.0D,
                                     NavRoute.Transition.BREAK, 64, target, stand));
+                            out.accept(new NavGraphSearch.Edge(malformedBreakState.asLong(), 0.1D,
+                                    NavRoute.Transition.BREAK, 64, target));
                         } else if (current.equals(target)) {
                             out.accept(new NavGraphSearch.Edge(goal.asLong(), 1.0D,
                                     NavRoute.Transition.WALK, 64));
@@ -52,7 +55,9 @@ public final class NavBreakGraphStateTest {
         check("action target preserved", target.equals(breakStep.actionPos()));
         check("physical stand preserved separately", stand.equals(breakStep.standPos()));
         check("next edge starts after cleared target", result.route().get(1).state() == goal.asLong());
-        System.out.println("NAV_BREAK_GRAPH_STATE_TEST: OK (6 assertions)");
+        check("incomplete BREAK edge without stand is not selected",
+                result.route().stream().noneMatch(step -> step.state() == malformedBreakState.asLong()));
+        System.out.println("NAV_BREAK_GRAPH_STATE_TEST: OK (7 assertions)");
     }
 
     private static void check(String name, boolean value) {
