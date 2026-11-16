@@ -1,5 +1,15 @@
 # NEXT SESSION — A2 / C4 Stability
 
+## Latest checkpoint — 2026-11-16 Phase19 BREAK retry observation window
+
+- Harness run `a2n-20261116-173828` on `08cf0e8c`: both targets air, retry exactly 40 ticks, Scenario A resumed. Scenario B remained at X=737 (target X=737) at the 20-tick deadline while state was TRAVERSING and movement commands targeted X=738/739. The original physical-crossing predicate had not yet passed.
+- ChatGPT changed **only** `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` in commit `8f2b9138937b23ff853ec839a0db9f7559d0673e`.
+- Fixture now allows a bounded 100 ticks after retry destruction for the mob to physically cross the target column. The original predicate `objective().equals(goal) && blockPosition().getX() > target.getX()` is unchanged; no pass is granted for merely having an objective or movement command.
+- Added `BREAK_FIXTURE_RETRY_PROGRESS` samples every 10 ticks with position, objective, state, route node and executor diagnostics. Deadline failure includes final retry diagnostics.
+- No production source, A2/C4 original world, cooldown, reach, LOS, collision, planner budget or acceptance threshold changed.
+- Detailed report: `2026-11-16-PHASE19-BREAK-RETRY-OBSERVATION-WINDOW.md`.
+- **PENDING HARNESS**: run static checks and a fresh disposable `break-runtime` on the exact current branch HEAD. Require both mission-resumption flags and exact 40-tick retry. A2 remains OPEN; no 12k before five consecutive strict 8/8 runs.
+
 ## Latest checkpoint — 2026-11-16 Phase19 BREAK retry fixture timing
 
 - Harness run `a2n-20261116-172549` proves the production stand nudge, exact stand occupancy, both target-air results and exactly 40-tick retry. Scenario A mission resumption also passes.
