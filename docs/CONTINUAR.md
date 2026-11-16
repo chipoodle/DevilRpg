@@ -1,3 +1,31 @@
+# Continuación vigente — 2026-11-16
+
+La continuación operativa actual de DevilRpg está en `docs/autonomous-village/NEXT-SESSION.md`.
+Antes de actuar, leer también:
+
+- `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`
+- `docs/autonomous-village/CHATGPT-HARNESS-WORKFLOW.md`
+- `docs/autonomous-village/CONTINUAR.md`
+- `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`
+
+## Acuerdo operativo
+
+ChatGPT es responsable de modificar código de producción directamente en GitHub y publicar commits. Harness es responsable de sincronizar con seguridad, preservar artefactos locales, ejecutar pruebas/compilaciones/lint/runtime, medir y producir reportes. Harness no corrige código de producción por su cuenta; devuelve evidencia reproducible para que ChatGPT implemente la corrección. Cada validación debe identificar el SHA exacto.
+
+## Checkpoint actual
+
+- Rama: `feature/autonomous-village`.
+- Código Phase19 pendiente de validación: `600b78b4f628cadf894be2cb38015d0c4ffb512d`.
+- Hallazgo: el grafo A* colapsaba el estado BREAK post-acción con el estado WALK al stand; además, BREAK podía avanzar por proximidad sin ejecutar el actuador.
+- Corrección publicada: estado post-BREAK y stand separados, nodo BREAK no alcanzado por proximidad, ocupación física exacta del stand, transferencia del action target a la ruta local y reanudación de misión estratégica.
+- Fixture determinista agregado: `A2NavHarness` modo `break-runtime`; pruebas nuevas registradas, aún no ejecutadas.
+- Siguiente acción: Harness ejecuta Gradle, lint, diff-check y el fixture runtime en un mundo desechable con `-Da2n.mode=break-runtime -Dn4.trace=true`. Reportar SHA, logs y eventos; no tocar código de producción.
+- A2 permanece OPEN en 5/8 estricto; no ejecutar campaña 12k hasta cinco corridas consecutivas 8/8 estrictas. C4 save/reload OPEN.
+
+Este bloque es el checkpoint vigente. El resto del archivo conserva los registros históricos y no sustituye los documentos activos indicados arriba.
+
+---
+
 ## 2026-11-12 22:43 — C4 ACCEPTED; A2 GLOBAL / BLOCK 6 SOAK OPEN; C1–C5 ACCEPTED
 
 **C4 ACCEPTED:** la variante final del clérigo pasó en `c4-full8-20261112-2240`. Resultado final: 4/4 guardias combatieron; 12/12 trabajadores vivos reanudaron; 16 aldeanos vivos; 0 bajas/no resueltos; JOB_SITE limpio; 15 impactos, 6 atacantes muertos (5 atribuidos a guardias) y 2 retirados para recuperación. El detalle completo está al final de este archivo y en `A2-C4-HEADLESS-ACCEPTANCE-20261112.md`. Run4 tuvo 4/4 guardias, 16 impactos, 16 aldeanos vivos y 11/12 trabajadores contados; todos los 12 Goals seguían instalados. Run5 con UUID tracking registró 4/4 guardias, 16 impactos, 5 atacantes muertos, 3 retirados, 15 aldeanos vivos, 11 profesionales supervivientes, 11 Goals y 11 reanudaciones; JOB_SITE 0 huérfanos/duplicados. El UUID faltante `f62b9fae-2361-42b0-b0f3-6058f265c789` era el único weaponsmith y el log de Minecraft registra que Quintin (Herrero de armas) fue asesinado por un Aggressive Zombie. No era un falso negativo de AABB: fue una baja real.
