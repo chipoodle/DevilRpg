@@ -598,10 +598,11 @@ public final class A2NavHarness {
                             breakEdgeGoal.equals(breakEdgeMob.navExecutor().objective());
                     boolean fingerprintExclusionActive = breakEdgeMob.navExecutor()
                             .isBreakEdgeExcluded(breakEdgeFailedStand, breakEdgeFailedTarget);
+                    boolean exclusionRecorded = breakEdgeMob.navExecutor().breakExclusionCount() >= 1;
                     boolean exactRetry = breakEdgeSecondTick - breakEdgeFirstTick == 40L;
                     if (rejectedBlockStillSolid && alternativeBlockStillSolid
                             && cursorBeforeAction && strategicMissionPreserved
-                            && fingerprintExclusionActive && exactRetry
+                            && fingerprintExclusionActive && exclusionRecorded && exactRetry
                             && breakEdgeFirstPairMatched && breakEdgeSecondPairMatched
                             && breakEdgeUnexpectedCalls == 0) {
                         log("BREAK_EDGE_FIXTURE_ALTERNATIVE_SELECTED stand="
@@ -612,7 +613,8 @@ public final class A2NavHarness {
                                 + " rejectedPair=" + breakEdgeFailedStand.toShortString()
                                 + "->" + breakEdgeFailedTarget.toShortString()
                                 + " rejectedStillSolid=true alternativeStillSolid=true"
-                                + " fingerprintExclusionActive=" + fingerprintExclusionActive);
+                                + " fingerprintExclusionActive=" + fingerprintExclusionActive
+                                + " exclusionCount=" + breakEdgeMob.navExecutor().breakExclusionCount());
                         cerrar("COMPLETO", "calls=" + breakEdgeCalls
                                 + " retryDeltaTicks=" + (breakEdgeSecondTick - breakEdgeFirstTick)
                                 + " retryTimingExact=" + (breakEdgeSecondTick - breakEdgeFirstTick == 40L)
@@ -620,6 +622,8 @@ public final class A2NavHarness {
                                 + " rejectedBlockStillSolid=" + rejectedBlockStillSolid
                                 + " alternativeBlockStillSolid=" + alternativeBlockStillSolid
                                 + " fingerprintExclusionActive=" + fingerprintExclusionActive
+                                + " exclusionRecorded=" + exclusionRecorded
+                                + " exclusionCount=" + breakEdgeMob.navExecutor().breakExclusionCount()
                                 + " firstPairMatchedPreflight=" + breakEdgeFirstPairMatched
                                 + " secondPairMatched=" + breakEdgeSecondPairMatched
                                 + " unexpectedActuatorCalls=" + breakEdgeUnexpectedCalls
