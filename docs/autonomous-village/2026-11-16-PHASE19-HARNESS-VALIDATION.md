@@ -153,14 +153,14 @@ ChatGPT reviewed the actual source and identified that the BREAK route could be 
 
 ChatGPT published corrections and a deterministic runtime fixture in code checkpoint:
 
-`600b78b4f628cadf894be2cb38015d0c4ffb512d`
+`5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`
 
 New tests authored and registered (not yet run):
 - `NavBreakGraphStateTest` — 6 assertions.
 - `NavBreakRoutePolicyTest` — 10 assertions.
 
 New runtime mode:
-`A2NavHarness` with `-Da2n.mode=break-runtime`, compiled with `-Pa2nDiagnostics=true` and launched with `-Dn4.trace=true` in a new disposable world. It exercises a production-actuator success path and a controlled first-failure/second-success path whose retry must be exactly 40 ticks.
+`A2NavHarness` with `-Da2n.mode=break-runtime`, compiled with `-Pa2nDiagnostics=true` and launched with `-Ddevilrpg.a2n.traceNav=true` in a new disposable world. It exercises a production-actuator success path and a controlled first-failure/second-success path whose retry must be exactly 40 ticks.
 
 The source changes, fixture design, expected trace events, and exact Harness instructions are documented in:
 `2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
