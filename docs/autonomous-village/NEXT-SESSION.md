@@ -1,5 +1,15 @@
 # NEXT SESSION — A2 / C4 Stability
 
+## Latest checkpoint — 2026-11-16 Phase19 BREAK retry fixture timing
+
+- Harness run `a2n-20261116-172549` proves the production stand nudge, exact stand occupancy, both target-air results and exactly 40-tick retry. Scenario A mission resumption also passes.
+- The only failure was fixture timing: it evaluated retry mission progress in the same tick that the second actuator destroyed the block, before the retry mob received a subsequent entity-movement tick.
+- ChatGPT changed **only** `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` in commit `4c3f446aeaa893db7ff7bcfc1c5f690f94e37332`. It defers the retry mission-progress predicate until `now > breakRetrySecondTick` and allows up to 20 ticks after destruction for the same objective + physical-progress predicate. If still false at the deadline, the fixture reports FAIL; it does not silently pass.
+- Production `NavExecutor` and its nudge/BREAK behavior are unchanged.
+- Detailed handoff: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-FIXTURE-TIMING.md`.
+- **PENDING HARNESS**: validate the exact current branch HEAD with Gradle tests, strict lint, diff-check, diagnostics compile, then rerun disposable `break-runtime`. Require both mission-resumption flags, exact 40-tick retry and both targets air. No A2/C4 world use.
+
+
 ## Latest checkpoint — 2026-11-16 Phase19 BREAK stand approach correction
 
 - Harness run `a2n-20261116-163239` is a behavioral FAIL: both BREAK plans and LOS hits are valid, but `moveTo` returns a completed one-node path for the adjacent stand and the mobs do not move.
