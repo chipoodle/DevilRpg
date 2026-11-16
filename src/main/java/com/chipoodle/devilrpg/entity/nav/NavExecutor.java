@@ -3385,6 +3385,11 @@ public final class NavExecutor {
      * suelo firme debajo. Así no se puede "dar por bajado" un escalón por estar cerca de él en el aire.
      */
     private boolean nodoAlcanzado(final NavRoute.Node node) {
+        // BREAK is an action, not a proximity waypoint. If proximity advanced this node,
+        // the actuator would be skipped before it could approach the validated stand and act.
+        if (node.transition() == NavRoute.Transition.BREAK) {
+            return false;
+        }
         com.chipoodle.devilrpg.entity.AggressiveZombieEntity zombie =
                 mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az ? az : null;
         boolean escalonPendiente = zombie != null
