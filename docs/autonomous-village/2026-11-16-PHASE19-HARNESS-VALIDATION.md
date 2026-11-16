@@ -153,10 +153,10 @@ ChatGPT reviewed the actual source and identified that the BREAK route could be 
 
 ChatGPT published corrections and a deterministic runtime fixture in code checkpoint:
 
-`5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`
+`1a7028abc138f5b53d1313155dee23fceb20ed78`
 
 New tests authored and registered (not yet run):
-- `NavBreakGraphStateTest` — 6 assertions.
+- `NavBreakGraphStateTest` — 7 assertions.
 - `NavBreakRoutePolicyTest` — 10 assertions.
 
 New runtime mode:
@@ -166,3 +166,8 @@ The source changes, fixture design, expected trace events, and exact Harness ins
 `2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 
 **Validation state:** no Gradle/lint/runtime command has been run by ChatGPT on `600b78b4`. Harness must fetch the latest branch, verify the exact code checkpoint, run the required commands and execute the new fixture. Edge-exclusion and `NAV_BACKTRACK` still require separate runtime coverage.
+
+
+### Additional correction — generic recovery target
+
+A subsequent review found one remaining generic recovery path that still passed `actual.pos()` to the BREAK actuator. Since `pos()` is the stand, that path could act on the wrong block. It now passes `actual.actionTarget()` and verifies the actual target state. The graph search also rejects malformed BREAK edges that do not carry both stand and action positions. These changes are included in code checkpoint `1a7028abc138f5b53d1313155dee23fceb20ed78` and are also pending Harness validation.
