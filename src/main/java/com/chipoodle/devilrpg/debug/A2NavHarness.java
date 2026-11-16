@@ -519,6 +519,8 @@ public final class A2NavHarness {
         breakRetryMob.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
                 new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
 
+        // The planner itself performs the executable LOS checks; initialize trace before those calls.
+        traceInit();
         NavPlanner.Result successPlan = NavPlanner.plan(nivel, breakSuccessMob,
                 new BlockPos(x0, y, z), breakSuccessGoal, 12, 2, 512, policiesForBreak(breakSuccessMob));
         NavPlanner.Result retryPlan = NavPlanner.plan(nivel, breakRetryMob,
@@ -564,9 +566,6 @@ public final class A2NavHarness {
             return false;
         });
 
-        // Install the same production NavTrace sink used by the raid harness before either
-        // entity starts ticking, so actuator events are persisted to nav-trace.log.
-        traceInit();
         breakSuccessMob.navExecutor().setObjective(breakSuccessGoal);
         breakRetryMob.navExecutor().setObjective(breakRetryGoal);
         log("BREAK_FIXTURE_READY seed-world=" + nivel.dimension().location()
