@@ -43,7 +43,7 @@ Read first, in order:
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Code implementation awaiting validation: `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
+- Code implementation awaiting validation: `1a7028abc138f5b53d1313155dee23fceb20ed78` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
 - Latest technical report: `2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`. The preceding `PHASE19-HARNESS-VALIDATION.md` records the prior `ecdfaff6` validation and remains historical evidence, not validation of this new code.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
@@ -81,7 +81,7 @@ Read first, in order:
   tests executed (5/7/8/6/7 assertions); this is not evidence for code added after `ecdfaff6`.
 - Focused `a2n-20261116-112413`: 6/8 perimeter, 5/8 strict, C4 PASS `[1,0,0]`; no BREAK/backtrack
   runtime events. New graph-state root cause and deterministic fixture are documented in the latest report.
-- New tests `NavBreakGraphStateTest` (6 assertions) and `NavBreakRoutePolicyTest` (10 assertions) are authored,
+- New tests `NavBreakGraphStateTest` (7 assertions) and `NavBreakRoutePolicyTest` (10 assertions) are authored,
   registered, and pending Harness execution. `A2NavHarness` now supports `-Da2n.mode=break-runtime`.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
@@ -89,7 +89,7 @@ Read first, in order:
 ## Immediate work
 
 1. Harness: fetch the current branch HEAD and verify it contains code checkpoint
-   `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`. Preserve all local-only artifacts.
+   `1a7028abc138f5b53d1313155dee23fceb20ed78`. Preserve all local-only artifacts.
 2. Run on the exact fetched tree:
    ```powershell
    .\gradlew.bat test
