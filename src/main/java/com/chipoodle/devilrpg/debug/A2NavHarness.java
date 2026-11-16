@@ -65,6 +65,7 @@ public final class A2NavHarness {
     private static int breakRetryCalls;
     private static long breakRetryFirstTick = -1L;
     private static long breakRetrySecondTick = -1L;
+    private static long breakRetryMissionResumeDeadlineTick = -1L;
     private static boolean breakSuccessMissionResumed;
     private static boolean breakRetryMissionResumed;
 
@@ -433,14 +434,20 @@ public final class A2NavHarness {
                         + " action=" + node.actionTarget().toShortString()
                         + " tick=" + now);
             }
-            if (nivel.getBlockState(breakRetryTarget).isAir() && !breakRetryMissionResumed) {
+            // ServerTickEvent.Pre runs before this tick's entity movement. Do not judge
+            // mission progress in the same tick that the retry actuator removes the block:
+            // the mob needs subsequent entity ticks to leave the stand and advance toward goal.
+            if (nivel.getBlockState(breakRetryTarget).isAir()
+                    && breakRetrySecondTick >= 0L && now > breakRetrySecondTick
+                    && !breakRetryMissionResumed) {
                 breakRetryMissionResumed = breakRetryMob.navExecutor().objective() != null
                         && breakRetryMob.navExecutor().objective().equals(breakRetryGoal)
                         && breakRetryMob.blockPosition().getX() > breakRetryTarget.getX();
                 if (breakRetryMissionResumed) {
                     log("BREAK_FIXTURE_MISSION_RESUMED retry pos="
                             + breakRetryMob.blockPosition().toShortString()
-                            + " mission=" + breakRetryGoal.toShortString() + " tick=" + now);
+                            + " mission=" + breakRetryGoal.toShortString() + " tick=" + now
+                            + " ticksAfterBreak=" + (now - breakRetrySecondTick));
                 }
             }
         }
@@ -458,7 +465,10 @@ public final class A2NavHarness {
 
         boolean successAir = nivel.getBlockState(breakSuccessTarget).isAir();
         boolean retryAir = nivel.getBlockState(breakRetryTarget).isAir();
-        if (successAir && retryAir && breakRetryCalls >= 2) {
+        if (successAir && retryAir && breakRetryCalls >= 2
+                && (breakRetryMissionResumed
+                || (breakRetryMissionResumeDeadlineTick >= 0L
+                && now >= breakRetryMissionResumeDeadlineTick))) {
             long retryDelta = breakRetrySecondTick - breakRetryFirstTick;
             boolean retryTimingExact = breakRetryCalls == 2 && retryDelta == 40L;
             boolean accepted = retryTimingExact && breakSuccessMissionResumed && breakRetryMissionResumed;
@@ -470,7 +480,8 @@ public final class A2NavHarness {
                             + " retryDeltaTicks=" + retryDelta
                             + " retryTimingExact=" + retryTimingExact
                             + " successMissionResumed=" + breakSuccessMissionResumed
-                            + " retryMissionResumed=" + breakRetryMissionResumed,
+                            + " retryMissionResumed=" + breakRetryMissionResumed
+                            + " retryMissionResumeWaitTicks=" + (now - breakRetrySecondTick),
                     server);
             return;
         }
@@ -558,9 +569,13 @@ public final class A2NavHarness {
             if (breakRetryCalls == 2) {
                 breakRetrySecondTick = tick;
                 boolean destroyed = nivel.destroyBlock(node, false);
+                if (destroyed) {
+                    breakRetryMissionResumeDeadlineTick = tick + 20L;
+                }
                 log("BREAK_FIXTURE_RETRY_SECOND tick=" + tick + " delta="
                         + (breakRetrySecondTick - breakRetryFirstTick)
-                        + " target=" + node.toShortString() + " destroyed=" + destroyed);
+                        + " target=" + node.toShortString() + " destroyed=" + destroyed
+                        + " missionResumeDeadline=" + breakRetryMissionResumeDeadlineTick);
                 return destroyed;
             }
             return false;
