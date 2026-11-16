@@ -1,5 +1,17 @@
 # NEXT SESSION — A2 / C4 Stability
 
+## Latest checkpoint — 2026-11-16 Phase19 BREAK LOS correction
+
+- Previous Harness run `a2n-20261116-160714` was **INVALIDO**: static checks passed, but both planner routes were empty and no mob/actuator started. This is not a BREAK actuator FAIL.
+- Source correction is published through `9200ac31a350d9013b2abb8f39ce2b421fc9605a`: BREAK LOS now clips toward the target collision-shape center instead of the old projected endpoint below a thin pane. Planning-time `BREAK_LOS_DIAG` and bounded `BREAK_STAND_CANDIDATE` events were added; fixture trace initialization now occurs before planning.
+- Detailed handoff: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-LOS-CORRECTION.md`.
+- This correction is **NOT YET VALIDATED** by Harness. Tests, diagnostics compilation and runtime must be executed on the exact current branch HEAD after fetching.
+- Harness must preserve local artifacts, fast-forward safely, run Gradle tests, strict lint, diff-check and diagnostics compile, then execute a new disposable `break-runtime` world with `-Ddevilrpg.a2n.traceNav=true`.
+- Required evidence: `BREAK_STAND_CANDIDATE`, `BREAK_LOS_DIAG` (legacy and new ray endpoints plus actual clip hit), route summaries, `nav-trace.log`, server logs, `fin.txt`, `estado.txt`, exact SHA.
+- Harness must not change production source. If the new ray still fails, return the exact rejection branch and clip hit to ChatGPT.
+- A2 remains OPEN (last known 5/8 strict, 6/8 perimeter); no 12k until five consecutive 8/8 strict runs. C4 save/reload remains OPEN.
+
+
 Read first, in order:
 
 1. `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`
