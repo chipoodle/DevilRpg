@@ -2696,6 +2696,11 @@ public final class NavExecutor {
                 + " strategicMission=" + (misionFinal == null ? "-" : misionFinal.toShortString());
     }
 
+    public int recoveryHistorySize() { return recoveryController.historySize(); }
+    public int recoveryConsecutiveNoProgress() { return recoveryController.consecutiveNoProgress(); }
+    public boolean recoveryBacktrackUsed() { return recoveryController.backtrackUsed(); }
+    public BlockPos recoveryBacktrackTarget() { return recoveryController.lastBacktrack(); }
+
     public String metrics() {
         return "plans=" + plansRun + " expansionsUltima=" + expansionsLast + " expansionsTotal=" + expansionsTotal
                 + " rutasRechazadas=" + routesRejected + " recuperaciones=" + recoveriesRun
