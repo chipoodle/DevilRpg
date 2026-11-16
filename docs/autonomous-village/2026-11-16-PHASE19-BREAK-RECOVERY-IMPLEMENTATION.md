@@ -39,3 +39,6 @@ Planner validates the predecessor at its tracked feet Y; executor validates the 
 - Removed a chunk-query call from the policy's `CollisionGetter` abstraction; planner callers already classify world cells and the policy must compile against the shared collision interface.
 - Protected the one-shot backtrack objective from repeated submissions of the strategic mission. Without this guard, a goal refresh could overwrite the temporary backtrack before it was reached. The guard clears on backtrack arrival, mission change, or objective clear.
 - Added a dedicated test for BREAK-edge exclusion and terrain-fingerprint invalidation.
+
+
+- Reach distance deliberately preserves the pre-existing metric (mob feet position to target center) and the existing 6.25 squared range. The raycast still originates at the eye position. Planning uses the hypothetical stand-cell center; execution uses the mob's exact position.

@@ -21,14 +21,20 @@ public final class NavBreakActionPolicy {
                 || !NavObstruction.fits(level, mob, stand)
                 || !NavObstruction.hasSupport(level, stand)) return false;
 
-        double eyeX = stand.getX() + 0.5D;
-        double eyeY = stand.getY() + mob.getEyeHeight();
-        double eyeZ = stand.getZ() + 0.5D;
+        // Keep the existing action-range metric (mob feet position -> target center).
+        // During planning use the hypothetical cell center; during execution use the mob's exact position.
+        boolean actualStand = mob.blockPosition().equals(stand);
+        double feetX = actualStand ? mob.getX() : stand.getX() + 0.5D;
+        double feetY = actualStand ? mob.getY() : stand.getY();
+        double feetZ = actualStand ? mob.getZ() : stand.getZ() + 0.5D;
+        double eyeX = actualStand ? mob.getEyePosition().x : stand.getX() + 0.5D;
+        double eyeY = actualStand ? mob.getEyePosition().y : stand.getY() + mob.getEyeHeight();
+        double eyeZ = actualStand ? mob.getEyePosition().z : stand.getZ() + 0.5D;
         Vec3 eye = new Vec3(eyeX, eyeY, eyeZ);
         Vec3 targetCenter = target.getCenter();
-        double dx = targetCenter.x - eyeX;
-        double dy = targetCenter.y - eyeY;
-        double dz = targetCenter.z - eyeZ;
+        double dx = targetCenter.x - feetX;
+        double dy = targetCenter.y - feetY;
+        double dz = targetCenter.z - feetZ;
         double distanceSqr = dx * dx + dy * dy + dz * dz;
         if (!NavBreakReachPolicy.reachable(stand.getY(), target.getY(), distanceSqr, actionReachSqr)) return false;
 
