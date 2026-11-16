@@ -818,7 +818,7 @@ public final class A2NavHarness {
         backtrackPreviousX = backtrackMob.getX();
         backtrackPreviousY = backtrackMob.getY();
         backtrackPreviousZ = backtrackMob.getZ();
-        if (backtrackMaxStepDistance > 4.0D) {
+        if (backtrackMaxStepDistance > 1.5D) {
             hecho = true;
             cerrar("FAIL", "unexpected displacement suggests teleport maxStep="
                     + backtrackMaxStepDistance + " pos=" + backtrackMob.position(), server);
@@ -868,7 +868,7 @@ public final class A2NavHarness {
 
         if (backtrackSelectedSeen && backtrackSelectedTarget != null
                 && backtrackGoal.equals(backtrackMob.navExecutor().objective())
-                && backtrackMob.blockPosition().distSqr(backtrackSelectedTarget) <= 2.25D) {
+                && backtrackMob.blockPosition().equals(backtrackSelectedTarget)) {
             backtrackMissionResumed = true;
             boolean oneBacktrack = backtrackSelectionCount == 1
                     && backtrackMob.navExecutor().recoveryBacktrackUsed();
@@ -876,7 +876,7 @@ public final class A2NavHarness {
                     <= NavRecoveryController.MAX_HISTORY;
             boolean missionPreserved = backtrackMob.navExecutor().recoveryDiag()
                     .contains("strategicMission=" + backtrackGoal.toShortString());
-            boolean noTeleport = backtrackMaxStepDistance <= 4.0D;
+            boolean noTeleport = backtrackMaxStepDistance <= 1.5D;
             log("NAV_BACKTRACK_FIXTURE_MISSION_RESUMED tick=" + now
                     + " pos=" + backtrackMob.blockPosition().toShortString()
                     + " backtrackTarget=" + backtrackSelectedTarget.toShortString()
