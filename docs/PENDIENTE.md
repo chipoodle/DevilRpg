@@ -4,7 +4,7 @@
 
 > **Roles obligatorios:** ChatGPT modifica el código de producción directamente en GitHub y publica commits. Harness sincroniza, preserva trabajo local, ejecuta compilaciones/pruebas/lint/runtime, mide y genera reportes. Harness no implementa correcciones de producción; devuelve evidencia a ChatGPT. Ninguno declara validado un SHA sin ejecutar y documentar los checks sobre ese SHA exacto.
 
-> **Checkpoint de código pendiente de validación:** `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a` en `feature/autonomous-village`. Verificar siempre el HEAD real local/remoto; commits documentales posteriores pueden mover la rama sin cambiar ese checkpoint de código.
+> **Checkpoint de código pendiente de validación:** `1a7028abc138f5b53d1313155dee23fceb20ed78` en `feature/autonomous-village`. Verificar siempre el HEAD real local/remoto; commits documentales posteriores pueden mover la rama sin cambiar ese checkpoint de código.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 
