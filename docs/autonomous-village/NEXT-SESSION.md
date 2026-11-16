@@ -1,5 +1,7 @@
 # NEXT SESSION — A2 / C4 Stability
 
+Current branch HEAD at checkpoint: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; fetch the live branch head before synchronization because documentation may advance it.
+
 ## Latest checkpoint — 2026-11-16 Phase19 independent exclusion/backtrack fixtures
 
 - Harness run `a2n-20261116-174648` on `8b389672`: `break-runtime` **PASS**. Both targets air, exact 40-tick retry, exact stand occupancy and both strategic missions resumed. This is fixture validation, not A2 siege acceptance.
