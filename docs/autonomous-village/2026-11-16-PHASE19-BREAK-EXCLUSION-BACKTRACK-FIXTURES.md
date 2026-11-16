@@ -21,7 +21,7 @@ Correction:
 - Added `chooseBacktrack(current, minimumDistanceSqr, predicate)`; it skips too-near history cells and continues searching.
 - Existing two-argument API delegates to the new overload with zero minimum distance, preserving existing callers.
 - Executor now passes its existing `ARRIVE_DISTANCE_SQR` (2.25); no distance threshold was changed.
-- Added two unit assertions: skip adjacent cell and continue to a farther valid historical cell.
+- Added three unit assertions: skip adjacent history, continue to a farther valid historical cell, and enforce the 16-cell history bound. The recovery controller also exposes read-only state diagnostics.
 - Added read-only recovery diagnostics and BREAK fingerprint-exclusion diagnostics for the runtime harness.
 
 Files:
@@ -45,7 +45,7 @@ Acceptance requires:
 3. Second action is on the same stand->target pair exactly 40 ticks later.
 4. Both actions remain unverified; the original target block stays solid.
 5. Production emits `BREAK_EDGE_EXCLUDED` with the edge fingerprint.
-6. The current fingerprint remains excluded (`isBreakEdgeExcluded=true`).
+6. The current fingerprint remains excluded (`isBreakEdgeExcluded=true`) and the executor reports a nonzero exclusion count.
 7. Production planner selects a different BREAK stand->target pair.
 8. Both rejected and alternative blocks remain solid; route cursor has not advanced past the alternative BREAK node.
 9. Strategic mission remains the original goal; no unexpected actuator calls.
