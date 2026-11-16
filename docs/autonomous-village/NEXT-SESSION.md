@@ -9,33 +9,40 @@ Read first, in order:
 5. `docs/PENDIENTE.md`
 6. `docs/autonomous-village/2026-11-15-PHASE2-FIXES.md`
 7. `docs/autonomous-village/2026-11-15-A2-IDX8-C4-FORENSICS.md`
+8. `docs/autonomous-village/2026-11-15-PHASE5-A2-VARIABILITY.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Phase-4 substantive commit: `2026-11-15-PHASE4-STABILITY.md` accompanies this checkpoint. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-15-PHASE5-A2-VARIABILITY.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
-- Working tree may contain local-only untracked artifacts; read the final report of the latest session.
+- Working tree may contain local-only untracked artifacts.
 
 ## Completed investigations
 
 - IDX8 elevated-BREAK support-floor selection: fixed by `NavBreakTargetPolicy` and regression test.
-- C4 displaced workers beyond 72 blocks: fixed by `VillagerReturnPolicy`/`VillagerReturnGoal`; 2/2 focused passes.
+- C4 displaced workers beyond 72 blocks: fixed by `VillagerReturnPolicy`/`VillagerReturnGoal`.
 - Existing diagnostic worlds remain authoritative; do not recreate.
 
 ## Current status
 
-- A2 focused valid entry sequence: 5, 8, 7, 7; all valid runs destroyed the bell and emitted one conquest event. 3/4 runs reached ≥7/8; one 5/8. Full 12k OPEN.
-- C4 focused: 12/12 on four consecutive valid runs (145020, 150410, 184205, 185459). Save/reload support not established.
-- Elevated-BREAK support-floor fix and worker return goal are published.
+- A2 focused strict enclosure-entry sequence (`DENTRO-PARED`): **5, 7, 7, 7, 7** across `145020, 150410, 184205, 185459, 194632`.
+- All five valid runs spawned 8/8 and destroyed the bell with exactly one `SIEGE_COMPLETED`.
+- `150410` reached 8/8 perimeter, but strict enclosure entry is 7/8 (idx8 perimeter-only). Historical wording preserved; this is the clarified metric.
+- A2 is OPEN because the 5/8 run exists; no full 12k run.
+- C4 focused: **12/12 on five consecutive valid runs** (same IDs). No save/reload acceptance path exists yet.
+- Elevated-BREAK and worker-return fixes are published.
 
 ## Immediate work
 
-1. Run at least two additional valid focused A2 repetitions and two C4 repetitions (including save/reload if supported), same seed/configuration.
-2. Record every run, including failures; do not count suspended/interrupted runs.
-3. Verify C4 12/12, fisherman restart, and no worker stuck in return goal.
+1. Forensic focus: why idx4/idx7/idx8 miss the 6000-tick window in some runs; they were alive outside, so classify as delayed entry vs a specific navigation defect before changing code.
+2. Do not increase budgets, force job sites/survival, or weaken criteria.
+3. Document a safe C4 save/reload procedure only if the harness gains one; do not touch diagnostic worlds.
 4. Only after a documented reproducible focused standard, run full 12,000-tick A2.
-5. Do not increase budgets, force job sites/survival, or weaken criteria.
+
+## Local-only artifacts
+
+`.a2-backups/`, `src/foodTest/`, `tools/a2n/A2NavHarness.java.partial`, launcher helper scripts, `tools/a5-closure/`. Do not commit indiscriminately.
 
 ## Worlds (preserve; do not overwrite)
 
