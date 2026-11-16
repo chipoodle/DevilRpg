@@ -272,3 +272,11 @@ un/saves; hashes match; structural verification only.
 - Failed stand->target edges are fingerprint-excluded (max 32) until geometry changes; alternate approach edges remain searchable.
 - Recovery history stores at most 16 physically occupied, valid feet cells. First no-progress failure replans; second may backtrack once to a still-valid prior cell as a tactical objective, preserving the strategic mission. Mission progress rearms the mechanism.
 - Added pure policy tests; **not run by ChatGPT**. Harness must fetch this commit first, run Gradle/lint/diff-check, then targeted runtime and A2/C4 acceptance checks. No PASS claimed.
+
+## 2026-11-16 — Phase19 Harness validation
+
+- Synced `14df0115` -> `ecdfaff690824607c8e7f0189a356f1fe030b229` by fast-forward; requested code `f43eb11e` is an ancestor.
+- Gradle test PASS, strict aldea lint PASS, diff-check PASS; all five BREAK/recovery policy tests executed.
+- Focused diagnostic `a2n-20261116-112413`: 6/8 perimeter, 5/8 strict, C4 PASS [1,0,0].
+- No BREAK_STAND_APPROACH / BREAK_EXECUTED_FROM_STAND / BREAK_EDGE_EXCLUDED / NAV_BACKTRACK runtime events; direct BREAK behavior remains BLOCKED.
+- Report: docs/autonomous-village/2026-11-16-PHASE19-HARNESS-VALIDATION.md. A2 remains OPEN; no 12k.

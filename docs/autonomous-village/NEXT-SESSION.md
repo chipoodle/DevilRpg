@@ -27,12 +27,13 @@ Read first, in order:
 23. `docs/autonomous-village/2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`
 24. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
 25. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-VERIFICATION.md`
+26. `docs/autonomous-village/2026-11-16-PHASE19-HARNESS-VALIDATION.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
 - Current published HEAD: `f43eb11eab618ed1e19f8b795c1663bc0c619331` (follow-up BREAK attack-stand edge fix).
-- Latest substantive report: `2026-11-16-PHASE19-BREAK-VERIFICATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-16-PHASE19-HARNESS-VALIDATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -64,20 +65,24 @@ Read first, in order:
   5/8 strict, C4 PASS `[1,0,0]`/`[3,0,0]`.
 - Phase19 verification: BREAK executor integration fixed to use `actionTarget()`. Follow-up review
   constrains planner-selected attack stands to one legal move from the predecessor and delegates
-  reach/LOS/protection checks to `NavBreakActionPolicy.executable`. The new policy test is not yet
-  run by Harness. No runtime BREAK event yet.
+  reach/LOS/protection checks to `NavBreakActionPolicy.executable`.
+- Harness validation at `ecdfaff6`: Gradle tests, strict lint and diff-check PASS. All five BREAK/recovery
+  policy tests executed (5/7/8/6/7 assertions).
+- Focused `a2n-20261116-112413`: 6/8 perimeter, 5/8 strict, C4 PASS `[1,0,0]`; **no BREAK/backtrack
+  runtime events**, so direct execution, retry, alternatives and backtrack remain unproven.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Harness: fetch `f43eb11eab618ed1e19f8b795c1663bc0c619331`, preserve local-only work, then run
-   Gradle tests, strict aldea lint and diff-check. Do not reset, clean, stash or overwrite.
-2. Capture runtime BREAK from multiple approach sides: stand selection/reach, verified target air,
-   route replan, first failed actuator attempt and retry exactly 40 ticks later.
-3. Exercise two no-progress failures, backtrack selection and resumption of the original strategic mission.
-4. Add the real/mock `CollisionGetter` + `Mob` planner integration fixture; do not substitute policy-only tests.
-5. Run focused A2/C4 checks only after targeted BREAK checks. Do not run the 12k campaign until five
+1. Build a deterministic runtime fixture that forces a route BREAK edge (valid stand) and records
+   `BREAK_STAND_APPROACH` → target air → route advance.
+2. Force one actuator false return to observe the 40-tick retry, then two no-progress failures to
+   observe `NAV_BACKTRACK` and strategic mission resumption.
+3. Add the real/mock `CollisionGetter` + `Mob` planner integration fixture; do not substitute
+   policy-only tests.
+4. Run focused A2/C4 only after targeted BREAK checks. Do not run 12k until five consecutive 8/8 strict.
+5. IDX7 remains BLOCKED; IDX5 boundary UNKNOWN; C4 save/reload OPEN.
    consecutive 8/8 strict `DENTRO-PARED` runs are achieved.
 6. IDX7 remains BLOCKED (not reproduced); IDX5 boundary UNKNOWN; C4 contract unchanged.
 
