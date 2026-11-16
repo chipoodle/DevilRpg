@@ -1153,6 +1153,8 @@ public final class NavExecutor {
     private final NavDropExclusionPolicy exclusionesDescenso = new NavDropExclusionPolicy();
     private final NavBreakExclusionPolicy exclusionesBreak = new NavBreakExclusionPolicy();
     private final NavRecoveryController recoveryController = new NavRecoveryController();
+    /** Non-null only while the one-shot tactical backtrack is active; protects it from mission refreshes. */
+    private BlockPos recoveryBacktrackObjective;
     /** A2 Stage 7G · replanteos consumidos por rechazo de la guarda de ruta (acotado). */
     private int replanteosPorGuarda;
     private BlockPos nodoSeguido;
@@ -2438,6 +2440,12 @@ public final class NavExecutor {
         }
         objectiveSubmissions++;
         lastSubmissionTick = mob.level().getGameTime();
+        if (recoveryBacktrackObjective != null && !immutable.equals(misionFinal)) {
+            recoveryBacktrackObjective = null;
+        }
+        if (recoveryBacktrackObjective != null && objetivoTactico && immutable.equals(misionFinal)) {
+            return; // repeated goal refresh must not overwrite the one-shot backtrack target
+        }
         if (objective == null) {
             objective = immutable;
             objetivoPermiteConstruccion = false;
@@ -2478,6 +2486,7 @@ public final class NavExecutor {
         objective = null;
         objetivoPermiteConstruccion = false;
         objetivoTactico = false;
+        recoveryBacktrackObjective = null;
         rearmesTerminales = 0;
         nextRearmAt = 0L;
         motivoFalloTerminal = "-";
@@ -2815,6 +2824,7 @@ public final class NavExecutor {
                         + objective.toShortString()
                         + " -> se recalcula hacia " + (misionFinal == null ? "-" : misionFinal.toShortString());
                 objetivoTactico = false;
+                recoveryBacktrackObjective = null;
                 objective = NavArrivalPolicy.objetivoTrasLlegada(llegada, objective, misionFinal);
                 objetivoPermiteConstruccion = false;
                 plannedFrom = null;
@@ -3784,6 +3794,7 @@ public final class NavExecutor {
                     recoveryController.markBacktrack(backtrack);
                     mob.getNavigation().stop();
                     objective = backtrack.immutable();
+                    recoveryBacktrackObjective = backtrack.immutable();
                     objetivoTactico = true;
                     objetivoPermiteConstruccion = false;
                     objetivoTransicionLocal = null;

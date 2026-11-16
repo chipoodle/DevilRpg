@@ -32,3 +32,10 @@ Harness must execute Gradle tests, strict lint and diff-check, followed by targe
 ## Runtime verification boundary
 
 Planner validates the predecessor at its tracked feet Y; executor validates the actual occupied cell when the BREAK node becomes active. Runtime must verify this handoff especially after DROP/BUILD. If the mob is not at a valid predecessor, preserve the rejection and report exact transition/coordinates; never navigate to the solid target or weaken the contract.
+
+
+## Follow-up source review
+
+- Removed a chunk-query call from the policy's `CollisionGetter` abstraction; planner callers already classify world cells and the policy must compile against the shared collision interface.
+- Protected the one-shot backtrack objective from repeated submissions of the strategic mission. Without this guard, a goal refresh could overwrite the temporary backtrack before it was reached. The guard clears on backtrack arrival, mission change, or objective clear.
+- Added a dedicated test for BREAK-edge exclusion and terrain-fingerprint invalidation.

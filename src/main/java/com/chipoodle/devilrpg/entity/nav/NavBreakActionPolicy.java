@@ -16,8 +16,7 @@ public final class NavBreakActionPolicy {
 
     public static boolean executable(CollisionGetter level, Mob mob, BlockPos stand, BlockPos target,
                                      NavObstruction.Policies policies, double actionReachSqr) {
-        if (level == null || mob == null || stand == null || target == null || policies == null
-                || !level.hasChunkAt(stand) || !level.hasChunkAt(target)) return false;
+        if (level == null || mob == null || stand == null || target == null || policies == null) return false;
         if (policies.isProtected(target) || !policies.canBreak(target)
                 || !NavObstruction.fits(level, mob, stand)
                 || !NavObstruction.hasSupport(level, stand)) return false;
