@@ -58,7 +58,7 @@ Read first, in order:
 
 - `NavExecutor` is the single movement authority; legacy planner, `NavFeature` and
   `MovementOwnership` are deleted. Harness passed Gradle tests, strict lint and diff-check on the
-  prior tree at `ecdfaff6`; those results do **not** validate the later code checkpoint `600b78b4`.
+  prior tree at `ecdfaff6`; those results do **not** validate the later code checkpoint `6d5dc7b1d1f72a366d4f6b05626147b9e932481c`.
   The new graph-state/route/executor changes and two new tests are **not yet compiled or executed by Harness**.
 - Phase10 melee-only tactical ownership (`002550`): 6/8 perimeter, 5/8 strict; C4 12/12.
 - Phase11 diagnostic `005739`: same 6/8 perimeter, 5/8 strict. Combat inactive for idx5/7/8.
