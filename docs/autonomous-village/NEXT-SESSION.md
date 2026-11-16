@@ -26,11 +26,12 @@ Read first, in order:
 22. `docs/autonomous-village/2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`
 23. `docs/autonomous-village/2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`
 24. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`
+25. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-VERIFICATION.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-16-PHASE19-BREAK-RECOVERY-IMPLEMENTATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-16-PHASE19-BREAK-VERIFICATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -57,8 +58,10 @@ Read first, in order:
 - BREAK contract implementation: `Node.pos`=stand, `Node.actionPos`=solid target; planner validates
   adjacent stand AABB/support/LOS/reach/protection; executor navigates to stand, delegates action,
   requires verified air before advancing.
-- Focused `a2n-20261116-101718` and merged `a2n-20261116-103331`: 6/8 perimeter, 5/8 strict,
-  C4 PASS `[1,0,0]`; no route BREAK event captured, so runtime BREAK proof is still pending.
+- Focused `a2n-20261116-101718`, merged `103331`, post-integration `110238`: 6/8 perimeter,
+  5/8 strict, C4 PASS `[1,0,0]`/`[3,0,0]`.
+- Phase19 verification: BREAK executor integration fixed to use `actionTarget()`; tests PASS; no
+  runtime `BREAK_EXECUTED_FROM_STAND` event yet, so direct execution remains unproven.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 

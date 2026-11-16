@@ -2099,15 +2099,24 @@ public final class NavExecutor {
         return true;
     }
 
-    /** BREAK se ejecuta desde la celda física actual, nunca caminando hacia el bloque sólido. */
+    /** BREAK se ejecuta desde la celda de pie de la ruta, nunca caminando hacia el bloque sólido. */
     private void ejecutarBreakDesdePosicionDeAtaque(NavRoute.Node node, long now) {
-        BlockPos target = node.pos();
-        BlockPos stand = mob.blockPosition();
+        BlockPos target = node.actionTarget();
+        BlockPos standRuta = node.standPos();
         if (mob.level().getBlockState(target).isAir()) {
             limpiarEstadoBreak();
-            resolverBreakVerificado(target, stand);
+            resolverBreakVerificado(target, mob.blockPosition());
             return;
         }
+        if (mob.distanceToSqr(standRuta.getX() + 0.5D, standRuta.getY() + 0.5D,
+                standRuta.getZ() + 0.5D) > 1.0D) {
+            mob.getNavigation().moveTo(standRuta.getX() + 0.5D, standRuta.getY(),
+                    standRuta.getZ() + 0.5D, 1.0D);
+            traceActuatorCommand("BREAK_STAND_APPROACH", standRuta, mob.level().getGameTime());
+            ultimaAccionDeRuta = standRuta.toShortString() + ":BREAK-ACERCARSE-STAND";
+            return;
+        }
+        BlockPos stand = mob.blockPosition();
         if (!NavBreakActionPolicy.executable(mob.level(), mob, stand, target, policies, ALCANCE_DE_ACCION_SQR)) {
             limpiarEstadoBreak();
             excluirAristaBreakYReplanificar(stand, target, "precondicion de ataque invalida", now);
