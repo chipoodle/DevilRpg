@@ -15,7 +15,7 @@ ChatGPT es responsable de modificar código de producción directamente en GitHu
 ## Checkpoint actual
 
 - Rama: `feature/autonomous-village`.
-- Código Phase19 pendiente de validación: `1a7028abc138f5b53d1313155dee23fceb20ed78`.
+- Código Phase19 pendiente de validación: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c`.
 - Hallazgo: el grafo A* colapsaba el estado BREAK post-acción con el estado WALK al stand; además, BREAK podía avanzar por proximidad sin ejecutar el actuador.
 - Corrección publicada: estado post-BREAK y stand separados, nodo BREAK no alcanzado por proximidad, ocupación física exacta del stand, transferencia del action target a la ruta local y reanudación de misión estratégica.
 - Fixture determinista agregado: `A2NavHarness` modo `break-runtime`; pruebas nuevas registradas, aún no ejecutadas.
