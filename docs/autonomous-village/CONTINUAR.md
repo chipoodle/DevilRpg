@@ -318,3 +318,11 @@ un/saves; hashes match; structural verification only.
 - Focused diagnostic `a2n-20261116-112413`: 6/8 perimeter, 5/8 strict, C4 PASS [1,0,0].
 - No BREAK_STAND_APPROACH / BREAK_EXECUTED_FROM_STAND / BREAK_EDGE_EXCLUDED / NAV_BACKTRACK runtime events; direct BREAK behavior remains BLOCKED.
 - Report: docs/autonomous-village/2026-11-16-PHASE19-HARNESS-VALIDATION.md. A2 remains OPEN; no 12k.
+
+## 2026-11-16 — Phase19 BREAK graph-state runtime validation
+
+- Synced `289406f6` -> `d440b3e7` (contains implementation `6d5dc7b1`) by fast-forward.
+- Static PASS: Gradle, strict lint, diff-check, diagnostics compile. New tests executed: graph-state 7, route-policy 11, attack-position 7.
+- `break-runtime` fixture `a2n-20261116-160714` returned **INVALIDO**: both production planner routes empty (`breakTargetFound=false`), `encolados=9`, `exp=10/512`, `rechazadasPorNodoNoPisable=42`. No BREAK/retry/backtrack events.
+- Harness did not change code. Candidate LOS/aim defect returned to ChatGPT. A2 remains OPEN; no 12k.
+- Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-RUNTIME-INVALID.md.

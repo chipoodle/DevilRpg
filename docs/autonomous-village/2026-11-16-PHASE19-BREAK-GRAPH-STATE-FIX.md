@@ -125,3 +125,11 @@ On the local repository:
 **Harness:** fetch and validate `6d5dc7b1d1f72a366d4f6b05626147b9e932481c`, then execute the deterministic `break-runtime` fixture.
 
 **ChatGPT:** review the resulting report and logs; correct source directly on GitHub if Harness demonstrates a defect. Harness must not independently change production source.
+
+## Harness validation result — 2026-11-16
+
+- Static checks PASS on `d440b3e7` (implementation `6d5dc7b1`): Gradle, strict lint, diff-check, diagnostics compile.
+- New policy tests executed: graph-state 7, route-policy 11, attack-position 7.
+- `break-runtime` fixture `a2n-20261116-160714` returned **INVALIDO** before spawning: both production planner routes were empty (`breakTargetFound=false`), `encolados=9`, `exp=10/512`, `rechazadasPorNodoNoPisable=42`.
+- No BREAK/retry/backtrack events. See `2026-11-16-PHASE19-BREAK-RUNTIME-INVALID.md`.
+- Harness did not modify production code. Fixture/LOS diagnosis returned to ChatGPT.
