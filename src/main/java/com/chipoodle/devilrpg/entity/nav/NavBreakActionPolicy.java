@@ -28,8 +28,8 @@ public final class NavBreakActionPolicy {
                 + " distanceSqr=" + distanceSqr
                 + " legacyTEnter=" + tEnter
                 + " legacyAimY=" + legacyAimY
-                + " legacyRayEnd=" + (target == null ? "-" : new Vec3(target.getX() + 0.5D,
-                        legacyAimY, target.getZ() + 0.5D))
+                + " legacyRayEnd=" + (target == null ? "-" : "(" + (target.getX() + 0.5D)
+                        + "," + legacyAimY + "," + (target.getZ() + 0.5D) + ")")
                 + " rayEnd=" + rayEnd
                 + " hitType=" + (hit == null ? "-" : hit.getType())
                 + " hitBlock=" + (hit == null ? "-" : hit.getBlockPos().toShortString()));
