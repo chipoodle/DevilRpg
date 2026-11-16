@@ -2183,6 +2183,9 @@ public final class NavExecutor {
 
     private void resolverBreakVerificado(BlockPos target, BlockPos stand) {
         ultimaAccionDeRuta = target.toShortString() + ":BREAK-VERIFICADO desde " + stand.toShortString();
+        // Resume the strategic mission from the newly opened terrain; do not keep planning toward
+        // the temporary attack stand as if it were still the mission. 
+        if (misionFinal != null) objective = misionFinal.immutable();
         route = null;
         routeIndex = 0;
         plannedFrom = null;
@@ -2207,6 +2210,9 @@ public final class NavExecutor {
                     + " reason={" + reason + "}");
         }
         if (route != null) lastRouteSignature = route.signature();
+        if (misionFinal != null) objective = misionFinal.immutable();
+        objetivoTransicionLocal = null;
+        objetivoAccionLocal = null;
         route = null;
         routeIndex = 0;
         plannedFrom = null;
@@ -3793,7 +3799,8 @@ public final class NavExecutor {
                     // local selection instead of spending the no-progress budget on it.
                     objetivoPermiteConstruccion = false;
                     objetivoTransicionLocal = null;
-                    objective = null;
+                    objetivoAccionLocal = null;
+                    objective = misionFinal == null ? null : misionFinal.immutable();
                     plannedFrom = null;
                     globalCache = null;
                     globalDesde = null;
