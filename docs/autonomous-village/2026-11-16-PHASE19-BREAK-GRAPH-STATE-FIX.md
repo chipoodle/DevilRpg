@@ -1,7 +1,7 @@
 # Phase19 — BREAK graph-state correction and deterministic runtime fixture
 
 **Date:** 2026-11-16  
-**Implementation HEAD:** `600b78b4f628cadf894be2cb38015d0c4ffb512d`  
+**Implementation HEAD:** `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`  
 **Branch:** `feature/autonomous-village`  
 **Status:** IMPLEMENTED / NOT YET VALIDATED BY HARNESS
 
@@ -71,7 +71,7 @@ These tests are registered in `policyTest`. ChatGPT has not run Gradle, lint or 
 
 ## 4. Deterministic runtime fixture
 
-Run mode: `break-runtime` in `A2NavHarness`. Build diagnostics with `-Pa2nDiagnostics=true`; launch with `-Da2n.mode=break-runtime -Dn4.trace=true` and a unique `a2n.run` in a **new disposable world**.
+Run mode: `break-runtime` in `A2NavHarness`. Build diagnostics with `-Pa2nDiagnostics=true`; launch with `-Da2n.mode=break-runtime -Ddevilrpg.a2n.traceNav=true` and a unique `a2n.run` in a **new disposable world**.
 
 The fixture:
 1. Builds two separate sealed, supported, low-clearance corridors. Bedrock walls prevent bypass mining; a glass pane is the only breakable obstruction. The ceiling at feetY+2 rules out STEP_UP/JUMP_UP while preserving the mob's 1.95-block clearance after the pane is removed.
@@ -88,6 +88,8 @@ Expected trace evidence:
 - `BREAK_FIXTURE_RETRY_FIRST`, `BREAK_FIXTURE_RETRY_SECOND delta=40`
 - `BREAK_FIXTURE_MISSION_RESUMED` for both mobs
 
+The fixture calls `traceInit()` before starting the mobs; `-Ddevilrpg.a2n.traceNav=true` installs the production `NavTrace` sink and persists actuator events in `nav-trace.log`. The unrelated `n4.trace` property is not used.
+
 The fixture does **not yet** exercise second-action failure/edge exclusion or `NAV_BACKTRACK`. Those remain separate runtime tasks and must not be marked PASS from this fixture.
 
 ## 5. Harness validation instructions
@@ -95,7 +97,7 @@ The fixture does **not yet** exercise second-action failure/edge exclusion or `N
 On the local repository:
 
 1. Fetch the current `origin/feature/autonomous-village` HEAD and preserve all local-only artifacts. No reset/clean/stash/force-push.
-2. Confirm exact HEAD `600b78b4f628cadf894be2cb38015d0c4ffb512d`.
+2. Confirm exact HEAD `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`.
 3. Run:
    ```powershell
    .\gradlew.bat test
@@ -119,6 +121,6 @@ On the local repository:
 
 ## 7. Next owner/action
 
-**Harness:** fetch and validate `600b78b4f628cadf894be2cb38015d0c4ffb512d`, then execute the deterministic `break-runtime` fixture.
+**Harness:** fetch and validate `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`, then execute the deterministic `break-runtime` fixture.
 
 **ChatGPT:** review the resulting report and logs; correct source directly on GitHub if Harness demonstrates a defect. Harness must not independently change production source.
