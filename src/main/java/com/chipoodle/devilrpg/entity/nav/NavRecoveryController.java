@@ -33,11 +33,23 @@ public final class NavRecoveryController {
     }
 
     public BlockPos chooseBacktrack(BlockPos current, Predicate<BlockPos> stillValid) {
-        if (backtrackUsed || stillValid == null) return null;
+        return chooseBacktrack(current, 0.0D, stillValid);
+    }
+
+    /**
+     * Select the newest physically reached cell that is still valid and farther than the
+     * arrival tolerance. Nearby history entries are skipped rather than aborting the search,
+     * so ordinary one-block movement history can still yield a useful bounded backtrack.
+     */
+    public BlockPos chooseBacktrack(BlockPos current, double minimumDistanceSqr,
+                                     Predicate<BlockPos> stillValid) {
+        if (current == null || backtrackUsed || stillValid == null
+                || minimumDistanceSqr < 0.0D) return null;
         Iterator<BlockPos> it = reached.descendingIterator();
         while (it.hasNext()) {
             BlockPos candidate = it.next();
-            if (candidate.equals(current) || candidate.equals(lastBacktrack)) continue;
+            if (candidate.equals(current) || candidate.equals(lastBacktrack)
+                    || candidate.distSqr(current) <= minimumDistanceSqr) continue;
             if (stillValid.test(candidate)) return candidate.immutable();
         }
         return null;
