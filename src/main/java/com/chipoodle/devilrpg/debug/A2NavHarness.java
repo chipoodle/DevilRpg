@@ -786,6 +786,11 @@ public final class A2NavHarness {
                 bedrock(x + 10, y + dy, z + dz);
             }
         }
+        // Light the sealed corridor without changing its collision geometry or movement lanes.
+        for (int dx = -2; dx <= 10; dx += 4) {
+            nivel.setBlockAndUpdate(new BlockPos(x + dx, y + 1, z - 3), Blocks.GLOWSTONE.defaultBlockState());
+            nivel.setBlockAndUpdate(new BlockPos(x + dx, y + 1, z + 3), Blocks.GLOWSTONE.defaultBlockState());
+        }
         // Five-wide sealed wall: three glass targets provide distinct BREAK edges; bedrock
         // closes both bypass lanes. Every target remains solid until the fixture shuts down.
         for (int dz = -2; dz <= 2; dz++) {
@@ -949,6 +954,11 @@ public final class A2NavHarness {
                 bedrock(x - 4, y + dy, z + dz);
                 bedrock(x + 14, y + dy, z + dz);
             }
+        }
+        // Side-wall lighting prevents ambient hostile spawns inside the long-running fixture.
+        for (int dx = -2; dx <= 14; dx += 4) {
+            nivel.setBlockAndUpdate(new BlockPos(x + dx, y + 1, z - 2), Blocks.GLOWSTONE.defaultBlockState());
+            nivel.setBlockAndUpdate(new BlockPos(x + dx, y + 1, z + 2), Blocks.GLOWSTONE.defaultBlockState());
         }
         backtrackBarrier = new BlockPos(x + 4, y, z);
         backtrackGoal = new BlockPos(x + 10, y, z);
