@@ -41,8 +41,24 @@ public final class NavRoute {
         BUILD
     }
 
-    /** Un paso de la ruta: dónde y cómo se llega. */
-    public record Node(BlockPos pos, Transition transition) {
+    /** Un paso de la ruta: dónde se está de pie, cómo se llega y qué bloque se actúa (si aplica). */
+    public record Node(BlockPos pos, Transition transition, BlockPos actionPos) {
+        public Node(BlockPos pos, Transition transition) {
+            this(pos, transition, null);
+        }
+
+        public boolean hasAction() {
+            return actionPos != null;
+        }
+
+        /** The cell the mob must physically occupy; BREAK keeps the solid target separately. */
+        public BlockPos standPos() {
+            return pos;
+        }
+
+        public BlockPos actionTarget() {
+            return actionPos == null ? pos : actionPos;
+        }
     }
 
     private final List<Node> nodes;
@@ -61,6 +77,7 @@ public final class NavRoute {
         for (Node n : nodes) {
             h = 31 * h + n.pos().hashCode();
             h = 31 * h + n.transition().ordinal();
+            h = 31 * h + (n.actionPos() == null ? 0 : n.actionPos().hashCode());
         }
         return h;
     }
@@ -103,6 +120,9 @@ public final class NavRoute {
                 sb.append(' ');
             }
             sb.append(n.transition()).append('@').append(n.pos().toShortString());
+            if (n.actionPos() != null) {
+                sb.append("(action=").append(n.actionPos().toShortString()).append(')');
+            }
         }
         return "len=" + nodes.size() + " fin=" + destination.toShortString() + " ultimos=[" + sb + "]";
     }

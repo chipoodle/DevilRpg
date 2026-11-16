@@ -3,6 +3,11 @@ package com.chipoodle.devilrpg.entity.nav;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.CollisionGetter;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -91,7 +96,12 @@ public final class NavPlanner {
 
     /** Una arista ya validada: coste, etiqueta y nivel de pies; o el motivo del rechazo. */
     private record Arista(NavObstruction.Kind kind, double coste, NavRoute.Transition transicion, int piesHasta,
-                          Rechazo rechazo) {
+                          Rechazo rechazo, BlockPos standPos, BlockPos actionPos) {
+        Arista(NavObstruction.Kind kind, double coste, NavRoute.Transition transicion, int piesHasta,
+               Rechazo rechazo) {
+            this(kind, coste, transicion, piesHasta, rechazo, null, null);
+        }
+
         boolean valida() {
             return rechazo == Rechazo.NINGUNO;
         }
@@ -186,6 +196,13 @@ public final class NavPlanner {
         if (kind == NavObstruction.Kind.BREAKABLE && !NavObstruction.hasSupport(level, candidate)) {
             return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
         }
+        BlockPos standPos = null;
+        if (kind == NavObstruction.Kind.BREAKABLE) {
+            standPos = buscarPosicionDeAtaque(level, mob, candidate, from, policies);
+            if (standPos == null) {
+                return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
+            }
+        }
         boolean escalada = kind == NavObstruction.Kind.STEP_UP || kind == NavObstruction.Kind.JUMP_UP;
         if (escalada) {
             BlockPos pies = new BlockPos(candidate.getX(), piesHasta, candidate.getZ());
@@ -204,7 +221,43 @@ public final class NavPlanner {
                     from.toShortString(), candidate.toShortString(), kind, transicion, piesHasta,
                     NavObstruction.fits(level, mob, candidate), NavObstruction.hasSupport(level, candidate));
         }
-        return new Arista(kind, cost, transicion, piesHasta, Rechazo.NINGUNO);
+        return new Arista(kind, cost, transicion, piesHasta, Rechazo.NINGUNO, standPos,
+                kind == NavObstruction.Kind.BREAKABLE ? candidate.immutable() : null);
+    }
+
+    /**
+     * A2 · el nodo BREAK debe terminar en una celda de pie desde la que la accion sea realmente
+     * ejecutable. No se acepta el bloque solido como destino de navegacion.
+     */
+    private static BlockPos buscarPosicionDeAtaque(CollisionGetter level, Mob mob, BlockPos actionPos,
+                                                   BlockPos from, NavObstruction.Policies policies) {
+        for (BlockPos stand : NavBreakAttackPositionPolicy.candidates(actionPos, from)) {
+            if (!NavBreakAttackPositionPolicy.withinActionReach(stand, actionPos)) {
+                continue;
+            }
+            if (!NavObstruction.fits(level, mob, stand) || !NavObstruction.hasSupport(level, stand)) {
+                continue;
+            }
+            if (policies.isProtected(stand)) {
+                continue;
+            }
+            if (!lineaDeVision(level, mob, stand, actionPos)) {
+                continue;
+            }
+            return stand.immutable();
+        }
+        return null;
+    }
+
+    private static boolean lineaDeVision(CollisionGetter level, Mob mob, BlockPos stand, BlockPos actionPos) {
+        if (!(level instanceof Level world)) {
+            return true;
+        }
+        Vec3 eye = new Vec3(stand.getX() + 0.5D, stand.getY() + 1.6D, stand.getZ() + 0.5D);
+        Vec3 target = Vec3.atCenterOf(actionPos);
+        BlockHitResult hit = world.clip(new ClipContext(eye, target, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, mob));
+        return hit.getType() == HitResult.Type.MISS || hit.getBlockPos().equals(actionPos);
     }
 
     /**
@@ -292,10 +345,11 @@ public final class NavPlanner {
                         if (off[0] != 0 && off[1] != 0) {
                             cost *= 1.4142D;
                         }
-                        BlockPos estado = sucesorCanonico(candidate, arista.kind(), arista.transicion(), arista.piesHasta());
+                        BlockPos estado = arista.standPos() != null ? arista.standPos()
+                                : sucesorCanonico(candidate, arista.kind(), arista.transicion(), arista.piesHasta());
                         contadores[1]++;
                         out.accept(new NavGraphSearch.Edge(estado.asLong(), cost,
-                                arista.transicion(), arista.piesHasta()));
+                                arista.transicion(), arista.piesHasta(), arista.actionPos()));
                     }
                 }
             }
@@ -340,7 +394,7 @@ public final class NavPlanner {
                     .append(" motivo=").append(motivo);
             List<NavRoute.Node> nodosFrente = new ArrayList<>();
             for (NavGraphSearch.Step paso : resultado.route()) {
-                nodosFrente.add(new NavRoute.Node(BlockPos.of(paso.state()), paso.transition()));
+                nodosFrente.add(new NavRoute.Node(BlockPos.of(paso.state()), paso.transition(), paso.actionPos()));
             }
             resumen.append(" rutaFrente=").append(nodosFrente.size());
             return new GlobalResult(new NavRoute(nodosFrente, frente), frente, false, expansions, hitBudget,
@@ -348,7 +402,7 @@ public final class NavPlanner {
         }
         List<NavRoute.Node> nodes = new ArrayList<>();
         for (NavGraphSearch.Step paso : resultado.route()) {
-            nodes.add(new NavRoute.Node(BlockPos.of(paso.state()), paso.transition()));
+            nodes.add(new NavRoute.Node(BlockPos.of(paso.state()), paso.transition(), paso.actionPos()));
         }
         resumen.append(" ruta=").append(nodes.size());
         return new GlobalResult(new NavRoute(nodes, objetivo), objetivo, true, expansions, hitBudget,
@@ -503,6 +557,7 @@ public final class NavPlanner {
         Map<BlockPos, Double> bestG = new HashMap<>();
         Map<BlockPos, BlockPos> cameFrom = new HashMap<>();
         Map<BlockPos, NavRoute.Transition> transitionTo = new HashMap<>();
+        Map<BlockPos, BlockPos> actionTo = new HashMap<>();
         /** A2 Stage 6D · FIX 2 · nivel de PIES con el que se llega a cada nodo (no siempre es `pos.getY()`). */
         Map<BlockPos, Integer> piesDe = new HashMap<>();
         Set<BlockPos> closed = new HashSet<>();
@@ -568,7 +623,8 @@ public final class NavPlanner {
                     double cost = arista.coste();
                     NavRoute.Transition transicion = arista.transicion();
                     int piesHasta = arista.piesHasta();
-                    BlockPos sucesor = sucesorCanonico(candidate, arista.kind(), transicion, piesHasta);
+                    BlockPos sucesor = arista.standPos() != null ? arista.standPos()
+                            : sucesorCanonico(candidate, arista.kind(), transicion, piesHasta);
                     if (exclusiones != null && transicion == NavRoute.Transition.DROP) {
                         long clave = NavDropExclusionPolicy.clave(pos.getX(), pos.getY(), pos.getZ(),
                                 sucesor.getX(), sucesor.getY(), sucesor.getZ());
@@ -622,6 +678,7 @@ public final class NavPlanner {
                     }
                     cameFrom.put(sucesor, pos);
                     transitionTo.put(sucesor, transicion);
+                    actionTo.put(sucesor, arista.actionPos());
                     open.add(new Node(sucesor, tentative, tentative + heuristic(sucesor, goal),
                             off[0], off[1]));
                     if (sucesor.equals(goal)) {
@@ -659,7 +716,7 @@ public final class NavPlanner {
         BlockPos cursor = found;
         while (cursor != null && !cursor.equals(start)) {
             NavRoute.Transition t = transitionTo.getOrDefault(cursor, NavRoute.Transition.WALK);
-            nodes.add(new NavRoute.Node(cursor, t));
+            nodes.add(new NavRoute.Node(cursor, t, actionTo.get(cursor)));
             cursor = cameFrom.get(cursor);
         }
         java.util.Collections.reverse(nodes);

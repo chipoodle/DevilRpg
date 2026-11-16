@@ -3553,7 +3553,9 @@ public final class NavExecutor {
                 // el ente se quedaba en `idx=0` enviando `moveTo` sin ejecutar la transicion (10 envios, 0 avance).
                 // Primero comprobar el estado REAL del bloque. Si BREAK ya quedó en aire, o BRIDGE
                 // ya quedó sólido, avanzar sin exigir que el mob alcance una celda que ya no es objetivo.
-                boolean targetIsAir = mob.level().getBlockState(node.pos()).isAir();
+                BlockPos actionPos = node.transition() == NavRoute.Transition.BREAK
+                        ? node.actionTarget() : node.pos();
+                boolean targetIsAir = mob.level().getBlockState(actionPos).isAir();
                 if (NavObjectivePolicy.accionResuelta(node.transition() == NavRoute.Transition.BREAK, targetIsAir)) {
                     routeIndex++;
                     replanteosPorGuarda = 0;
@@ -3567,13 +3569,50 @@ public final class NavExecutor {
                     globalCache = null;
                     globalDesde = null;
                     state = NavState.PLANNING;
-                    ultimaAccionDeRuta = node.pos().toShortString() + ":" + node.transition()
+                    ultimaAccionDeRuta = actionPos.toShortString() + ":" + node.transition()
                             + "-YA-RESUELTO-REPLAN";
                     if (NavTrace.on()) {
                         NavTrace.ev("VERTICAL_TRANSITION_FAILED", "uuid=" + mob.getUUID()
                                 + " tick=" + mob.level().getGameTime() + " transition=" + node.transition()
                                 + " target=" + node.pos().toShortString() + " reason=BREAK_VERIFIED_REPLAN");
                     }
+                    return;
+                }
+                // A2 · el nodo BREAK moderno es una POSICION DE PIE; actionPos es el bloque solido.
+                if (node.actionPos() != null) {
+                    double distStandSqr = mob.distanceToSqr(node.pos().getX() + 0.5D,
+                            node.pos().getY() + 0.5D, node.pos().getZ() + 0.5D);
+                    if (distStandSqr > 1.0D) {
+                        mob.getNavigation().moveTo(node.pos().getX() + 0.5D, node.pos().getY(),
+                                node.pos().getZ() + 0.5D, 1.0D);
+                        traceActuatorCommand("BREAK_STAND_APPROACH", node.pos(), mob.level().getGameTime());
+                        lastMoveTarget = node.pos().toShortString() + ":ACERCARSE-STAND";
+                        ultimaAccionDeRuta = node.pos().toShortString() + ":BREAK-ACERCARSE-STAND (dist="
+                                + String.format(java.util.Locale.ROOT, "%.2f", Math.sqrt(distStandSqr)) + ")";
+                        if (mob.getNavigation().isDone() && ticksSinAvance > TICKS_DE_GRACIA_DE_NODO) {
+                            state = NavState.OBSTRUCTED;
+                        }
+                        return;
+                    }
+                    BlockPos blocker = primerBloqueoEnLineaDeVision(actionPos);
+                    boolean reach = mob.distanceToSqr(actionPos.getX() + 0.5D, actionPos.getY() + 0.5D,
+                            actionPos.getZ() + 0.5D) <= ALCANCE_DE_ACCION_SQR;
+                    boolean authorized = mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az
+                            && az.puedeRomperNodoDeNavegacion(actionPos);
+                    if (!reach || !authorized || (blocker != null && !blocker.equals(actionPos))) {
+                        state = NavState.OBSTRUCTED;
+                        lastMoveTarget = node.pos().toShortString() + ":BREAK-PRECONDICION-FALLIDA";
+                        ultimaAccionDeRuta = node.pos().toShortString() + ":BREAK-RECHAZADO action="
+                                + actionPos.toShortString() + " reach=" + reach + " authorized=" + authorized
+                                + " blocker=" + (blocker == null ? "-" : blocker.toShortString());
+                        return;
+                    }
+                    nodoDeRecuperacionOverride = actionPos.immutable();
+                    nodoDeRecuperacion = actionPos.immutable();
+                    nextRecoveryAt = Math.min(nextRecoveryAt, mob.level().getGameTime());
+                    state = NavState.RECOVERING;
+                    ultimaAccionDeRuta = node.pos().toShortString() + ":BREAK-DELEGADO action="
+                            + actionPos.toShortString();
                     return;
                 }
                 double distNodoSqr = mob.distanceToSqr(node.pos().getX() + 0.5D, node.pos().getY() + 0.5D,

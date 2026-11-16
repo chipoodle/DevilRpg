@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.entity.nav;
 
+import net.minecraft.core.BlockPos;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -15,7 +17,10 @@ import java.util.Set;
  * adaptador de produccion; aqui solo se decide que sucesores ya validados entran en la busqueda.
  */
 public final class NavGraphSearch {
-    public record Edge(long to, double cost, NavRoute.Transition transition, int feet) {
+    public record Edge(long to, double cost, NavRoute.Transition transition, int feet, BlockPos actionPos) {
+        public Edge(long to, double cost, NavRoute.Transition transition, int feet) {
+            this(to, cost, transition, feet, null);
+        }
     }
 
     public interface Graph {
@@ -28,7 +33,10 @@ public final class NavGraphSearch {
         double distance(long state);
     }
 
-    public record Step(long state, NavRoute.Transition transition, int feet) {
+    public record Step(long state, NavRoute.Transition transition, int feet, BlockPos actionPos) {
+        public Step(long state, NavRoute.Transition transition, int feet) {
+            this(state, transition, feet, null);
+        }
     }
 
     public record Result(boolean found, List<Step> route, long front, int expansions,
@@ -48,6 +56,7 @@ public final class NavGraphSearch {
         Map<Long, Double> bestG = new HashMap<>();
         Map<Long, Long> cameFrom = new HashMap<>();
         Map<Long, NavRoute.Transition> transitionTo = new HashMap<>();
+        Map<Long, BlockPos> actionTo = new HashMap<>();
         Map<Long, Integer> feetTo = new HashMap<>();
         Set<Long> closed = new HashSet<>();
         double h0 = graph.heuristic(start);
@@ -93,6 +102,7 @@ public final class NavGraphSearch {
                 feetTo.put(edge.to(), edge.feet());
                 cameFrom.put(edge.to(), from);
                 transitionTo.put(edge.to(), edge.transition());
+                actionTo.put(edge.to(), edge.actionPos());
                 double h = graph.heuristic(edge.to());
                 open.add(new Node(edge.to(), tentative, tentative + h, h));
             });
@@ -105,7 +115,7 @@ public final class NavGraphSearch {
                 break;
             }
             route.add(new Step(cursor, transitionTo.getOrDefault(cursor, NavRoute.Transition.WALK),
-                    feetTo.getOrDefault(cursor, startFeet)));
+                    feetTo.getOrDefault(cursor, startFeet), actionTo.get(cursor)));
             cursor = prev;
         }
         Collections.reverse(route);

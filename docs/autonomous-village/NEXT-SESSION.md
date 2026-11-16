@@ -24,11 +24,12 @@ Read first, in order:
 20. `docs/autonomous-village/2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`
 21. `docs/autonomous-village/2026-11-16-PHASE17-ISOLATED-EVALUATOR-IDX7-FORENSICS.md`
 22. `docs/autonomous-village/2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`
+23. `docs/autonomous-village/2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-16-BREAK-EXECUTABLE-CONTRACT.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -50,19 +51,21 @@ Read first, in order:
 - Phase15 diagnostic `092800`: 5/8 perimeter, 4/8 strict; C4 **PASS** `[2,0,0]`.
 - Phase16 diagnostic `094243`: 5/8 perimeter, 3/8 strict; C4 **PASS** `[1,0,0]`.
 - Phase17: `createPath` cached-return flaw confirmed; Phase16 retry not independent.
-- Phase18 audit: `NavPlanner` emits the **solid BREAK block** as route node; `estadoSucesor` keeps it;
-  executor calls `moveTo` on the solid cell; `NavBreakReachPolicy` is unused; no attack-position search.
-  This is the confirmed planner/executor contract break.
+- Phase18 audit: BREAK route node was the solid block; no attack-position search.
+- BREAK contract implementation: `Node.pos`=stand, `Node.actionPos`=solid target; planner validates
+  adjacent stand AABB/support/LOS/reach/protection; executor navigates to stand, delegates action,
+  requires verified air before advancing.
+- Focused `a2n-20261116-101718`: 6/8 perimeter, 5/8 strict, C4 PASS `[1,0,0]`; no route BREAK event
+  captured, so runtime BREAK proof is still pending.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Design (not implement) an action-aware route: BREAK edge must terminate at a validated standing
-   attack position with AABB/support/LOS/range/protection and fallback alternatives. Recommended Option A
-   in the Phase-18 report; Option B only as temporary executor fallback.
-2. Do not change action range, budgets, recovery, collision or acceptance.
-3. C4 contract unchanged; IDX7 remains BLOCKED (not reproduced); IDX5 boundary UNKNOWN.
+1. Add a deterministic integration fixture for `NavPlanner` BREAK with a real/mock `CollisionGetter`
+   and `Mob`, covering valid stand, blocked front, no stand, AABB/support/LOS/range/protection.
+2. Capture a runtime route BREAK event proving stand navigation → target air → route advance.
+3. IDX8 remains UNKNOWN; IDX7 BLOCKED; IDX5 6164 UNKNOWN; C4 save/reload OPEN.
 
 ## Worlds (preserve; do not overwrite)
 
