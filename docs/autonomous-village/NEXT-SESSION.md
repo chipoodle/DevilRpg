@@ -23,11 +23,12 @@ Read first, in order:
 19. `docs/autonomous-village/2026-11-16-PHASE15-NAVIGATION-ROOT-CAUSE-FORENSICS.md`
 20. `docs/autonomous-village/2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`
 21. `docs/autonomous-village/2026-11-16-PHASE17-ISOLATED-EVALUATOR-IDX7-FORENSICS.md`
+22. `docs/autonomous-village/2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-16-PHASE17-ISOLATED-EVALUATOR-IDX7-FORENSICS.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-16-PHASE18-BREAK-EXECUTION-CONTRACT-AUDIT.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -48,19 +49,20 @@ Read first, in order:
 - Phase14 diagnostic `035911`: 6/8 perimeter, 4/8 strict; C4 **PASS** `[1,0,0]`.
 - Phase15 diagnostic `092800`: 5/8 perimeter, 4/8 strict; C4 **PASS** `[2,0,0]`.
 - Phase16 diagnostic `094243`: 5/8 perimeter, 3/8 strict; C4 **PASS** `[1,0,0]`.
-- Phase17 source audit: `createPath(BlockPos,int)` returns the active path when the target matches
-  `targetPos`, so the Phase-16 retry was **not independent**. Corrected probe skips the cached query.
-  IDX8 target-node rejection remains UNKNOWN; IDX7 required reachable-path state did not reproduce.
+- Phase17: `createPath` cached-return flaw confirmed; Phase16 retry not independent.
+- Phase18 audit: `NavPlanner` emits the **solid BREAK block** as route node; `estadoSucesor` keeps it;
+  executor calls `moveTo` on the solid cell; `NavBreakReachPolicy` is unused; no attack-position search.
+  This is the confirmed planner/executor contract break.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Capture the original production `moveTo` path before installation, or run a genuinely isolated
-   `WalkNodeEvaluator`/`PathFinder` with a separate `PathNavigationRegion`.
-2. Do not use `createPath` while a matching active path exists; it returns the cached path.
-3. Reproduce IDX7's required reachable-path state; otherwise preserve BLOCKED.
-4. C4 contract remains unchanged; IDX5 6164 boundary UNKNOWN.
+1. Design (not implement) an action-aware route: BREAK edge must terminate at a validated standing
+   attack position with AABB/support/LOS/range/protection and fallback alternatives. Recommended Option A
+   in the Phase-18 report; Option B only as temporary executor fallback.
+2. Do not change action range, budgets, recovery, collision or acceptance.
+3. C4 contract unchanged; IDX7 remains BLOCKED (not reproduced); IDX5 boundary UNKNOWN.
 
 ## Worlds (preserve; do not overwrite)
 
