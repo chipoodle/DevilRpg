@@ -31,6 +31,7 @@ Read first, in order:
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
+- Current published HEAD: `f43eb11eab618ed1e19f8b795c1663bc0c619331` (follow-up BREAK attack-stand edge fix).
 - Latest substantive report: `2026-11-16-PHASE19-BREAK-VERIFICATION.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
@@ -44,8 +45,9 @@ Read first, in order:
 ## Current status
 
 - `NavExecutor` is the single movement authority; legacy planner, `NavFeature` and
-  `MovementOwnership` are deleted. Baseline through Phase18 passed its recorded tests; Phase19
-  gameplay changes and newly added policy tests have **not yet been compiled or executed by Harness**.
+  `MovementOwnership` are deleted. Harness reported Gradle tests, strict lint and diff-check PASS
+  for the Phase19 baseline at `14df0115`. Follow-up attack-stand edge correction at `f43eb11e`
+  has **not yet been compiled or executed by Harness**.
 - Phase10 melee-only tactical ownership (`002550`): 6/8 perimeter, 5/8 strict; C4 12/12.
 - Phase11 diagnostic `005739`: same 6/8 perimeter, 5/8 strict. Combat inactive for idx5/7/8.
 - Phase12 diagnostic `022656`: 5/8 perimeter, 4/8 strict; C4 12/12.
@@ -69,16 +71,14 @@ Read first, in order:
 
 ## Immediate work
 
-1. Harness: fetch the latest commit, preserve local-only work, run Gradle tests, strict lint and
-   diff-check for the attack-stand edge correction; then capture the full runtime BREAK sequence.
-2. Harness must fetch the latest `feature/autonomous-village` commit before touching local files; inspect
-   local status and preserve every uncommitted/untracked artifact. Do not reset, clean, stash or overwrite.
-3. Run Gradle tests, strict aldea lint and diff-check. Fix compile/test regressions without changing action
-   range, existing budgets, collision/protection rules or acceptance.
-4. Runtime: focused BREAK from multiple approach sides, failed-edge exclusion and terrain-fingerprint
-   invalidation; then bounded backtrack after two no-progress route failures. Verify strategic mission resumes.
-5. Run focused A2 and C4 12/12 only after targeted checks. Do not run the 12k campaign until the canonical
-   five consecutive 8/8 strict `DENTRO-PARED` gate is satisfied.
+1. Harness: fetch `f43eb11eab618ed1e19f8b795c1663bc0c619331`, preserve local-only work, then run
+   Gradle tests, strict aldea lint and diff-check. Do not reset, clean, stash or overwrite.
+2. Capture runtime BREAK from multiple approach sides: stand selection/reach, verified target air,
+   route replan, first failed actuator attempt and retry exactly 40 ticks later.
+3. Exercise two no-progress failures, backtrack selection and resumption of the original strategic mission.
+4. Add the real/mock `CollisionGetter` + `Mob` planner integration fixture; do not substitute policy-only tests.
+5. Run focused A2/C4 checks only after targeted BREAK checks. Do not run the 12k campaign until five
+   consecutive 8/8 strict `DENTRO-PARED` runs are achieved.
 6. IDX7 remains BLOCKED (not reproduced); IDX5 boundary UNKNOWN; C4 contract unchanged.
 
 ## Worlds (preserve; do not overwrite)

@@ -111,3 +111,8 @@ Corrected in the follow-up source commit:
 
 These are source and deterministic policy changes only. Harness must run Gradle tests, strict lint,
 diff-check and then targeted runtime. No runtime BREAK or A2 acceptance PASS is claimed.
+
+
+Follow-up implementation commit: f43eb11eab618ed1e19f8b795c1663bc0c619331.
+The follow-up policy test and planner correction are pending Harness execution; the earlier PASS
+results in this report apply to the preceding commit only.
