@@ -1151,6 +1151,15 @@ public final class NavExecutor {
     private long ultimaFirmaDiagConversion = Long.MIN_VALUE;
     private long ultimoTickDiagConversion = Long.MIN_VALUE;
     private final NavDropExclusionPolicy exclusionesDescenso = new NavDropExclusionPolicy();
+    private final NavBreakExclusionPolicy exclusionesBreak = new NavBreakExclusionPolicy();
+    private final NavRecoveryController recoveryController = new NavRecoveryController();
+    /** Non-null only while the one-shot tactical backtrack is active; protects it from mission refreshes. */
+    private BlockPos recoveryBacktrackObjective;
+    /** One transient retry is allowed for the existing BREAK actuator cooldown. */
+    private BlockPos ultimoBreakFallidoStand;
+    private BlockPos ultimoBreakFallidoTarget;
+    private int fallosBreakSinResolucion;
+    private long nextBreakRetryAt;
     /** A2 Stage 7G · replanteos consumidos por rechazo de la guarda de ruta (acotado). */
     private int replanteosPorGuarda;
     private BlockPos nodoSeguido;
@@ -1413,7 +1422,7 @@ public final class NavExecutor {
         }
         NavPlanner.GlobalResult r = NavPlanner.planGlobal(mob.level(), mob, yo, mision,
                 RADIO_GLOBAL_DE_BUSQUEDA, VENTANA_VERTICAL_GLOBAL, MAX_EXPANSIONES_GLOBALES, policies, construidas,
-                exclusionesDescenso);
+                exclusionesDescenso, exclusionesBreak);
         globalExpansionesTotal += r.expansions();
         globalCache = r;
         globalMision = mision;
@@ -2058,6 +2067,133 @@ public final class NavExecutor {
                 + " state=" + state + " objective=" + objective);
     }
 
+    private boolean intentarBacktrackTrasFallo(long now, String reason) {
+        if (recoveryController.onNoProgress() != NavRecoveryController.Decision.BACKTRACK) return false;
+        BlockPos backtrack = recoveryController.chooseBacktrack(mob.blockPosition(), p ->
+                esPieValido(p) && NavObstruction.fits(mob.level(), mob, p));
+        if (backtrack == null || backtrack.distSqr(mob.blockPosition()) <= ARRIVE_DISTANCE_SQR) return false;
+
+        recoveryController.markBacktrack(backtrack);
+        mob.getNavigation().stop();
+        objective = backtrack.immutable();
+        recoveryBacktrackObjective = backtrack.immutable();
+        objetivoTactico = true;
+        objetivoPermiteConstruccion = false;
+        objetivoTransicionLocal = null;
+        plannedFrom = null;
+        globalCache = null;
+        globalMision = null;
+        globalDesde = null;
+        route = null;
+        routeIndex = 0;
+        nextPlanAt = now;
+        state = NavState.PLANNING;
+        if (NavTrace.on()) {
+            NavTrace.ev("NAV_BACKTRACK_SELECTED", "uuid=" + mob.getUUID()
+                    + " from=" + mob.blockPosition().toShortString()
+                    + " target=" + backtrack.toShortString()
+                    + " history=" + recoveryController.historySize()
+                    + " consecutiveFailures=" + recoveryController.consecutiveNoProgress()
+                    + " reason={" + reason + "}");
+        }
+        return true;
+    }
+
+    /** BREAK se ejecuta desde la celda física actual, nunca caminando hacia el bloque sólido. */
+    private void ejecutarBreakDesdePosicionDeAtaque(NavRoute.Node node, long now) {
+        BlockPos target = node.pos();
+        BlockPos stand = mob.blockPosition();
+        if (mob.level().getBlockState(target).isAir()) {
+            limpiarEstadoBreak();
+            resolverBreakVerificado(target, stand);
+            return;
+        }
+        if (!NavBreakActionPolicy.executable(mob.level(), mob, stand, target, policies, ALCANCE_DE_ACCION_SQR)) {
+            limpiarEstadoBreak();
+            excluirAristaBreakYReplanificar(stand, target, "precondicion de ataque invalida", now);
+            return;
+        }
+        if (ultimoBreakFallidoStand == null || !ultimoBreakFallidoStand.equals(stand)
+                || !target.equals(ultimoBreakFallidoTarget)) {
+            limpiarEstadoBreak();
+        }
+        if (now < nextBreakRetryAt) return;
+
+        mob.getNavigation().stop();
+        boolean invoked = recoveryAction != null
+                && recoveryAction.run(objective, target, NavRoute.Transition.BREAK);
+        boolean verified = mob.level().getBlockState(target).isAir();
+        if (verified) {
+            limpiarEstadoBreak();
+            exclusionesBreak.resolve(stand, target);
+            if (NavTrace.on()) {
+                NavTrace.ev("BREAK_EXECUTED_FROM_STAND", "uuid=" + mob.getUUID()
+                        + " stand=" + stand.toShortString() + " target=" + target.toShortString()
+                        + " invoked=" + invoked + " verified=true");
+            }
+            resolverBreakVerificado(target, stand);
+        } else if (!invoked && fallosBreakSinResolucion == 0) {
+            // romperNodoDeRuta shares the tunnel actuator's existing 40-tick inter-block cooldown.
+            // A false return can be transient, so wait once before blacklisting this stand->target edge.
+            ultimoBreakFallidoStand = stand.immutable();
+            ultimoBreakFallidoTarget = target.immutable();
+            fallosBreakSinResolucion = 1;
+            nextBreakRetryAt = now + RECOVERY_COOLDOWN_TICKS;
+            if (NavTrace.on()) {
+                NavTrace.ev("BREAK_ACTUATOR_RETRY_WAIT", "uuid=" + mob.getUUID()
+                        + " stand=" + stand.toShortString() + " target=" + target.toShortString()
+                        + " retryAt=" + nextBreakRetryAt + " reason=first_unverified_attempt");
+            }
+        } else {
+            limpiarEstadoBreak();
+            excluirAristaBreakYReplanificar(stand, target,
+                    "segunda accion no verificada (invoked=" + invoked + ")", now);
+        }
+    }
+
+    private void limpiarEstadoBreak() {
+        ultimoBreakFallidoStand = null;
+        ultimoBreakFallidoTarget = null;
+        fallosBreakSinResolucion = 0;
+        nextBreakRetryAt = 0L;
+    }
+
+    private void resolverBreakVerificado(BlockPos target, BlockPos stand) {
+        ultimaAccionDeRuta = target.toShortString() + ":BREAK-VERIFICADO desde " + stand.toShortString();
+        route = null;
+        routeIndex = 0;
+        plannedFrom = null;
+        lastRouteSignature = 0;
+        objetivoPermiteConstruccion = false;
+        objetivoTransicionLocal = null;
+        globalCache = null;
+        globalMision = null;
+        globalDesde = null;
+        state = NavState.PLANNING;
+        nextPlanAt = mob.level().getGameTime();
+    }
+
+    private void excluirAristaBreakYReplanificar(BlockPos stand, BlockPos target, String reason, long now) {
+        long fingerprint = NavPlanner.huellaBreak(mob.level(), stand, target);
+        exclusionesBreak.exclude(stand, target, fingerprint);
+        if (NavTrace.on()) {
+            NavTrace.ev("BREAK_EDGE_EXCLUDED", "uuid=" + mob.getUUID()
+                    + " stand=" + stand.toShortString() + " target=" + target.toShortString()
+                    + " fingerprint=" + fingerprint + " exclusions=" + exclusionesBreak.size()
+                    + " reason={" + reason + "}");
+        }
+        if (route != null) lastRouteSignature = route.signature();
+        route = null;
+        routeIndex = 0;
+        plannedFrom = null;
+        globalCache = null;
+        globalMision = null;
+        globalDesde = null;
+        nodoDeRecuperacion = null;
+        nextPlanAt = now;
+        state = NavState.PLANNING;
+    }
+
     private void traceRecoverDecision(String decision, String detail, long now) {
         if (!NavTrace.on()) {
             return;
@@ -2179,6 +2315,7 @@ public final class NavExecutor {
             return;
         }
         objetivoTactico = false;
+        recoveryBacktrackObjective = null;
         objective = misionFinal;
         objetivoPermiteConstruccion = false;
         plannedFrom = null;
@@ -2323,6 +2460,7 @@ public final class NavExecutor {
         // A2 Stage 7B · la MISION FINAL es la que fija el llamante y NO cambia con el escalonado. Una mision nueva
         // reinicia los contadores del escalonado (el reenvio del MISMO objetivo no toca el progreso).
         if (!immutable.equals(this.misionFinal)) {
+            recoveryBacktrackObjective = null;
             com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPUP] MISSIONCHANGE old={} new={} objective={}",
                     this.misionFinal, immutable, this.objective);
             if (this.objective != null) {
@@ -2339,6 +2477,9 @@ public final class NavExecutor {
                 this.nextPlanAt = 0L;
             }
             this.misionFinal = immutable;
+            recoveryController.reset();
+            exclusionesBreak.clear();
+            limpiarEstadoBreak();
             // A2 FASE 2 · un CAMBIO DE MISION justifica rearmar: se reinicia el presupuesto terminal. Pero una
             // etapa intermedia de la MISMA aldea NO es una mision nueva: `noReiniciarRearmes` conserva el tope.
             if (!noReiniciarRearmes) {
@@ -2369,6 +2510,12 @@ public final class NavExecutor {
         }
         objectiveSubmissions++;
         lastSubmissionTick = mob.level().getGameTime();
+        if (recoveryBacktrackObjective != null && !immutable.equals(misionFinal)) {
+            recoveryBacktrackObjective = null;
+        }
+        if (recoveryBacktrackObjective != null && objetivoTactico && immutable.equals(misionFinal)) {
+            return; // repeated goal refresh must not overwrite the one-shot backtrack target
+        }
         if (objective == null) {
             objective = immutable;
             objetivoPermiteConstruccion = false;
@@ -2409,6 +2556,7 @@ public final class NavExecutor {
         objective = null;
         objetivoPermiteConstruccion = false;
         objetivoTactico = false;
+        recoveryBacktrackObjective = null;
         rearmesTerminales = 0;
         nextRearmAt = 0L;
         motivoFalloTerminal = "-";
@@ -2421,6 +2569,9 @@ public final class NavExecutor {
         cadenaActivaFirma = 0; // una cadena nueva tras limpiar debe volver a enviarse
         // A2 Stage 7B · sin objetivo no hay mision final ni escalonado que conservar.
         misionFinal = null;
+        recoveryController.reset();
+        exclusionesBreak.clear();
+        limpiarEstadoBreak();
         escalonesDeObjetivo = 0;
         rearmadoPorCambioDeTerreno = false;
         cambioTerrenoPendienteRearme = false;
@@ -2499,6 +2650,7 @@ public final class NavExecutor {
         }
         if (d < mejorDistMision - PROGRESO_MINIMO_DE_OBJETIVO) {
             mejorDistMision = d;
+            recoveryController.onMissionProgress();
             escalonesDeObjetivo = 0;
         rearmadoPorCambioDeTerreno = false;
         cambioTerrenoPendienteRearme = false;
@@ -2706,6 +2858,10 @@ public final class NavExecutor {
         }
         registrarProgresoHaciaMision();
         recordCell(mob.blockPosition());
+        BlockPos physicalCell = mob.blockPosition();
+        if (esPieValido(physicalCell) && NavObstruction.fits(mob.level(), mob, physicalCell)) {
+            recoveryController.recordReached(physicalCell);
+        }
 
         double distSqr = mob.distanceToSqr(objective.getX() + 0.5D, objective.getY() + 0.5D,
                 objective.getZ() + 0.5D);
@@ -2739,6 +2895,7 @@ public final class NavExecutor {
                         + objective.toShortString()
                         + " -> se recalcula hacia " + (misionFinal == null ? "-" : misionFinal.toShortString());
                 objetivoTactico = false;
+                recoveryBacktrackObjective = null;
                 objective = NavArrivalPolicy.objetivoTrasLlegada(llegada, objective, misionFinal);
                 objetivoPermiteConstruccion = false;
                 plannedFrom = null;
@@ -3051,7 +3208,7 @@ public final class NavExecutor {
         }
         NavPlanner.Result result = NavPlanner.plan(mob.level(), mob, mob.blockPosition(), objective,
                 HORIZONTAL_RANGE, VERTICAL_RANGE, MAX_EXPANSIONS_PER_PLAN, policies, construidas,
-                exclusionesDescenso);
+                exclusionesDescenso, exclusionesBreak);
         plansRun++;
         expansionsLast = result.expansions();
         expansionsTotal += result.expansions();
@@ -3105,6 +3262,9 @@ public final class NavExecutor {
         budgetBackoff = MIN_BUDGET_BACKOFF_TICKS;
         budgetRetries = 0;
         if (result.route().isEmpty()) {
+            // A genuinely exhausted search is also a no-progress failure. Count it toward the
+            // same two-failure recovery sequence used by stale routes.
+            if (intentarBacktrackTrasFallo(now, "planificador sin ruta")) return;
             // Sin ruta REAL (se exploro sin agotar presupuesto): recuperacion acotada.
             routesRejected++;
             replans++;
@@ -3546,7 +3706,11 @@ public final class NavExecutor {
                 lastMoveTarget = node.pos().toShortString() + ":BUILD-VERIFICADO";
                 return;
             }
-            case BREAK, BRIDGE -> {
+            case BREAK -> {
+                ejecutarBreakDesdePosicionDeAtaque(node, now);
+                return;
+            }
+            case BRIDGE -> {
                 // A2 Stage 6E · FIX B · LA TRANSICION ACTUA SOBRE SU NODO, NO SOBRE LA MISION LEJANA.
                 // Medido en `a2n-20261016-170218`: la ruta empezaba en `0:BREAK@120,84,-9` y el ejecutor se limitaba
                 // a pasar a RECOVERING; la recuperacion solo recibia el OBJETIVO, asi que ese nodo NUNCA se rompia y
@@ -3733,6 +3897,8 @@ public final class NavExecutor {
                     + " ticksSinAvance=" + ticksSinAvance
                     + " aristaValida=" + esAristaValidaHacia(node)
                     + " pieDestino=" + esPieValido(node.pos());
+            // First failure replans from the real position; the second may backtrack once.
+            if (intentarBacktrackTrasFallo(now, "ruta sin avance")) return;
             // La firma vieja queda registrada para que el planificador no acepte la misma ruta ya fallida.
             lastRouteSignature = route.signature();
             route = null;
@@ -3762,7 +3928,9 @@ public final class NavExecutor {
             }
             case BUILD -> !mob.level().getBlockState(c).isAir()
                     || (mob.level().getBlockState(c).isAir() && mob.level().getBlockState(c.above()).isAir());
-            case BREAK, BRIDGE -> true;
+            case BREAK -> NavBreakActionPolicy.executable(mob.level(), mob, mob.blockPosition(), c, policies,
+                    ALCANCE_DE_ACCION_SQR);
+            case BRIDGE -> true;
             default -> esPieValido(c);
         };
     }
@@ -4166,6 +4334,7 @@ public final class NavExecutor {
 
     /** Se llama cuando algo externo cambió el terreno: invalida la ruta en curso. */
     public void terrainChanged() {
+        recoveryController.onVerifiedProgress();
         route = null;
         plannedFrom = null;
         // A2 REMEDIACIÓN 2 · una ruta global cacheada tambien queda obsoleta si el terreno cambio.

@@ -74,16 +74,20 @@ git diff --check                       PASS
 ```
 
 The test suite is pure-Java policy coverage because the test source set has no Minecraft classpath.
-Full production-planner integration (mock `CollisionGetter`/`Mob`) was not added in this timebox; no
-claim is made that every planner geometry path is covered.
+The merged build adds the main Minecraft classpath to `sourceSets.test` so the Phase-19 policy tests
+using `BlockPos` compile and run. Full production-planner integration (mock `CollisionGetter`/`Mob`)
+was not added in this timebox; no claim is made that every planner geometry path is covered.
 
 ## Runtime
 
-Focused run **`a2n-20261116-101718`** (seed 12345, FaseA 3000, FaseB 6000, budgets 900/8000):
+Focused run **`a2n-20261116-101718`** (pre-merge local contract) and **`a2n-20261116-103331`**
+(post-merge with the remote Phase-19 recovery/execution fixes), both seed 12345, FaseA 3000,
+FaseB 6000, budgets 900/8000:
 
 - 8/8 spawn.
 - 6/8 perimeter.
-- **5/8 strict `DENTRO-PARED`:** idx1 513, idx2 668, idx3 1063, idx5 703, idx6 650.
+- **5/8 strict `DENTRO-PARED`:** idx1 512/513, idx2 667/668, idx3 1063/1064, idx5 702/703,
+  idx6 649/650.
 - idx4 perimeter-only; idx7/idx8 outside.
 - C4 **PASS** `[1,0,0]`, 12/12 resumed.
 - No route `BREAK-DELEGADO` event was present in the captured log; the run does not prove a
