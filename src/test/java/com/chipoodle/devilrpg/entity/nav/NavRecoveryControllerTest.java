@@ -16,6 +16,10 @@ public final class NavRecoveryControllerTest {
                 controller.onNoProgress() == NavRecoveryController.Decision.BACKTRACK);
         check("chooses last physically reached cell, not current",
                 b.equals(controller.chooseBacktrack(c, p -> true)));
+        check("skips adjacent history and selects a useful older cell",
+                a.equals(controller.chooseBacktrack(c, 2.25D, p -> true)));
+        check("skips nearby cells even when the newest cell is valid",
+                a.equals(controller.chooseBacktrack(c, 2.25D, p -> p.equals(a) || p.equals(b))));
         controller.markBacktrack(b);
         check("does not repeatedly backtrack in same failure cycle",
                 controller.onNoProgress() == NavRecoveryController.Decision.REPLAN);
@@ -27,7 +31,7 @@ public final class NavRecoveryControllerTest {
                         && controller.onNoProgress() == NavRecoveryController.Decision.BACKTRACK);
         controller.reset();
         check("reset clears history", controller.historySize() == 0);
-        System.out.println("NAV_RECOVERY_CONTROLLER_TEST: OK (7 assertions)");
+        System.out.println("NAV_RECOVERY_CONTROLLER_TEST: OK (9 assertions)");
     }
     private static void check(String name, boolean value) {
         if (!value) throw new AssertionError(name);
