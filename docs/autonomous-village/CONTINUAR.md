@@ -1,6 +1,6 @@
 # Continuación activa — 2026-11-16 (Phase19 BREAK)
 
-Checkpoint code/documentation HEAD: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; fetch the live branch head before synchronization.
+Code checkpoint SHA: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; subsequent handoff commits are documentation-only. Always fetch the live branch HEAD before synchronization.
 
 ## 2026-11-16 — Phase19 BREAK runtime PASS + next independent fixtures
 
