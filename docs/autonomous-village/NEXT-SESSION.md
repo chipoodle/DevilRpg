@@ -43,7 +43,7 @@ Read first, in order:
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Code implementation awaiting validation: `600b78b4f628cadf894be2cb38015d0c4ffb512d` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
+- Code implementation awaiting validation: `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
 - Latest technical report: `2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`. The preceding `PHASE19-HARNESS-VALIDATION.md` records the prior `ecdfaff6` validation and remains historical evidence, not validation of this new code.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
@@ -89,7 +89,7 @@ Read first, in order:
 ## Immediate work
 
 1. Harness: fetch the current branch HEAD and verify it contains code checkpoint
-   `600b78b4f628cadf894be2cb38015d0c4ffb512d`. Preserve all local-only artifacts.
+   `5b6f58fbf59f3abbb0877c1a4c9e58fbd1677a7a`. Preserve all local-only artifacts.
 2. Run on the exact fetched tree:
    ```powershell
    .\gradlew.bat test
