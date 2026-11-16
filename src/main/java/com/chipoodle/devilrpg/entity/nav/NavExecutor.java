@@ -1998,6 +1998,56 @@ public final class NavExecutor {
     private String ultimoActuatorDiag = "-";
     private long ultimoActuatorDiagTick = Long.MIN_VALUE;
 
+    private String ultimoPathTransaction = "-";
+    private long ultimoPathTransactionTick = Long.MIN_VALUE;
+
+    /** Diagnostic only: re-run path creation without installing it, for a one-node non-reaching path. */
+    private void tracePathTransaction(BlockPos target, long now) {
+        if (!NavTrace.on()) {
+            return;
+        }
+        String key = target.toShortString();
+        if (key.equals(ultimoPathTransaction) && now - ultimoPathTransactionTick < 200L) {
+            return;
+        }
+        net.minecraft.world.level.pathfinder.Path current = mob.getNavigation().getPath();
+        if (current == null || current.getNodeCount() > 1) {
+            return;
+        }
+        ultimoPathTransaction = key;
+        ultimoPathTransactionTick = now;
+        String nodes = "-";
+        try {
+            net.minecraft.world.level.pathfinder.Path retry = mob.getNavigation().createPath(target, 1);
+            if (retry != null) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < retry.getNodeCount(); i++) {
+                    var n = retry.getNode(i);
+                    if (n != null) {
+                        if (i > 0) sb.append('|');
+                        sb.append(n.asBlockPos().toShortString()).append(':').append(n.type);
+                    }
+                }
+                nodes = "retryNull=false retryCanReach=" + retry.canReach()
+                        + " retryNodes=" + retry.getNodeCount() + " retryPath=" + sb;
+            } else {
+                nodes = "retryNull=true";
+            }
+        } catch (RuntimeException e) {
+            nodes = "retryException=" + e.getClass().getSimpleName() + ":" + e.getMessage();
+        }
+        NavTrace.ev("PATH_TRANSACTION", "uuid=" + mob.getUUID() + " tick=" + now
+                + " requested=" + target.toShortString()
+                + " start=" + mob.blockPosition().toShortString()
+                + " bbox=" + mob.getBoundingBox()
+                + " currentNodes=" + current.getNodeCount()
+                + " currentCanReach=" + current.canReach()
+                + " currentDone=" + mob.getNavigation().isDone()
+                + " evaluator=" + mob.getNavigation().getNodeEvaluator().getClass().getSimpleName()
+                + " " + nodes
+                + " state=" + state + " objective=" + objective);
+    }
+
     private void traceRecoverDecision(String decision, String detail, long now) {
         if (!NavTrace.on()) {
             return;
@@ -3524,6 +3574,7 @@ public final class NavExecutor {
                     mob.getNavigation().moveTo(node.pos().getX() + 0.5D, node.pos().getY(),
                             node.pos().getZ() + 0.5D, 1.0D);
                     traceActuatorCommand("BREAK_APPROACH", node.pos(), mob.level().getGameTime());
+                    tracePathTransaction(node.pos(), mob.level().getGameTime());
                     trazarComandoMovimiento(node, "ACERCARSE-ACCION", node.pos().getX() + 0.5D,
                             node.pos().getY(), node.pos().getZ() + 0.5D, 1.0D);
                     moveSubmissions++;

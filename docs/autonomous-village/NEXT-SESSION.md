@@ -21,11 +21,12 @@ Read first, in order:
 17. `docs/autonomous-village/2026-11-16-PHASE13-RECOVERY-ACTUATOR-FORENSICS.md`
 18. `docs/autonomous-village/2026-11-16-PHASE14-MOVEMENT-C4-FORENSICS.md`
 19. `docs/autonomous-village/2026-11-16-PHASE15-NAVIGATION-ROOT-CAUSE-FORENSICS.md`
+20. `docs/autonomous-village/2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`
 
 ## Verified baseline
 
 - Branch: `feature/autonomous-village`
-- Latest substantive report: `2026-11-16-PHASE15-NAVIGATION-ROOT-CAUSE-FORENSICS.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
+- Latest substantive report: `2026-11-16-PHASE16-PATHFINDER-MOVEMENT-FORENSICS.md`. Always verify `git rev-parse HEAD` and `origin/feature/autonomous-village`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -45,20 +46,19 @@ Read first, in order:
 - Phase13 diagnostic `024118`: 6/8 perimeter, 4/8 strict; C4 **FAIL** (`jobSite=[0,0,0]`, 12/12 resumed).
 - Phase14 diagnostic `035911`: 6/8 perimeter, 4/8 strict; C4 **PASS** `[1,0,0]`.
 - Phase15 diagnostic `092800`: 5/8 perimeter, 4/8 strict; C4 **PASS** `[2,0,0]`.
-  - IDX7: exact zero displacement, bbox has 0 solid shapes, path null/FAILED in this run.
-  - IDX8: exact zero displacement, one-node `canReach=false` path is done; origin not captured.
-  - `[0,0,0]` = zero Brain `JOB_SITE` memories, not coordinate `(0,0,0)`.
+- Phase16 diagnostic `094243`: 5/8 perimeter, 3/8 strict; C4 **PASS** `[1,0,0]`.
+  - IDX8 transaction: requested `746,65,538` from start `747,63,538`; pathfinder returned one node at
+    `747,63,538:WALKABLE` with `canReach=false` — no target node.
+  - IDX7 reachable-path state did not reproduce; ended FAILED with a one-node non-reaching path.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Instrument the pathfinder transaction for IDX8: requested target, start/target nodes, evaluator,
-   accuracy, returned nodes and caller.
-2. For IDX7, capture per-tick movement input and `PathNavigation.tick()`/`followThePath` execution while
-   a reachable path exists; do not infer collision from static position.
-3. C4 contract decision (zero Brain JOB_SITE vs custom workstation) requires separate authorization;
-   do not alter `assignmentsClean`.
+1. Decompose IDX8 target-node rejection: block state, support, walkability and evaluator result at
+   `746,65,538` / `745,66,538` with a read-only query.
+2. Reproduce the specific IDX7 reachable-path state; otherwise preserve BLOCKED.
+3. C4 contract decision (zero Brain JOB_SITE vs custom workstation) still requires separate authorization.
 4. IDX5 6164 boundary remains UNKNOWN.
 
 ## Worlds (preserve; do not overwrite)
