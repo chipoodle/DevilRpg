@@ -26,7 +26,9 @@ public final class NavBreakRoutePolicyTest {
         check("wrong final stand rejected", NavBreakRoutePolicy.attachFinalBreak(original, goal, target) == null);
         check("same-cell action rejected", NavBreakRoutePolicy.attachFinalBreak(original, stand, stand) == null);
         check("null action rejected", NavBreakRoutePolicy.attachFinalBreak(original, stand, null) == null);
-        System.out.println("NAV_BREAK_ROUTE_POLICY_TEST: OK (10 assertions)");
+        check("route with a different destination rejected",
+                NavBreakRoutePolicy.attachFinalBreak(new NavRoute(original.nodes(), goal), stand, target) == null);
+        System.out.println("NAV_BREAK_ROUTE_POLICY_TEST: OK (11 assertions)");
     }
 
     private static void check(String name, boolean value) {
