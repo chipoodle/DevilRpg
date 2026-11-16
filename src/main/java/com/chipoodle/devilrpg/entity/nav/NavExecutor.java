@@ -2067,6 +2067,38 @@ public final class NavExecutor {
                 + " state=" + state + " objective=" + objective);
     }
 
+    private boolean intentarBacktrackTrasFallo(long now, String reason) {
+        if (recoveryController.onNoProgress() != NavRecoveryController.Decision.BACKTRACK) return false;
+        BlockPos backtrack = recoveryController.chooseBacktrack(mob.blockPosition(), p ->
+                esPieValido(p) && NavObstruction.fits(mob.level(), mob, p));
+        if (backtrack == null || backtrack.distSqr(mob.blockPosition()) <= ARRIVE_DISTANCE_SQR) return false;
+
+        recoveryController.markBacktrack(backtrack);
+        mob.getNavigation().stop();
+        objective = backtrack.immutable();
+        recoveryBacktrackObjective = backtrack.immutable();
+        objetivoTactico = true;
+        objetivoPermiteConstruccion = false;
+        objetivoTransicionLocal = null;
+        plannedFrom = null;
+        globalCache = null;
+        globalMision = null;
+        globalDesde = null;
+        route = null;
+        routeIndex = 0;
+        nextPlanAt = now;
+        state = NavState.PLANNING;
+        if (NavTrace.on()) {
+            NavTrace.ev("NAV_BACKTRACK_SELECTED", "uuid=" + mob.getUUID()
+                    + " from=" + mob.blockPosition().toShortString()
+                    + " target=" + backtrack.toShortString()
+                    + " history=" + recoveryController.historySize()
+                    + " consecutiveFailures=" + recoveryController.consecutiveNoProgress()
+                    + " reason={" + reason + "}");
+        }
+        return true;
+    }
+
     /** BREAK se ejecuta desde la celda física actual, nunca caminando hacia el bloque sólido. */
     private void ejecutarBreakDesdePosicionDeAtaque(NavRoute.Node node, long now) {
         BlockPos target = node.pos();
@@ -3228,6 +3260,9 @@ public final class NavExecutor {
         budgetBackoff = MIN_BUDGET_BACKOFF_TICKS;
         budgetRetries = 0;
         if (result.route().isEmpty()) {
+            // A genuinely exhausted search is also a no-progress failure. Count it toward the
+            // same two-failure recovery sequence used by stale routes.
+            if (intentarBacktrackTrasFallo(now, "planificador sin ruta")) return;
             // Sin ruta REAL (se exploro sin agotar presupuesto): recuperacion acotada.
             routesRejected++;
             replans++;
@@ -3821,38 +3856,8 @@ public final class NavExecutor {
                     + " ticksSinAvance=" + ticksSinAvance
                     + " aristaValida=" + esAristaValidaHacia(node)
                     + " pieDestino=" + esPieValido(node.pos());
-            // First failure replans from the real position. A second consecutive no-progress
-            // failure may backtrack once to a previously reached cell that is still valid.
-            NavRecoveryController.Decision recoveryDecision = recoveryController.onNoProgress();
-            if (recoveryDecision == NavRecoveryController.Decision.BACKTRACK) {
-                BlockPos backtrack = recoveryController.chooseBacktrack(mob.blockPosition(), p ->
-                        esPieValido(p) && NavObstruction.fits(mob.level(), mob, p));
-                if (backtrack != null && backtrack.distSqr(mob.blockPosition()) > ARRIVE_DISTANCE_SQR) {
-                    recoveryController.markBacktrack(backtrack);
-                    mob.getNavigation().stop();
-                    objective = backtrack.immutable();
-                    recoveryBacktrackObjective = backtrack.immutable();
-                    objetivoTactico = true;
-                    objetivoPermiteConstruccion = false;
-                    objetivoTransicionLocal = null;
-                    plannedFrom = null;
-                    globalCache = null;
-                    globalMision = null;
-                    globalDesde = null;
-                    route = null;
-                    routeIndex = 0;
-                    nextPlanAt = now;
-                    state = NavState.PLANNING;
-                    if (NavTrace.on()) {
-                        NavTrace.ev("NAV_BACKTRACK_SELECTED", "uuid=" + mob.getUUID()
-                                + " from=" + mob.blockPosition().toShortString()
-                                + " target=" + backtrack.toShortString()
-                                + " history=" + recoveryController.historySize()
-                                + " consecutiveFailures=" + recoveryController.consecutiveNoProgress());
-                    }
-                    return;
-                }
-            }
+            // First failure replans from the real position; the second may backtrack once.
+            if (intentarBacktrackTrasFallo(now, "ruta sin avance")) return;
             // La firma vieja queda registrada para que el planificador no acepte la misma ruta ya fallida.
             lastRouteSignature = route.signature();
             route = null;

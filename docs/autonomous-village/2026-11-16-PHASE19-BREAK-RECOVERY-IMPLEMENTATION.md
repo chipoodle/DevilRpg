@@ -45,3 +45,6 @@ Planner validates the predecessor at its tracked feet Y; executor validates the 
 
 
 - The existing BREAK actuator has a 40-tick inter-block cooldown. A false return is therefore retried once after the existing 40-tick recovery cooldown; only a second unverified attempt excludes the unchanged stand->target edge. A different edge resets this transient retry state immediately.
+
+
+- The same two-consecutive-failure backtrack gate is also fed by a fully exhausted no-route search (not by a hit-budget/inconclusive search), so recovery is not limited to cases where vanilla had already produced a stale route.
