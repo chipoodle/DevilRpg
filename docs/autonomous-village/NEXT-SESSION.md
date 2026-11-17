@@ -93,6 +93,7 @@ Read first, in order:
 34. `docs/autonomous-village/2026-11-16-PHASE19-EXCLUSION-BACKTRACK-RUNTIME.md`
 35. `docs/autonomous-village/2026-11-16-PHASE19-BACKTRACK-EXACT-ARRIVAL-FAIL.md`
 36. `docs/autonomous-village/2026-11-16-PHASE19-NAV-BACKTRACK-EXACT-ARRIVAL-RESULT.md`
+37. `docs/autonomous-village/2026-11-16-A2-STRICT-GATE-RUN1-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -107,7 +108,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-PHASE19-NAV-BACKTRACK-EXACT-ARRIVAL-RESULT.md`. Backtrack exact arrival PASS on `fb93541e`.
+- Latest technical report: `2026-11-16-A2-STRICT-GATE-RUN1-FAIL.md`. A2 Run 1 FAIL: 5/8 strict; gate remains OPEN.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -152,18 +153,23 @@ Read first, in order:
 - `nav-backtrack` `a2n-20261116-185434` on HEAD `fb93541e`: **COMPLETO**. Selection target
   `937,184,608`, adjacent nudge from 938, exact physical return, mission resumed at tick 103,
   history 6, max step 0.114, one backtrack, no teleport.
-- BREAK success/retry, BREAK_EDGE_EXCLUDED and NAV_BACKTRACK fixtures are individually validated.
+- A2 gate Run 1 `a2n-20261116-190555` on `2d47d628`: **FAIL**. 8/8 spawn, 5/8 perimeter, 5/8 strict
+  (idx1 t558, idx2 t667, idx3 t1062, idx5 t702, idx6 t649); idx4/7/8 outside and alive.
+  - idx8 NAV_FAIL t3411: no valid local waypoint after world change; global budget 8000/8000; 4/4 rearms.
+  - idx7 NAV_FAIL t4209: no-progress budget 10/10 toward `703,68,457` BUILD.
+  - idx4 NAV_FAIL t5147: replans 8/8, 24 DROP rejections (landing above), global budget exhausted.
+- Consecutive 8/8 runs: **0**. C4 in Run 1: PASS `[2,0,0]`.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Move to the separate A2 focused gate: five consecutive 8/8 strict `DENTRO-PARED` runs in
-   independent disposable worlds. Do not count perimeter-only arrivals.
-2. Keep BREAK success/retry, BREAK_EDGE_EXCLUDED and NAV_BACKTRACK fixtures unchanged as regression
-   evidence.
-3. C4 contract unchanged; save/reload remains OPEN.
-4. Full 12k only after the five-run A2 gate. A2 remains OPEN.
+1. ChatGPT: address the three reproduced A2 terminal modes separately — idx8 local-waypoint
+   invalidation/budget, idx7 BUILD no-progress budget, idx4 repeated DROP rejection + replan exhaustion.
+   Do not weaken entry criteria, ranges, budgets or collision.
+2. After a new SHA, Harness reruns A2 Run 1; only 8/8 strict permits Run 2 and the five-run gate.
+3. Keep BREAK/backtrack fixtures unchanged as regression evidence.
+4. C4 save/reload remains OPEN; full 12k only after five consecutive 8/8 strict. A2 OPEN.
 
 ## Worlds (preserve; do not overwrite)
 

@@ -472,3 +472,10 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - `nav-backtrack` `a2n-20261116-185434`: **COMPLETO**. Selected 937, adjacent nudge from 938, physical return, mission resumed tick103, history6, maxStep0.114, one backtrack, no teleport.
 - BREAK success/retry, BREAK_EDGE_EXCLUDED and NAV_BACKTRACK fixtures individually validated. A2 remains OPEN; no 12k.
 - Report: docs/autonomous-village/2026-11-16-PHASE19-NAV-BACKTRACK-EXACT-ARRIVAL-RESULT.md.
+
+## 2026-11-16 — A2 strict siege gate run 1
+
+- Baseline SHA `2d47d628` (already current). Run `a2n-20261116-190555`: 8/8 spawn, 5/8 perimeter, 5/8 strict, C4 PASS [2,0,0].
+- Strict entrants: idx1 558, idx2 667, idx3 1062, idx5 702, idx6 649. Non-entrants idx4/7/8, all alive.
+- Terminal failures: idx8 no valid local waypoint/budget (t3411), idx7 BUILD no-progress budget (t4209), idx4 replans 8/8 + DROP rejections (t5147).
+- Gate 0/5 consecutive; full 12k not run. Report: docs/autonomous-village/2026-11-16-A2-STRICT-GATE-RUN1-FAIL.md.
