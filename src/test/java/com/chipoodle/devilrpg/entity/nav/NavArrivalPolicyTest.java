@@ -46,6 +46,14 @@ public final class NavArrivalPolicyTest {
                 NavArrivalPolicy.proximityArrivalAllowed(true, true));
         comprobar("proximidad generica conserva objetivos normales",
                 NavArrivalPolicy.proximityArrivalAllowed(false, false));
+
+        // A Phase19 backtrack is complete only at the exact selected historical block cell.
+        comprobar("backtrack adyacente dentro de tolerancia NO se consume",
+                !NavArrivalPolicy.backtrackArrivalAllowed(true, false));
+        comprobar("backtrack se consume al ocupar la celda exacta",
+                NavArrivalPolicy.backtrackArrivalAllowed(true, true));
+        comprobar("objetivo no-backtrack conserva llegada generica",
+                NavArrivalPolicy.backtrackArrivalAllowed(false, false));
         comprobar("escalon pendiente adyacente NO se considera alcanzado",
                 !NavArrivalPolicy.waypointReached(false, false, true, true, false, false));
         comprobar("escalon pendiente fuera de tolerancia SI se reconoce si esta ocupado",
