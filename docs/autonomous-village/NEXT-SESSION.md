@@ -115,6 +115,7 @@ Read first, in order:
 42. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md`
 43. `docs/autonomous-village/2026-11-16-A2-RUN1-NON-DESCENDING-DROP-FAIL.md`
 44. `docs/autonomous-village/2026-11-16-A2-RUN1-FIRST-NODE-DROP-FAIL.md`
+45. `docs/autonomous-village/2026-11-16-A2-RUN1-VERTICAL-TAKEOFF-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -129,7 +130,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-A2-RUN1-FIRST-NODE-DROP-FAIL.md`. Origin resolves and command emits, but vertical ascent y93→y96 is not executable.
+- Latest technical report: `2026-11-16-A2-RUN1-VERTICAL-TAKEOFF-FAIL.md`. Recovery route accepted (STEP_UP only) but stalls at y104 vs takeoff y107; later plans 901/900 empty.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -215,16 +216,21 @@ Read first, in order:
   IDX4 resolves origin `589,96,522` from live `589,93,522` and emits `ACERCARSE-ORIGEN-DROP`, but
   PathNavigation returns a one-node path and the mob does not ascend; physical origin not reached.
 - IDX7 BUILD/900-expansion and IDX8 local-waypoint failures unchanged.
-- A2 focused remains **OPEN**; full 12k not run.
+- Vertical recovery fix at `38a4b52e`: static PASS (NAV_DROP_TAKEOFF 16). A2 Run 1
+  `a2n-20261116-225217`: **FAIL**, 5/8 strict, 5/8 perimeter, C4 PASS `[1,0,0]`.
+  IDX4 accepted a len1 STEP_UP recovery route but stalled at `588,104,521` vs takeoff `588,107,520`;
+  later plans returned empty with `exp=901/900`; final construction exhausted.
+- IDX7/IDX8 unchanged; A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Harness validates the bounded vertical take-off recovery on the exact current branch HEAD:
-   static checks first, then A2 Run 1 only. The executor now plans from the mob's live cell to the
-   exact DROP take-off using the existing NavPlanner. Only complete WALK/STEP_UP/JUMP_UP routes
-   are accepted; DROP/BREAK/BRIDGE/BUILD are rejected. The original DROP route is suspended and
-   restored only after physical take-off occupancy with support and fit.
+1. ChatGPT: make the accepted vertical recovery route physically executable (nudge/step to the next
+   STEP_UP waypoint) and prevent empty recovery plans from consuming 901/900. Preserve height,
+   support and collision guards.
+2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
+3. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
+   Keep C4 save/reload OPEN.
 2. Capture recovery plan summary/route, each exact physical waypoint arrival, support/fit,
    JUMPUP outcome if used, `DROP_TAKEOFF_RECOVERY_REACHED`, restored route cursor, and final
    physical DROP landing. If route is rejected or stalls, confirm fail-closed replanning from live position.

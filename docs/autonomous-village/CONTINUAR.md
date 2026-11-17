@@ -610,3 +610,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
   of the original DROP cursor, and final physical landing.
 - IDX7/IDX8 remain independent and untouched. No Run 2 unless 8/8 strict; no full 12k until five
   consecutive 8/8 strict runs. A2 OPEN; C4 save/reload OPEN.
+
+## 2026-11-16 — A2 Run 1 vertical take-off recovery
+
+- Synced `b6b398a8` -> `38a4b52e` by fast-forward.
+- Static PASS incl NAV_DROP_TAKEOFF_POLICY_TEST 16, NAV_ROUTE_NODE 6, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261116-225217`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 accepted STEP_UP-only recovery route but stalled at 588,104,521 vs takeoff588,107,520; later plans empty at 901/900; construction exhausted. IDX7/IDX8 unchanged.
+- Report: docs/autonomous-village/2026-11-16-A2-RUN1-VERTICAL-TAKEOFF-FAIL.md. A2 OPEN; no 12k.
