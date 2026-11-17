@@ -197,6 +197,11 @@ public final class NavExecutor {
     private boolean enCadenaDeEtapas;
     private boolean noReiniciarRearmes;
     private BlockPos plannedFrom;
+    /** Suspended main route while a physically validated path returns to a DROP take-off cell. */
+    private NavRoute rutaDropSuspendida;
+    private int indiceRutaDropSuspendida;
+    private BlockPos objetivoRecuperacionOrigenDrop;
+    private boolean recuperacionOrigenDropActiva;
     private int lastRouteSignature;
     private int replans;
     private int recoveryActions;
@@ -2517,6 +2522,7 @@ public final class NavExecutor {
         // A2 Stage 7B · la MISION FINAL es la que fija el llamante y NO cambia con el escalonado. Una mision nueva
         // reinicia los contadores del escalonado (el reenvio del MISMO objetivo no toca el progreso).
         if (!immutable.equals(this.misionFinal)) {
+            limpiarRecuperacionOrigenDrop();
             recoveryBacktrackObjective = null;
             com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPUP] MISSIONCHANGE old={} new={} objective={}",
                     this.misionFinal, immutable, this.objective);
@@ -2899,9 +2905,13 @@ public final class NavExecutor {
             saltosTimeout++;
         }
         estadoSalto = "ABORT:" + motivo;
+        int suspendedSignature = recuperacionOrigenDropActiva && rutaDropSuspendida != null
+                ? rutaDropSuspendida.signature() : (int) saltoFirmaRuta;
+        limpiarRecuperacionOrigenDrop();
         route = null;
         routeIndex = 0;
-        lastRouteSignature = (int) saltoFirmaRuta;
+        plannedFrom = null;
+        lastRouteSignature = suspendedSignature;
         globalCache = null;
         globalDesde = null;
         state = NavState.PLANNING;
@@ -3451,6 +3461,12 @@ public final class NavExecutor {
      * suelo firme debajo. Así no se puede "dar por bajado" un escalón por estar cerca de él en el aire.
      */
     private boolean nodoAlcanzado(final NavRoute.Node node) {
+        if (recuperacionOrigenDropActiva) {
+            BlockPos live = mob.blockPosition();
+            return live.equals(node.pos()) && esPieValido(live)
+                    && NavObstruction.hasSupport(mob.level(), live)
+                    && NavObstruction.fits(mob.level(), mob, live);
+        }
         // BREAK is an action, not a proximity waypoint. If proximity advanced this node,
         // the actuator would be skipped before it could approach the validated stand and act.
         if (node.transition() == NavRoute.Transition.BREAK) {
@@ -3609,6 +3625,105 @@ public final class NavExecutor {
                     + " speed=" + speed);
         }
     }
+    /**
+     * Plans and executes a bounded, non-destructive route back to the take-off of the active DROP.
+     * Vanilla PathNavigation may return a completed one-node path when the target is vertically
+     * above the mob in the same column. In that case, use the same validated A* movement graph as
+     * normal navigation, temporarily suspending (not discarding) the DROP route.
+     */
+    private boolean iniciarRecuperacionFisicaOrigenDrop(BlockPos takeoff, long now) {
+        if (recuperacionOrigenDropActiva) {
+            return takeoff.equals(objetivoRecuperacionOrigenDrop);
+        }
+        BlockPos start = mob.blockPosition();
+        NavPlanner.Result result = NavPlanner.plan(mob.level(), mob, start, takeoff,
+                12, VERTICAL_RANGE, MAX_EXPANSIONS_PER_PLAN, policies, construidas,
+                exclusionesDescenso, exclusionesBreak);
+        boolean safe = !result.hitBudget()
+                && NavDropTransitionPolicy.rutaAscensoOrigenSegura(result.route(), takeoff);
+        if (!safe) {
+            int rejectedSignature = route == null ? 0 : route.signature();
+            if (NavTrace.on()) {
+                NavTrace.ev("DROP_TAKEOFF_RECOVERY_PLAN_REJECTED", "uuid=" + mob.getUUID()
+                        + " from=" + start.toShortString() + " takeoff=" + takeoff.toShortString()
+                        + " hitBudget=" + result.hitBudget() + " route=" + result.route().describe()
+                        + " summary={" + result.summary() + "}");
+            }
+            // Do not keep asking vanilla to move vertically in place. Invalidate this route and
+            // let the normal planner search from the mob's actual physical cell for another way.
+            route = null;
+            routeIndex = 0;
+            plannedFrom = null;
+            lastRouteSignature = rejectedSignature;
+            globalCache = null;
+            globalMision = null;
+            globalDesde = null;
+            state = NavState.PLANNING;
+            nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+            return false;
+        }
+
+        rutaDropSuspendida = route;
+        indiceRutaDropSuspendida = routeIndex;
+        objetivoRecuperacionOrigenDrop = takeoff.immutable();
+        route = result.route();
+        routeIndex = 0;
+        recuperacionOrigenDropActiva = true;
+        state = NavState.TRAVERSING;
+        if (NavTrace.on()) {
+            NavTrace.ev("DROP_TAKEOFF_RECOVERY_ROUTE_ACCEPTED", "uuid=" + mob.getUUID()
+                    + " from=" + start.toShortString() + " takeoff=" + takeoff.toShortString()
+                    + " suspendedIndex=" + indiceRutaDropSuspendida
+                    + " recoveryRoute=" + route.describe()
+                    + " summary={" + result.summary() + "}");
+        }
+        return true;
+    }
+
+    private void limpiarRecuperacionOrigenDrop() {
+        rutaDropSuspendida = null;
+        indiceRutaDropSuspendida = 0;
+        objetivoRecuperacionOrigenDrop = null;
+        recuperacionOrigenDropActiva = false;
+    }
+
+    private void finalizarRecuperacionOrigenDrop(long now) {
+        BlockPos takeoff = objetivoRecuperacionOrigenDrop;
+        NavRoute suspended = rutaDropSuspendida;
+        int suspendedIndex = indiceRutaDropSuspendida;
+        boolean reached = takeoff != null && NavDropTransitionPolicy.origenFisicamenteAlcanzado(
+                mob.blockPosition().getX(), mob.blockPosition().getY(), mob.blockPosition().getZ(),
+                takeoff.getX(), takeoff.getY(), takeoff.getZ())
+                && esPieValido(mob.blockPosition())
+                && NavObstruction.hasSupport(mob.level(), mob.blockPosition())
+                && NavObstruction.fits(mob.level(), mob, mob.blockPosition());
+        if (NavTrace.on()) {
+            NavTrace.ev(reached ? "DROP_TAKEOFF_RECOVERY_REACHED" : "DROP_TAKEOFF_RECOVERY_INCOMPLETE",
+                    "uuid=" + mob.getUUID() + " takeoff=" + takeoff
+                            + " live=" + mob.blockPosition().toShortString()
+                            + " routeIndex=" + routeIndex + " route=" + (route == null ? "-" : route.describe()));
+        }
+        if (reached && suspended != null) {
+            route = suspended;
+            routeIndex = suspendedIndex;
+            limpiarRecuperacionOrigenDrop();
+            state = NavState.TRAVERSING;
+            return;
+        }
+
+        int rejectedSignature = suspended == null ? 0 : suspended.signature();
+        limpiarRecuperacionOrigenDrop();
+        route = null;
+        routeIndex = 0;
+        plannedFrom = null;
+        lastRouteSignature = rejectedSignature;
+        globalCache = null;
+        globalMision = null;
+        globalDesde = null;
+        state = NavState.PLANNING;
+        nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+    }
+
     private void traverse(long now) {
         if (route == null) {
             state = NavState.PLANNING;
@@ -3632,6 +3747,10 @@ public final class NavExecutor {
             node = route.currentNode(routeIndex);
         }
         if (node == null) {
+            if (recuperacionOrigenDropActiva) {
+                finalizarRecuperacionOrigenDrop(now);
+                return;
+            }
             // Ruta agotada sin llegar: si el destino no está cerca, hay que replanificar.
             // A2 Stage 7F · PROGRESO VERIFICADO AL CERRAR UN TRAMO. Antes el tope de escalones (24) se agotaba
             // aunque el ente subiera el escape entero (medido en `a2n-20261017-125658`: dos objetivos alcanzados y
@@ -3696,6 +3815,9 @@ public final class NavExecutor {
             }
             case STEP_UP -> {
                 mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 1.0D);
+                if (recuperacionOrigenDropActiva) {
+                    aplicarAcercamientoAdyacente(node, aim, 1.0D);
+                }
                 trazarComandoMovimiento(node, "STEP_UP", aim.x, aim.y, aim.z, 1.0D);
             }
             case DROP -> {
@@ -3731,13 +3853,8 @@ public final class NavExecutor {
                         && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(mob.blockPosition().getX(),
                                 mob.blockPosition().getY(), mob.blockPosition().getZ(),
                                 origenPlan.getX(), origenPlan.getY(), origenPlan.getZ())) {
-                    // The DROP is evaluated only from its planned origin. Move there first; the
-                    // existing contiguity/support checks remain authoritative once the origin is reached.
-                    mob.getNavigation().moveTo(origenPlan.getX() + 0.5D, origenPlan.getY(),
-                            origenPlan.getZ() + 0.5D, 1.0D);
-                    trazarComandoMovimiento(node, "ACERCARSE-ORIGEN-DROP", origenPlan.getX() + 0.5D,
-                            origenPlan.getY(), origenPlan.getZ() + 0.5D, 1.0D);
                     lastMoveTarget = origenPlan.toShortString() + ":ACERCARSE-ORIGEN-DROP";
+                    iniciarRecuperacionFisicaOrigenDrop(origenPlan, mob.level().getGameTime());
                     return;
                 }
                 ultimoDescenso = descenso.resumen();
@@ -4520,6 +4637,7 @@ public final class NavExecutor {
     /** Se llama cuando algo externo cambió el terreno: invalida la ruta en curso. */
     public void terrainChanged() {
         recoveryController.onVerifiedProgress();
+        limpiarRecuperacionOrigenDrop();
         route = null;
         plannedFrom = null;
         // A2 REMEDIACIÓN 2 · una ruta global cacheada tambien queda obsoleta si el terreno cambio.
