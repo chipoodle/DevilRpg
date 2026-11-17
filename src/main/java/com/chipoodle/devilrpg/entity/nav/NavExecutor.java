@@ -3473,7 +3473,7 @@ public final class NavExecutor {
             BlockPos live = mob.blockPosition();
             return live.equals(node.pos()) && esPieValido(live)
                     && NavObstruction.hasSupport(mob.level(), live)
-                    && NavObstruction.fits(mob.level(), mob, live);
+                    && NavObstruction.fitsActualAabb(mob.level(), mob);
         }
         // BREAK is an action, not a proximity waypoint. If proximity advanced this node,
         // the actuator would be skipped before it could approach the validated stand and act.
@@ -3735,7 +3735,7 @@ public final class NavExecutor {
                         start, mob.getBoundingBox(),
                         cell -> esPieValido(cell)
                                 && NavObstruction.fitsAtCellCenter(mob.level(), mob, cell));
-                if (NavTrace.on()) {
+                if (NavTrace.on() && now % 10L == 0L) {
                     NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_INVALID", "uuid=" + mob.getUUID()
                             + " tick=" + now + " current=" + start.toShortString()
                             + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
@@ -3865,7 +3865,7 @@ public final class NavExecutor {
                 takeoff.getX(), takeoff.getY(), takeoff.getZ())
                 && esPieValido(mob.blockPosition())
                 && NavObstruction.hasSupport(mob.level(), mob.blockPosition())
-                && NavObstruction.fits(mob.level(), mob, mob.blockPosition());
+                && NavObstruction.fitsActualAabb(mob.level(), mob);
         if (NavTrace.on()) {
             NavTrace.ev(reached ? "DROP_TAKEOFF_RECOVERY_REACHED" : "DROP_TAKEOFF_RECOVERY_INCOMPLETE",
                     "uuid=" + mob.getUUID() + " takeoff=" + takeoff
