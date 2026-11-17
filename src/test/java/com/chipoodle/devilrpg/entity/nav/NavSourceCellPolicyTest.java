@@ -30,9 +30,10 @@ public final class NavSourceCellPolicyTest {
                         overlapping, adjacent::equals)));
         comprobar("unsupported overlapping cells are rejected",
                 NavSourceCellPolicy.uniqueAdjacentCandidate(current, overlapping, cell -> false) == null);
-        comprobar("candidate with blocked AABB is rejected by physical-valid predicate",
+        boolean candidateAabbBlocked = true;
+        comprobar("candidate with blocked real AABB is rejected by physical-valid predicate",
                 NavSourceCellPolicy.uniqueAdjacentCandidate(current, overlapping,
-                        cell -> adjacent.equals(cell) && false) == null);
+                        cell -> adjacent.equals(cell) && !candidateAabbBlocked) == null);
 
         AABB ambiguousFootprint = new AABB(0.65D, 1.0D, 0.65D, 1.25D, 2.95D, 1.25D);
         comprobar("multiple valid adjacent cells are ambiguous and fail closed",
