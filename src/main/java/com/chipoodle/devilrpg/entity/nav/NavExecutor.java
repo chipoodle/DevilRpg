@@ -4154,10 +4154,6 @@ public final class NavExecutor {
                         && esPieValido(origenPlan)
                         && NavObstruction.hasSupport(mob.level(), origenPlan)
                         && NavObstruction.fitsAtCellCenter(mob.level(), mob, origenPlan);
-                boolean liveSourceReady = mob.onGround()
-                        && esPieValido(mob.blockPosition())
-                        && NavObstruction.hasSupport(mob.level(), mob.blockPosition())
-                        && NavObstruction.fitsActualAabb(mob.level(), mob);
                 long sourceCheckTick = mob.level().getGameTime();
 
                 // A route may have been planned while the mob was falling or standing in an
@@ -4166,18 +4162,20 @@ public final class NavExecutor {
                 // strategic route from its actual grounded, supported feet cell.
                 if (origenPlan != null && !takeoffSupported) {
                     if (NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(
-                            false, mob.onGround(), esPieValido(mob.blockPosition()),
+                            takeoffSupported, mob.onGround(), esPieValido(mob.blockPosition()),
                             NavObstruction.hasSupport(mob.level(), mob.blockPosition()),
                             NavObstruction.fitsActualAabb(mob.level(), mob))) {
-                        NavTrace.ev("DROP_TAKEOFF_UNSUPPORTED_REPLAN", "uuid=" + mob.getUUID()
-                                + " tick=" + sourceCheckTick
-                                + " staleTakeoff=" + origenPlan.toShortString()
-                                + " liveSource=" + mob.blockPosition().toShortString()
-                                + " grounded=" + mob.onGround()
-                                + " feetValid=" + esPieValido(mob.blockPosition())
-                                + " support=" + NavObstruction.hasSupport(mob.level(), mob.blockPosition())
-                                + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob)
-                                + " action=discard_stale_drop_and_replan");
+                        if (NavTrace.on()) {
+                            NavTrace.ev("DROP_TAKEOFF_UNSUPPORTED_REPLAN", "uuid=" + mob.getUUID()
+                                    + " tick=" + sourceCheckTick
+                                    + " staleTakeoff=" + origenPlan.toShortString()
+                                    + " liveSource=" + mob.blockPosition().toShortString()
+                                    + " grounded=" + mob.onGround()
+                                    + " feetValid=" + esPieValido(mob.blockPosition())
+                                    + " support=" + NavObstruction.hasSupport(mob.level(), mob.blockPosition())
+                                    + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob)
+                                    + " action=discard_stale_drop_and_replan");
+                        }
                         route = null;
                         routeIndex = 0;
                         plannedFrom = null;
