@@ -2957,6 +2957,21 @@ public final class NavExecutor {
                 && zombiePendiente.escalonPendienteOcupado();
         boolean proximidadPuedeConsumirObjetivo = NavArrivalPolicy.proximityArrivalAllowed(
                 objetivoEsEscalonPendiente, escalonPendienteOcupado);
+        // A2 Phase19: a recovery backtrack is a one-shot physical return, not a proximity waypoint.
+        // Keep its tactical objective alive until the mob occupies the exact historical block cell.
+        boolean backtrackPendiente = recoveryBacktrackObjective != null
+                && recoveryBacktrackObjective.equals(objective);
+        boolean backtrackOcupadoFisicamente = backtrackPendiente
+                && mob.blockPosition().equals(recoveryBacktrackObjective);
+        boolean proximidadPuedeConsumirBacktrack = NavArrivalPolicy.backtrackArrivalAllowed(
+                backtrackPendiente, backtrackOcupadoFisicamente);
+        if (distSqr <= ARRIVE_DISTANCE_SQR && backtrackPendiente && !backtrackOcupadoFisicamente
+                && NavTrace.on() && now % 20L == 0L) {
+            NavTrace.ev("BACKTRACK_PROXIMITY_SUPPRESSED", "uuid=" + mob.getUUID()
+                    + " target=" + recoveryBacktrackObjective.toShortString()
+                    + " pos=" + mob.blockPosition().toShortString()
+                    + " distSqr=" + String.format(java.util.Locale.ROOT, "%.3f", distSqr));
+        }
         // A2 RUN20: no consumir un escalon pendiente por la tolerancia generica de proximidad.
         // Run19 demostro que la distancia <= 2.25 puede ser cierta al estar junto al bloque, sin pisarlo.
         if (distSqr <= ARRIVE_DISTANCE_SQR && objetivoEsEscalonPendiente && !escalonPendienteOcupado
@@ -2967,7 +2982,8 @@ public final class NavExecutor {
                     + " pos=" + mob.blockPosition().toShortString()
                     + " distSqr=" + String.format(java.util.Locale.ROOT, "%.3f", distSqr));
         }
-        if (distSqr <= ARRIVE_DISTANCE_SQR && proximidadPuedeConsumirObjetivo) {
+        if (distSqr <= ARRIVE_DISTANCE_SQR && proximidadPuedeConsumirObjetivo
+                && proximidadPuedeConsumirBacktrack) {
             // A2 FASE 4 · LLEGADA TACTICA != LLEGADA DE MISION. La decision vive en una politica pura y
             // probada: solo MISION_LLEGADA (sin etapas) puede declarar ARRIVED.
             NavArrivalPolicy.Result llegada =
