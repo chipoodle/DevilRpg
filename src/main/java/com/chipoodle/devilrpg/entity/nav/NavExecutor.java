@@ -209,6 +209,8 @@ public final class NavExecutor {
     /** Adjacent supported source cell selected from the real AABB footprint while recovering a DROP take-off. */
     private BlockPos fuenteDropPendiente;
     private long inicioSnapFuenteDrop = -1L;
+    /** Backoff for a failed bounded exact take-off search; the suspended strategic route stays intact. */
+    private long nextDropRecoveryPlanAt;
 
     private int lastRouteSignature;
     private int replans;
@@ -3643,6 +3645,15 @@ public final class NavExecutor {
         if (recuperacionOrigenDropActiva) {
             return takeoff.equals(objetivoRecuperacionOrigenDrop);
         }
+        if (now < nextDropRecoveryPlanAt) {
+            if (NavTrace.on() && now % 20L == 0L) {
+                NavTrace.ev("DROP_TAKEOFF_RECOVERY_PLAN_RETRY_WAIT", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " retryAt=" + nextDropRecoveryPlanAt
+                        + " originalRoutePreserved=" + (route != null)
+                        + " originalCursor=" + routeIndex);
+            }
+            return false;
+        }
 
         BlockPos start = mob.blockPosition();
         boolean grounded = mob.onGround();
@@ -3794,28 +3805,28 @@ public final class NavExecutor {
             return false;
         }
 
-        NavPlanner.Result result = NavPlanner.plan(mob.level(), mob, start, takeoff,
-                12, VERTICAL_RANGE, MAX_EXPANSIONS_PER_PLAN, policies, construidas,
+        // This is a short, exact tactical recovery, not a strategic route search. A 4-cell
+        // horizontal / 3-cell vertical envelope contains at most 9x9x7 search states; the
+        // existing 900-expansion hard cap is unchanged. The admissible global A* core reopens
+        // improved states and terminates only after extracting the exact take-off state.
+        NavPlanner.GlobalResult result = NavPlanner.planExact(mob.level(), mob, start, takeoff,
+                4, 3, MAX_EXPANSIONS_PER_PLAN, policies, construidas,
                 exclusionesDescenso, exclusionesBreak);
-        boolean safe = !result.hitBudget()
+        boolean safe = result.alcanzoMision() && !result.hitBudget()
+                && takeoff.equals(result.route().destination())
                 && NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(result.route(), start, takeoff);
         if (!safe) {
-            int rejectedSignature = route == null ? 0 : route.signature();
             if (NavTrace.on()) {
                 NavTrace.ev("DROP_TAKEOFF_RECOVERY_PLAN_REJECTED", "uuid=" + mob.getUUID()
                         + " from=" + start.toShortString() + " takeoff=" + takeoff.toShortString()
-                        + " hitBudget=" + result.hitBudget() + " route=" + result.route().describe()
+                        + " exactGoal=true radius=4 verticalRange=3"
+                        + " hitBudget=" + result.hitBudget() + " reached=" + result.alcanzoMision()
+                        + " route=" + result.route().describe()
                         + " summary={" + result.summary() + "}");
             }
-            route = null;
-            routeIndex = 0;
-            plannedFrom = null;
-            lastRouteSignature = rejectedSignature;
-            globalCache = null;
-            globalMision = null;
-            globalDesde = null;
-            state = NavState.PLANNING;
-            nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+            // Keep the original route, cursor and plannedFrom untouched. A failed temporary
+            // search must not destroy the route whose DROP take-off we are trying to recover.
+            nextDropRecoveryPlanAt = now + REPLAN_COOLDOWN_TICKS;
             return false;
         }
 
@@ -3825,6 +3836,7 @@ public final class NavExecutor {
         plannedFromDropSuspendido = plannedFrom;
         plannedFromDropSuspendidoCapturado = true;
         plannedFrom = start.immutable();
+        nextDropRecoveryPlanAt = 0L;
         route = result.route();
         routeIndex = 0;
         recuperacionOrigenDropActiva = true;
@@ -3854,6 +3866,7 @@ public final class NavExecutor {
         }
         plannedFromDropSuspendido = null;
         plannedFromDropSuspendidoCapturado = false;
+        nextDropRecoveryPlanAt = 0L;
     }
 
     private void finalizarRecuperacionOrigenDrop(long now) {
@@ -3873,10 +3886,20 @@ public final class NavExecutor {
                             + " routeIndex=" + routeIndex + " route=" + (route == null ? "-" : route.describe()));
         }
         if (reached && suspended != null) {
+            BlockPos restoredPlannedFrom = plannedFromDropSuspendido;
+            int restoredSignature = suspended.signature();
             route = suspended;
             routeIndex = suspendedIndex;
             limpiarRecuperacionOrigenDrop();
             state = NavState.TRAVERSING;
+            if (NavTrace.on()) {
+                NavTrace.ev("DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED", "uuid=" + mob.getUUID()
+                        + " routeSignature=" + restoredSignature
+                        + " routeIndex=" + routeIndex + "/" + route.length()
+                        + " plannedFrom=" + (plannedFrom == null ? "NONE" : plannedFrom.toShortString())
+                        + " capturedPlannedFrom="
+                        + (restoredPlannedFrom == null ? "NONE" : restoredPlannedFrom.toShortString()));
+            }
             return;
         }
 
