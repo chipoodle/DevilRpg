@@ -531,3 +531,13 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - A2 Run 1 `a2n-20261116-201759`: FAIL 4/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
 - IDX4 DROP is route index0: origenPlan null, no ACERCARSE-ORIGEN-DROP, mob stays y77 below y78; dy=1 repeated. IDX7/IDX8 unchanged.
 - Report: docs/autonomous-village/2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md. A2 OPEN; no 12k.
+
+## 2026-11-17 — A2 IDX4 reject non-descending DROP edge (PENDING HARNESS)
+
+- Harness run `a2n-20261116-201759` on `6d294c1d`: 4/8 strict, 5/8 perimeter. IDX4 first route node was DROP at routeIndex=0, so no predecessor/origenPlan existed; mob `596,77,498`, landing `597,78,499`, dy=1.
+- Source diagnosis: local planning starts from `mob.blockPosition()` and initializes `piesDesde=start.getY()`. `validarArista()` allowed a DROP whose `piesHasta` was equal to or above `piesDesde` as long as the generic vertical bound passed. This is an impossible DROP edge, not a missing recovery origin. `plannedFrom` would reproduce the same Y=77 source and cannot make the Y=78 landing a descent.
+- Added `NavDropTransitionPolicy.descensoFisicoValido(takeoffFeet, landingFeet)` and reject `DROP` edges unless landing feet are strictly below source feet, before A* accepts the edge. Added optional `DROP_REJECTED_NON_DESCENDING` trace.
+- Extended `NavDropTakeoffPolicyTest` from 5 to 9 assertions. Commits: `a4a4fd29` policy, `cd2024d0` planner, `865f9229` test.
+- Report: `docs/autonomous-village/2026-11-17-A2-IDX4-NON-DESCENDING-DROP-FIX.md`.
+- ChatGPT did not execute tests, lint, diff-check, diagnostics compile or runtime. **PENDING HARNESS** on exact live HEAD.
+- Harness static validation, then A2 Run 1 only. Capture source feet, candidate, landing feet, rejected invalid DROP and alternative route. IDX7/IDX8 remain independent and untouched. No Run 2 unless 8/8 strict; no full 12k before five consecutive 8/8 strict runs. A2 OPEN; C4 save/reload OPEN.
