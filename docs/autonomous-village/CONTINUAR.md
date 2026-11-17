@@ -696,3 +696,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 El Run 1 `a2n-20261117-020800` probó `b3064596`: FAIL 5/8 strict. IDX4 quedó en WAIT_GROUNDED; un evento tuvo feetValid/support/fits true con onGround=false. Se añadió estabilización horizontal limitada con MoveControl hacia el centro de esa celda, manteniendo gravedad y sin planificar/saltar hasta que onGround sea true. Telemetría agrega velocidad y landingAnchor. Test esperado: NAV_DROP_TAKEOFF_POLICY_TEST 36; NAV_ROUTE_NODE 6. Informe: `2026-11-17-A2-IDX4-LANDING-ANCHOR-FIX.md`. PENDING HARNESS.
 
 C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 ni su criterio. IDX7/IDX8 siguen intactos. A2 OPEN; no Run 2 hasta 8/8 estricto en Run 1; no 12k hasta cinco corridas consecutivas 8/8 estricto.
+
+## 2026-11-17 — A2 Run 1 landing anchor
+
+- Synced `0e66984c` -> `f32c32a4` by fast-forward; production559ba6e3.
+- Static PASS incl NAV_DROP_TAKEOFF_POLICY_TEST 36, NAV_ROUTE_NODE 6, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261117-101833`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 grounded at593.51,87,507.96 but feetValid=false support=false fits=true, landingAnchor=NONE; no accepted route/assist/reached; replans8/8. IDX7/IDX8 unchanged.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-LANDING-ANCHOR-FAIL.md. A2 OPEN; no 12k.
