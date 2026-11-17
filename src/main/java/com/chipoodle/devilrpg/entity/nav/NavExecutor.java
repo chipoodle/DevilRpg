@@ -270,6 +270,8 @@ public final class NavExecutor {
     /** A2 Run22: ultimo comando de movimiento trazado, con cadencia acotada. */
     private String lastMoveTraceKey = "-";
     private long lastMoveTraceTick = -1L;
+    /** A2 Phase 23: throttle physical DROP landing diagnostics to one event per 10 ticks. */
+    private long lastDropLandingTraceTick = -1L;
     private double lastMoveTraceX = Double.NaN;
     private double lastMoveTraceY = Double.NaN;
     private double lastMoveTraceZ = Double.NaN;
@@ -3489,8 +3491,33 @@ public final class NavExecutor {
         boolean escalonOcupado = zombie != null && zombie.escalonPendienteOcupado();
         boolean dentroTolerancia = mob.distanceToSqr(node.pos().getX() + 0.5D, node.pos().getY() + 0.5D,
                 node.pos().getZ() + 0.5D) <= ARRIVE_DISTANCE_SQR;
-        boolean aterrizajeDropValido = mob.blockPosition().getY() <= node.pos().getY()
-                && NavObstruction.hasSolidFace(mob.level(), mob.blockPosition().below());
+        boolean landingHeightReached = mob.blockPosition().getY() <= node.pos().getY();
+        boolean liveCellSupported = NavObstruction.hasSolidFace(mob.level(), mob.blockPosition().below());
+        boolean aterrizajeDropValido = landingHeightReached && liveCellSupported;
+        if (node.transition() == NavRoute.Transition.DROP && NavTrace.on()) {
+            long tick = mob.level().getGameTime();
+            if (tick - lastDropLandingTraceTick >= 10L) {
+                lastDropLandingTraceTick = tick;
+                NavTrace.ev("DROP_LANDING_PROGRESS", "uuid=" + mob.getUUID()
+                        + " tick=" + tick + " routeIndex=" + routeIndex
+                        + " landing=" + node.pos().toShortString()
+                        + " liveCell=" + mob.blockPosition().toShortString()
+                        + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                mob.getX(), mob.getY(), mob.getZ())
+                        + " onGround=" + mob.onGround()
+                        + " landingHeightReached=" + landingHeightReached
+                        + " liveCellSupported=" + liveCellSupported
+                        + " validLanding=" + aterrizajeDropValido
+                        + " withinTolerance=" + dentroTolerancia
+                        + " distanceSqr=" + String.format(java.util.Locale.ROOT, "%.3f",
+                                mob.distanceToSqr(node.pos().getX() + 0.5D,
+                                        node.pos().getY() + 0.5D, node.pos().getZ() + 0.5D))
+                        + " landingFits=" + NavObstruction.fits(mob.level(), mob, node.pos())
+                        + " landingSupport=" + NavObstruction.hasSupport(mob.level(), node.pos())
+                        + " delta=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                mob.getDeltaMovement().x, mob.getDeltaMovement().y, mob.getDeltaMovement().z));
+            }
+        }
         boolean alcanzadoPorRuta = NavArrivalPolicy.waypointReached(
                 node.transition() == NavRoute.Transition.JUMP_UP,
                 node.transition() == NavRoute.Transition.DROP,
@@ -3947,7 +3974,16 @@ public final class NavExecutor {
         // A2 Stage 6F · la ruta avanza cuando el nodo esta ALCANZADO de verdad: para un DROP eso exige estar
         // fisicamente en el aterrizaje (a su altura o por debajo) y con suelo, no solo cerca.
         while (node != null && nodoAlcanzado(node)) {
+            NavRoute.Node reachedNode = node;
+            int previousRouteIndex = routeIndex;
             routeIndex++;
+            if (reachedNode.transition() == NavRoute.Transition.DROP && NavTrace.on()) {
+                NavTrace.ev("DROP_CURSOR_ADVANCE", "uuid=" + mob.getUUID()
+                        + " landing=" + reachedNode.pos().toShortString()
+                        + " previousIndex=" + previousRouteIndex
+                        + " nextIndex=" + routeIndex
+                        + " routeLength=" + route.length());
+            }
             replanteosPorGuarda = 0;
             intentosDeDescenso = 0;
             node = route.currentNode(routeIndex);
