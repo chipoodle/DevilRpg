@@ -102,7 +102,10 @@
 - Report: `2026-11-17-A2-PHASE27-SNAP-FORENSIC-DIAGNOSIS.md`.
 - Harness Phase 28 at `cebca95b` (production `05b7e9c0`): root cause **PARTIALLY_CONFIRMED**. `originPlan` is candidate `577,110,514`; `origenFisicamenteAlcanzado` admits same integer cell at z=514.01 despite 0.49 to center. Normal DROP navigation then targets z=513.50 vs snap 514.50; cells oscillate 513↔514 and guard switches to RECOVERING at t4271.
 - Report: `2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md`.
-- **NEXT: ChatGPT must unify DROP admission with exact center occupancy and make snap movement exclusive; swept-AABB telemetry still missing.**
+- Harness Phase 29 implemented `NavSnapOwnershipPolicy` (production `192d0c52`): pending snap blocks route movement, DROP admission cannot continue until `SNAP_COMPLETE` with 0.20 center + grounded/feet/support/real-AABB. Added `SNAP_MOVE_OWNER`, `SNAP_ADMISSION`, `SNAP_SWEPT_AABB`, `SNAP_GUARD`, `SNAP_COMPLETE`, `SOURCE_SELECTED`.
+- Static PASS: `NAV_SNAP_OWNERSHIP_POLICY_TEST: OK (12)`, DROP 51, source 14. Runtime `a2n-20261117-170935`: A2 2/8 strict, C4 PASS `[1,0,0]`. IDX4 completes snap at t211 with collision=false; later fails `replans agotados (8/8)`.
+- Report: `2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`.
+- **NEXT: Phase 30 diagnose IDX4's post-snap replan exhaustion; snap/admission fix is complete.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -291,6 +294,7 @@ Read first, in order:
 56. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-SOURCE-SELECTION-PHASE26.md`
 57. `docs/autonomous-village/2026-11-17-A2-PHASE27-SNAP-FORENSIC-DIAGNOSIS.md`
 58. `docs/autonomous-village/2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md`
+59. `docs/autonomous-village/2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`
 
 ## Permanent collaboration workflow
 
@@ -305,7 +309,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md`. PARTIALLY_CONFIRMED: premature integer-cell admission + normal DROP navigation ownership + oscillation abort; swept collision missing.
+- Latest technical report: `2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`. Snap admission/ownership fixed and statically/runtime covered; A2 2/8 strict; IDX4 post-snap replan exhaustion remains.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -416,12 +420,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: require the same exact center/occupancy predicate for DROP admission as the snap; the
-   current ±1 integer-cell rule admits at z=514.01 with 0.49 to center.
-2. Keep one movement owner while `fuenteDropPendiente` is active; suppress normal DROP
-   `Navigation.moveTo` until snap completion or explicit failure.
-3. Prevent oscillation guard from consuming boundary-jitter snaps; add swept-AABB/controller trace.
-4. Do not relax support/fit or increase budget. A2 OPEN; no Run 2/12k.
+1. Phase 30: diagnose IDX4 post-snap `replans agotados (8/8)` at `571,115,533`; do not reopen the
+   exclusive snap/admission contract.
+2. Keep `SNAP_MOVE_OWNER`/`SNAP_SWEPT_AABB` telemetry. No budget increase; no support/fit relaxation.
+3. A2 OPEN; no Run 2 unless 8/8 strict; no 12k before five consecutive 8/8 strict runs.
+4. C4 PASS `[1,0,0]`; save/reload OPEN.
 
 ## Worlds (preserve; do not overwrite)
 

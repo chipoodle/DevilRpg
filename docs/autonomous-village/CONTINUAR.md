@@ -889,3 +889,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only diagnosis at `cebca95b`; production remains `05b7e9c0`.
 - Confirmed premature integer-cell DROP admission and normal-navigation ownership conflict; oscillation guard aborts at t4271.
 - Report: `docs/autonomous-village/2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md`. No production changes; A2 OPEN.
+
+## 2026-11-17 — A2 Phase 29 snap exclusive ownership/admission fix
+
+- Production `192d0c52`: exclusive source snap, center-gated completion, swept/owner telemetry, 12-assertion policy test.
+- Runtime `a2n-20261117-170935`: A2 2/8 strict; C4 PASS [1,0,0]; IDX4 snap completes at t211, later replan exhaustion remains.
+- Report: `docs/autonomous-village/2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`. A2 OPEN.

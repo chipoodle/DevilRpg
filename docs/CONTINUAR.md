@@ -5055,3 +5055,10 @@ run/saves; hashes match; structural verification only.
 - CONFIRMED ownership: normal DROP `Navigation.moveTo` targets z=513.50 while snap targets 514.50; blockPosition oscillates 513<->514; guard sets RECOVERING at t4271.
 - PHYSICAL_COLLISION not demonstrated; swept-AABB/controller telemetry missing. Eight-neighbor matrix: only S (577,110,514) overlaps (0.1739); other seven zero overlap.
 - Report: docs/autonomous-village/2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md. A2 OPEN; no Run 2/12k.
+
+## 2026-11-17 — A2 Phase 29 snap exclusive ownership/admission fix
+
+- Production `192d0c52`: `NavSnapOwnershipPolicy`; pending snap blocks route movement and oscillation abort; completion uses 0.20 center + grounded/feet/support/real-AABB.
+- Static PASS: NAV_SNAP_OWNERSHIP 12, NAV_DROP_TAKEOFF 51, NAV_SOURCE_CELL 14, lint/diff/compile.
+- Runtime `a2n-20261117-170935`: A2 2/8 strict, 2/8 perimeter, C4 PASS [1,0,0]; snap works (SNAP_MOVE_OWNER, SNAP_COMPLETE t211, no contradictory MOVE_COMMAND, collision=false).
+- IDX4 later fails independent `replans agotados (8/8)` at571,115,533. Report: docs/autonomous-village/2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md. A2 OPEN; no 12k.
