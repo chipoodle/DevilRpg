@@ -381,6 +381,12 @@ public final class NavPlanner {
                         if (!arista.valida()) {
                             continue;
                         }
+                        // Exact take-off recovery is confined to a bounded vertical envelope around
+                        // its grounded source as well as the horizontal radius. Strategic global
+                        // navigation retains its existing per-edge vertical semantics.
+                        if (exactGoal && Math.abs(arista.piesHasta() - start.getY()) > verticalRange) {
+                            continue;
+                        }
                         if (exclusiones != null && arista.transicion() == NavRoute.Transition.DROP) {
                             BlockPos landing = sucesorCanonico(candidate, arista.kind(), arista.transicion(), arista.piesHasta());
                             long clave = NavDropExclusionPolicy.clave(pos.getX(), pos.getY(), pos.getZ(),
