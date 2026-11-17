@@ -3839,9 +3839,9 @@ public final class NavExecutor {
                 // (contigüidad, holgura de pies y cuerpo, soporte con colisión —construido y VERIFICADO si es obra
                 // del plan—, caída dentro del límite y CAMINO DE CAÍDA despejado) ANTES de ordenar movimiento. La
                 // ruta no avanza hasta el aterrizaje físico (`nodoAlcanzado`).
-                // Edit 17 · ORIGEN PLANIFICADO de ESTA transicion: solo si el cursor apunta al nodo que se
-                // ejecuta (identidad por posicion) y existe predecesor. NUNCA se usa plannedFrom (es el
-                // origen de la RUTA, no el de cada DROP) ni indiceDeEtapa (es el indice de ETAPA).
+                // Origen de esta transicion: el nodo anterior para DROP posteriores; en routeIndex=0,
+                // plannedFrom es el origen fisico exacto desde el que se acepto esta ruta. Si el mob se
+                // desplazo verticalmente, se ejecuta una ruta auxiliar validada hasta ese origen antes de caer.
                 BlockPos origenAnterior = null;
                 if (route != null && routeIndex > 0 && routeIndex < route.nodes().size()) {
                     NavRoute.Node actual = route.currentNode(routeIndex);
