@@ -510,3 +510,16 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - A2 Run 1 `a2n-20261116-195651`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
 - IDX4 unchanged: mob at 596,77,498 below landing 597,78,499; dy=1 DROP rejections, replans 8/8. IDX7 exp=901/900 10/10; IDX8 no local waypoint/global budget.
 - Report: docs/autonomous-village/2026-11-16-A2-RUN1-DROP-FEET-FAIL.md. A2 OPEN; no 12k.
+
+
+## 2026-11-17 — A2 IDX4 physical DROP take-off recovery correction (PENDING HARNESS)
+
+- Runtime evidence `a2n-20261116-195651` showed IDX4 at `596,77,498` with landing `597,78,499` (dy=1).
+- Source diagnosis: `origenCompatible` accepted +/-1 Y, so the executor treated a mob one block below its planned take-off as already compatible. The subsequent DROP validation rejected the landing as above the mob, and route invalidation/replanning repeated without issuing the move back to the take-off.
+- Added `origenFisicamenteAlcanzado`: horizontal tolerance remains <=1, but Y must equal the planned take-off Y. Both executor decision points now use this stricter physical-occupancy predicate.
+- Added `NavDropTakeoffPolicyTest` (5 assertions) and registered it in `policyTest`.
+- Commits: `199d905d` policy, `88182bcc` executor, `21f31149` test, `de0ff4d5` registration.
+- Report: `docs/autonomous-village/2026-11-17-A2-IDX4-DROP-TAKEOFF-RECOVERY-FIX.md`.
+- ChatGPT did not execute tests, lint, diff-check, diagnostics compile or runtime. **PENDING HARNESS** on exact live HEAD.
+- Harness: static checks, then A2 Run 1 only. Capture command to return to planned take-off Y, exact Y occupancy, and the next DROP outcome. Do not bypass the height guard.
+- IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain separate and untouched. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs. A2 OPEN; C4 save/reload OPEN.
