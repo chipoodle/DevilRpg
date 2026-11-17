@@ -109,6 +109,26 @@ public final class NavDropTransitionPolicy {
                 && Math.abs(liveZ - origenZ) <= MAX_CONTIGUIDAD;
     }
 
+    /**
+     * Runtime DROP admission: coordinate proximity alone is insufficient. The mob must be
+     * grounded in a valid, supported feet cell and its real AABB must fit before the origin
+     * can be treated as physically reached.
+     */
+    public static boolean origenFisicamenteAlcanzado(boolean grounded, boolean feetValid,
+                                                       boolean supported, boolean fits,
+                                                       int liveX, int liveY, int liveZ,
+                                                       int origenX, int origenY, int origenZ) {
+        return grounded && feetValid && supported && fits
+                && origenFisicamenteAlcanzado(liveX, liveY, liveZ, origenX, origenY, origenZ);
+    }
+
+    /** An unsupported planned take-off must be abandoned only after a safe grounded source exists. */
+    public static boolean replanificarDesdeOrigenSoportado(boolean takeoffSupported,
+                                                            boolean grounded, boolean feetValid,
+                                                            boolean supported, boolean fits) {
+        return !takeoffSupported && grounded && feetValid && supported && fits;
+    }
+
     public static boolean ejecutable(boolean clearance, boolean support, boolean originCompatible,
                                      boolean landingContiguous, int dy, int maxDrop) {
         return clearance && support && originCompatible && landingContiguous
