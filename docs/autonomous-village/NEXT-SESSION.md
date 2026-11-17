@@ -130,7 +130,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-A2-RUN1-VERTICAL-TAKEOFF-FAIL.md`. Recovery route accepted (STEP_UP only) but stalls at y104 vs takeoff y107; later plans 901/900 empty.
+- Latest technical report: `2026-11-17-A2-IDX4-STEP-UP-EXECUTION-FIX.md`. Guarded natural STEP_UP assist and exact 900-expansion budget fix are PENDING HARNESS.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -294,3 +294,13 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 - Commits: `df3b9e46`, `ebeda4de`, `2cc3aa50`, `d79189aa`, `d7056617`, `800329f6`.
 - Report: `2026-11-17-A2-IDX4-VERTICAL-TAKEOFF-RECOVERY-FIX.md`.
 - PENDING HARNESS; ChatGPT did not execute static or runtime checks.
+
+
+## Latest checkpoint — 2026-11-17 A2 IDX4 STEP_UP execution correction (PENDING HARNESS)
+
+- Run `a2n-20261116-225217` on `38a4b52e`: static PASS; A2 Run 1 FAIL 5/8 strict. IDX4 accepted one STEP_UP but did not climb; later plans reported 901/900.
+- ChatGPT added a guarded natural STEP_UP assist for DROP recovery: only adjacent one-block climbs with blocked lower step, headroom, destination fit and real support; uses MoveControl + JumpControl, never direct velocity or teleport. Exact physical occupancy remains required.
+- Corrected NavPlanner's expansion guard to check before incrementing; 900 is now the maximum, never 901. Budget itself unchanged.
+- Added pure policies and extended `NavDropTakeoffPolicyTest` to 25 assertions; expected route-node test remains 6.
+- Report: `docs/autonomous-village/2026-11-17-A2-IDX4-STEP-UP-EXECUTION-FIX.md`.
+- PENDING HARNESS on exact current HEAD. Static checks first, then A2 Run 1 only. IDX7/IDX8 untouched. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict runs. C4 save/reload OPEN.
