@@ -384,8 +384,21 @@ public final class NavPlanner {
                         // Exact take-off recovery is confined to a bounded vertical envelope around
                         // its grounded source as well as the horizontal radius. Strategic global
                         // navigation retains its existing per-edge vertical semantics.
-                        if (exactGoal && Math.abs(arista.piesHasta() - start.getY()) > verticalRange) {
-                            continue;
+                        if (exactGoal) {
+                            if (Math.abs(arista.piesHasta() - start.getY()) > verticalRange) {
+                                continue;
+                            }
+                            NavRoute.Transition transition = arista.transicion();
+                            if (transition != NavRoute.Transition.WALK
+                                    && transition != NavRoute.Transition.STEP_UP
+                                    && transition != NavRoute.Transition.JUMP_UP
+                                    && transition != NavRoute.Transition.DROP) {
+                                continue; // no BREAK, BUILD or BRIDGE in a physical take-off recovery
+                            }
+                            if (transition == NavRoute.Transition.DROP
+                                    && feet - arista.piesHasta() != 1) {
+                                continue; // only a planner-validated one-block recovery descent is eligible
+                            }
                         }
                         if (exclusiones != null && arista.transicion() == NavRoute.Transition.DROP) {
                             BlockPos landing = sucesorCanonico(candidate, arista.kind(), arista.transicion(), arista.piesHasta());
