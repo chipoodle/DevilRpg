@@ -6,14 +6,18 @@
 - ChatGPT implementation published through production checkpoint `b02affb19eb8e37824682090ba99f793a04aea94`.
 - New source resolver selects exactly one cardinal same-Y supported cell overlapped by the actual AABB, validates the actual translated AABB at candidate center, then issues bounded horizontal MoveControl only. It requires physical center occupancy and rechecks feet/support/current-AABB fit before A*.
 - Recovery route now permits at most one planner-validated DROP of exactly one block, because resolved source (593,87,508) is one block above original take-off (593,86,507). It rejects longer/multiple drops and all destructive/build/bridge transitions. Temporary route start is saved/restored so the recovery DROP resolves the correct origin.
-- Added `NavSourceCellPolicyTest` (10 assertions); `NavDropTakeoffPolicyTest` now expects 40 assertions; `NavRouteNodePolicyTest` remains 6. Harness Phase 21 executed all three: PASS 10/40/6.
+- Added `NavSourceCellPolicyTest` (10 assertions); `NavDropTakeoffPolicyTest` now expects 43 assertions; `NavRouteNodePolicyTest` remains 6. Harness Phase 21 executed all three: PASS 10/40/6.
 - Detailed implementation: `2026-11-17-IDX4-AABB-SOURCE-RECOVERY-FIX.md`.
 - Harness static gate at `1e65c024` was BLOCKED only by a missing test import; the historical result is preserved in `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`.
 - ChatGPT added `import net.minecraft.core.BlockPos;` to `NavDropTakeoffPolicyTest.java` (test-only), commit `c75165c2135cccbfcc3eddd40abe09adce6766e8`.
 - Confirmed `build.gradle` registers `NavDropTakeoffPolicyTest`, `NavSourceCellPolicyTest`, and `NavRouteNodePolicyTest` in `policyTest`.
-- Harness Phase 21 at `77b635d4`: static PASS; source snap reached `596,77,499` with feet/support/real-AABB true, but recovery A* returned empty at `900/900`; A2 FAIL 5/8 strict, C4 PASS `[2,0,0]`.
-- Harness result: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`.
-- **NEXT: ChatGPT makes recovery A* find a route from the valid snapped source to take-off/DROP entry; consider exact-center snap (499.31 vs 499.5).**
+- Harness Phase 21 at `77b635d4`: static PASS; source snap reached `596,77,499` with feet/support/real-AABB true; old local recovery A* returned empty at `900/900`; A2 FAIL 5/8 strict, C4 PASS `[2,0,0]`. Historical result: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`.
+- ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
+- Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
+- The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
+- Detailed fix and Harness protocol: `2026-11-17-IDX4-EXACT-RECOVERY-ASTAR-FIX.md`.
+- Expected `NAV_DROP_TAKEOFF_POLICY_TEST`: 43 assertions. **PENDING HARNESS**; ChatGPT has not run tests, lint, diagnostics compile or runtime on this implementation.
+- **NEXT: Harness validates exact live HEAD, static gate first, then A2 Run 1 only.**
 - Do not run A2 Run 2 unless Run 1 reaches 8/8 strict. Do not run full 12k until five consecutive 8/8 strict runs.
 - IDX7/IDX8 untouched. C4 last observed PASS [1,0,0], save/reload OPEN. A2 remains OPEN pending runtime evidence.
 - Harness must not modify production source. Original A2/C4 worlds and local artifacts remain protected.
