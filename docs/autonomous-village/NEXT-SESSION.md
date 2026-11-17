@@ -30,7 +30,9 @@
 - Harness Phase 21 at `77b635d4`: static PASS; source snap reached `596,77,499` with feet/support/real-AABB true; old local recovery A* returned empty at `900/900`; A2 FAIL 5/8 strict, C4 PASS `[2,0,0]`. Historical result: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`.
 - Harness Phase 22 at `c17459b7`: static PASS (10/43/6); exact A* bounded and `hitBudget=false`, but stopped at `589,95,521` vs takeoff `589,96,522`; 39 rejections, no route accepted/restored/reached. A2 FAIL 5/8 strict, C4 PASS `[1,0,0]`.
 - Harness result: `2026-11-17-A2-RUN1-EXACT-BOUNDED-RECOVERY-PHASE22.md`.
-- **NEXT: ChatGPT must make the bounded A* reach the exact take-off from `589,93,522` to `589,96,522`; no budget increase.**
+- Harness Phase 23 at `69f066cc`: static PASS (10/43/6); exact-edge diag shows candidate `589,95,522` is air/no-support, classified DROP, and exact goal `589,96,522` has `feetSupport=false`. A2 FAIL 5/8, C4 PASS `[1,0,0]`.
+- Harness result: `2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`.
+- **NEXT: ChatGPT must choose a supported take-off/landing; the current exact goal is unsupported.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -213,6 +215,7 @@ Read first, in order:
 50. `docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`
 51. `docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`
 52. `docs/autonomous-village/2026-11-17-A2-RUN1-EXACT-BOUNDED-RECOVERY-PHASE22.md`
+53. `docs/autonomous-village/2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`
 
 ## Permanent collaboration workflow
 
@@ -227,7 +230,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-RUN1-EXACT-BOUNDED-RECOVERY-PHASE22.md`. Exact A* bounded, hitBudget=false, but stops one block below takeoff; 5/8 strict.
+- Latest technical report: `2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`. Candidate589,95,522 air/no-support -> DROP; goal589,96,522 feetSupport=false; A2 5/8 strict.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -338,11 +341,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: make the exact bounded A* reach `589,96,522` from `589,93,522`. Current search stops at
-   `589,95,521` (`JUMP_UP`), `hitBudget=false`; do not increase the 900 budget.
-2. Preserve the original route/cursor during rejected searches; Phase 22 observed no restoration event.
-3. C4 PASS `[1,0,0]`; IDX7/IDX8 remain independent. No Run 2 unless Run 1 reaches 8/8 strict.
-4. No full 12k until five consecutive 8/8 strict runs.
+1. ChatGPT: choose a supported take-off/landing. The current exact goal `589,96,522` has
+   `feetSupport=false`, and `589,95,522` is air/no-support classified DROP. No STEP_UP exists.
+2. Do not increase budget (`hitBudget=false`) or relax support/protection/landing.
+3. C4 PASS `[1,0,0]`; IDX7/IDX8 independent. No Run 2 unless 8/8 strict; no 12k until five consecutive.
 
 ## Worlds (preserve; do not overwrite)
 

@@ -787,3 +787,12 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - IDX4 af70fc14: 39 exact-goal rejections, hitBudget=false, best route len1 JUMP_UP ending589,95,521 vs takeoff589,96,522; no accepted/restored/reached.
 - Original DROP active landing589,95,521 not completed; latest DROP_DONE is prior-cycle589,93,522.
 - Report: docs/autonomous-village/2026-11-17-A2-RUN1-EXACT-BOUNDED-RECOVERY-PHASE22.md. A2 OPEN; no 12k.
+
+## 2026-11-17 — A2 Run 1 Phase 23 exact-edge diagnostic
+
+- Synced 00760c5f -> 69f066cc by fast-forward.
+- Static PASS: NAV_SOURCE_CELL 10, NAV_DROP_TAKEOFF 43, NAV_ROUTE_NODE 6.
+- A2 Run 1 `a2n-20261117-122621`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 7460873e: DROP_TAKEOFF_EXACT_EDGE_DIAG from589,95,521 candidate589,95,522 kind=DROP support=false goal589,96,522 feetSupport=false rejection=DESNIVEL; no STEP_UP.
+- Current landing589,95,521: no DROP_DONE, no cursor advance. DROP_DONE/advance at589,93,522 belongs to prior cycle.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md. A2 OPEN; no 12k.
