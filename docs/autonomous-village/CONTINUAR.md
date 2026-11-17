@@ -629,3 +629,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - Production code checkpoint before handoff documentation: `491b7d0170501e9d86433a52d2703395a4029b06`.
 - Report: `docs/autonomous-village/2026-11-17-A2-IDX4-STEP-UP-EXECUTION-FIX.md`.
 - ChatGPT has not run Gradle/lint/compile/runtime. **PENDING HARNESS** on exact live HEAD. Static first, then A2 Run 1 only. IDX7/IDX8 unchanged; no Run 2 unless 8/8 strict; no full 12k until five consecutive 8/8 strict runs. C4 save/reload OPEN.
+
+## 2026-11-17 — A2 Run 1 STEP_UP assist
+
+- Synced `ed17b493` -> `7aed2c68` by fast-forward; production491b7d01.
+- Static PASS incl NAV_DROP_TAKEOFF_POLICY_TEST 25, NAV_ROUTE_NODE 6, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261117-001624`: FAIL 4/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 assist emitted (567,121 -> 566,122, support/fit true) but mob stalled at567,119; no REACHED, no 901/900. IDX7/IDX8 unchanged.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-STEP-UP-ASSIST-FAIL.md. A2 OPEN; no 12k.
