@@ -796,3 +796,17 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - IDX4 7460873e: DROP_TAKEOFF_EXACT_EDGE_DIAG from589,95,521 candidate589,95,522 kind=DROP support=false goal589,96,522 feetSupport=false rejection=DESNIVEL; no STEP_UP.
 - Current landing589,95,521: no DROP_DONE, no cursor advance. DROP_DONE/advance at589,93,522 belongs to prior cycle.
 - Report: docs/autonomous-village/2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md. A2 OPEN; no 12k.
+
+
+## 2026-11-17 — IDX4 unsupported DROP take-off guard (PENDING HARNESS)
+
+- Phase 23 proved planned take-off `589,96,522` had no support; landing `589,95,521` never completed. The mob later stood at supported `589,93,522`.
+- Source inspection found that coordinate-only `origenFisicamenteAlcanzado` could treat an unsupported/airborne position as a take-off.
+- Runtime DROP admission now requires grounded + valid feet + support + real AABB fit. The planned take-off cell itself must also be valid, supported, and fit at cell center.
+- If planned take-off is unsupported, DROP is refused. The executor waits during the fall; after a valid supported landing, it discards the stale DROP route/global cache and replans from the live supported source.
+- Added traces `DROP_TAKEOFF_UNSUPPORTED_WAIT` and `DROP_TAKEOFF_UNSUPPORTED_REPLAN`; `describirDescenso` uses the same physical-origin predicate.
+- Four new policy assertions; expected DROP test total 47.
+- Report: `2026-11-17-IDX4-UNSUPPORTED-TAKEOFF-REPLAN-FIX.md`.
+- Implementation checkpoint: `c17ec47e7277a687fa428841d64ca8c8089e68c1`; handoff doc commit: `5c3a7034b0b01ea1bc01d1e0ab48aa41688e52b2`.
+- Harness static validation is pending. Run A2 Run 1 only if static passes. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict.
+- A2 OPEN; C4 last PASS [1,0,0], save/reload OPEN; IDX7/IDX8 independent. No budgets or safety predicates relaxed.
