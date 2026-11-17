@@ -1,0 +1,40 @@
+package com.chipoodle.devilrpg.entity.nav;
+
+import net.minecraft.core.BlockPos;
+
+public final class NavRouteNodePolicyTest {
+    public static void main(String[] args) {
+        BlockPos dropState = new BlockPos(597, 78, 499);
+        BlockPos landing = NavRouteNodePolicy.routePosition(
+                dropState, NavRoute.Transition.DROP, 77, null);
+        check("DROP route node uses validated landing feet",
+                landing.equals(new BlockPos(597, 77, 499)));
+        check("DROP preserves searched horizontal column",
+                landing.getX() == dropState.getX() && landing.getZ() == dropState.getZ());
+
+        BlockPos walkState = new BlockPos(12, 64, -8);
+        check("WALK keeps canonical graph state",
+                NavRouteNodePolicy.routePosition(walkState, NavRoute.Transition.WALK, 63, null)
+                        .equals(walkState));
+        check("STEP_UP keeps canonical successor state",
+                NavRouteNodePolicy.routePosition(walkState, NavRoute.Transition.STEP_UP, 65, null)
+                        .equals(walkState));
+
+        BlockPos breakState = new BlockPos(20, 70, 20);
+        BlockPos breakStand = new BlockPos(19, 70, 20);
+        check("BREAK keeps physical attack stand separate from graph state",
+                NavRouteNodePolicy.routePosition(breakState, NavRoute.Transition.BREAK, 70, breakStand)
+                        .equals(breakStand));
+        check("BREAK without stand retains existing safe fallback",
+                NavRouteNodePolicy.routePosition(breakState, NavRoute.Transition.BREAK, 70, null)
+                        .equals(breakState));
+
+        System.out.println("NAV_ROUTE_NODE_POLICY_TEST: OK (6 assertions)");
+    }
+
+    private static void check(String name, boolean value) {
+        if (!value) {
+            throw new AssertionError(name);
+        }
+    }
+}
