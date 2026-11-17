@@ -98,7 +98,9 @@
 - Harness result: `2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md`.
 - Harness Phase 26 at `29b82a2c`: static PASS (14/51/6); A2 FAIL 2/8 strict, 3/8 perimeter, C4 PASS `[2,0,0]`. Candidates exist (16) but `SOURCE_SELECTED=0`, `SNAP_REACHED=0`; IDX4 has 19 snaps started and never completes occupancy.
 - Harness result: `2026-11-17-A2-RUN1-GROUNDED-SOURCE-SELECTION-PHASE26.md`.
-- **NEXT: ChatGPT must make the source snap complete physical occupancy and emit SOURCE_SELECTED/SNAP_REACHED; log eight-neighbor rejection matrix.**
+- Phase 27 forensic result at `05b7e9c0`: `ROOT_CAUSE_PARTIALLY_CONFIRMED`. The snap targets z=514.5 but a normal DROP `MOVE_COMMAND` at t4261 targets z=513.5; blockPosition oscillates 513↔514; `recordCell` flags oscillation and `traverse` switches to RECOVERING at t4271 before center tolerance. `SOURCE_SELECTED` is not implemented; full eight-neighbor matrix is missing.
+- Report: `2026-11-17-A2-PHASE27-SNAP-FORENSIC-DIAGNOSIS.md`.
+- **NEXT: ChatGPT must make the snap movement exclusive and log swept collision/controller ownership plus the eight-neighbor matrix; no production fix yet.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -285,6 +287,7 @@ Read first, in order:
 54. `docs/autonomous-village/2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`
 55. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md`
 56. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-SOURCE-SELECTION-PHASE26.md`
+57. `docs/autonomous-village/2026-11-17-A2-PHASE27-SNAP-FORENSIC-DIAGNOSIS.md`
 
 ## Permanent collaboration workflow
 
@@ -299,7 +302,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-RUN1-GROUNDED-SOURCE-SELECTION-PHASE26.md`. 2/8 strict; candidates exist but no SOURCE_SELECTED/SNAP_REACHED; 19 snaps started, none completes.
+- Latest technical report: `2026-11-17-A2-PHASE27-SNAP-FORENSIC-DIAGNOSIS.md`. PARTIALLY_CONFIRMED: competing DROP navigation + oscillation guard abort snap; swept collision/controller ownership missing.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -410,11 +413,12 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: make the source snap complete physical occupancy and emit `SOURCE_SELECTED` +
-   `SNAP_REACHED`. Current run has 16 candidates, 0 selected, 19 snaps started, 0 reached/replan.
-2. Log the eight-neighbor rejection matrix and selection reason when ranking candidates.
-3. IDX4 final `577,110,514`; no DROP_DONE/cursor for current `577,109,513`.
-4. Do not increase budget or relax support/fit. C4 PASS `[2,0,0]`; no Run 2 or 12k.
+1. ChatGPT: make snap movement exclusive while `fuenteDropPendiente` is active; suppress normal DROP
+   `Navigation.moveTo` and prevent oscillation guard from treating boundary jitter as route oscillation.
+2. Add read-only telemetry: `SOURCE_SELECTED` with eight-neighbor matrix, per-tick MoveControl winner,
+   swept-AABB collision, center check and guard abort.
+3. Do not relax support/fit or increase budget. No Run 2 unless 8/8 strict; no 12k before five
+   consecutive 8/8 strict runs. A2 remains OPEN.
 
 ## Worlds (preserve; do not overwrite)
 
