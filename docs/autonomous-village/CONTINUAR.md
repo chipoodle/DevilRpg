@@ -456,3 +456,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - Static PASS: Gradle, strict lint, diff-check, diagnostics compile; three new NavArrivalPolicy backtrack assertions and NavRecoveryControllerTest 10 passed.
 - `nav-backtrack` `a2n-20261116-182234`: **FAIL**. BACKTRACK_PROXIMITY_SUPPRESSED works at distSqr=1.935, but mob stays at 938 with completed route to 937; no physical step/mission resume.
 - Missing adjacent nudge/exact-step for recoveryBacktrackObjective. Report: docs/autonomous-village/2026-11-16-PHASE19-BACKTRACK-EXACT-ARRIVAL-FAIL.md. A2 OPEN; no 12k.
+
+
+## 2026-11-16 — Phase19 backtrack route-cursor + adjacent nudge correction (PENDING HARNESS)
+
+- Previous run `a2n-20261116-182234`: exact objective arrival gate worked, but WALK route node `937` was still consumed by generic waypoint tolerance at `938`; cursor reached idx=2 and no nudge ran.
+- ChatGPT published checkpoint `cc817c6314d2b2055dfbba578c5565e3bff9fedf`: exact-cell gate now also applies inside `nodoAlcanzado()`, preserving the active WALK node until physical occupancy. Existing adjacent nudge helper then runs when navigation is done, guarded by Manhattan distance, AABB fit and support. Added two diagnostic trace events and pure policy assertions.
+- Static/runtime checks are pending Harness. Validate exact live HEAD and run only disposable `nav-backtrack` after static checks. Require exact physical occupancy, one backtrack selection, mission resumed, history <=16, no teleport.
+- A2 OPEN; no full 12k before five consecutive strict 8/8; C4 save/reload OPEN.
