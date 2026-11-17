@@ -736,3 +736,12 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - gradlew test FAILED in compileTestJava: NavDropTakeoffPolicyTest uses BlockPos without import net.minecraft.core.BlockPos; 11 cannot-find-symbol errors, lines 60-79.
 - lint PASS, diff-check PASS, compileJava diagnostics PASS. No test mains executed; A2 not run.
 - Report: docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md. A2 OPEN; no 12k.
+
+
+## 2026-11-17 — test compile blocker corrected (PENDING HARNESS)
+
+- Harness reported `compileTestJava` failure on tested SHA `1e65c0242fc8058775eb2ab4687ccd3811fa42ad`: missing `net.minecraft.core.BlockPos` import in `NavDropTakeoffPolicyTest.java`.
+- ChatGPT added the import only; no production source or acceptance criteria changed.
+- Commit: `c75165c2135cccbfcc3eddd40abe09adce6766e8`.
+- Verified in `build.gradle`: `NavDropTakeoffPolicyTest`, `NavSourceCellPolicyTest` and `NavRouteNodePolicyTest` are all registered in `policyTest`.
+- Harness must sync this exact HEAD and rerun static checks. No A2 runtime unless every static gate passes. A2 remains OPEN; Run 2 and 12k remain prohibited by existing gates.
