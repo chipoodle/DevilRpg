@@ -1,3 +1,20 @@
+# CURRENT CHECKPOINT — 2026-11-17 IDX4 AABB source recovery
+
+**This section supersedes older "Immediate work" statements below.** Historical entries remain unchanged.
+
+- Forensic root cause confirmed in `2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md`: mob AABB spans Z=507.66..508.26 and physically rests on cobblestone (593,86,508), while integer blockPosition=(593,87,507) checks air below at (593,86,507).
+- ChatGPT implementation published through production checkpoint `b02affb19eb8e37824682090ba99f793a04aea94`.
+- New source resolver selects exactly one cardinal same-Y supported cell overlapped by the actual AABB, validates the actual translated AABB at candidate center, then issues bounded horizontal MoveControl only. It requires physical center occupancy and rechecks feet/support/current-AABB fit before A*.
+- Recovery route now permits at most one planner-validated DROP of exactly one block, because resolved source (593,87,508) is one block above original take-off (593,86,507). It rejects longer/multiple drops and all destructive/build/bridge transitions. Temporary route start is saved/restored so the recovery DROP resolves the correct origin.
+- Added `NavSourceCellPolicyTest` (10 assertions); `NavDropTakeoffPolicyTest` now expects 40 assertions; `NavRouteNodePolicyTest` remains 6. **Authored only; Harness has not yet executed them.**
+- Detailed implementation: `2026-11-17-IDX4-AABB-SOURCE-RECOVERY-FIX.md`.
+- **NEXT: Harness validates exact live branch HEAD.** Static checks first; then A2 Run 1 only on disposable world. Capture source candidate, snap movement, physical occupancy, recovery route (including any one-block DROP), exact take-off, original route/cursor restoration, and original DROP landing.
+- Do not run A2 Run 2 unless Run 1 reaches 8/8 strict. Do not run full 12k until five consecutive 8/8 strict runs.
+- IDX7/IDX8 untouched. C4 last observed PASS [1,0,0], save/reload OPEN. A2 remains OPEN pending runtime evidence.
+- Harness must not modify production source. Original A2/C4 worlds and local artifacts remain protected.
+
+---
+
 # Continuity update — 2026-11-17
 
 ## Collaboration contract correction
