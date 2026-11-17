@@ -1,3 +1,38 @@
+# Documentation reconciliation — 2026-11-17
+
+ChatGPT reviewed the shared branch collaboration documents after the Harness report
+`a2n-20261117-020800` and found two contradictory legacy documents. The permanent role policy and
+the explicit ChatGPT/Harness contract already correctly assigned implementation to ChatGPT and
+testing/evidence to Harness, but `GOVERNANCE.md` and `WORKFLOW.md` still described ChatGPT as
+read-only and a local-first orchestrator as the workflow.
+
+Those contradictions have now been corrected directly on `feature/autonomous-village`:
+
+- `docs/autonomous-village/GOVERNANCE.md` — commit `c670f2ba2b979b9ebe1ceaa81d1cbd7cd072765e`.
+- `docs/autonomous-village/WORKFLOW.md` — commit `9fbc63344acf6e0a575efe1d22b80509cf5b4d5d`.
+
+The corrected documents now explicitly state:
+- `feature/autonomous-village` is the shared communication channel and durable source of truth.
+- ChatGPT directly investigates, edits production source, reviews diffs, commits and publishes on that branch.
+- Harness synchronizes the branch locally, runs all requested static/runtime tests, records metrics/logs and publishes dated reports/documentation to the same branch.
+- ChatGPT reviews every Harness report and Harness-authored documentation change, reconciles errors/contradictions and updates the current handoff.
+- Harness does not independently implement production source fixes.
+- The user's pasted Harness report is a handoff; ChatGPT must also inspect the repository report/source.
+- Local Harness worktree is the execution environment, not a competing source-of-truth branch.
+
+No production source was changed in this documentation reconciliation. No tests or Minecraft runtime
+were run by ChatGPT. The latest empirical status remains the Harness result for tested SHA
+`b3064596d457e6e7877607a534f8889a4214045d`: A2 FAIL (5/8 strict, 5/8 perimeter), C4 FAIL
+`[0,0,0]`; IDX4 grounded recovery still has no accepted route; IDX7/IDX8 remain independent.
+Run 2 and Full 12K remain prohibited by the acceptance gates.
+
+**Next implementation:** inspect the live source for IDX4's airborne landing-anchor stabilization
+(change documented as `2026-11-17-A2-IDX4-LANDING-ANCHOR-FIX.md`), verify its safety/geometry and
+instrumentation, then make a focused correction to obtain a genuinely grounded supported recovery
+source. Investigate C4 `assignmentsClean=false` separately. Harness validates the exact new SHA.
+
+---
+
 # NEXT SESSION — A2 / C4 Stability
 
 ## Latest checkpoint — 2026-11-17 airborne DROP take-off recovery correction (PENDING HARNESS)
