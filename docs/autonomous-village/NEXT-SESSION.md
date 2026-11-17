@@ -110,6 +110,7 @@ Read first, in order:
 38. `docs/autonomous-village/2026-11-16-A2-RUN1-FORENSIC-EXTRACT.md`
 39. `docs/autonomous-village/2026-11-16-A2-DROP-ROUTE-FEET-FIX.md`
 40. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-FEET-FAIL.md`
+41. `docs/autonomous-village/2026-11-17-A2-IDX4-DROP-TAKEOFF-RECOVERY-FIX.md`
 
 ## Permanent collaboration workflow
 
@@ -189,12 +190,14 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: treat IDX4 as a separate recovery defect — the mob is below the DROP landing and cannot
-   regain it; every attempt yields `dy=1` and replans exhaust. IDX7 local 900-expansion/BUILD failure
-   and IDX8 invalid-local-waypoint failure remain independent.
-2. Publish a new SHA; Harness reruns A2 Run 1 only. Do not weaken entry criteria, ranges or budgets.
-3. Keep BREAK/backtrack fixtures unchanged as regression evidence. Do not run 12k until five
-   consecutive strict 8/8 runs. C4 save/reload remains OPEN.
+1. Harness fetches the live HEAD and validates the IDX4 physical take-off recovery fix:
+   Gradle tests, strict lint, diff-check, diagnostics compile, and NAV_DROP_TAKEOFF_POLICY_TEST (5 assertions).
+2. If static checks pass, run A2 Run 1 only. Confirm the mob below planned take-off Y receives
+   ACERCARSE-ORIGEN-DROP, physically returns to exact take-off Y, and only then executes/rejects the DROP.
+3. If runtime cannot regain the take-off, preserve full path/navigation trace; do not bypass the height guard.
+4. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent and untouched.
+   No Run 2 unless Run 1 reaches 8/8 strict; no 12k until five consecutive strict 8/8 runs.
+   Keep BREAK/backtrack fixtures unchanged. C4 save/reload remains OPEN.
 
 ## Worlds (preserve; do not overwrite)
 
