@@ -175,3 +175,12 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 ## Local-only artifacts
 
 `.a2-backups/`, `src/foodTest/`, `tools/a2n/A2NavHarness.java.partial`, launcher helper scripts, `tools/a5-closure/`. Do not commit indiscriminately.
+
+
+## 2026-11-16 — Phase19 backtrack exact-arrival correction (PENDING HARNESS)
+
+- Harness evidence: `BREAK_EDGE_EXCLUDED` PASS; `NAV_BACKTRACK` FAIL because generic `ARRIVE_DISTANCE_SQR` cleared the one-shot tactical target at 938 before exact cell 937.
+- ChatGPT correction source checkpoint: `889072d235a44d0efc2de7ad955333b39b1d8b03`. Added exact-cell gate for pending recovery backtrack in `NavExecutor`, pure policy and three regression assertions in `NavArrivalPolicyTest`, plus bounded suppression trace.
+- No tests/compile/lint/runtime executed by ChatGPT. **PENDING HARNESS** on exact live HEAD.
+- Run static validation and only disposable `nav-backtrack`; require physical return to exact historical cell, one selection, mission resumed, strategic mission preserved, bounded history, no teleport.
+- `BREAK_EDGE_EXCLUDED` remains validated; A2 OPEN; no full 12k until five consecutive strict 8/8; C4 save/reload OPEN.
