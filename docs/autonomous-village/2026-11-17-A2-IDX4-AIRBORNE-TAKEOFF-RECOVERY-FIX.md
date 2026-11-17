@@ -18,14 +18,14 @@ DROP_TAKEOFF_RECOVERY_ROUTE_STALLED
  pos=567,119,534 ticksSinAvance=21
 ```
 
-The recovery route was planned from `mob.blockPosition()` while the mob was airborne. That block coordinate was a transient feet cell, not a grounded/support-verified source. The first STEP_UP edge therefore described a one-block climb from a cell the mob did not physically occupy as a stable standing position. The entity fell, and the planned edge became stale.
+The trace proves that the STEP_UP assist was executing while `onGround=false`; the prior trace did not record the grounded state at the instant the auxiliary A* route was accepted, so it does **not** prove retrospectively that planning itself began airborne. Source review did establish that recovery planning had no grounded/source-support admission guard, while the STEP_UP executor could keep issuing horizontal movement from an airborne source without initiating a jump. The mob then fell to y119 and the one-block edge became stale. The correction closes both gaps and adds plan-acceptance telemetry so Harness can verify the source state directly.
 
 This is distinct from the already-fixed 900-expansion overflow: the report observed no `901/900`.
 
 ## Implementation
 
 - `NavStepUpRecoveryPolicy.canStartFrom` now admits recovery planning only when the mob is grounded, the source feet cell is valid, supported, and fits the entity.
-- `iniciarRecuperacionFisicaOrigenDrop` now defers planning while those physical preconditions are false. The suspended original DROP route is not discarded; the executor retries on subsequent ticks from the live cell after landing.
+- `iniciarRecuperacionFisicaOrigenDrop` now defers planning while those physical preconditions are false. The suspended original DROP route is not discarded; the executor retries on subsequent ticks from the live cell after landing. `DROP_TAKEOFF_RECOVERY_ROUTE_ACCEPTED` now records exact position, grounded state, valid feet, support and fit at plan admission.
 - Recovery STEP_UP preserves horizontal MoveControl during an airborne jump/fall, but JumpControl is only requested by the assist from a grounded, supported source.
 - If the mob lands and the active one-block STEP_UP edge is no longer adjacent at the expected elevation, the auxiliary recovery fails closed and the strategic mission is replanned from the live grounded cell. It does not execute a stale edge.
 - Added pure-policy coverage for grounded source admission, adjacent one-block geometry, and airborne/unsupported STEP_UP assist rejection.

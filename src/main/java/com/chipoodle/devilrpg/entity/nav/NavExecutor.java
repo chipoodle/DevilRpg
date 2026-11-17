@@ -3691,7 +3691,12 @@ public final class NavExecutor {
         state = NavState.TRAVERSING;
         if (NavTrace.on()) {
             NavTrace.ev("DROP_TAKEOFF_RECOVERY_ROUTE_ACCEPTED", "uuid=" + mob.getUUID()
-                    + " from=" + start.toShortString() + " takeoff=" + takeoff.toShortString()
+                    + " from=" + start.toShortString()
+                    + " exact=" + String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
+                            mob.getX(), mob.getY(), mob.getZ())
+                    + " onGround=" + grounded + " feetValid=" + sourceFeetValid
+                    + " sourceSupport=" + sourceSupported + " sourceFits=" + sourceFits
+                    + " takeoff=" + takeoff.toShortString()
                     + " suspendedIndex=" + indiceRutaDropSuspendida
                     + " recoveryRoute=" + route.describe()
                     + " summary={" + result.summary() + "}");
