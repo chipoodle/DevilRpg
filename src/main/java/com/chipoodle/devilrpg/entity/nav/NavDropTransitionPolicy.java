@@ -24,6 +24,11 @@ public final class NavDropTransitionPolicy {
      * horizontal approach tolerance. The old proximity predicate allowed Y +/- 1, which
      * incorrectly treated a mob one block BELOW its take-off as ready to execute a DROP.
      */
+    /** A DROP edge is executable only when its validated landing is strictly below take-off. */
+    public static boolean descensoFisicoValido(int takeoffFeet, int landingFeet) {
+        return landingFeet < takeoffFeet;
+    }
+
     public static boolean origenFisicamenteAlcanzado(int liveX, int liveY, int liveZ,
                                                        int origenX, int origenY, int origenZ) {
         return Math.abs(liveX - origenX) <= MAX_CONTIGUIDAD
