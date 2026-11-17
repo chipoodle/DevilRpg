@@ -57,6 +57,29 @@ public final class NavDropTakeoffPolicyTest {
         comprobar("vertical take-off recovery rejects partial routes to another destination",
                 !NavDropTransitionPolicy.rutaAscensoOrigenSegura(safeClimb, previous));
 
+        comprobar("STEP_UP assist accepts one adjacent supported climb",
+                NavStepUpRecoveryPolicy.canAssist(0, 1, -1, true, true, true, true));
+        comprobar("STEP_UP assist rejects same-column vertical impulse",
+                !NavStepUpRecoveryPolicy.canAssist(0, 1, 0, true, true, true, true));
+        comprobar("STEP_UP assist rejects multi-block recovery",
+                !NavStepUpRecoveryPolicy.canAssist(0, 3, -1, true, true, true, true));
+        comprobar("STEP_UP assist rejects missing obstruction, headroom, fit or support",
+                !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, false, true, true, true)
+                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, false, true, true)
+                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, true, false, true)
+                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, true, true, false));
+
+        comprobar("expansion budget permits the first expansion",
+                NavExpansionBudgetPolicy.canExpand(0, 900));
+        comprobar("expansion budget permits expansion 900",
+                NavExpansionBudgetPolicy.canExpand(899, 900));
+        comprobar("expansion budget rejects expansion 901",
+                !NavExpansionBudgetPolicy.canExpand(900, 900));
+        comprobar("expansion budget rejects any expansion after the limit",
+                !NavExpansionBudgetPolicy.canExpand(901, 900));
+        comprobar("zero expansion budget permits no work",
+                !NavExpansionBudgetPolicy.canExpand(0, 0));
+
         System.out.println("NAV_DROP_TAKEOFF_POLICY_TEST: OK (" + assertions + " assertions)");
     }
 
