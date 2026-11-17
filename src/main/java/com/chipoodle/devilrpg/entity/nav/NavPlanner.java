@@ -661,10 +661,11 @@ public final class NavPlanner {
             if (!closed.add(pos)) {
                 continue;
             }
-            if (++expansions > maxExpansions) {
+            if (!NavExpansionBudgetPolicy.canExpand(expansions, maxExpansions)) {
                 hitBudget = true;
                 break;
             }
+            expansions++;
             if (pos.equals(goal)) {
                 found = pos;
                 break;
