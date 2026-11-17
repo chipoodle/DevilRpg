@@ -19,6 +19,18 @@ public final class NavDropTransitionPolicy {
                 && Math.abs(liveZ - origenZ) <= MAX_CONTIGUIDAD;
     }
 
+    /**
+     * True only when the mob is physically back on the planned take-off Y and within the
+     * horizontal approach tolerance. The old proximity predicate allowed Y +/- 1, which
+     * incorrectly treated a mob one block BELOW its take-off as ready to execute a DROP.
+     */
+    public static boolean origenFisicamenteAlcanzado(int liveX, int liveY, int liveZ,
+                                                       int origenX, int origenY, int origenZ) {
+        return Math.abs(liveX - origenX) <= MAX_CONTIGUIDAD
+                && liveY == origenY
+                && Math.abs(liveZ - origenZ) <= MAX_CONTIGUIDAD;
+    }
+
     public static boolean ejecutable(boolean clearance, boolean support, boolean originCompatible,
                                      boolean landingContiguous, int dy, int maxDrop) {
         return clearance && support && originCompatible && landingContiguous
