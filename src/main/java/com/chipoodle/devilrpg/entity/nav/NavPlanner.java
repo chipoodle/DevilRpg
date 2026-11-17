@@ -431,8 +431,8 @@ public final class NavPlanner {
             List<NavRoute.Node> nodosFrente = new ArrayList<>();
             for (NavGraphSearch.Step paso : resultado.route()) {
                 BlockPos state = BlockPos.of(paso.state());
-                BlockPos routePos = paso.transition() == NavRoute.Transition.BREAK && paso.standPos() != null
-                        ? paso.standPos() : state;
+                BlockPos routePos = NavRouteNodePolicy.routePosition(state, paso.transition(),
+                        paso.feet(), paso.standPos());
                 nodosFrente.add(new NavRoute.Node(routePos, paso.transition(), paso.actionPos()));
             }
             resumen.append(" rutaFrente=").append(nodosFrente.size());
@@ -442,8 +442,8 @@ public final class NavPlanner {
         List<NavRoute.Node> nodes = new ArrayList<>();
         for (NavGraphSearch.Step paso : resultado.route()) {
             BlockPos state = BlockPos.of(paso.state());
-            BlockPos routePos = paso.transition() == NavRoute.Transition.BREAK && paso.standPos() != null
-                    ? paso.standPos() : state;
+            BlockPos routePos = NavRouteNodePolicy.routePosition(state, paso.transition(),
+                    paso.feet(), paso.standPos());
             nodes.add(new NavRoute.Node(routePos, paso.transition(), paso.actionPos()));
         }
         resumen.append(" ruta=").append(nodes.size());
@@ -781,7 +781,8 @@ public final class NavPlanner {
         BlockPos cursor = found;
         while (cursor != null && !cursor.equals(start)) {
             NavRoute.Transition t = transitionTo.getOrDefault(cursor, NavRoute.Transition.WALK);
-            BlockPos routePos = t == NavRoute.Transition.BREAK ? standTo.get(cursor) : cursor;
+            int feet = piesDe.getOrDefault(cursor, cursor.getY());
+            BlockPos routePos = NavRouteNodePolicy.routePosition(cursor, t, feet, standTo.get(cursor));
             if (t == NavRoute.Transition.BREAK && (routePos == null || actionTo.get(cursor) == null)) {
                 return new Result(new NavRoute(List.of(), goal), expansions, hitBudget,
                         resumen + " contratoBREAKIncompleto=true");
