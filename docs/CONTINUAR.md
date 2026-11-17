@@ -5047,3 +5047,11 @@ run/saves; hashes match; structural verification only.
 - PARTIALLY_CONFIRMED: MoveControl snap target z=514.5 competes with normal DROP MOVE_COMMAND z=513.5 at t4261; blockPosition oscillates 513<->514; oscillation guard switches state to RECOVERING at t4271 before center tolerance.
 - SOURCE_SELECTED is not implemented; SOURCE_SNAP_REACHED/REPLAN absent. Eight-neighbor matrix not logged.
 - Report: docs/autonomous-village/2026-11-17-A2-PHASE27-SNAP-FORENSIC-DIAGNOSIS.md. A2 OPEN; no Run 2/12k.
+
+## 2026-11-17 — A2 Phase 28 snap ownership/admission
+
+- Inspected `cebca95b` (production `05b7e9c0`); read-only, no production/runtime changes.
+- CONFIRMED admission: `originPlan=577,110,514`; `origenFisicamenteAlcanzado` uses integer ±1, admits at z=514.01 with 0.49 to center.
+- CONFIRMED ownership: normal DROP `Navigation.moveTo` targets z=513.50 while snap targets 514.50; blockPosition oscillates 513<->514; guard sets RECOVERING at t4271.
+- PHYSICAL_COLLISION not demonstrated; swept-AABB/controller telemetry missing. Eight-neighbor matrix: only S (577,110,514) overlaps (0.1739); other seven zero overlap.
+- Report: docs/autonomous-village/2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md. A2 OPEN; no Run 2/12k.

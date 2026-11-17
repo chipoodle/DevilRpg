@@ -883,3 +883,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only diagnosis on `feature/autonomous-village` at `05b7e9c0`.
 - Root cause PARTIALLY_CONFIRMED: competing DROP navigation vs source snap and oscillation-guard abort before physical center; no swept-collision or controller-ownership telemetry.
 - Report: `docs/autonomous-village/2026-11-17-A2-PHASE27-SNAP-FORENSIC-DIAGNOSIS.md`. No production changes; A2 OPEN.
+
+## 2026-11-17 — A2 Phase 28 snap ownership/admission
+
+- Read-only diagnosis at `cebca95b`; production remains `05b7e9c0`.
+- Confirmed premature integer-cell DROP admission and normal-navigation ownership conflict; oscillation guard aborts at t4271.
+- Report: `docs/autonomous-village/2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md`. No production changes; A2 OPEN.
