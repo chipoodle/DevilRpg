@@ -1,21 +1,14 @@
-# CONTINUAR — IDX4 Phase 23 (2026-11-17)
+# CONTINUAR — IDX4 unsupported DROP take-off guard (2026-11-17)
 
-Checkpoint vigente: `feature/autonomous-village` HEAD `557a7c9273930d91a377fdfde9e3d862cf2fe46f`.
+Implementation checkpoint: `c17ec47e7277a687fa428841d64ca8c8089e68c1`.
+Latest handoff: `docs/autonomous-village/NEXT-SESSION.md`.
+Latest fix report: `docs/autonomous-village/2026-11-17-IDX4-UNSUPPORTED-TAKEOFF-REPLAN-FIX.md`.
 
-ChatGPT añadió instrumentación de solo observación para:
-- Registrar el motivo exacto de rechazo de la arista de recuperación hacia el take-off: `DROP_TAKEOFF_EXACT_EDGE_DIAG`.
-- Registrar cada 10 ticks el estado físico del landing DROP: `DROP_LANDING_PROGRESS`.
-- Registrar el avance del cursor tras un landing físicamente alcanzado: `DROP_CURSOR_ADVANCE`.
+Phase 23 established that planned take-off `589,96,522` is unsupported; the requested landing `589,95,521` never emitted `DROP_DONE` or cursor advance. Source inspection found that runtime take-off admission checked coordinates but not grounded state, valid feet, support, or actual AABB fit.
 
-Código:
-- `NavPlanner.java` blob `65fad9421cdc0e6fb86d175c3ef52090f7d77966`.
-- `NavExecutor.java` blob `f5051593916d562b11aa0b426df337c890335f36`.
+ChatGPT changed DROP admission to require a grounded, valid, supported, fitting live source and a supported, fitting planned take-off. An unsupported planned take-off is not executed: the mob waits while airborne, then discards the stale DROP route and replans from its actual grounded supported cell. New traces: `DROP_TAKEOFF_UNSUPPORTED_WAIT` and `DROP_TAKEOFF_UNSUPPORTED_REPLAN`.
 
-Informe: `docs/autonomous-village/2026-11-17-IDX4-PHASE23-FORENSIC-INSTRUMENTATION.md`.
-
-**Pendiente Harness:** validar el SHA exacto con `gradlew test`, lint estricto, `git diff --check` y `compileJava -Pa2nDiagnostics=true`; si todo pasa, ejecutar A2 Run 1 solamente y extraer los tres eventos nuevos. ChatGPT no ha ejecutado estas pruebas ni runtime.
-
-A2 sigue OPEN. No ejecutar Run 2 sin 8/8 strict ni 12k sin cinco corridas consecutivas 8/8 strict. No aumentar presupuestos ni relajar geometría, soporte, protección o aterrizaje. IDX7/IDX8 siguen independientes; C4 save/reload sigue OPEN.
+Four policy assertions were added; expected `NAV_DROP_TAKEOFF_POLICY_TEST` total is 47. **Harness validation is pending; ChatGPT has not run tests, lint, diagnostics compile, or Minecraft runtime.** Static gate first, then A2 Run 1 only if static passes. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict. A2 remains OPEN; C4 last PASS [1,0,0], save/reload OPEN; IDX7/IDX8 independent. No budgets or safety predicates relaxed.
 
 ---
 
