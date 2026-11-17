@@ -158,6 +158,18 @@ public final class NavPlanner {
         if (cost < 0) {
             return new Arista(kind, -1.0D, transicion, PIES_NO_EJECUTABLE, Rechazo.CLASIFICACION);
         }
+        // A DROP must end strictly below its source feet. A gap candidate can be classified as
+        // DROP while its first supported landing is actually level with or above the current
+        // take-off; accepting that edge creates an impossible route (executor later sees dy >= 0).
+        if (transicion == NavRoute.Transition.DROP
+                && !NavDropTransitionPolicy.descensoFisicoValido(piesDesde, piesHasta)) {
+            if (NavTrace.on() && Boolean.getBoolean("devilrpg.a2n.traceNav.verboseDrops")) {
+                NavTrace.ev("DROP_REJECTED_NON_DESCENDING", "from=" + from.toShortString()
+                        + " takeoffFeet=" + piesDesde + " candidate=" + candidate.toShortString()
+                        + " landingFeet=" + piesHasta);
+            }
+            return new Arista(kind, cost, transicion, piesHasta, Rechazo.DESNIVEL);
+        }
         if (piesHasta == PIES_NO_EJECUTABLE
                 || piesHasta - piesDesde > SUBIDA_MAXIMA
                 || piesDesde - piesHasta > policies.maxSafeDrop()) {
