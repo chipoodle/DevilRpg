@@ -1,3 +1,19 @@
+# CURRENT CHECKPOINT — 2026-11-17 IDX4 Phase 23 targeted forensic instrumentation
+
+**This section supersedes older immediate-work statements below. Historical entries remain unchanged.**
+
+- Phase 22 read-only forensic extraction confirms the exact recovery A* expands `589,95,521`; the candidate `589,95,522` is generated but rejected inside `validarArista`. Exact rejection reason remains UNKNOWN because no candidate-level geometry/policy evidence was recorded.
+- The same run separately confirms that DROP landing `589,95,521` receives commands but has no verified physical landing, no matching `DROP_DONE`, and no cursor advance. The earlier `DROP_DONE` for `589,93,522` is a different route cycle and must not be counted.
+- ChatGPT added sparse, opt-in-only diagnostics without changing movement semantics:
+  - `NavPlanner.java`: `DROP_TAKEOFF_EXACT_EDGE_DIAG` captures the exact one-block-below-goal candidate, edge rejection enum, transition, feet values, protected status, fit/support/headroom and cell snapshot.
+  - `NavExecutor.java`: `DROP_LANDING_PROGRESS` records physical landing predicates every 10 ticks; `DROP_CURSOR_ADVANCE` records cursor advancement only after the existing physical arrival check succeeds.
+- Commits: planner `81890f7e80f2281481b479968d149437f59e9346`; executor `f43249eabda633569277ee73fa64835273a558e8`.
+- Detailed instructions: `2026-11-17-IDX4-PHASE23-FORENSIC-INSTRUMENTATION.md`.
+- **PENDING HARNESS**: static validation first on exact live HEAD, then A2 Run 1 only if static passes. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict.
+- A2 remains OPEN. No budget increase or weakened collision/support/headroom/protection/landing conditions. IDX7/IDX8 remain independent. C4 save/reload OPEN.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-17 IDX4 AABB source recovery
 
 **This section supersedes older "Immediate work" statements below.** Historical entries remain unchanged.
