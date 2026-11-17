@@ -487,3 +487,18 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - IDX7: exp=901/900 on 10/10 attempts, BUILD-FALLIDO, final full plan summary not persisted.
 - IDX8: 81 global front waypoints, 0/64 valid local, A2_LOCAL_STAIR_WRITE INC_FAIL NO_LOCAL_OBJECTIVE.
 - Report: docs/autonomous-village/2026-11-16-A2-RUN1-FORENSIC-EXTRACT.md. A2 remains OPEN; no 12k.
+
+
+## 2026-11-16 — A2 DROP route-node feet correction (PENDING HARNESS)
+
+- Forensic source: `a2n-20261116-190555`, SHA `2d47d628724a677269e1c3d895759154f56a52c9`.
+- Confirmed IDX4/IDX8 defect: local and global route reconstruction used graph state Y for DROP instead of validated feet/landing Y.
+- ChatGPT added `NavRouteNodePolicy` and applied it to complete global routes, partial/frontier global routes and local A* reconstruction. DROP now uses `(state.x, Step.feet, state.z)`.
+- BREAK retains stand position in `Node.pos` and solid target in `Node.actionPos`; other transitions retain canonical state.
+- Added `NavRouteNodePolicyTest` with 6 assertions and registered it in `policyTest`.
+- Commits: `866d8169` (policy), `38a15bb7` (production reconstruction), `cdf4c9f5` (test), `b19f413c` (test registration).
+- Report: `docs/autonomous-village/2026-11-16-A2-DROP-ROUTE-FEET-FIX.md`.
+- ChatGPT did not execute tests, lint, diff-check, diagnostics compile or runtime. **PENDING HARNESS** on exact live HEAD.
+- IDX7 BUILD failure/local 900-expansion exhaustion is intentionally deferred until the DROP correction is measured. No budget, collision, safe-drop or acceptance criteria were weakened.
+- Next: Harness validates static checks, then reruns A2 Run 1 only. Run 2 is forbidden unless Run 1 reaches 8/8 strict. Five consecutive 8/8 strict runs remain the gate before full 12k.
+- A2 OPEN; C4 save/reload OPEN; original worlds and previous run artifacts remain protected.
