@@ -3706,15 +3706,24 @@ public final class NavExecutor {
                 // Edit 17 · ORIGEN PLANIFICADO de ESTA transicion: solo si el cursor apunta al nodo que se
                 // ejecuta (identidad por posicion) y existe predecesor. NUNCA se usa plannedFrom (es el
                 // origen de la RUTA, no el de cada DROP) ni indiceDeEtapa (es el indice de ETAPA).
-                BlockPos origenPlan = null;
+                BlockPos origenAnterior = null;
                 if (route != null && routeIndex > 0 && routeIndex < route.nodes().size()) {
                     NavRoute.Node actual = route.currentNode(routeIndex);
                     if (actual != null && actual.pos().equals(node.pos())) {
                         NavRoute.Node previo = route.currentNode(routeIndex - 1);
                         if (previo != null) {
-                            origenPlan = previo.pos();
+                            origenAnterior = previo.pos();
                         }
                     }
+                }
+                BlockPos origenPlan = NavDropTransitionPolicy.origenPlanificado(
+                        routeIndex, plannedFrom, origenAnterior);
+                if (NavTrace.on() && routeIndex == 0) {
+                    NavTrace.ev("DROP_TAKEOFF_ORIGIN_RESOLVED", "uuid=" + mob.getUUID()
+                            + " routeIndex=0 routeStart=" + (plannedFrom == null ? "NONE" : plannedFrom.toShortString())
+                            + " live=" + mob.blockPosition().toShortString()
+                            + " landing=" + node.pos().toShortString()
+                            + " resolved=" + (origenPlan == null ? "NONE" : origenPlan.toShortString()));
                 }
                 Descenso descenso = describirDescenso(node.pos(),
                         construidas.contains(node.pos().below()), true, origenPlan);
