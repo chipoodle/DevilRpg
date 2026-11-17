@@ -57,6 +57,11 @@ Extended `NavDropTakeoffPolicyTest` from 16 to 25 assertions:
 - `src/main/java/com/chipoodle/devilrpg/entity/nav/NavExpansionBudgetPolicy.java` (new)
 - `src/test/java/com/chipoodle/devilrpg/entity/nav/NavDropTakeoffPolicyTest.java`
 
+## Code checkpoint
+
+- Production code checkpoint: `491b7d0170501e9d86433a52d2703395a4029b06`.
+- Branch: `feature/autonomous-village`.
+
 ## Validation
 
 ChatGPT has not executed Gradle, lint, compilation, or Minecraft runtime. All checks remain
