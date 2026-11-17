@@ -548,3 +548,27 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - A2 Run 1 `a2n-20261116-211919`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
 - IDX4 unchanged: DROP 597,78,499 from 596,77,498, dy=1, 24 failures; no non-descending rejection/recovery event for its UUID. IDX7/IDX8 unchanged.
 - Report: docs/autonomous-village/2026-11-16-A2-RUN1-NON-DESCENDING-DROP-FAIL.md. A2 OPEN; no 12k.
+
+
+## 2026-11-17 — A2 IDX4 first-node DROP origin fix (PENDING HARNESS)
+
+- Harness on `2214366a`: static PASS (DROP policy 9, route-node policy 6), A2 Run 1
+  `a2n-20261116-211919`: FAIL 5/8 strict, 5/8 perimeter. IDX4 remains at
+  `596,77,498` with DROP landing `597,78,499`, dy=+1, routeIndex=0.
+- Source inspection: accepted route installation records `plannedFrom = mob.blockPosition()`.
+  DROP executor resolved `origenPlan` only from the previous route node when routeIndex > 0,
+  leaving the first DROP without an origin. For index 0, the recorded route start is the exact
+  predecessor; for later nodes, the immediate previous node remains authoritative.
+- Added `NavDropTransitionPolicy.origenPlanificado(routeIndex, routeStart, previousNode)`.
+  Updated `NavExecutor` to use it and emit `DROP_TAKEOFF_ORIGIN_RESOLVED` for index 0.
+  Existing exact-Y physical-origin guard and all landing/safety checks remain unchanged.
+- Added three pure assertions; `NAV_DROP_TAKEOFF_POLICY_TEST` expected count is now 12.
+  Existing test registration is unchanged.
+- Commits: `b763b112` policy, `2518d703` tests, `183b7667` executor,
+  `bc38d43a` report.
+- Report: `docs/autonomous-village/2026-11-17-A2-IDX4-FIRST-NODE-DROP-ORIGIN-FIX.md`.
+- No tests, lint, compile, or runtime were executed by ChatGPT. **PENDING HARNESS** on exact HEAD.
+- Harness must capture routeStart/plannedFrom, live position, landing, resolved origin, recovery command,
+  physical arrival at origin, and final DROP result. Static PASS first; A2 Run 1 only.
+- IDX7/IDX8 remain independent and untouched. No Run 2 unless 8/8 strict; no full 12k until
+  five consecutive 8/8 strict runs. A2 OPEN; C4 save/reload OPEN.
