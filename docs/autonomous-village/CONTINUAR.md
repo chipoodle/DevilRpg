@@ -440,3 +440,12 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - `break-edge-excluded` `a2n-20261116-180242`: **COMPLETO**; one fingerprint exclusion, 40-tick retry, alternative BREAK, both blocks solid, mission preserved.
 - `nav-backtrack` `a2n-20261116-180555`: **FAIL**; selected 937 from 939, stopped at 938 because generic arrival tolerance cleared tactical objective before exact return; mission not resumed.
 - Report: docs/autonomous-village/2026-11-16-PHASE19-EXCLUSION-BACKTRACK-RUNTIME.md. A2 remains OPEN; no 12k.
+
+
+## 2026-11-16 — Phase19 backtrack exact-arrival correction (PENDING HARNESS)
+
+- Previous run `a2n-20261116-180555`: backtrack selected 937 from 939 but generic arrival tolerance cleared it at 938; no physical return and no mission resumption.
+- ChatGPT published exact-cell arrival gate; source checkpoint `889072d235a44d0efc2de7ad955333b39b1d8b03`. Ordinary tactical arrival behavior and all budgets/cooldowns unchanged. Added pure policy regression assertions and `BACKTRACK_PROXIMITY_SUPPRESSED` trace.
+- Static and runtime validation are pending Harness. Validate exact live HEAD with Gradle tests, strict lint, diff-check, diagnostics compile, then disposable `nav-backtrack` only.
+- Required: one selection, physical occupancy of the selected cell, mission resumed, strategic mission preserved, history ≤16, no teleport.
+- `BREAK_EDGE_EXCLUDED` remains PASS. A2 OPEN; no full 12k until five consecutive strict 8/8; C4 save/reload OPEN.
