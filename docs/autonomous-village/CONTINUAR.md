@@ -626,5 +626,6 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - Added `NavStepUpRecoveryPolicy`: natural JumpControl + MoveControl assist only for an adjacent one-block climb with blocked lower step, clear headroom, destination fit and support. Same-column and multi-block ascent are rejected. Exact physical occupancy/support/fit remain mandatory.
 - Added `NavExpansionBudgetPolicy`; planner checks before increment, so the hard 900 limit cannot execute expansion 901. No budget increase.
 - Extended `NavDropTakeoffPolicyTest` to 25 assertions. Expected `NAV_ROUTE_NODE_POLICY_TEST` remains 6.
+- Production code checkpoint before handoff documentation: `491b7d0170501e9d86433a52d2703395a4029b06`.
 - Report: `docs/autonomous-village/2026-11-17-A2-IDX4-STEP-UP-EXECUTION-FIX.md`.
 - ChatGPT has not run Gradle/lint/compile/runtime. **PENDING HARNESS** on exact live HEAD. Static first, then A2 Run 1 only. IDX7/IDX8 unchanged; no Run 2 unless 8/8 strict; no full 12k until five consecutive 8/8 strict runs. C4 save/reload OPEN.
