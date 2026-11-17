@@ -129,3 +129,32 @@ strategicMissionPreserved=true
 historyBounded=true
 noTeleport=true
 ```
+
+
+## ChatGPT correction 2 — route cursor gate + adjacent backtrack nudge (PENDING HARNESS)
+
+Source checkpoint: `cc817c6314d2b2055dfbba578c5565e3bff9fedf`; production executor commit `3d80f0883ce55676be8051e2d51562002e04341e`; pure policy commit `2ba9e3a560462be5e24be906423ebde889ac09cb`.
+
+### New root cause from run a2n-20261116-182234
+
+The previous exact-arrival guard protected the top-level objective arrival, but the route cursor had a separate generic gate: `nodoAlcanzado()` still accepted a WALK node by the ordinary 2.25 squared distance tolerance. At position `938,184,608`, this consumed `WALK@937,184,608`; the route reached `idx=2` before the adjacent nudge helper could run. The completed route remained one block short.
+
+### Correction published
+
+- `NavArrivalPolicy.backtrackWaypointReached(pendingBacktrack, exactCellOccupied, normalWaypointReached)` now overrides ordinary node-arrival semantics only for the selected backtrack node.
+- `NavExecutor.nodoAlcanzado()` identifies the node only when it matches both the active strategic objective and `recoveryBacktrackObjective`; while the mob is not in the exact BlockPos, it refuses to consume that node even if normal WALK tolerance says reached.
+- Because the route node remains active, the existing default movement branch continues to issue `moveTo` and calls `aplicarAcercamientoAdyacente()`. When vanilla navigation is already done, the existing bounded `NavAdjacentApproachPolicy` checks Manhattan distance, AABB fit and support, then `MoveControl.setWantedPosition` nudges into the exact target cell.
+- Added `BACKTRACK_NODE_OCCUPANCY_REQUIRED` and `BACKTRACK_ADJACENT_NUDGE` trace events.
+- Added three pure assertions: adjacent backtrack node cannot advance cursor; exact occupancy can; normal waypoint semantics remain unchanged.
+- The earlier exact objective-arrival gate remains in place. No cooldown, budget, range, recovery count or acceptance criterion changed.
+
+No Gradle, lint, diff-check, diagnostics compile or runtime validation was run by ChatGPT. This is **PENDING HARNESS**, not PASS.
+
+### Required Harness validation
+
+1. Fetch actual live branch HEAD and verify checkpoint `cc817c63`; preserve local-only artifacts and use safe fast-forward only.
+2. Run `.\\gradlew.bat test`, `python tools/lint_aldea.py --strict`, `git diff --check`, and `.\\gradlew.bat compileJava -Pa2nDiagnostics=true`.
+3. Execute only a new disposable `nav-backtrack` run with `-Da2n.mode=nav-backtrack -Ddevilrpg.a2n.traceNav=true`.
+4. Require one backtrack selection, `BACKTRACK_NODE_OCCUPANCY_REQUIRED` at the adjacent cell, `BACKTRACK_ADJACENT_NUDGE`, physical occupancy of the exact selected historical cell, objective clear only afterward, mission resumed, strategic mission preserved, history <=16 and no teleport.
+5. Report exact tested SHA and preserve `srv.log`, `nav-trace.log`, `fin.txt`, `estado.txt`, static logs. Harness must not edit production source.
+6. No full 12k. A2 remains OPEN until five consecutive strict 8/8 `DENTRO-PARED`; C4 save/reload remains OPEN.
