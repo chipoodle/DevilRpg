@@ -449,3 +449,10 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - Static and runtime validation are pending Harness. Validate exact live HEAD with Gradle tests, strict lint, diff-check, diagnostics compile, then disposable `nav-backtrack` only.
 - Required: one selection, physical occupancy of the selected cell, mission resumed, strategic mission preserved, history ≤16, no teleport.
 - `BREAK_EDGE_EXCLUDED` remains PASS. A2 OPEN; no full 12k until five consecutive strict 8/8; C4 save/reload OPEN.
+
+## 2026-11-16 — Phase19 NAV_BACKTRACK exact arrival runtime
+
+- Synced `9a5d075d` -> `e2fe0873` by fast-forward.
+- Static PASS: Gradle, strict lint, diff-check, diagnostics compile; three new NavArrivalPolicy backtrack assertions and NavRecoveryControllerTest 10 passed.
+- `nav-backtrack` `a2n-20261116-182234`: **FAIL**. BACKTRACK_PROXIMITY_SUPPRESSED works at distSqr=1.935, but mob stays at 938 with completed route to 937; no physical step/mission resume.
+- Missing adjacent nudge/exact-step for recoveryBacktrackObjective. Report: docs/autonomous-village/2026-11-16-PHASE19-BACKTRACK-EXACT-ARRIVAL-FAIL.md. A2 OPEN; no 12k.
