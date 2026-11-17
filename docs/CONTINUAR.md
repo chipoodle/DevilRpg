@@ -1,3 +1,22 @@
+# CURRENT CHECKPOINT — 2026-11-17 grounded invalid DROP source recovery (PENDING HARNESS)
+
+**Current branch HEAD:** `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
+**Detailed report:** `2026-11-17-A2-GROUNDED-INVALID-DROP-SOURCE-RECOVERY-FIX.md`.
+
+- Phase 24 tested `37c0aa702b44d94c6d5db037d2a1317c5224d3b6b`: A2 FAIL 1/8 perimeter and 1/8 strict; 2,102 unsupported-source WAIT events. The dominant state was grounded with invalid feet/support but a fitting real AABB.
+- Root cause: grounded-invalid source bypassed the existing AABB source resolver and fell into the airborne WAIT branch. It now snaps only to a unique cardinal same-Y supported cell overlapped by the real AABB, using horizontal MoveControl, then replans from the physically verified source.
+- If no unique source exists or the snap cannot be physically completed within 80 ticks, the executor emits an explicit failure and fails closed; no infinite wait loop.
+- A missing `plannedFrom` can no longer bypass DROP origin admission: the live cell is accepted only if grounded, valid, supported and real-AABB fitting; otherwise source recovery/wait occurs.
+- `DROP_START` now logs originPlan and physical source predicates for IDX4 forensic diagnosis.
+- Policy test expected count is now 51 assertions (47 + 4). Tests authored, **not executed by ChatGPT**.
+- **PENDING HARNESS:** sync exact HEAD above; run Gradle tests, strict lint, diff-check and diagnostics compile first. Confirm 51 assertions. If static PASS, A2 Run 1 only.
+- Capture source recovery/snap/replan events for the seven blocked entrants and new DROP_START origin fields plus landing/cursor events for IDX4 UUID `bbadffa7-09c6-49fa-8adf-c1cd118e30f5`.
+- No Run 2 unless Run 1 is 8/8 strict. No Full 12K until five consecutive 8/8 strict runs. No budget increases or relaxed geometry/support/protection/landing criteria.
+- A2 remains OPEN. C4 last PASS [1,0,0], save/reload OPEN. IDX7/IDX8 remain independent. Original worlds/artifacts protected. Harness must not modify production.
+- ChatGPT has not run tests, lint, diagnostics compile, or Minecraft runtime.
+
+---
+
 # CONTINUAR — IDX4 unsupported DROP take-off guard (2026-11-17)
 
 Implementation checkpoint: `c17ec47e7277a687fa428841d64ca8c8089e68c1`.
