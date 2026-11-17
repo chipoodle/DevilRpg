@@ -4,7 +4,7 @@
 **Production code checkpoint:** `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
 **Detailed report:** `2026-11-17-A2-GROUNDED-INVALID-DROP-SOURCE-RECOVERY-FIX.md`.
 
-- Phase 24 tested `37c0aa702b44d94c6d5db037d2a1317c5224d3b6b`: A2 FAIL 1/8 perimeter and 1/8 strict; 2,102 unsupported-source WAIT events. The dominant state was grounded with invalid feet/support but a fitting real AABB.
+- Phase 24 tested `37c0aa702b44d94c6d5db506d023ec65d1b8`: A2 FAIL 1/8 perimeter and 1/8 strict; 2,102 unsupported-source WAIT events. The dominant state was grounded with invalid feet/support but a fitting real AABB.
 - Root cause: grounded-invalid source bypassed the existing AABB source resolver and fell into the airborne WAIT branch. It now snaps only to a unique cardinal same-Y supported cell overlapped by the real AABB, using horizontal MoveControl, then replans from the physically verified source.
 - If no unique source exists or the snap cannot be physically completed within 80 ticks, the executor emits an explicit failure and fails closed; no infinite wait loop.
 - A missing `plannedFrom` can no longer bypass DROP origin admission: the live cell is accepted only if grounded, valid, supported and real-AABB fitting; otherwise source recovery/wait occurs.
