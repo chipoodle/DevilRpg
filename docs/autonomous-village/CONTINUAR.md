@@ -729,3 +729,10 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - onGround=true, feetValid=false, support=false, fits=true (narrow cellBox); canStartFrom rejects and shouldStabilizeLanding is inapplicable.
 - Valid shortest recovery candidate: (593,87,508), horizontal WALK +0.54 z, no jump/teleport.
 - Report: docs/autonomous-village/2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md. A2 OPEN; no 12k.
+
+## 2026-11-17 — AABB source recovery static gate BLOCKED
+
+- Synced c67e0e8a -> 1e65c024 by fast-forward; production b02affb1.
+- gradlew test FAILED in compileTestJava: NavDropTakeoffPolicyTest uses BlockPos without import net.minecraft.core.BlockPos; 11 cannot-find-symbol errors, lines 60-79.
+- lint PASS, diff-check PASS, compileJava diagnostics PASS. No test mains executed; A2 not run.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md. A2 OPEN; no 12k.

@@ -8,7 +8,9 @@
 - Recovery route now permits at most one planner-validated DROP of exactly one block, because resolved source (593,87,508) is one block above original take-off (593,86,507). It rejects longer/multiple drops and all destructive/build/bridge transitions. Temporary route start is saved/restored so the recovery DROP resolves the correct origin.
 - Added `NavSourceCellPolicyTest` (10 assertions); `NavDropTakeoffPolicyTest` now expects 40 assertions; `NavRouteNodePolicyTest` remains 6. **Authored only; Harness has not yet executed them.**
 - Detailed implementation: `2026-11-17-IDX4-AABB-SOURCE-RECOVERY-FIX.md`.
-- **NEXT: Harness validates exact live branch HEAD.** Static checks first; then A2 Run 1 only on disposable world. Capture source candidate, snap movement, physical occupancy, recovery route (including any one-block DROP), exact take-off, original route/cursor restoration, and original DROP landing.
+- **BLOCKED at static gate:** `gradlew test` fails because `NavDropTakeoffPolicyTest.java` uses `BlockPos` without `import net.minecraft.core.BlockPos` (11 `cannot find symbol` errors, lines 60–79). `compileTestJava` aborts; no test mains or A2 ran.
+- Harness result: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`.
+- **NEXT: ChatGPT adds the missing import (test-only) and republishes.** Harness then reruns static validation before A2 Run 1.
 - Do not run A2 Run 2 unless Run 1 reaches 8/8 strict. Do not run full 12k until five consecutive 8/8 strict runs.
 - IDX7/IDX8 untouched. C4 last observed PASS [1,0,0], save/reload OPEN. A2 remains OPEN pending runtime evidence.
 - Harness must not modify production source. Original A2/C4 worlds and local artifacts remain protected.
@@ -182,6 +184,7 @@ Read first, in order:
 47. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-RECOVERY-FAIL.md`
 48. `docs/autonomous-village/2026-11-17-A2-RUN1-LANDING-ANCHOR-FAIL.md`
 49. `docs/autonomous-village/2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md`
+50. `docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`
 
 ## Permanent collaboration workflow
 
@@ -196,7 +199,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md`. Root cause: AABB at z507.96 rests on cobblestone at z508 while support checks integer cell z507; no horizontal source resolution exists.
+- Latest technical report: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`. BLOCKED: missing `import net.minecraft.core.BlockPos` in `NavDropTakeoffPolicyTest`; A2 not run.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -307,11 +310,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: implement AABB-footprint source resolution. If grounded on an edge overhang, select the
-   adjacent same-Y supported cell (`593,87,508`), move horizontally to its center with MoveControl,
-   then re-evaluate admission. Do not relax support; do not accept the current invalid cell for A*.
-2. Add the unit tests and isolated fixture in the forensic report.
-3. C4 remains independent (PASS `[1,0,0]`, save/reload OPEN); IDX7/IDX8 remain independent failures.
+1. ChatGPT: add the missing `import net.minecraft.core.BlockPos;` to
+   `src/test/java/com/chipoodle/devilrpg/entity/nav/NavDropTakeoffPolicyTest.java` and republish.
+   Test-only compile blocker; do not alter production behavior to work around it.
+2. Harness reruns static validation first, then A2 Run 1 only; no runtime before PASS.
+3. C4 remains independent (last PASS `[1,0,0]`, save/reload OPEN); IDX7/IDX8 remain independent.
 4. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
 
 ## Worlds (preserve; do not overwrite)
