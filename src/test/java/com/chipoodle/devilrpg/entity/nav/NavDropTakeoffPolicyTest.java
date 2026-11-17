@@ -66,6 +66,17 @@ public final class NavDropTakeoffPolicyTest {
         comprobar("source recovery accepts one planner-validated one-block DROP to exact take-off",
                 NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
                         oneBlockRecoveryDrop, resolvedSource, originalTakeoff));
+        NavRoute partialDeclaredTakeoff = new NavRoute(java.util.List.of(
+                new NavRoute.Node(new BlockPos(593, 86, 508), NavRoute.Transition.WALK)), originalTakeoff);
+        comprobar("source recovery rejects a partial route that only declares the exact destination",
+                !NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
+                        partialDeclaredTakeoff, resolvedSource, originalTakeoff));
+        NavRoute exactJumpRecovery = new NavRoute(java.util.List.of(
+                new NavRoute.Node(new BlockPos(593, 89, 507), NavRoute.Transition.JUMP_UP)),
+                new BlockPos(593, 89, 507));
+        comprobar("source recovery accepts an exact final JUMP_UP take-off waypoint",
+                NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
+                        exactJumpRecovery, resolvedSource, new BlockPos(593, 89, 507)));
         NavRoute twoBlockRecoveryDrop = new NavRoute(java.util.List.of(
                 new NavRoute.Node(new BlockPos(593, 85, 507), NavRoute.Transition.DROP)),
                 new BlockPos(593, 85, 507));
