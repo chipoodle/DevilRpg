@@ -111,6 +111,7 @@ Read first, in order:
 39. `docs/autonomous-village/2026-11-16-A2-DROP-ROUTE-FEET-FIX.md`
 40. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-FEET-FAIL.md`
 41. `docs/autonomous-village/2026-11-17-A2-IDX4-DROP-TAKEOFF-RECOVERY-FIX.md`
+42. `docs/autonomous-village/2026-11-17-A2-IDX4-NON-DESCENDING-DROP-FIX.md`
 42. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md`
 
 ## Permanent collaboration workflow
@@ -189,17 +190,23 @@ Read first, in order:
 - Take-off fix at `6d294c1d`: static PASS (NAV_DROP_TAKEOFF_POLICY_TEST 5). A2 Run 1
   `a2n-20261116-201759`: **4/8 strict**, 5/8 perimeter. IDX4 route starts with DROP at index0, so
   `origenPlan` is null and `ACERCARSE-ORIGEN-DROP` is never emitted; mob remains at y77 below y78.
+- Follow-up source diagnosis: local planner starts from `mob.blockPosition()` and initializes
+  `piesDesde=start.getY()`; planner accepted a DROP whose landing feet were above the source feet
+  because only the generic vertical bound was enforced. Using `plannedFrom` cannot repair this
+  impossible edge. Fix at pending SHA: require `landingFeet < takeoffFeet` for every DROP edge;
+  reject non-descending DROP before A* accepts it. New test grows to 9 assertions.
 - IDX2 this run reached perimeter but not strict; idx7/idx8 unchanged independent failures.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. ChatGPT: support a recoverable take-off origin for a DROP that is the first route node
-   (`routeIndex=0`). Currently `origenPlan` is null, so the physical take-off recovery guard is never
-   applied and no `ACERCARSE-ORIGEN-DROP` is issued. Do not weaken the height guard.
-2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
-3. After a new SHA, Harness reruns A2 Run 1 only; no Run 2 unless 8/8 strict. Keep C4 save/reload OPEN.
+1. Harness validates the non-descending DROP correction: static tests, strict lint, diff-check,
+   diagnostics compile, then A2 Run 1 only. Confirm the planner rejects any DROP with
+   landingFeet >= takeoffFeet and selects an alternative executable route where available.
+2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent and untouched.
+3. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
+   Keep C4 save/reload OPEN.
 
 ## Worlds (preserve; do not overwrite)
 
