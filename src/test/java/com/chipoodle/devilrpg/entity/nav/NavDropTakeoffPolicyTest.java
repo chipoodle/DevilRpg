@@ -17,6 +17,15 @@ public final class NavDropTakeoffPolicyTest {
                 NavDropTransitionPolicy.origenCompatible(596, 77, 498, 597, 78, 499)
                         && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(596, 77, 498, 597, 78, 499));
 
+        comprobar("landing one block below takeoff is a valid DROP",
+                NavDropTransitionPolicy.descensoFisicoValido(78, 77));
+        comprobar("landing at takeoff height is not a DROP",
+                !NavDropTransitionPolicy.descensoFisicoValido(78, 78));
+        comprobar("landing above takeoff is not a DROP",
+                !NavDropTransitionPolicy.descensoFisicoValido(77, 78));
+        comprobar("landing below takeoff by safe multi-block fall remains a DROP",
+                NavDropTransitionPolicy.descensoFisicoValido(82, 78));
+
         System.out.println("NAV_DROP_TAKEOFF_POLICY_TEST: OK (" + assertions + " assertions)");
     }
 
