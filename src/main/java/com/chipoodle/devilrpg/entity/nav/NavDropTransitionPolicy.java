@@ -64,7 +64,8 @@ public final class NavDropTransitionPolicy {
      */
     public static boolean rutaRecuperacionOrigenSegura(NavRoute route, BlockPos start, BlockPos takeoff) {
         if (route == null || route.isEmpty() || start == null || takeoff == null
-                || !takeoff.equals(route.destination())) {
+                || !takeoff.equals(route.destination())
+                || !takeoff.equals(route.nodes().get(route.nodes().size() - 1).pos())) {
             return false;
         }
         int previousY = start.getY();
