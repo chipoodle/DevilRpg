@@ -109,6 +109,7 @@ Read first, in order:
 37. `docs/autonomous-village/2026-11-16-A2-STRICT-GATE-RUN1-FAIL.md`
 38. `docs/autonomous-village/2026-11-16-A2-RUN1-FORENSIC-EXTRACT.md`
 39. `docs/autonomous-village/2026-11-16-A2-DROP-ROUTE-FEET-FIX.md`
+40. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-FEET-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -123,7 +124,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-A2-RUN1-FORENSIC-EXTRACT.md`. Confirms DROP node uses state Y not Step.feet; IDX7 local budget exhaustion; IDX8 global/local waypoint rejection.
+- Latest technical report: `2026-11-16-A2-RUN1-DROP-FEET-FAIL.md`. DROP-feet fix statically passes but A2 remains 5/8; IDX4 is now a recovery-below-landing defect.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -179,18 +180,20 @@ Read first, in order:
   node y78 vs mob y77 (`dy=1` rejection); IDX8 has 81 front waypoints but 0/64 valid local.
 - IDX7 BUDGET shows `exp=901/900` for 10/10 attempts with `BUILD-FALLIDO`; no final full plan summary
   was persisted.
+- DROP-feet fix at `5604ed03`: static PASS (NavRouteNodePolicyTest 6). A2 Run 1 `a2n-20261116-195651`
+  still **FAIL** at 5/8 strict. IDX4 remains below its landing `597,78,499` at `596,77,498`
+  (24 DROP rejections, dy=1, replans 8/8); the earlier state-vs-feet node hypothesis is not the cause
+  of this runtime instance. IDX7 `exp=901/900` 10/10; IDX8 no local waypoint/global budget.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Harness: fetch the live `feature/autonomous-village` HEAD and validate the DROP route-node fix:
-   Gradle tests, strict lint, diff-check and diagnostics compile.
-2. If static checks pass, rerun **A2 Run 1 only** on that exact SHA. Preserve all prior artifacts and
-   original A2/C4 worlds. Do not run Run 2 unless Run 1 reaches 8/8 strict.
-3. Evaluate IDX7 after measuring the DROP correction. If it still fails, return the full local plan
-   summary and BUILD failure trace; ChatGPT will diagnose and implement a separate fix.
-4. Keep BREAK/backtrack fixtures unchanged as regression evidence. Do not run full 12k until five
+1. ChatGPT: treat IDX4 as a separate recovery defect — the mob is below the DROP landing and cannot
+   regain it; every attempt yields `dy=1` and replans exhaust. IDX7 local 900-expansion/BUILD failure
+   and IDX8 invalid-local-waypoint failure remain independent.
+2. Publish a new SHA; Harness reruns A2 Run 1 only. Do not weaken entry criteria, ranges or budgets.
+3. Keep BREAK/backtrack fixtures unchanged as regression evidence. Do not run 12k until five
    consecutive strict 8/8 runs. C4 save/reload remains OPEN.
 
 ## Worlds (preserve; do not overwrite)

@@ -502,3 +502,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - IDX7 BUILD failure/local 900-expansion exhaustion is intentionally deferred until the DROP correction is measured. No budget, collision, safe-drop or acceptance criteria were weakened.
 - Next: Harness validates static checks, then reruns A2 Run 1 only. Run 2 is forbidden unless Run 1 reaches 8/8 strict. Five consecutive 8/8 strict runs remain the gate before full 12k.
 - A2 OPEN; C4 save/reload OPEN; original worlds and previous run artifacts remain protected.
+
+## 2026-11-16 — A2 Run 1 after DROP-feet correction
+
+- Synced `bd1e543f` -> `5604ed03` by fast-forward; confirmed commits 38a15bb7/cdf4c9f5/b19f413c.
+- Static PASS including NavRouteNodePolicyTest 6 assertions, NavArrivalPolicy, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261116-195651`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 unchanged: mob at 596,77,498 below landing 597,78,499; dy=1 DROP rejections, replans 8/8. IDX7 exp=901/900 10/10; IDX8 no local waypoint/global budget.
+- Report: docs/autonomous-village/2026-11-16-A2-RUN1-DROP-FEET-FAIL.md. A2 OPEN; no 12k.
