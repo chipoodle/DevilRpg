@@ -3625,8 +3625,9 @@ public final class NavExecutor {
                     + " speed=" + speed);
         }
     }
-    /**
-     * Plans and executes a bounded, non-destructive route back to the take-off of the active DROP.
+    private boolean iniciarRecuperacionFisicaOrigenDrop(BlockPos takeoff, long now) {
+        // The temporary route remains subject to the normal A* and physical transition guards.
+
      * Vanilla PathNavigation may return a completed one-node path when the target is vertically
      * above the mob in the same column. In that case, use the same validated A* movement graph as
      * normal navigation, temporarily suspending (not discarding) the DROP route.
@@ -3828,11 +3829,40 @@ public final class NavExecutor {
                 return;
             }
             case STEP_UP -> {
-                mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 1.0D);
-                if (recuperacionOrigenDropActiva) {
-                    aplicarAcercamientoAdyacente(node, aim, 1.0D);
+                boolean recoveryStepAssist = recuperacionOrigenDropActiva
+                        && NavStepUpRecoveryPolicy.canAssist(
+                                node.pos().getX() - mob.blockPosition().getX(),
+                                node.pos().getY() - mob.blockPosition().getY(),
+                                node.pos().getZ() - mob.blockPosition().getZ(),
+                                NavObstruction.blockedAtFeet(mob.level(), mob, node.pos().below()),
+                                NavObstruction.headClearOneUp(mob.level(), mob, node.pos().below()),
+                                NavObstruction.fits(mob.level(), mob, node.pos()),
+                                NavObstruction.hasSupport(mob.level(), node.pos()));
+                if (recoveryStepAssist) {
+                    // Execute this already-validated one-block climb through vanilla's natural
+                    // JumpControl + MoveControl. Do not leave PathNavigation in charge of a
+                    // vertical waypoint it may report complete without physically climbing.
+                    mob.getNavigation().stop();
+                    mob.getMoveControl().setWantedPosition(aim.x, aim.y, aim.z, 1.0D);
+                    if (mob.onGround()) {
+                        mob.getJumpControl().jump();
+                    }
+                    if (NavTrace.on() && mob.level().getGameTime() % 10L == 0L) {
+                        NavTrace.ev("DROP_TAKEOFF_STEP_UP_ASSIST", "uuid=" + mob.getUUID()
+                                + " from=" + mob.blockPosition().toShortString()
+                                + " target=" + node.pos().toShortString()
+                                + " onGround=" + mob.onGround()
+                                + " support=" + NavObstruction.hasSupport(mob.level(), node.pos())
+                                + " fits=" + NavObstruction.fits(mob.level(), mob, node.pos()));
+                    }
+                } else {
+                    mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 1.0D);
+                    if (recuperacionOrigenDropActiva) {
+                        aplicarAcercamientoAdyacente(node, aim, 1.0D);
+                    }
                 }
-                trazarComandoMovimiento(node, "STEP_UP", aim.x, aim.y, aim.z, 1.0D);
+                trazarComandoMovimiento(node, "STEP_UP" + (recoveryStepAssist ? "-RECOVERY-ASSIST" : ""),
+                        aim.x, aim.y, aim.z, 1.0D);
             }
             case DROP -> {
                 // A2 Stage 6F · DESCENSO EXPLICITO Y VERIFICADO. El nodo es el ATERRIZAJE: se describe y se valida
