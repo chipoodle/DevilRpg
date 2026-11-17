@@ -7,7 +7,8 @@ import java.util.function.Predicate;
 
 /**
  * Resolves a grounded navigation source from the mob's real AABB footprint when its integer
- * blockPosition cell is unsupported. Only physically valid overlapping neighboring feet cells are eligible; selection is deterministic.
+ * blockPosition cell is unsupported. Only physically valid overlapping neighboring feet cells
+ * are eligible; selection is deterministic.
  */
 public final class NavSourceCellPolicy {
     private static final double MIN_OVERLAP = 1.0E-4D;
