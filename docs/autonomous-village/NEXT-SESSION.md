@@ -92,6 +92,7 @@ Read first, in order:
 33. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-PASS.md`
 34. `docs/autonomous-village/2026-11-16-PHASE19-EXCLUSION-BACKTRACK-RUNTIME.md`
 35. `docs/autonomous-village/2026-11-16-PHASE19-BACKTRACK-EXACT-ARRIVAL-FAIL.md`
+36. `docs/autonomous-village/2026-11-16-PHASE19-NAV-BACKTRACK-EXACT-ARRIVAL-RESULT.md`
 
 ## Permanent collaboration workflow
 
@@ -106,7 +107,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-PHASE19-BACKTRACK-EXACT-ARRIVAL-FAIL.md`. Exact-arrival guard works; adjacent physical backtrack step is still missing.
+- Latest technical report: `2026-11-16-PHASE19-NAV-BACKTRACK-EXACT-ARRIVAL-RESULT.md`. Backtrack exact arrival PASS on `fb93541e`.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -148,20 +149,21 @@ Read first, in order:
 - `break-edge-excluded` `a2n-20261116-180242`: **COMPLETO**. Two unverified actions, delta=40,
   one `BREAK_EDGE_EXCLUDED` (fingerprint, exclusions=1), alternative BREAK selected, both blocks
   solid, route index unchanged, strategic mission preserved, 0 unexpected calls.
-- `nav-backtrack` `a2n-20261116-182234` on HEAD `e2fe0873`: **FAIL**. `BACKTRACK_PROXIMITY_SUPPRESSED`
-  works at `distSqr=1.935`, but the mob stays at `938` with a completed 2-node WALK route to `937`;
-  no physical step, no mission resume. Adjacent nudge is missing for `recoveryBacktrackObjective`.
+- `nav-backtrack` `a2n-20261116-185434` on HEAD `fb93541e`: **COMPLETO**. Selection target
+  `937,184,608`, adjacent nudge from 938, exact physical return, mission resumed at tick 103,
+  history 6, max step 0.114, one backtrack, no teleport.
+- BREAK success/retry, BREAK_EDGE_EXCLUDED and NAV_BACKTRACK fixtures are individually validated.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. ChatGPT: add the adjacent physical nudge/exact-step for `recoveryBacktrackObjective` when navigation
-   is done and the mob is one cell away (`938 -> 937`). The suppression guard already prevents early
-   clearing; do not change cooldown/budgets/acceptance.
-2. Rerun `nav-backtrack` on the exact new SHA; require physicalReturn+missionResumed.
-3. BREAK_EDGE_EXCLUDED is validated; keep its fixture unchanged.
-4. A2 remains OPEN; do not run 12k until five consecutive 8/8 strict `DENTRO-PARED`. C4 save/reload OPEN.
+1. Move to the separate A2 focused gate: five consecutive 8/8 strict `DENTRO-PARED` runs in
+   independent disposable worlds. Do not count perimeter-only arrivals.
+2. Keep BREAK success/retry, BREAK_EDGE_EXCLUDED and NAV_BACKTRACK fixtures unchanged as regression
+   evidence.
+3. C4 contract unchanged; save/reload remains OPEN.
+4. Full 12k only after the five-run A2 gate. A2 remains OPEN.
 
 ## Worlds (preserve; do not overwrite)
 

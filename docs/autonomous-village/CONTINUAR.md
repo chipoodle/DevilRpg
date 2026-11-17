@@ -464,3 +464,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - ChatGPT published checkpoint `cc817c6314d2b2055dfbba578c5565e3bff9fedf`: exact-cell gate now also applies inside `nodoAlcanzado()`, preserving the active WALK node until physical occupancy. Existing adjacent nudge helper then runs when navigation is done, guarded by Manhattan distance, AABB fit and support. Added two diagnostic trace events and pure policy assertions.
 - Static/runtime checks are pending Harness. Validate exact live HEAD and run only disposable `nav-backtrack` after static checks. Require exact physical occupancy, one backtrack selection, mission resumed, history <=16, no teleport.
 - A2 OPEN; no full 12k before five consecutive strict 8/8; C4 save/reload OPEN.
+
+## 2026-11-16 — Phase19 NAV_BACKTRACK exact arrival PASS
+
+- Synced `58cb27aa` -> `fb93541e` by fast-forward; test commit `cc817c63`.
+- Static PASS: Gradle, strict lint, diff-check, diagnostics compile; NavArrivalPolicy cursor-occupancy assertions and NavRecoveryControllerTest 10 passed.
+- `nav-backtrack` `a2n-20261116-185434`: **COMPLETO**. Selected 937, adjacent nudge from 938, physical return, mission resumed tick103, history6, maxStep0.114, one backtrack, no teleport.
+- BREAK success/retry, BREAK_EDGE_EXCLUDED and NAV_BACKTRACK fixtures individually validated. A2 remains OPEN; no 12k.
+- Report: docs/autonomous-village/2026-11-16-PHASE19-NAV-BACKTRACK-EXACT-ARRIVAL-RESULT.md.
