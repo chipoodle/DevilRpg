@@ -704,3 +704,11 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - A2 Run 1 `a2n-20261117-101833`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
 - IDX4 grounded at593.51,87,507.96 but feetValid=false support=false fits=true, landingAnchor=NONE; no accepted route/assist/reached; replans8/8. IDX7/IDX8 unchanged.
 - Report: docs/autonomous-village/2026-11-17-A2-RUN1-LANDING-ANCHOR-FAIL.md. A2 OPEN; no 12k.
+
+## 2026-11-17 — IDX4 grounded-invalid forensic
+
+- Read-only audit at f0be2dac; no A2 run, no production changes.
+- Root cause: AABB at 593.51,87,507.96 spans z507.66-508.26 and rests on cobblestone (593,86,508), while blockPosition/support checks use (593,87,507) below (593,86,507) air.
+- onGround=true, feetValid=false, support=false, fits=true (narrow cellBox); canStartFrom rejects and shouldStabilizeLanding is inapplicable.
+- Valid shortest recovery candidate: (593,87,508), horizontal WALK +0.54 z, no jump/teleport.
+- Report: docs/autonomous-village/2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md. A2 OPEN; no 12k.

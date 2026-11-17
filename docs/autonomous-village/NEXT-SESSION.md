@@ -164,6 +164,7 @@ Read first, in order:
 46. `docs/autonomous-village/2026-11-17-A2-RUN1-STEP-UP-ASSIST-FAIL.md`
 47. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-RECOVERY-FAIL.md`
 48. `docs/autonomous-village/2026-11-17-A2-RUN1-LANDING-ANCHOR-FAIL.md`
+49. `docs/autonomous-village/2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md`
 
 ## Permanent collaboration workflow
 
@@ -178,7 +179,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-RUN1-LANDING-ANCHOR-FAIL.md`. Anchor does not activate because IDX4 is grounded on an invalid/unsupported feet cell; C4 PASS in this run.
+- Latest technical report: `2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md`. Root cause: AABB at z507.96 rests on cobblestone at z508 while support checks integer cell z507; no horizontal source resolution exists.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -280,15 +281,20 @@ Read first, in order:
   A2 Run 1 `a2n-20261117-101833`: **FAIL**, 5/8 strict, 5/8 perimeter, C4 PASS `[1,0,0]`.
   IDX4 is grounded at `593.51,87,507.96` but `feetValid=false support=false fits=true`,
   `landingAnchor=NONE`; no route accepted/assist/reached; final replans 8/8.
-- IDX7/IDX8 unchanged; A2 focused remains **OPEN**; full 12k not run.
+- IDX4 forensic root cause (run `a2n-20261117-101833`): exact `593.51,87,507.96`, AABB
+  z≈507.66–508.26, supported by cobblestone `(593,86,508)`, but `blockPosition`/support check uses
+  `(593,87,507)` below `(593,86,507)` air. `onGround=true`, `feetValid=false`, `support=false`,
+  `fits=true` (narrow cellBox). Valid shortest candidate is `(593,87,508)` via horizontal WALK.
+- No production change and no new A2 run in the forensic session. A2 OPEN; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. ChatGPT: make IDX4 obtain a grounded, supported, valid feet cell. The landing anchor is safe but
-   cannot activate while `feetValid=false support=false`; horizontal stabilization alone is insufficient.
-2. C4 remains an independent contract; PASS in this run, save/reload OPEN.
-3. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
+1. ChatGPT: implement AABB-footprint source resolution. If grounded on an edge overhang, select the
+   adjacent same-Y supported cell (`593,87,508`), move horizontally to its center with MoveControl,
+   then re-evaluate admission. Do not relax support; do not accept the current invalid cell for A*.
+2. Add the unit tests and isolated fixture in the forensic report.
+3. C4 remains independent (PASS `[1,0,0]`, save/reload OPEN); IDX7/IDX8 remain independent failures.
 4. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
 
 ## Worlds (preserve; do not overwrite)
