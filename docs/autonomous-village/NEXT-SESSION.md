@@ -8,9 +8,10 @@
 - Recovery route now permits at most one planner-validated DROP of exactly one block, because resolved source (593,87,508) is one block above original take-off (593,86,507). It rejects longer/multiple drops and all destructive/build/bridge transitions. Temporary route start is saved/restored so the recovery DROP resolves the correct origin.
 - Added `NavSourceCellPolicyTest` (10 assertions); `NavDropTakeoffPolicyTest` now expects 40 assertions; `NavRouteNodePolicyTest` remains 6. **Authored only; Harness has not yet executed them.**
 - Detailed implementation: `2026-11-17-IDX4-AABB-SOURCE-RECOVERY-FIX.md`.
-- **BLOCKED at static gate:** `gradlew test` fails because `NavDropTakeoffPolicyTest.java` uses `BlockPos` without `import net.minecraft.core.BlockPos` (11 `cannot find symbol` errors, lines 60–79). `compileTestJava` aborts; no test mains or A2 ran.
-- Harness result: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`.
-- **NEXT: ChatGPT adds the missing import (test-only) and republishes.** Harness then reruns static validation before A2 Run 1.
+- Harness static gate at `1e65c024` was BLOCKED only by a missing test import; the historical result is preserved in `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`.
+- ChatGPT added `import net.minecraft.core.BlockPos;` to `NavDropTakeoffPolicyTest.java` (test-only), commit `c75165c2135cccbfcc3eddd40abe09adce6766e8`.
+- Confirmed `build.gradle` registers `NavDropTakeoffPolicyTest`, `NavSourceCellPolicyTest`, and `NavRouteNodePolicyTest` in `policyTest`.
+- **NEXT: Harness syncs exact HEAD `c75165c2135cccbfcc3eddd40abe09adce6766e8` and reruns static validation.** A2 Run 1 only after the complete static gate passes.
 - Do not run A2 Run 2 unless Run 1 reaches 8/8 strict. Do not run full 12k until five consecutive 8/8 strict runs.
 - IDX7/IDX8 untouched. C4 last observed PASS [1,0,0], save/reload OPEN. A2 remains OPEN pending runtime evidence.
 - Harness must not modify production source. Original A2/C4 worlds and local artifacts remain protected.
