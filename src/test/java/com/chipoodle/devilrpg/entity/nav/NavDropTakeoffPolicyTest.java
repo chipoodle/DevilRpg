@@ -68,6 +68,16 @@ public final class NavDropTakeoffPolicyTest {
         comprobar("DROP recovery rejects a source cell the mob cannot fit",
                 !NavStepUpRecoveryPolicy.canStartFrom(true, true, true, false));
 
+        comprobar("airborne landing stabilization accepts only a valid supported fitting feet cell",
+                NavStepUpRecoveryPolicy.shouldStabilizeLanding(false, true, true, true));
+        comprobar("landing stabilization is not requested once grounded",
+                !NavStepUpRecoveryPolicy.shouldStabilizeLanding(true, true, true, true));
+        comprobar("landing stabilization rejects unsupported or invalid feet cells",
+                !NavStepUpRecoveryPolicy.shouldStabilizeLanding(false, true, false, true)
+                        && !NavStepUpRecoveryPolicy.shouldStabilizeLanding(false, false, true, true));
+        comprobar("landing stabilization rejects cells the mob cannot fit",
+                !NavStepUpRecoveryPolicy.shouldStabilizeLanding(false, true, true, false));
+
         comprobar("STEP_UP geometry accepts one adjacent one-block climb",
                 NavStepUpRecoveryPolicy.isAdjacentOneBlockStep(0, 1, -1));
         comprobar("STEP_UP geometry rejects same-column vertical movement",

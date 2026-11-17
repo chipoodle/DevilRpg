@@ -3644,13 +3644,25 @@ public final class NavExecutor {
             // blockPosition() can describe a cell the mob is merely passing through while falling.
             // Never seed a physical recovery A* route from that transient airborne cell.
             mob.getNavigation().stop();
+            boolean landingAnchor = NavStepUpRecoveryPolicy.shouldStabilizeLanding(
+                    grounded, sourceFeetValid, sourceSupported, sourceFits);
+            if (landingAnchor) {
+                // Do not plan or jump while airborne. If the current feet cell is geometrically
+                // supported and clear, keep the mob horizontally over its center while gravity
+                // completes the landing; the next tick may admit A* only after onGround becomes true.
+                mob.getMoveControl().setWantedPosition(start.getX() + 0.5D, mob.getY(),
+                        start.getZ() + 0.5D, 0.35D);
+            }
             if (NavTrace.on() && now % 10L == 0L) {
                 NavTrace.ev("DROP_TAKEOFF_RECOVERY_WAIT_GROUNDED", "uuid=" + mob.getUUID()
                         + " live=" + start.toShortString()
                         + " exact=" + String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
                                 mob.getX(), mob.getY(), mob.getZ())
+                        + " velocity=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                mob.getDeltaMovement().x, mob.getDeltaMovement().y, mob.getDeltaMovement().z)
                         + " onGround=" + grounded + " feetValid=" + sourceFeetValid
                         + " support=" + sourceSupported + " fits=" + sourceFits
+                        + " landingAnchor=" + (landingAnchor ? start.toShortString() : "NONE")
                         + " takeoff=" + takeoff.toShortString());
             }
             return false;

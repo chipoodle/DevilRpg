@@ -10,6 +10,15 @@ public final class NavStepUpRecoveryPolicy {
         return grounded && feetValid && supported && fits;
     }
 
+    /**
+     * While airborne, only stabilize over the current cell when its feet geometry is valid,
+     * supported and clear. This is horizontal landing guidance only; it never admits A* or a jump.
+     */
+    public static boolean shouldStabilizeLanding(boolean grounded, boolean feetValid,
+                                                  boolean supported, boolean fits) {
+        return !grounded && feetValid && supported && fits;
+    }
+
     /** The active edge must still be a one-block horizontal step from the current physical cell. */
     public static boolean isAdjacentOneBlockStep(int dx, int dy, int dz) {
         int horizontal = Math.abs(dx) + Math.abs(dz);

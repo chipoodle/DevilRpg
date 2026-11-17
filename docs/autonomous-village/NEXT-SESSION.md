@@ -322,3 +322,13 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 - Production code checkpoint before handoff documentation: `491b7d0170501e9d86433a52d2703395a4029b06`.
 - Report: `docs/autonomous-village/2026-11-17-A2-IDX4-STEP-UP-EXECUTION-FIX.md`.
 - PENDING HARNESS on exact current HEAD. Static checks first, then A2 Run 1 only. IDX7/IDX8 untouched. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict runs. C4 save/reload OPEN.
+
+
+## 2026-11-17 — IDX4 bounded airborne landing anchor (PENDING HARNESS)
+
+- Harness on `b3064596` / production `190bb657`: static PASS, A2 Run 1 FAIL 5/8 strict.
+- IDX4 emitted only WAIT_GROUNDED; one sample had feetValid=true, support=true, fits=true, but onGround=false.
+- Published bounded horizontal landing guidance through MoveControl, only over the current valid/supported/fitting feet cell. No A* or jump is allowed until a later tick reports onGround=true.
+- Added four pure assertions; expected DROP policy test total 36. WAIT trace includes velocity and landingAnchor.
+- Report: `2026-11-17-A2-IDX4-LANDING-ANCHOR-FIX.md`. PENDING HARNESS. A2 Run 1 only after static PASS; no Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict.
+- C4 `assignmentsClean=false` remains independent and unchanged; IDX7/IDX8 untouched.
