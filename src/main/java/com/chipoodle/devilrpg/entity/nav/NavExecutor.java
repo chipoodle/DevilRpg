@@ -3772,7 +3772,7 @@ public final class NavExecutor {
             mob.getNavigation().stop();
 
             // Resolve a grounded but invalid integer source from the actual horizontal AABB footprint.
-            // Only one cardinal adjacent same-Y cell may qualify; ambiguous or unsupported candidates fail closed.
+            // Rank all eight same-Y neighbors by real AABB overlap and center distance; only physically safe cells qualify.
             if (grounded && (!sourceFeetValid || !sourceSupported || !sourceFits)) {
                 BlockPos candidate = NavSourceCellPolicy.bestAdjacentCandidate(
                         start, mob.getBoundingBox(), mob.getX(), mob.getZ(),

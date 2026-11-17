@@ -45,6 +45,10 @@ public final class NavSourceCellPolicyTest {
         comprobar("multiple valid overlaps select one deterministic best source instead of failing closed",
                 south.equals(NavSourceCellPolicy.bestAdjacentCandidate(current, ambiguousFootprint,
                         0.95D, 0.95D, cell -> cell.equals(east) || cell.equals(south))));
+        comprobar("candidate with greatest real-AABB overlap outranks a smaller overlap",
+                south.equals(NavSourceCellPolicy.bestAdjacentCandidate(current,
+                        new AABB(0.1D, 1.0D, 0.7D, 0.9D, 2.95D, 1.3D),
+                        0.95D, 0.95D, cell -> cell.equals(east) || cell.equals(south))));
         comprobar("diagonal AABB-overlapping source is considered when it is the only safe candidate",
                 diagonal.equals(NavSourceCellPolicy.bestAdjacentCandidate(current, ambiguousFootprint,
                         0.95D, 0.95D, diagonal::equals)));
