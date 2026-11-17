@@ -54,6 +54,12 @@ public final class NavArrivalPolicyTest {
                 NavArrivalPolicy.backtrackArrivalAllowed(true, true));
         comprobar("objetivo no-backtrack conserva llegada generica",
                 NavArrivalPolicy.backtrackArrivalAllowed(false, false));
+        comprobar("nodo de backtrack adyacente NO avanza cursor por tolerancia",
+                !NavArrivalPolicy.backtrackWaypointReached(true, false, true));
+        comprobar("nodo de backtrack avanza al ocupar celda exacta",
+                NavArrivalPolicy.backtrackWaypointReached(true, true, false));
+        comprobar("nodo normal conserva resultado de llegada existente",
+                NavArrivalPolicy.backtrackWaypointReached(false, false, true));
         comprobar("escalon pendiente adyacente NO se considera alcanzado",
                 !NavArrivalPolicy.waypointReached(false, false, true, true, false, false));
         comprobar("escalon pendiente fuera de tolerancia SI se reconoce si esta ocupado",
