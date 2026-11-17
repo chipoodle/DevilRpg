@@ -114,6 +114,7 @@ Read first, in order:
 42. `docs/autonomous-village/2026-11-17-A2-IDX4-NON-DESCENDING-DROP-FIX.md`
 42. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md`
 43. `docs/autonomous-village/2026-11-16-A2-RUN1-NON-DESCENDING-DROP-FAIL.md`
+44. `docs/autonomous-village/2026-11-16-A2-RUN1-FIRST-NODE-DROP-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -128,7 +129,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-IDX4-FIRST-NODE-DROP-ORIGIN-FIX.md`. First-node DROP now resolves its origin from the route's recorded `plannedFrom`; later DROP nodes still use their immediate predecessor. Pending Harness.
+- Latest technical report: `2026-11-16-A2-RUN1-FIRST-NODE-DROP-FAIL.md`. Origin resolves and command emits, but vertical ascent y93→y96 is not executable.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -209,16 +210,20 @@ Read first, in order:
   routeStart for index 0 and immediate predecessor for later indices; `NavExecutor` now issues the
   existing exact-Y `ACERCARSE-ORIGEN-DROP` recovery when required. Added `DROP_TAKEOFF_ORIGIN_RESOLVED`
   trace and 3 assertions (DROP policy total 12). Commits `b763b112`, `2518d703`, `183b7667`.
+- First-node origin fix at `b73ca2de`: static PASS (NAV_DROP_TAKEOFF 12). A2 Run 1
+  `a2n-20261116-213836`: **FAIL**, 5/8 strict, 5/8 perimeter, C4 PASS `[1,0,0]`.
+  IDX4 resolves origin `589,96,522` from live `589,93,522` and emits `ACERCARSE-ORIGEN-DROP`, but
+  PathNavigation returns a one-node path and the mob does not ascend; physical origin not reached.
+- IDX7 BUILD/900-expansion and IDX8 local-waypoint failures unchanged.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Harness validates the first-node DROP origin fix at the exact current branch HEAD:
-   static checks first, then A2 Run 1 only. Capture `plannedFrom`, live position, landing,
-   resolved origin, `DROP_TAKEOFF_ORIGIN_RESOLVED`, `ACERCARSE-ORIGEN-DROP`, physical arrival
-   at take-off, and final DROP validation. Confirm existing exact-Y and safety guards remain active.
-2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent and untouched.
+1. ChatGPT: make the vertical recovery from live y93 to take-off y96 executable while preserving
+   height/support/collision guards. Origin resolution and `ACERCARSE-ORIGEN-DROP` already work; the
+   mob receives a one-node path and does not ascend.
+2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
 3. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
    Keep C4 save/reload OPEN.
 

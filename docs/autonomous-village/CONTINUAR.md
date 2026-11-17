@@ -572,3 +572,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
   physical arrival at origin, and final DROP result. Static PASS first; A2 Run 1 only.
 - IDX7/IDX8 remain independent and untouched. No Run 2 unless 8/8 strict; no full 12k until
   five consecutive 8/8 strict runs. A2 OPEN; C4 save/reload OPEN.
+
+## 2026-11-16 — A2 Run 1 first-node DROP origin recovery
+
+- Synced `31923d0f` -> `b73ca2de` by fast-forward.
+- Static PASS incl NAV_DROP_TAKEOFF_POLICY_TEST 12, NAV_ROUTE_NODE 6, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261116-213836`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 origin resolves 589,96,522 from live589,93,522; ACERCARSE-ORIGEN-DROP emitted but one-node path, no ascent, physical origin not reached. IDX7/IDX8 unchanged.
+- Report: docs/autonomous-village/2026-11-16-A2-RUN1-FIRST-NODE-DROP-FAIL.md. A2 OPEN; no 12k.
