@@ -27,6 +27,14 @@ public final class NavDropTakeoffPolicyTest {
                                 true, true, false, true, 596, 78, 498, 597, 78, 499)
                         && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(
                                 true, true, true, false, 596, 78, 498, 597, 78, 499));
+        comprobar("grounded invalid source enters AABB source-cell recovery, not wait",
+                NavDropTransitionPolicy.debeRecuperarFuenteActual(false, true, false, false, true));
+        comprobar("airborne unsupported take-off waits for natural physics",
+                !NavDropTransitionPolicy.debeRecuperarFuenteActual(false, false, false, false, true));
+        comprobar("valid grounded source replans instead of source recovery",
+                !NavDropTransitionPolicy.debeRecuperarFuenteActual(false, true, true, true, true));
+        comprobar("supported planned take-off does not trigger source recovery",
+                !NavDropTransitionPolicy.debeRecuperarFuenteActual(true, true, false, false, true));
         comprobar("unsupported take-off replans only from a grounded valid supported fitting source",
                 NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(false, true, true, true, true));
         comprobar("unsupported take-off does not replan from airborne or invalid source",

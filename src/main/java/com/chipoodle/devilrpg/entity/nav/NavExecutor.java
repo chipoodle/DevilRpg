@@ -209,6 +209,8 @@ public final class NavExecutor {
     /** Adjacent supported source cell selected from the real AABB footprint while recovering a DROP take-off. */
     private BlockPos fuenteDropPendiente;
     private long inicioSnapFuenteDrop = -1L;
+    private BlockPos fuenteDropSinCandidatoDesde;
+    private long inicioEsperaFuenteDropSinCandidato = -1L;
     /** Backoff for a failed bounded exact take-off search; the suspended strategic route stays intact. */
     private long nextDropRecoveryPlanAt;
 
@@ -3886,7 +3888,100 @@ public final class NavExecutor {
         return true;
     }
 
+    /** Snap a grounded invalid feet cell to its unique AABB-overlapping support, then replan. */
+    private void resolverFuenteActualYReplanificar(long now) {
+        if (!mob.onGround()) {
+            mob.getNavigation().stop();
+            return;
+        }
+        BlockPos current = mob.blockPosition();
+        if (fuenteDropPendiente != null) {
+            BlockPos candidate = fuenteDropPendiente;
+            boolean valid = esPieValido(candidate)
+                    && NavObstruction.fitsAtCellCenter(mob.level(), mob, candidate);
+            if (valid && current.equals(candidate)
+                    && NavSourceCellPolicy.centeredInCell(mob.getX(), mob.getZ(), candidate, 0.20D)
+                    && NavObstruction.hasSupport(mob.level(), current)
+                    && NavObstruction.fitsActualAabb(mob.level(), mob)) {
+                if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_REPLAN", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " source=" + current.toShortString()
+                        + " action=replan_from_verified_aabb_source");
+                fuenteDropPendiente = null;
+                inicioSnapFuenteDrop = -1L;
+                fuenteDropSinCandidatoDesde = null;
+                inicioEsperaFuenteDropSinCandidato = -1L;
+                route = null;
+                routeIndex = 0;
+                plannedFrom = null;
+                globalCache = null;
+                globalMision = null;
+                globalDesde = null;
+                nextDropRecoveryPlanAt = 0L;
+                state = NavState.PLANNING;
+                nextPlanAt = now;
+                return;
+            }
+            if (!valid) {
+                fuenteDropPendiente = null;
+                inicioSnapFuenteDrop = -1L;
+            } else if (inicioSnapFuenteDrop >= 0L && now - inicioSnapFuenteDrop > 80L) {
+                if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_FAILED", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " candidate=" + candidate.toShortString()
+                        + " reason=physical_center_not_reached_within_80_ticks");
+                fuenteDropPendiente = null;
+                inicioSnapFuenteDrop = -1L;
+                fallar("DROP source-cell recovery stalled before physical occupancy: " + candidate);
+                return;
+            } else {
+                mob.getNavigation().stop();
+                mob.getMoveControl().setWantedPosition(candidate.getX() + 0.5D, mob.getY(),
+                        candidate.getZ() + 0.5D, 0.35D);
+                if (NavTrace.on() && now % 10L == 0L) NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_STARTED",
+                        "uuid=" + mob.getUUID() + " tick=" + now + " from=" + current.toShortString()
+                                + " candidate=" + candidate.toShortString() + " speed=0.35 action=source_snap_then_replan");
+                return;
+            }
+        }
+        BlockPos candidate = NavSourceCellPolicy.uniqueAdjacentCandidate(current, mob.getBoundingBox(),
+                cell -> esPieValido(cell) && NavObstruction.fitsAtCellCenter(mob.level(), mob, cell));
+        if (candidate == null) {
+            if (!current.equals(fuenteDropSinCandidatoDesde)) {
+                fuenteDropSinCandidatoDesde = current.immutable();
+                inicioEsperaFuenteDropSinCandidato = now;
+            } else if (inicioEsperaFuenteDropSinCandidato >= 0L && now - inicioEsperaFuenteDropSinCandidato >= 80L) {
+                if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_UNRESOLVED", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " current=" + current.toShortString()
+                        + " waited=80 reason=no_unique_supported_aabb_overlapping_neighbor");
+                fuenteDropSinCandidatoDesde = null;
+                inicioEsperaFuenteDropSinCandidato = -1L;
+                fallar("DROP source-cell recovery found no unique supported AABB-overlapping cell at " + current);
+                return;
+            }
+            mob.getNavigation().stop();
+            if (NavTrace.on() && now % 10L == 0L) NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_INVALID",
+                    "uuid=" + mob.getUUID() + " tick=" + now + " current=" + current.toShortString()
+                            + " grounded=true feetValid=" + esPieValido(current)
+                            + " support=" + NavObstruction.hasSupport(mob.level(), current)
+                            + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob)
+                            + " candidate=NONE");
+            return;
+        }
+        fuenteDropSinCandidatoDesde = null;
+        inicioEsperaFuenteDropSinCandidato = -1L;
+        fuenteDropPendiente = candidate.immutable();
+        inicioSnapFuenteDrop = now;
+        mob.getNavigation().stop();
+        mob.getMoveControl().setWantedPosition(candidate.getX() + 0.5D, mob.getY(), candidate.getZ() + 0.5D, 0.35D);
+        if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_CANDIDATE", "uuid=" + mob.getUUID()
+                + " tick=" + now + " from=" + current.toShortString() + " candidate=" + candidate.toShortString()
+                + " feetValid=" + esPieValido(candidate) + " support=" + NavObstruction.hasSupport(mob.level(), candidate)
+                + " fits=" + NavObstruction.fitsAtCellCenter(mob.level(), mob, candidate)
+                + " action=source_snap_then_replan");
+    }
+
     private void limpiarRecuperacionOrigenDrop() {
+        fuenteDropSinCandidatoDesde = null;
+        inicioEsperaFuenteDropSinCandidato = -1L;
         rutaDropSuspendida = null;
         indiceRutaDropSuspendida = 0;
         objetivoRecuperacionOrigenDrop = null;
@@ -4159,26 +4254,52 @@ public final class NavExecutor {
                         && NavObstruction.fitsAtCellCenter(mob.level(), mob, origenPlan);
                 long sourceCheckTick = mob.level().getGameTime();
 
+                if (origenPlan == null) {
+                    boolean liveGrounded = mob.onGround();
+                    boolean liveFeetValid = esPieValido(mob.blockPosition());
+                    boolean liveSupported = NavObstruction.hasSupport(mob.level(), mob.blockPosition());
+                    boolean liveFits = NavObstruction.fitsActualAabb(mob.level(), mob);
+                    if (liveGrounded && liveFeetValid && liveSupported && liveFits) {
+                        origenPlan = mob.blockPosition().immutable();
+                        takeoffSupported = true;
+                        if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_LIVE_ORIGIN_VERIFIED", "uuid=" + mob.getUUID()
+                                + " tick=" + sourceCheckTick + " source=" + origenPlan.toShortString()
+                                + " grounded=true feetValid=true support=true realAabbFits=true");
+                    } else if (liveGrounded) {
+                        mob.getNavigation().stop();
+                        resolverFuenteActualYReplanificar(sourceCheckTick);
+                        if (NavTrace.on() && sourceCheckTick % 10L == 0L) NavTrace.ev(
+                                "DROP_TAKEOFF_ORIGIN_MISSING_SOURCE_RECOVERY", "uuid=" + mob.getUUID()
+                                        + " tick=" + sourceCheckTick + " liveSource=" + mob.blockPosition().toShortString()
+                                        + " feetValid=" + liveFeetValid + " support=" + liveSupported
+                                        + " realAabbFits=" + liveFits);
+                        return;
+                    } else {
+                        mob.getNavigation().stop();
+                        if (NavTrace.on() && sourceCheckTick % 10L == 0L) NavTrace.ev(
+                                "DROP_TAKEOFF_ORIGIN_MISSING_WAIT", "uuid=" + mob.getUUID()
+                                        + " tick=" + sourceCheckTick + " liveSource=" + mob.blockPosition().toShortString()
+                                        + " grounded=false action=wait_for_natural_landing");
+                        return;
+                    }
+                }
+
                 // A route may have been planned while the mob was falling or standing in an
                 // unsupported blockPosition. Coordinate proximity is not a take-off: never
                 // issue DROP from that stale origin. Let physics land the mob, then replan the
                 // strategic route from its actual grounded, supported feet cell.
                 if (origenPlan != null && !takeoffSupported) {
+                    boolean liveGrounded = mob.onGround();
+                    boolean liveFeetValid = esPieValido(mob.blockPosition());
+                    boolean liveSupported = NavObstruction.hasSupport(mob.level(), mob.blockPosition());
+                    boolean liveFits = NavObstruction.fitsActualAabb(mob.level(), mob);
                     if (NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(
-                            takeoffSupported, mob.onGround(), esPieValido(mob.blockPosition()),
-                            NavObstruction.hasSupport(mob.level(), mob.blockPosition()),
-                            NavObstruction.fitsActualAabb(mob.level(), mob))) {
-                        if (NavTrace.on()) {
-                            NavTrace.ev("DROP_TAKEOFF_UNSUPPORTED_REPLAN", "uuid=" + mob.getUUID()
-                                    + " tick=" + sourceCheckTick
-                                    + " staleTakeoff=" + origenPlan.toShortString()
-                                    + " liveSource=" + mob.blockPosition().toShortString()
-                                    + " grounded=" + mob.onGround()
-                                    + " feetValid=" + esPieValido(mob.blockPosition())
-                                    + " support=" + NavObstruction.hasSupport(mob.level(), mob.blockPosition())
-                                    + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob)
-                                    + " action=discard_stale_drop_and_replan");
-                        }
+                            takeoffSupported, liveGrounded, liveFeetValid, liveSupported, liveFits)) {
+                        if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_UNSUPPORTED_REPLAN", "uuid=" + mob.getUUID()
+                                + " tick=" + sourceCheckTick + " staleTakeoff=" + origenPlan.toShortString()
+                                + " liveSource=" + mob.blockPosition().toShortString()
+                                + " grounded=true feetValid=true support=true realAabbFits=true"
+                                + " action=discard_stale_drop_and_replan");
                         route = null;
                         routeIndex = 0;
                         plannedFrom = null;
@@ -4188,18 +4309,24 @@ public final class NavExecutor {
                         nextDropRecoveryPlanAt = 0L;
                         state = NavState.PLANNING;
                         nextPlanAt = sourceCheckTick;
+                    } else if (NavDropTransitionPolicy.debeRecuperarFuenteActual(
+                            takeoffSupported, liveGrounded, liveFeetValid, liveSupported, liveFits)) {
+                        mob.getNavigation().stop();
+                        resolverFuenteActualYReplanificar(sourceCheckTick);
+                        if (NavTrace.on() && sourceCheckTick % 10L == 0L) NavTrace.ev(
+                                "DROP_TAKEOFF_UNSUPPORTED_SOURCE_RECOVERY", "uuid=" + mob.getUUID()
+                                        + " tick=" + sourceCheckTick + " staleTakeoff=" + origenPlan.toShortString()
+                                        + " liveSource=" + mob.blockPosition().toShortString()
+                                        + " grounded=true feetValid=" + liveFeetValid + " support=" + liveSupported
+                                        + " realAabbFits=" + liveFits + " action=resolve_unique_aabb_neighbor");
                     } else {
                         mob.getNavigation().stop();
-                        if (NavTrace.on() && sourceCheckTick % 10L == 0L) {
-                            NavTrace.ev("DROP_TAKEOFF_UNSUPPORTED_WAIT", "uuid=" + mob.getUUID()
-                                    + " tick=" + sourceCheckTick
-                                    + " staleTakeoff=" + origenPlan.toShortString()
-                                    + " liveSource=" + mob.blockPosition().toShortString()
-                                    + " grounded=" + mob.onGround()
-                                    + " feetValid=" + esPieValido(mob.blockPosition())
-                                    + " support=" + NavObstruction.hasSupport(mob.level(), mob.blockPosition())
-                                    + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob));
-                        }
+                        if (NavTrace.on() && sourceCheckTick % 10L == 0L) NavTrace.ev(
+                                "DROP_TAKEOFF_UNSUPPORTED_WAIT", "uuid=" + mob.getUUID()
+                                        + " tick=" + sourceCheckTick + " staleTakeoff=" + origenPlan.toShortString()
+                                        + " liveSource=" + mob.blockPosition().toShortString()
+                                        + " grounded=false feetValid=" + liveFeetValid + " support=" + liveSupported
+                                        + " realAabbFits=" + liveFits + " action=wait_for_natural_landing");
                     }
                     return;
                 }

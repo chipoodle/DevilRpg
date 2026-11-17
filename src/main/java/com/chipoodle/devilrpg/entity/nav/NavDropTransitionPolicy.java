@@ -122,6 +122,12 @@ public final class NavDropTransitionPolicy {
                 && origenFisicamenteAlcanzado(liveX, liveY, liveZ, origenX, origenY, origenZ);
     }
 
+    /** Grounded invalid feet must recover from the real AABB, not wait for physics. */
+    public static boolean debeRecuperarFuenteActual(boolean takeoffSupported, boolean grounded,
+                                                     boolean feetValid, boolean supported, boolean fits) {
+        return !takeoffSupported && grounded && !(feetValid && supported && fits);
+    }
+
     /** An unsupported planned take-off must be abandoned only after a safe grounded source exists. */
     public static boolean replanificarDesdeOrigenSoportado(boolean takeoffSupported,
                                                             boolean grounded, boolean feetValid,
