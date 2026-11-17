@@ -523,3 +523,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - ChatGPT did not execute tests, lint, diff-check, diagnostics compile or runtime. **PENDING HARNESS** on exact live HEAD.
 - Harness: static checks, then A2 Run 1 only. Capture command to return to planned take-off Y, exact Y occupancy, and the next DROP outcome. Do not bypass the height guard.
 - IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain separate and untouched. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs. A2 OPEN; C4 save/reload OPEN.
+
+## 2026-11-16 — A2 Run 1 DROP take-off recovery
+
+- Synced `c03a61e1` -> `6d294c1d` by fast-forward; commits 199d905d/88182bcc/21f31149/de0ff4d5.
+- Static PASS incl NAV_DROP_TAKEOFF_POLICY_TEST 5 assertions, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261116-201759`: FAIL 4/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 DROP is route index0: origenPlan null, no ACERCARSE-ORIGEN-DROP, mob stays y77 below y78; dy=1 repeated. IDX7/IDX8 unchanged.
+- Report: docs/autonomous-village/2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md. A2 OPEN; no 12k.

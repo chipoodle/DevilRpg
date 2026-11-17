@@ -111,6 +111,7 @@ Read first, in order:
 39. `docs/autonomous-village/2026-11-16-A2-DROP-ROUTE-FEET-FIX.md`
 40. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-FEET-FAIL.md`
 41. `docs/autonomous-village/2026-11-17-A2-IDX4-DROP-TAKEOFF-RECOVERY-FIX.md`
+42. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -125,7 +126,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-A2-RUN1-DROP-FEET-FAIL.md`. DROP-feet fix statically passes but A2 remains 5/8; IDX4 is now a recovery-below-landing defect.
+- Latest technical report: `2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md`. Take-off fix statically passes but IDX4 route starts with DROP at index0; no planned origin/recovery command.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -185,19 +186,20 @@ Read first, in order:
   still **FAIL** at 5/8 strict. IDX4 remains below its landing `597,78,499` at `596,77,498`
   (24 DROP rejections, dy=1, replans 8/8); the earlier state-vs-feet node hypothesis is not the cause
   of this runtime instance. IDX7 `exp=901/900` 10/10; IDX8 no local waypoint/global budget.
+- Take-off fix at `6d294c1d`: static PASS (NAV_DROP_TAKEOFF_POLICY_TEST 5). A2 Run 1
+  `a2n-20261116-201759`: **4/8 strict**, 5/8 perimeter. IDX4 route starts with DROP at index0, so
+  `origenPlan` is null and `ACERCARSE-ORIGEN-DROP` is never emitted; mob remains at y77 below y78.
+- IDX2 this run reached perimeter but not strict; idx7/idx8 unchanged independent failures.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Harness fetches the live HEAD and validates the IDX4 physical take-off recovery fix:
-   Gradle tests, strict lint, diff-check, diagnostics compile, and NAV_DROP_TAKEOFF_POLICY_TEST (5 assertions).
-2. If static checks pass, run A2 Run 1 only. Confirm the mob below planned take-off Y receives
-   ACERCARSE-ORIGEN-DROP, physically returns to exact take-off Y, and only then executes/rejects the DROP.
-3. If runtime cannot regain the take-off, preserve full path/navigation trace; do not bypass the height guard.
-4. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent and untouched.
-   No Run 2 unless Run 1 reaches 8/8 strict; no 12k until five consecutive strict 8/8 runs.
-   Keep BREAK/backtrack fixtures unchanged. C4 save/reload remains OPEN.
+1. ChatGPT: support a recoverable take-off origin for a DROP that is the first route node
+   (`routeIndex=0`). Currently `origenPlan` is null, so the physical take-off recovery guard is never
+   applied and no `ACERCARSE-ORIGEN-DROP` is issued. Do not weaken the height guard.
+2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
+3. After a new SHA, Harness reruns A2 Run 1 only; no Run 2 unless 8/8 strict. Keep C4 save/reload OPEN.
 
 ## Worlds (preserve; do not overwrite)
 
