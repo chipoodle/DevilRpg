@@ -765,3 +765,12 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Source snap retains the 0.20 radial tolerance; Phase 21's 0.19 offset is within it and all physical predicates passed.
 - Fix report: `2026-11-17-IDX4-EXACT-RECOVERY-ASTAR-FIX.md`. Expected DROP policy test total: 43.
 - **PENDING HARNESS** on exact current HEAD. Static checks first, then A2 Run 1 only. A2 OPEN; no Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict. IDX7/IDX8 unchanged; C4 save/reload OPEN.
+
+## 2026-11-17 — Phase 22 exact bounded recovery A*
+
+- Synced 1c9c477e -> c17459b7 by fast-forward.
+- Static PASS: NAV_SOURCE_CELL 10, NAV_DROP_TAKEOFF 43, NAV_ROUTE_NODE 6, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261117-113750`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 af70fc14: 39 exact-goal rejections, hitBudget=false, best route len1 JUMP_UP ending589,95,521 vs takeoff589,96,522; no accepted/restored/reached.
+- Original DROP active landing589,95,521 not completed; latest DROP_DONE is prior-cycle589,93,522.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-EXACT-BOUNDED-RECOVERY-PHASE22.md. A2 OPEN; no 12k.
