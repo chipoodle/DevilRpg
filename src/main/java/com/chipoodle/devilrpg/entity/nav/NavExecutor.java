@@ -3732,6 +3732,20 @@ public final class NavExecutor {
         if (oscillating) {
             // A→B→A detectado: la ruta actual no sirve; se invalida y se pasa a recuperación.
             routesRejected++;
+            if (recuperacionOrigenDropActiva) {
+                lastRouteSignature = rutaDropSuspendida == null ? route.signature()
+                        : rutaDropSuspendida.signature();
+                limpiarRecuperacionOrigenDrop();
+                plannedFrom = null;
+                globalCache = null;
+                globalMision = null;
+                globalDesde = null;
+                route = null;
+                routeIndex = 0;
+                state = NavState.PLANNING;
+                nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+                return;
+            }
             lastRouteSignature = route.signature();
             route = null;
             state = NavState.RECOVERING;
@@ -4177,6 +4191,32 @@ public final class NavExecutor {
         // desde la posicion actual. BREAK/BRIDGE siguen su rama normal.
         if (NavRouteInvalidationPolicy.debeInvalidar(route != null, mob.getNavigation().isDone(),
                 ticksSinAvance, TICKS_DE_GRACIA_DE_NODO, node.transition())) {
+            if (recuperacionOrigenDropActiva) {
+                int suspendedSignature = rutaDropSuspendida == null ? route.signature()
+                        : rutaDropSuspendida.signature();
+                if (NavTrace.on()) {
+                    NavTrace.ev("DROP_TAKEOFF_RECOVERY_ROUTE_STALLED", "uuid=" + mob.getUUID()
+                            + " takeoff=" + objetivoRecuperacionOrigenDrop
+                            + " node=" + node.pos().toShortString()
+                            + " transition=" + node.transition()
+                            + " pos=" + mob.blockPosition().toShortString()
+                            + " ticksSinAvance=" + ticksSinAvance);
+                }
+                limpiarRecuperacionOrigenDrop();
+                route = null;
+                routeIndex = 0;
+                plannedFrom = null;
+                lastRouteSignature = suspendedSignature;
+                globalCache = null;
+                globalMision = null;
+                globalDesde = null;
+                nodoSeguido = null;
+                mejorDistAlNodo = Double.MAX_VALUE;
+                ticksSinAvance = 0;
+                nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+                state = NavState.PLANNING;
+                return;
+            }
             // A2 Stage 7E · DIAGNOSTICO DE LA PRIMERA OBSTRUCCION (instrumento acotado, una cadena):
             // se registra el nodo activo, la orden enviada, la posicion, la distancia, el estado real de la
             // navegacion de vanilla (isDone / path nulo / en curso) y si la arista es valida segun el modelo.
