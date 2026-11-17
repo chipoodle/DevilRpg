@@ -128,7 +128,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-A2-RUN1-NON-DESCENDING-DROP-FAIL.md`. Non-descending fix statically passes (9 assertions) but IDX4 still uses the same DROP/dy=1 and no alternative.
+- Latest technical report: `2026-11-17-A2-IDX4-FIRST-NODE-DROP-ORIGIN-FIX.md`. First-node DROP now resolves its origin from the route's recorded `plannedFrom`; later DROP nodes still use their immediate predecessor. Pending Harness.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -201,15 +201,24 @@ Read first, in order:
   `a2n-20261116-211919`: **FAIL**, 5/8 strict, 5/8 perimeter. IDX4 still `597,78,499` vs mob
   `596,77,498`, `dy=1`, 24 failures; no `DROP_REJECTED_NON_DESCENDING` or recovery command for its UUID.
   IDX7/IDX8 unchanged; C4 PASS `[1,0,0]`.
+- First-node origin diagnosis: route acceptance stores `plannedFrom = mob.blockPosition()`; the
+  DROP executor previously resolved an origin only from a previous node when `routeIndex > 0`.
+  Thus a first-node DROP had no recoverable origin. Absence of `DROP_REJECTED_NON_DESCENDING` was
+  inconclusive because that trace is opt-in.
+- First-node origin fix at pending HEAD: `NavDropTransitionPolicy.origenPlanificado` uses recorded
+  routeStart for index 0 and immediate predecessor for later indices; `NavExecutor` now issues the
+  existing exact-Y `ACERCARSE-ORIGEN-DROP` recovery when required. Added `DROP_TAKEOFF_ORIGIN_RESOLVED`
+  trace and 3 assertions (DROP policy total 12). Commits `b763b112`, `2518d703`, `183b7667`.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. ChatGPT: make the IDX4 first-node DROP fail at planning time or emit an executable alternative.
-   Runtime still starts with DROP at `597,78,499` against mob `596,77,498`; no non-descending
-   rejection/recovery event is emitted for that UUID. Do not weaken the height guard.
-2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
+1. Harness validates the first-node DROP origin fix at the exact current branch HEAD:
+   static checks first, then A2 Run 1 only. Capture `plannedFrom`, live position, landing,
+   resolved origin, `DROP_TAKEOFF_ORIGIN_RESOLVED`, `ACERCARSE-ORIGEN-DROP`, physical arrival
+   at take-off, and final DROP validation. Confirm existing exact-Y and safety guards remain active.
+2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent and untouched.
 3. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
    Keep C4 save/reload OPEN.
 
@@ -243,3 +252,13 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 - No static or runtime validation performed by ChatGPT. **PENDING HARNESS** on exact live HEAD.
 - Run Gradle tests, strict lint, diff-check, diagnostics compile, then a new disposable `nav-backtrack` only. Require exact physical return before clearing tactical target, mission resumed, one selection, history <=16 and no teleport.
 - A2 OPEN; no full 12k before five consecutive strict 8/8; C4 save/reload OPEN.
+
+
+## 2026-11-17 — IDX4 first-node DROP origin fix
+
+- Commits: `b763b11245f0fdf1864c49cfd0100e451f40abd8`,
+  `2518d70396d6c500efb241f522c6f53eef6a022c`,
+  `183b76675761a69f2ca2b501dc02311cba412572`,
+  docs `bc38d43a2085fef4cd91fad90afb91c95adacda2`.
+- Harness validation pending on exact current HEAD. Expected DROP policy test: 12 assertions.
+- Report: `2026-11-17-A2-IDX4-FIRST-NODE-DROP-ORIGIN-FIX.md`.
