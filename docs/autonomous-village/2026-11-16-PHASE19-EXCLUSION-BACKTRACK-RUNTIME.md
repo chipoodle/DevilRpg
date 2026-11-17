@@ -133,3 +133,28 @@ Original A2/C4 worlds were not used or modified. Local-only artifacts were prese
 - Full 12k: not run.
 - C4: not run; last known PASS `[1,0,0]`.
 - Save/reload: OPEN.
+
+
+## ChatGPT correction — exact physical backtrack arrival (PENDING HARNESS)
+
+Source checkpoint: `889072d235a44d0efc2de7ad955333b39b1d8b03` (the preceding two commits in this correction sequence are `29747f62dd4a134602307152c1ec3799cacc8e75` and `224695203cf0eecffb1d72c30cff41c3b3ea5efe`).
+
+Root cause confirmed in the production arrival shortcut: `recoveryBacktrackObjective` was cleared in the same generic `ARRIVE_DISTANCE_SQR` branch used for ordinary tactical objectives. At position `938,184,608`, target `937,184,608`, the one-block separation passed that tolerance and discarded the one-shot backtrack before physical cell occupancy.
+
+Correction published by ChatGPT:
+
+- Added pure policy `NavArrivalPolicy.backtrackArrivalAllowed(pendingBacktrack, exactCellOccupied)`; a pending backtrack cannot be consumed by distance tolerance.
+- In `NavExecutor`, a backtrack is recognized only while `recoveryBacktrackObjective.equals(objective)`; its completion requires `mob.blockPosition().equals(recoveryBacktrackObjective)`.
+- The generic arrival branch now requires both the existing stair gate and the new backtrack gate. Ordinary tactical objectives, stairs, cooldowns, budgets, recovery limits and acceptance thresholds are unchanged.
+- Added three pure assertions: adjacent-but-within-tolerance is rejected; exact-cell occupancy is accepted; non-backtrack objectives retain generic arrival.
+- Added bounded `BACKTRACK_PROXIMITY_SUPPRESSED` trace (at most every 20 ticks) while the mob is within generic tolerance but not in the exact selected cell.
+
+No Gradle, lint, diff-check, diagnostics compile or runtime validation was run by ChatGPT. This correction is **PENDING HARNESS**, not PASS.
+
+### Required Harness validation
+
+1. Fetch live `feature/autonomous-village` HEAD; verify it contains source checkpoint `889072d2` and preserve all local-only artifacts. No reset/clean/stash/rebase/force-push.
+2. Run `.\\gradlew.bat test`, `python tools/lint_aldea.py --strict`, `git diff --check`, and `.\\gradlew.bat compileJava -Pa2nDiagnostics=true`.
+3. Execute only the disposable `nav-backtrack` fixture with `-Da2n.mode=nav-backtrack -Ddevilrpg.a2n.traceNav=true`.
+4. Require `backtrackSelected=true`, `backtrackSelections=1`, `physicalReturn=true`, `missionResumed=true`, `strategicMissionPreserved=true`, `historyBounded=true`, and `noTeleport=true`. Trace must show the proximity suppression at `938` (or another adjacent cell) and exact physical occupancy at `937,184,608` before the tactical objective is cleared.
+5. Do not rerun or modify the already passing `BREAK_EDGE_EXCLUDED` fixture unless the new changes cause a regression. Do not run full 12k. A2 remains OPEN until five consecutive strict 8/8 `DENTRO-PARED` runs; C4 save/reload remains OPEN.
