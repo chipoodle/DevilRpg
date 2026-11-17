@@ -21,11 +21,6 @@ public final class NavDropTransitionPolicy {
                 && Math.abs(liveZ - origenZ) <= MAX_CONTIGUIDAD;
     }
 
-    /**
-     * True only when the mob is physically back on the planned take-off Y and within the
-     * horizontal approach tolerance. The old proximity predicate allowed Y +/- 1, which
-     * incorrectly treated a mob one block BELOW its take-off as ready to execute a DROP.
-     */
     /** A DROP edge is executable only when its validated landing is strictly below take-off. */
     public static boolean descensoFisicoValido(int takeoffFeet, int landingFeet) {
         return landingFeet < takeoffFeet;
@@ -62,6 +57,11 @@ public final class NavDropTransitionPolicy {
         return true;
     }
 
+    /**
+     * True only when the mob is physically back on the planned take-off Y and within the
+     * horizontal approach tolerance. The old proximity predicate allowed Y +/- 1, which
+     * incorrectly treated a mob one block BELOW its take-off as ready to execute a DROP.
+     */
     public static boolean origenFisicamenteAlcanzado(int liveX, int liveY, int liveZ,
                                                        int origenX, int origenY, int origenZ) {
         return Math.abs(liveX - origenX) <= MAX_CONTIGUIDAD
