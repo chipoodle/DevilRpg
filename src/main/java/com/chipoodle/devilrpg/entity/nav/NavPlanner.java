@@ -658,13 +658,14 @@ public final class NavPlanner {
         while (!open.isEmpty()) {
             Node current = open.poll();
             BlockPos pos = current.pos();
-            if (!closed.add(pos)) {
+            if (closed.contains(pos)) {
                 continue;
             }
             if (!NavExpansionBudgetPolicy.canExpand(expansions, maxExpansions)) {
                 hitBudget = true;
                 break;
             }
+            closed.add(pos);
             expansions++;
             if (pos.equals(goal)) {
                 found = pos;
