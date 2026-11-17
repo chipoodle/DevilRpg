@@ -99,6 +99,26 @@ public final class NavObstruction {
                 && level.getBlockCollisions(mob, upperBox(pos)).iterator().hasNext() == false;
     }
 
+    /**
+     * Checks the mob's real current AABB instead of the narrower synthetic navigation cell box.
+     * Used only for physical DROP recovery source admission.
+     */
+    public static boolean fitsActualAabb(CollisionGetter level, Mob mob) {
+        return !level.getBlockCollisions(mob, mob.getBoundingBox()).iterator().hasNext();
+    }
+
+    /**
+     * Checks the real mob AABB translated horizontally/vertically to the center of a candidate feet cell.
+     * This predicts the exact body volume at the destination without mutating the entity.
+     */
+    public static boolean fitsAtCellCenter(CollisionGetter level, Mob mob, BlockPos feetCell) {
+        AABB target = mob.getBoundingBox().move(
+                feetCell.getX() + 0.5D - mob.getX(),
+                feetCell.getY() - mob.getY(),
+                feetCell.getZ() + 0.5D - mob.getZ());
+        return !level.getBlockCollisions(mob, target).iterator().hasNext();
+    }
+
     /** ¿Hay colisión a la altura de los pies? */
     public static boolean blockedAtFeet(CollisionGetter level, Mob mob, BlockPos pos) {
         return level.getBlockCollisions(mob, cellBox(pos)).iterator().hasNext();
