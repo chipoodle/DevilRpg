@@ -224,6 +224,7 @@ public final class NavExecutor {
 
     private final Deque<BlockPos> recentCells = new ArrayDeque<>();
     private boolean oscillating;
+    private int recentCellOccurrences;
 
     // ---- Instrumentación ----
     private int plansRun;
@@ -3713,10 +3714,10 @@ public final class NavExecutor {
                 double dx = mob.getX() - (candidate.getX() + 0.5D);
                 double dz = mob.getZ() - (candidate.getZ() + 0.5D);
                 boolean centered = start.equals(candidate) && dx * dx + dz * dz <= 0.04D;
-                boolean physicallyValid = centered
-                        && esPieValido(start)
-                        && NavObstruction.hasSupport(mob.level(), start)
-                        && NavObstruction.fitsActualAabb(mob.level(), mob);
+                boolean physicallyValid = NavSnapOwnershipPolicy.snapComplete(
+                        centered, grounded, esPieValido(start),
+                        NavObstruction.hasSupport(mob.level(), start),
+                        NavObstruction.fitsActualAabb(mob.level(), mob));
                 if (physicallyValid) {
                     if (NavTrace.on()) {
                         NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_REACHED", "uuid=" + mob.getUUID()
@@ -3727,11 +3728,34 @@ public final class NavExecutor {
                                 + " feetValid=" + esPieValido(start)
                                 + " support=" + NavObstruction.hasSupport(mob.level(), start)
                                 + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob));
+                        NavTrace.ev("SNAP_COMPLETE", "uuid=" + mob.getUUID() + " tick=" + now
+                                + " candidate=" + candidate.toShortString()
+                                + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                        mob.getX(), mob.getY(), mob.getZ())
+                                + " distanceSqr=" + String.format(java.util.Locale.ROOT, "%.4f",
+                                        dx * dx + dz * dz)
+                                + " grounded=true feetValid=true support=true realAabbFits=true"
+                                + " action=replan_from_verified_source");
                     }
                     fuenteDropPendiente = null;
                     inicioSnapFuenteDrop = -1L;
                     start = mob.blockPosition();
                 } else {
+                    if (NavTrace.on() && now % 10L == 0L) {
+                        net.minecraft.world.phys.AABB before = mob.getBoundingBox();
+                        net.minecraft.world.phys.AABB target = before.move(
+                                candidate.getX() + 0.5D - mob.getX(), 0.0D,
+                                candidate.getZ() + 0.5D - mob.getZ());
+                        net.minecraft.world.phys.AABB swept = new net.minecraft.world.phys.AABB(
+                                Math.min(before.minX, target.minX), Math.min(before.minY, target.minY),
+                                Math.min(before.minZ, target.minZ), Math.max(before.maxX, target.maxX),
+                                Math.max(before.maxY, target.maxY), Math.max(before.maxZ, target.maxZ));
+                        boolean hit = mob.level().getBlockCollisions(mob, swept).iterator().hasNext();
+                        NavTrace.ev("SNAP_SWEPT_AABB", "uuid=" + mob.getUUID() + " tick=" + now
+                                + " before=" + before + " target=" + target + " swept=" + swept
+                                + " collision=" + hit + " dx=" + String.format(java.util.Locale.ROOT, "%.3f", dx)
+                                + " dz=" + String.format(java.util.Locale.ROOT, "%.3f", dz));
+                    }
                     if (inicioSnapFuenteDrop >= 0L && now - inicioSnapFuenteDrop > 80L) {
                         if (NavTrace.on()) {
                             NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_FAILED", "uuid=" + mob.getUUID()
@@ -3800,6 +3824,10 @@ public final class NavExecutor {
                                 + " candidateSupport=" + NavObstruction.hasSupport(mob.level(), candidate)
                                 + " candidateRealAabbFits="
                                 + NavObstruction.fitsAtCellCenter(mob.level(), mob, candidate));
+                        NavTrace.ev("DROP_TAKEOFF_SOURCE_SELECTED", "uuid=" + mob.getUUID()
+                                + " tick=" + now + " from=" + start.toShortString()
+                                + " selected=" + candidate.toShortString()
+                                + " strategy=largest_overlap_then_nearest_center_then_lexicographic");
                     }
                     mob.getMoveControl().setWantedPosition(candidate.getX() + 0.5D, mob.getY(),
                             candidate.getZ() + 0.5D, 0.35D);
@@ -3900,13 +3928,21 @@ public final class NavExecutor {
             BlockPos candidate = fuenteDropPendiente;
             boolean valid = esPieValido(candidate)
                     && NavObstruction.fitsAtCellCenter(mob.level(), mob, candidate);
+            boolean centered = NavSourceCellPolicy.centeredInCell(
+                    mob.getX(), mob.getZ(), candidate, 0.20D);
             if (valid && current.equals(candidate)
-                    && NavSourceCellPolicy.centeredInCell(mob.getX(), mob.getZ(), candidate, 0.20D)
-                    && NavObstruction.hasSupport(mob.level(), current)
-                    && NavObstruction.fitsActualAabb(mob.level(), mob)) {
+                    && NavSnapOwnershipPolicy.snapComplete(centered, mob.onGround(),
+                            esPieValido(current), NavObstruction.hasSupport(mob.level(), current),
+                            NavObstruction.fitsActualAabb(mob.level(), mob))) {
                 if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_REPLAN", "uuid=" + mob.getUUID()
                         + " tick=" + now + " source=" + current.toShortString()
                         + " action=replan_from_verified_aabb_source");
+                if (NavTrace.on()) NavTrace.ev("SNAP_COMPLETE", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " candidate=" + candidate.toShortString()
+                        + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                mob.getX(), mob.getY(), mob.getZ())
+                        + " centered=" + centered
+                        + " action=replan_from_verified_source");
                 fuenteDropPendiente = null;
                 inicioSnapFuenteDrop = -1L;
                 fuenteDropSinCandidatoDesde = null;
@@ -3934,6 +3970,23 @@ public final class NavExecutor {
                 fallar("DROP source-cell recovery stalled before physical occupancy: " + candidate);
                 return;
             } else {
+                double dx = mob.getX() - (candidate.getX() + 0.5D);
+                double dz = mob.getZ() - (candidate.getZ() + 0.5D);
+                if (NavTrace.on() && now % 10L == 0L) {
+                    net.minecraft.world.phys.AABB before = mob.getBoundingBox();
+                    net.minecraft.world.phys.AABB target = before.move(
+                            candidate.getX() + 0.5D - mob.getX(), 0.0D,
+                            candidate.getZ() + 0.5D - mob.getZ());
+                    net.minecraft.world.phys.AABB swept = new net.minecraft.world.phys.AABB(
+                            Math.min(before.minX, target.minX), Math.min(before.minY, target.minY),
+                            Math.min(before.minZ, target.minZ), Math.max(before.maxX, target.maxX),
+                            Math.max(before.maxY, target.maxY), Math.max(before.maxZ, target.maxZ));
+                    boolean hit = mob.level().getBlockCollisions(mob, swept).iterator().hasNext();
+                    NavTrace.ev("SNAP_SWEPT_AABB", "uuid=" + mob.getUUID() + " tick=" + now
+                            + " before=" + before + " target=" + target + " swept=" + swept
+                            + " collision=" + hit + " dx=" + String.format(java.util.Locale.ROOT, "%.3f", dx)
+                            + " dz=" + String.format(java.util.Locale.ROOT, "%.3f", dz));
+                }
                 mob.getNavigation().stop();
                 mob.getMoveControl().setWantedPosition(candidate.getX() + 0.5D, mob.getY(),
                         candidate.getZ() + 0.5D, 0.35D);
@@ -3979,6 +4032,10 @@ public final class NavExecutor {
                 + " feetValid=" + esPieValido(candidate) + " support=" + NavObstruction.hasSupport(mob.level(), candidate)
                 + " fits=" + NavObstruction.fitsAtCellCenter(mob.level(), mob, candidate)
                 + " action=source_snap_then_replan");
+        if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_SOURCE_SELECTED", "uuid=" + mob.getUUID()
+                + " tick=" + now + " from=" + current.toShortString()
+                + " selected=" + candidate.toShortString()
+                + " strategy=largest_overlap_then_nearest_center_then_lexicographic");
     }
 
     private void limpiarRecuperacionOrigenDrop() {
@@ -4048,7 +4105,32 @@ public final class NavExecutor {
             state = NavState.PLANNING;
             return;
         }
-        if (oscillating) {
+        // A pending source snap is the sole movement owner. Normal route commands (including DROP)
+        // must not run until the snap completes, fails, or is explicitly invalidated.
+        if (NavSnapOwnershipPolicy.snapOwnsMovement(fuenteDropPendiente)) {
+            mob.getNavigation().stop();
+            if (NavTrace.on() && now % 10L == 0L) {
+                double dx = mob.getX() - (fuenteDropPendiente.getX() + 0.5D);
+                double dz = mob.getZ() - (fuenteDropPendiente.getZ() + 0.5D);
+                NavTrace.ev("SNAP_MOVE_OWNER", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " pending=" + fuenteDropPendiente.toShortString()
+                        + " owner=SNAP routeBlocked=true action=resolve_snap_only");
+                NavTrace.ev("SNAP_ADMISSION", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " live=" + mob.blockPosition().toShortString()
+                        + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                mob.getX(), mob.getY(), mob.getZ())
+                        + " candidate=" + fuenteDropPendiente.toShortString()
+                        + " dx=" + String.format(java.util.Locale.ROOT, "%.3f", dx)
+                        + " dz=" + String.format(java.util.Locale.ROOT, "%.3f", dz)
+                        + " centeredInCell=" + NavSourceCellPolicy.centeredInCell(
+                                mob.getX(), mob.getZ(), fuenteDropPendiente, 0.20D)
+                        + " grounded=" + mob.onGround()
+                        + " decision=REJECT_DROP_ROUTE_PENDING_SNAP");
+            }
+            resolverFuenteActualYReplanificar(now);
+            return;
+        }
+        if (oscillating && NavSnapOwnershipPolicy.allowsOscillationAbort(fuenteDropPendiente)) {
             // A→B→A detectado: la ruta actual no sirve; se invalida y se pasa a recuperación.
             routesRejected++;
             if (recuperacionOrigenDropActiva) {
@@ -4064,6 +4146,11 @@ public final class NavExecutor {
                 state = NavState.PLANNING;
                 nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
                 return;
+            }
+            if (NavTrace.on()) {
+                NavTrace.ev("SNAP_GUARD", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " pending=NONE oscillating=true occurrences=" + recentCellOccurrences
+                        + " recentCells=" + recentCells.size() + " action=abort_route");
             }
             lastRouteSignature = route.signature();
             route = null;
@@ -5150,6 +5237,7 @@ public final class NavExecutor {
             }
         }
         oscillating = occurrences >= 3 && recentCells.size() >= 8;
+        recentCellOccurrences = occurrences;
     }
 
     /** Se llama cuando algo externo cambió el terreno: invalida la ruta en curso. */
