@@ -113,6 +113,7 @@ Read first, in order:
 41. `docs/autonomous-village/2026-11-17-A2-IDX4-DROP-TAKEOFF-RECOVERY-FIX.md`
 42. `docs/autonomous-village/2026-11-17-A2-IDX4-NON-DESCENDING-DROP-FIX.md`
 42. `docs/autonomous-village/2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md`
+43. `docs/autonomous-village/2026-11-16-A2-RUN1-NON-DESCENDING-DROP-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -127,7 +128,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-A2-RUN1-DROP-TAKEOFF-FAIL.md`. Take-off fix statically passes but IDX4 route starts with DROP at index0; no planned origin/recovery command.
+- Latest technical report: `2026-11-16-A2-RUN1-NON-DESCENDING-DROP-FAIL.md`. Non-descending fix statically passes (9 assertions) but IDX4 still uses the same DROP/dy=1 and no alternative.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -196,15 +197,19 @@ Read first, in order:
   impossible edge. Fix at pending SHA: require `landingFeet < takeoffFeet` for every DROP edge;
   reject non-descending DROP before A* accepts it. New test grows to 9 assertions.
 - IDX2 this run reached perimeter but not strict; idx7/idx8 unchanged independent failures.
+- Non-descending fix at `2214366a`: static PASS (NAV_DROP_TAKEOFF 9, NAV_ROUTE_NODE 6). A2 Run 1
+  `a2n-20261116-211919`: **FAIL**, 5/8 strict, 5/8 perimeter. IDX4 still `597,78,499` vs mob
+  `596,77,498`, `dy=1`, 24 failures; no `DROP_REJECTED_NON_DESCENDING` or recovery command for its UUID.
+  IDX7/IDX8 unchanged; C4 PASS `[1,0,0]`.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Harness validates the non-descending DROP correction: static tests, strict lint, diff-check,
-   diagnostics compile, then A2 Run 1 only. Confirm the planner rejects any DROP with
-   landingFeet >= takeoffFeet and selects an alternative executable route where available.
-2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent and untouched.
+1. ChatGPT: make the IDX4 first-node DROP fail at planning time or emit an executable alternative.
+   Runtime still starts with DROP at `597,78,499` against mob `596,77,498`; no non-descending
+   rejection/recovery event is emitted for that UUID. Do not weaken the height guard.
+2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
 3. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
    Keep C4 save/reload OPEN.
 

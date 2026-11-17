@@ -541,3 +541,10 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - Report: `docs/autonomous-village/2026-11-17-A2-IDX4-NON-DESCENDING-DROP-FIX.md`.
 - ChatGPT did not execute tests, lint, diff-check, diagnostics compile or runtime. **PENDING HARNESS** on exact live HEAD.
 - Harness static validation, then A2 Run 1 only. Capture source feet, candidate, landing feet, rejected invalid DROP and alternative route. IDX7/IDX8 remain independent and untouched. No Run 2 unless 8/8 strict; no full 12k before five consecutive 8/8 strict runs. A2 OPEN; C4 save/reload OPEN.
+## 2026-11-16 — A2 Run 1 non-descending DROP fix
+
+- Synced `868f3f63` -> `2214366a` by fast-forward.
+- Static PASS incl NAV_DROP_TAKEOFF_POLICY_TEST 9, NAV_ROUTE_NODE 6, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261116-211919`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
+- IDX4 unchanged: DROP 597,78,499 from 596,77,498, dy=1, 24 failures; no non-descending rejection/recovery event for its UUID. IDX7/IDX8 unchanged.
+- Report: docs/autonomous-village/2026-11-16-A2-RUN1-NON-DESCENDING-DROP-FAIL.md. A2 OPEN; no 12k.
