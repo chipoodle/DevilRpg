@@ -136,5 +136,5 @@ remains OPEN.
 
 ## Git checkpoint
 
-Production checkpoint: pending final documentation commit on `feature/autonomous-village`.
+Production checkpoint (all production source changes): `da16937ff9d4d3c401cb986f37c4c8f7640163a1`. Test additions are in `7170fcc0fd51e1115af13ec4a4dd383f7e0afb9a`.
 Tests, lint, diagnostics compilation and Minecraft runtime have **not** been executed by ChatGPT.
