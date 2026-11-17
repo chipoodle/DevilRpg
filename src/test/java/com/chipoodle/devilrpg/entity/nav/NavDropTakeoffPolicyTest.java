@@ -26,6 +26,15 @@ public final class NavDropTakeoffPolicyTest {
         comprobar("landing below takeoff by safe multi-block fall remains a DROP",
                 NavDropTransitionPolicy.descensoFisicoValido(82, 78));
 
+        net.minecraft.core.BlockPos routeStart = new net.minecraft.core.BlockPos(596, 79, 498);
+        net.minecraft.core.BlockPos previous = new net.minecraft.core.BlockPos(596, 80, 498);
+        comprobar("first route DROP uses the recorded route start as take-off origin",
+                routeStart.equals(NavDropTransitionPolicy.origenPlanificado(0, routeStart, null)));
+        comprobar("later DROP uses its immediate predecessor, not the route start",
+                previous.equals(NavDropTransitionPolicy.origenPlanificado(2, routeStart, previous)));
+        comprobar("first route DROP without a recorded start has no invented origin",
+                NavDropTransitionPolicy.origenPlanificado(0, null, previous) == null);
+
         System.out.println("NAV_DROP_TAKEOFF_POLICY_TEST: OK (" + assertions + " assertions)");
     }
 
