@@ -3465,13 +3465,30 @@ public final class NavExecutor {
                 node.pos().getZ() + 0.5D) <= ARRIVE_DISTANCE_SQR;
         boolean aterrizajeDropValido = mob.blockPosition().getY() <= node.pos().getY()
                 && NavObstruction.hasSolidFace(mob.level(), mob.blockPosition().below());
-        boolean alcanzado = NavArrivalPolicy.waypointReached(
+        boolean alcanzadoPorRuta = NavArrivalPolicy.waypointReached(
                 node.transition() == NavRoute.Transition.JUMP_UP,
                 node.transition() == NavRoute.Transition.DROP,
                 escalonPendiente,
                 dentroTolerancia,
                 escalonOcupado,
                 aterrizajeDropValido);
+        boolean backtrackPendiente = recoveryBacktrackObjective != null
+                && recoveryBacktrackObjective.equals(objective)
+                && recoveryBacktrackObjective.equals(node.pos());
+        boolean backtrackOcupadoFisicamente = backtrackPendiente
+                && mob.blockPosition().equals(recoveryBacktrackObjective);
+        boolean alcanzado = NavArrivalPolicy.backtrackWaypointReached(
+                backtrackPendiente, backtrackOcupadoFisicamente, alcanzadoPorRuta);
+        if (backtrackPendiente && !backtrackOcupadoFisicamente && dentroTolerancia
+                && NavTrace.on() && mob.level().getGameTime() % 20L == 0L) {
+            NavTrace.ev("BACKTRACK_NODE_OCCUPANCY_REQUIRED", "uuid=" + mob.getUUID()
+                    + " target=" + recoveryBacktrackObjective.toShortString()
+                    + " pos=" + mob.blockPosition().toShortString()
+                    + " routeNode=" + node.pos().toShortString()
+                    + " distSqr=" + String.format(java.util.Locale.ROOT, "%.3f",
+                            mob.distanceToSqr(node.pos().getX() + 0.5D, node.pos().getY() + 0.5D,
+                                    node.pos().getZ() + 0.5D)));
+        }
         if (escalonPendiente && alcanzado && NavTrace.on()) {
             NavTrace.ev("STAIR_NODE_PHYSICALLY_REACHED", "uuid=" + mob.getUUID()
                     + " node=" + node.pos().toShortString()
@@ -3570,6 +3587,18 @@ public final class NavExecutor {
         }
         mob.getMoveControl().setWantedPosition(aim.x, aim.y, aim.z, speed);
         lastMoveTarget = node.pos().toShortString() + ":ACERCAMIENTO-DIRECTO-ADYACENTE";
+        boolean backtrackNudge = recoveryBacktrackObjective != null
+                && recoveryBacktrackObjective.equals(objective)
+                && recoveryBacktrackObjective.equals(node.pos());
+        if (backtrackNudge && NavTrace.on()) {
+            NavTrace.ev("BACKTRACK_ADJACENT_NUDGE", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime()
+                    + " from=" + mob.blockPosition().toShortString()
+                    + " target=" + recoveryBacktrackObjective.toShortString()
+                    + " manhattan=" + distance
+                    + " speed=" + speed
+                    + " reason=navigation_done_without_exact_occupancy");
+        }
         if (NavTrace.on() && mob.level().getGameTime() % 10L == 0L) {
             NavTrace.ev("NAV_ADJACENT_NUDGE", "uuid=" + mob.getUUID()
                     + " tick=" + mob.level().getGameTime()
