@@ -77,8 +77,11 @@ public final class NavDropTakeoffPolicyTest {
         comprobar("source recovery rejects more than one DROP transition",
                 !NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
                         repeatedRecoveryDrops, resolvedSource, new BlockPos(593, 85, 507)));
+        NavRoute destructiveRecovery = new NavRoute(java.util.List.of(
+                new NavRoute.Node(originalTakeoff, NavRoute.Transition.BREAK)), originalTakeoff);
         comprobar("source recovery rejects destructive and build transitions",
-                !NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(unsafeBreak, resolvedSource, previous));
+                !NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
+                        destructiveRecovery, resolvedSource, originalTakeoff));
 
         comprobar("DROP recovery starts only from a grounded, valid, supported and fitting feet cell",
                 NavStepUpRecoveryPolicy.canStartFrom(true, true, true, true));
