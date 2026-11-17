@@ -1,6 +1,7 @@
 # CURRENT CHECKPOINT — 2026-11-17 grounded invalid DROP source recovery (PENDING HARNESS)
 
-**Current branch HEAD:** `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
+**Current branch HEAD:** `a4d4d8e8a03b3074492b3504e25e8f26e5a2f09b`.
+**Production code checkpoint:** `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
 **Detailed report:** `2026-11-17-A2-GROUNDED-INVALID-DROP-SOURCE-RECOVERY-FIX.md`.
 
 - Phase 24 tested `37c0aa702b44d94c6d5db037d2a1317c5224d3b6b`: A2 FAIL 1/8 perimeter and 1/8 strict; 2,102 unsupported-source WAIT events. The dominant state was grounded with invalid feet/support but a fitting real AABB.

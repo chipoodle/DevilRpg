@@ -5,11 +5,12 @@
 **Implementation published; Harness validation pending.** ChatGPT has not executed Gradle tests, strict lint, diagnostics compilation, or Minecraft runtime.
 
 - Previous run: `a2n-20261117-142016`
-- Previous tested SHA: `37c0aa702b44d94c6d5db506d023ec65d1b8` (Harness report records the full SHA as `37c0aa702b44d94c6d5db506d023ec65d1b8`? See note below.)
+- Previous tested SHA: `37c0aa702b44d94c6d5db506d023ec65d1b8`.
 - Result: A2 FAIL 1/8 perimeter and 1/8 strict; 2,102 `DROP_TAKEOFF_UNSUPPORTED_WAIT` events.
 - Previous dominant state: `grounded=true feetValid=false support=false realAabbFits=true` with stale and live source both `661,72,459`.
 - Current implementation branch: `feature/autonomous-village`.
 - Current code checkpoint: `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
+- Current branch HEAD (documentation-only descendant): `a4d4d8e8a03b3074492b3504e25e8f26e5a2f09b`.
 
 ## Root cause
 
@@ -46,7 +47,7 @@ The assertions are authored but **not executed by ChatGPT**. Harness must confir
 
 ## Harness instructions
 
-1. Safely sync exact branch HEAD `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`; preserve local/untracked artifacts and worlds.
+1. Safely sync exact live branch HEAD `a4d4d8e8a03b3074492b3504e25e8f26e5a2f09b` (the production code checkpoint is `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`); preserve local/untracked artifacts and worlds.
 2. Static gate first: `gradlew test`, `lint_aldea.py --strict`, `git diff --check`, and `compileJava -Pa2nDiagnostics=true`.
 3. Confirm `NAV_DROP_TAKEOFF_POLICY_TEST: OK (51 assertions)`, plus existing source-cell and route-node suites.
 4. If static passes, run **A2 Run 1 only** in a disposable world.
@@ -63,7 +64,3 @@ The assertions are authored but **not executed by ChatGPT**. Harness must confir
 - A2 remains OPEN until runtime acceptance passes.
 - Original A2/C4 worlds and all local-only artifacts remain protected.
 - Harness must not modify production source.
-
-## SHA correction note
-
-The Phase 24 report itself identifies tested SHA `37c0aa702b44d94c6d5db037d2a1317c5224d3b6b`. That full SHA is authoritative; the abbreviated value above is not used as a validation reference. Current validation target is `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
