@@ -202,6 +202,10 @@ public final class NavExecutor {
     private int indiceRutaDropSuspendida;
     private BlockPos objetivoRecuperacionOrigenDrop;
     private boolean recuperacionOrigenDropActiva;
+    /** Adjacent supported source cell selected from the real AABB footprint while recovering a DROP take-off. */
+    private BlockPos fuenteDropPendiente;
+    private long inicioSnapFuenteDrop = -1L;
+
     private int lastRouteSignature;
     private int replans;
     private int recoveryActions;
@@ -3635,21 +3639,139 @@ public final class NavExecutor {
         if (recuperacionOrigenDropActiva) {
             return takeoff.equals(objetivoRecuperacionOrigenDrop);
         }
+
         BlockPos start = mob.blockPosition();
         boolean grounded = mob.onGround();
+
+        // A previously selected candidate remains authoritative until the mob physically reaches
+        // its center. Do not admit A* merely because blockPosition crossed the cell boundary.
+        if (fuenteDropPendiente != null) {
+            BlockPos candidate = fuenteDropPendiente;
+            boolean candidateStillValid = grounded
+                    && esPieValido(candidate)
+                    && NavObstruction.fitsAtCellCenter(mob.level(), mob, candidate);
+            if (!grounded) {
+                mob.getNavigation().stop();
+                return false;
+            }
+            if (!candidateStillValid) {
+                if (NavTrace.on()) {
+                    NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_REJECTED", "uuid=" + mob.getUUID()
+                            + " tick=" + now + " candidate=" + candidate.toShortString()
+                            + " reason=feet_support_or_real_aabb_fit_changed");
+                }
+                fuenteDropPendiente = null;
+                inicioSnapFuenteDrop = -1L;
+            } else {
+                double dx = mob.getX() - (candidate.getX() + 0.5D);
+                double dz = mob.getZ() - (candidate.getZ() + 0.5D);
+                boolean centered = start.equals(candidate) && dx * dx + dz * dz <= 0.04D;
+                boolean physicallyValid = centered
+                        && esPieValido(start)
+                        && NavObstruction.hasSupport(mob.level(), start)
+                        && NavObstruction.fitsActualAabb(mob.level(), mob);
+                if (physicallyValid) {
+                    if (NavTrace.on()) {
+                        NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_REACHED", "uuid=" + mob.getUUID()
+                                + " tick=" + now + " source=" + candidate.toShortString()
+                                + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                        mob.getX(), mob.getY(), mob.getZ())
+                                + " grounded=" + mob.onGround()
+                                + " feetValid=" + esPieValido(start)
+                                + " support=" + NavObstruction.hasSupport(mob.level(), start)
+                                + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob));
+                    }
+                    fuenteDropPendiente = null;
+                    inicioSnapFuenteDrop = -1L;
+                    start = mob.blockPosition();
+                } else {
+                    if (inicioSnapFuenteDrop >= 0L && now - inicioSnapFuenteDrop > 80L) {
+                        if (NavTrace.on()) {
+                            NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_FAILED", "uuid=" + mob.getUUID()
+                                    + " tick=" + now + " candidate=" + candidate.toShortString()
+                                    + " live=" + start.toShortString()
+                                    + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                            mob.getX(), mob.getY(), mob.getZ())
+                                    + " reason=physical_center_not_reached_within_80_ticks");
+                        }
+                        fuenteDropPendiente = null;
+                        inicioSnapFuenteDrop = -1L;
+                        fallar("DROP source-cell recovery stalled before physical occupancy: "
+                                + candidate.toShortString());
+                        return false;
+                    }
+                    mob.getNavigation().stop();
+                    mob.getMoveControl().setWantedPosition(candidate.getX() + 0.5D, mob.getY(),
+                            candidate.getZ() + 0.5D, 0.35D);
+                    if (NavTrace.on() && now % 10L == 0L) {
+                        NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_STARTED", "uuid=" + mob.getUUID()
+                                + " tick=" + now + " from=" + start.toShortString()
+                                + " candidate=" + candidate.toShortString()
+                                + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                        mob.getX(), mob.getY(), mob.getZ())
+                                + " target=" + String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
+                                        candidate.getX() + 0.5D, mob.getY(), candidate.getZ() + 0.5D)
+                                + " dy=0 speed=0.35");
+                    }
+                    return false;
+                }
+            }
+        }
+
         boolean sourceFeetValid = esPieValido(start);
         boolean sourceSupported = NavObstruction.hasSupport(mob.level(), start);
-        boolean sourceFits = NavObstruction.fits(mob.level(), mob, start);
+        boolean sourceFits = NavObstruction.fitsActualAabb(mob.level(), mob);
         if (!NavStepUpRecoveryPolicy.canStartFrom(grounded, sourceFeetValid, sourceSupported, sourceFits)) {
-            // blockPosition() can describe a cell the mob is merely passing through while falling.
-            // Never seed a physical recovery A* route from that transient airborne cell.
             mob.getNavigation().stop();
+
+            // Resolve a grounded but invalid integer source from the actual horizontal AABB footprint.
+            // Only one cardinal adjacent same-Y cell may qualify; ambiguous or unsupported candidates fail closed.
+            if (grounded && (!sourceFeetValid || !sourceSupported || !sourceFits)) {
+                BlockPos candidate = NavSourceCellPolicy.uniqueAdjacentCandidate(
+                        start, mob.getBoundingBox(),
+                        cell -> esPieValido(cell)
+                                && NavObstruction.fitsAtCellCenter(mob.level(), mob, cell));
+                if (NavTrace.on()) {
+                    NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_INVALID", "uuid=" + mob.getUUID()
+                            + " tick=" + now + " current=" + start.toShortString()
+                            + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                    mob.getX(), mob.getY(), mob.getZ())
+                            + " aabb=" + mob.getBoundingBox()
+                            + " grounded=" + grounded + " feetValid=" + sourceFeetValid
+                            + " support=" + sourceSupported + " realAabbFits=" + sourceFits
+                            + " candidate=" + (candidate == null ? "NONE" : candidate.toShortString()));
+                }
+                if (candidate != null) {
+                    fuenteDropPendiente = candidate.immutable();
+                    inicioSnapFuenteDrop = now;
+                    if (NavTrace.on()) {
+                        NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_CANDIDATE", "uuid=" + mob.getUUID()
+                                + " tick=" + now + " from=" + start.toShortString()
+                                + " candidate=" + candidate.toShortString()
+                                + " candidateFeetValid=" + esPieValido(candidate)
+                                + " candidateSupport=" + NavObstruction.hasSupport(mob.level(), candidate)
+                                + " candidateRealAabbFits="
+                                + NavObstruction.fitsAtCellCenter(mob.level(), mob, candidate));
+                    }
+                    mob.getMoveControl().setWantedPosition(candidate.getX() + 0.5D, mob.getY(),
+                            candidate.getZ() + 0.5D, 0.35D);
+                    if (NavTrace.on()) {
+                        NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_STARTED", "uuid=" + mob.getUUID()
+                                + " tick=" + now + " from=" + start.toShortString()
+                                + " candidate=" + candidate.toShortString()
+                                + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                        mob.getX(), mob.getY(), mob.getZ())
+                                + " target=" + String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
+                                        candidate.getX() + 0.5D, mob.getY(), candidate.getZ() + 0.5D)
+                                + " dy=0 speed=0.35");
+                    }
+                    return false;
+                }
+            }
+
             boolean landingAnchor = NavStepUpRecoveryPolicy.shouldStabilizeLanding(
                     grounded, sourceFeetValid, sourceSupported, sourceFits);
             if (landingAnchor) {
-                // Do not plan or jump while airborne. If the current feet cell is geometrically
-                // supported and clear, keep the mob horizontally over its center while gravity
-                // completes the landing; the next tick may admit A* only after onGround becomes true.
                 mob.getMoveControl().setWantedPosition(start.getX() + 0.5D, mob.getY(),
                         start.getZ() + 0.5D, 0.35D);
             }
@@ -3667,6 +3789,7 @@ public final class NavExecutor {
             }
             return false;
         }
+
         NavPlanner.Result result = NavPlanner.plan(mob.level(), mob, start, takeoff,
                 12, VERTICAL_RANGE, MAX_EXPANSIONS_PER_PLAN, policies, construidas,
                 exclusionesDescenso, exclusionesBreak);
@@ -3680,8 +3803,6 @@ public final class NavExecutor {
                         + " hitBudget=" + result.hitBudget() + " route=" + result.route().describe()
                         + " summary={" + result.summary() + "}");
             }
-            // Do not keep asking vanilla to move vertically in place. Invalidate this route and
-            // let the normal planner search from the mob's actual physical cell for another way.
             route = null;
             routeIndex = 0;
             plannedFrom = null;
@@ -3707,7 +3828,7 @@ public final class NavExecutor {
                     + " exact=" + String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
                             mob.getX(), mob.getY(), mob.getZ())
                     + " onGround=" + grounded + " feetValid=" + sourceFeetValid
-                    + " sourceSupport=" + sourceSupported + " sourceFits=" + sourceFits
+                    + " sourceSupport=" + sourceSupported + " sourceFitsRealAabb=" + sourceFits
                     + " takeoff=" + takeoff.toShortString()
                     + " suspendedIndex=" + indiceRutaDropSuspendida
                     + " recoveryRoute=" + route.describe()
