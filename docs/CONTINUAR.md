@@ -4954,3 +4954,11 @@ un\saves\DevilRpg-A2-Prueba; LevelName=DevilRpg-A2-Prueba, spawn 96,144,-32, no 
 - C4: 9/12 resumed. Failed workers: weaponsmith 254f3367 at 652,62,431 (no site); fisherman f170acc0 at 678,62,436 (site 682,71,572); mason 615e8c86 at 698,62,454 (site 692,71,502). All idle on north shore; C4 intermittent.
 - Worlds: DevilRpg-A2-IDX8-Diagnostico and DevilRpg-C4-WorkerResume-Diagnostico in %APPDATA%/.minecraft/saves and
 run/saves; hashes match; structural verification only.
+
+
+## 2026-11-17 — IDX4 AABB source recovery test import correction
+
+- Harness report `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`: tested SHA `1e65c0242fc8058775eb2ab4687ccd3811fa42ad` BLOCKED at `compileTestJava` by missing `BlockPos` import; no tests or A2 runtime executed.
+- ChatGPT added `import net.minecraft.core.BlockPos;` in test-only commit `c75165c2135cccbfcc3eddd40abe09adce6766e8`.
+- Confirmed all three policy test mains are registered in `build.gradle`: NavDropTakeoffPolicyTest, NavSourceCellPolicyTest, NavRouteNodePolicyTest.
+- Harness must validate exact updated branch HEAD with static checks before any A2 Run 1. A2 remains OPEN; do not run Run 2 or 12k outside existing acceptance gates.
