@@ -4962,3 +4962,14 @@ run/saves; hashes match; structural verification only.
 - ChatGPT added `import net.minecraft.core.BlockPos;` in test-only commit `c75165c2135cccbfcc3eddd40abe09adce6766e8`.
 - Confirmed all three policy test mains are registered in `build.gradle`: NavDropTakeoffPolicyTest, NavSourceCellPolicyTest, NavRouteNodePolicyTest.
 - Harness must validate exact updated branch HEAD with static checks before any A2 Run 1. A2 remains OPEN; do not run Run 2 or 12k outside existing acceptance gates.
+
+
+## 2026-11-17 — IDX4 exact bounded recovery A* (PENDING HARNESS)
+
+- Phase 21 established that source snap succeeds but the old local recovery search returned empty at 900/900; see `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`.
+- New `NavPlanner.planExact` uses the existing validated global A* core, requires exact state + feet Y at take-off, bounds horizontal radius to 4 and vertical envelope to 3, and keeps the existing 900 expansion cap.
+- Exact recovery graph rejects BREAK/BUILD/BRIDGE and multi-block DROP edges. Recovery route policy requires the final waypoint to equal take-off and checks WALK=0, STEP_UP=+1, JUMP_UP=+2, DROP=-1 (at most one).
+- Failed auxiliary planning no longer destroys the original route/cursor/`plannedFrom`; retry is cooldown-bounded. Successful restoration emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED`.
+- Source snap retains the 0.20 radial tolerance; Phase 21's 0.19 offset is within it and all physical predicates passed.
+- Fix report: `2026-11-17-IDX4-EXACT-RECOVERY-ASTAR-FIX.md`. Expected DROP policy test total: 43.
+- **PENDING HARNESS** on exact current HEAD. Static checks first, then A2 Run 1 only. A2 OPEN; no Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict. IDX7/IDX8 unchanged; C4 save/reload OPEN.
