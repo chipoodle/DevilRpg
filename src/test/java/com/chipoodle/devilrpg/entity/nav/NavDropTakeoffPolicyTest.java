@@ -57,6 +57,29 @@ public final class NavDropTakeoffPolicyTest {
         comprobar("vertical take-off recovery rejects partial routes to another destination",
                 !NavDropTransitionPolicy.rutaAscensoOrigenSegura(safeClimb, previous));
 
+        BlockPos resolvedSource = new BlockPos(593, 87, 508);
+        BlockPos originalTakeoff = new BlockPos(593, 86, 507);
+        NavRoute oneBlockRecoveryDrop = new NavRoute(java.util.List.of(
+                new NavRoute.Node(originalTakeoff, NavRoute.Transition.DROP)), originalTakeoff);
+        comprobar("source recovery accepts one planner-validated one-block DROP to exact take-off",
+                NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
+                        oneBlockRecoveryDrop, resolvedSource, originalTakeoff));
+        NavRoute twoBlockRecoveryDrop = new NavRoute(java.util.List.of(
+                new NavRoute.Node(new BlockPos(593, 85, 507), NavRoute.Transition.DROP)),
+                new BlockPos(593, 85, 507));
+        comprobar("source recovery rejects a DROP longer than one block",
+                !NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
+                        twoBlockRecoveryDrop, resolvedSource, new BlockPos(593, 85, 507)));
+        NavRoute repeatedRecoveryDrops = new NavRoute(java.util.List.of(
+                new NavRoute.Node(new BlockPos(593, 86, 508), NavRoute.Transition.DROP),
+                new NavRoute.Node(new BlockPos(593, 85, 507), NavRoute.Transition.DROP)),
+                new BlockPos(593, 85, 507));
+        comprobar("source recovery rejects more than one DROP transition",
+                !NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
+                        repeatedRecoveryDrops, resolvedSource, new BlockPos(593, 85, 507)));
+        comprobar("source recovery rejects destructive and build transitions",
+                !NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(unsafeBreak, resolvedSource, previous));
+
         comprobar("DROP recovery starts only from a grounded, valid, supported and fitting feet cell",
                 NavStepUpRecoveryPolicy.canStartFrom(true, true, true, true));
         comprobar("DROP recovery defers planning while the mob is airborne",
