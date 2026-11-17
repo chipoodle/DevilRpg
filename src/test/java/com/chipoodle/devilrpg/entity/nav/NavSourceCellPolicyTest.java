@@ -39,6 +39,19 @@ public final class NavSourceCellPolicyTest {
         comprobar("multiple valid adjacent cells are ambiguous and fail closed",
                 NavSourceCellPolicy.uniqueAdjacentCandidate(current, ambiguousFootprint,
                         cell -> cell.equals(new BlockPos(1, 1, 0)) || cell.equals(adjacent)) == null);
+        BlockPos east = new BlockPos(1, 1, 0);
+        BlockPos south = new BlockPos(0, 1, 1);
+        BlockPos diagonal = new BlockPos(1, 1, 1);
+        comprobar("multiple valid overlaps select one deterministic best source instead of failing closed",
+                south.equals(NavSourceCellPolicy.bestAdjacentCandidate(current, ambiguousFootprint,
+                        0.95D, 0.95D, cell -> cell.equals(east) || cell.equals(south))));
+        comprobar("diagonal AABB-overlapping source is considered when it is the only safe candidate",
+                diagonal.equals(NavSourceCellPolicy.bestAdjacentCandidate(current, ambiguousFootprint,
+                        0.95D, 0.95D, diagonal::equals)));
+        comprobar("best-source resolver rejects every unsupported or non-fitting candidate",
+                NavSourceCellPolicy.bestAdjacentCandidate(current, ambiguousFootprint,
+                        0.95D, 0.95D, cell -> false) == null);
+
         comprobar("candidate must be physically centered before source admission",
                 NavSourceCellPolicy.centeredInCell(0.5D, 1.5D, adjacent, 0.20D));
         comprobar("boundary overlap is not physical center occupancy",

@@ -3774,9 +3774,10 @@ public final class NavExecutor {
             // Resolve a grounded but invalid integer source from the actual horizontal AABB footprint.
             // Only one cardinal adjacent same-Y cell may qualify; ambiguous or unsupported candidates fail closed.
             if (grounded && (!sourceFeetValid || !sourceSupported || !sourceFits)) {
-                BlockPos candidate = NavSourceCellPolicy.uniqueAdjacentCandidate(
-                        start, mob.getBoundingBox(),
+                BlockPos candidate = NavSourceCellPolicy.bestAdjacentCandidate(
+                        start, mob.getBoundingBox(), mob.getX(), mob.getZ(),
                         cell -> esPieValido(cell)
+                                && NavObstruction.hasSupport(mob.level(), cell)
                                 && NavObstruction.fitsAtCellCenter(mob.level(), mob, cell));
                 if (NavTrace.on() && now % 10L == 0L) {
                     NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_INVALID", "uuid=" + mob.getUUID()
@@ -3938,12 +3939,13 @@ public final class NavExecutor {
                         candidate.getZ() + 0.5D, 0.35D);
                 if (NavTrace.on() && now % 10L == 0L) NavTrace.ev("DROP_TAKEOFF_SOURCE_SNAP_STARTED",
                         "uuid=" + mob.getUUID() + " tick=" + now + " from=" + current.toShortString()
-                                + " candidate=" + candidate.toShortString() + " speed=0.35 action=source_snap_then_replan");
+                                + " candidate=" + candidate.toShortString() + " speed=0.35 action=source_snap_then_replan strategy=largest_overlap_then_nearest_center_then_lexicographic");
                 return;
             }
         }
-        BlockPos candidate = NavSourceCellPolicy.uniqueAdjacentCandidate(current, mob.getBoundingBox(),
-                cell -> esPieValido(cell) && NavObstruction.fitsAtCellCenter(mob.level(), mob, cell));
+        BlockPos candidate = NavSourceCellPolicy.bestAdjacentCandidate(current, mob.getBoundingBox(), mob.getX(), mob.getZ(),
+                cell -> esPieValido(cell) && NavObstruction.hasSupport(mob.level(), cell)
+                        && NavObstruction.fitsAtCellCenter(mob.level(), mob, cell));
         if (candidate == null) {
             if (!current.equals(fuenteDropSinCandidatoDesde)) {
                 fuenteDropSinCandidatoDesde = current.immutable();
@@ -3951,10 +3953,10 @@ public final class NavExecutor {
             } else if (inicioEsperaFuenteDropSinCandidato >= 0L && now - inicioEsperaFuenteDropSinCandidato >= 80L) {
                 if (NavTrace.on()) NavTrace.ev("DROP_TAKEOFF_SOURCE_CELL_UNRESOLVED", "uuid=" + mob.getUUID()
                         + " tick=" + now + " current=" + current.toShortString()
-                        + " waited=80 reason=no_unique_supported_aabb_overlapping_neighbor");
+                        + " waited=80 reason=no_safe_supported_aabb_overlapping_neighbor");
                 fuenteDropSinCandidatoDesde = null;
                 inicioEsperaFuenteDropSinCandidato = -1L;
-                fallar("DROP source-cell recovery found no unique supported AABB-overlapping cell at " + current);
+                fallar("DROP source-cell recovery found no safe supported AABB-overlapping neighbor at " + current);
                 return;
             }
             mob.getNavigation().stop();
@@ -4318,7 +4320,7 @@ public final class NavExecutor {
                                         + " tick=" + sourceCheckTick + " staleTakeoff=" + origenPlan.toShortString()
                                         + " liveSource=" + mob.blockPosition().toShortString()
                                         + " grounded=true feetValid=" + liveFeetValid + " support=" + liveSupported
-                                        + " realAabbFits=" + liveFits + " action=resolve_unique_aabb_neighbor");
+                                        + " realAabbFits=" + liveFits + " action=resolve_ranked_8_neighbor_aabb_source");
                     } else {
                         mob.getNavigation().stop();
                         if (NavTrace.on() && sourceCheckTick % 10L == 0L) NavTrace.ev(
