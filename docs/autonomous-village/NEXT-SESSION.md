@@ -302,5 +302,6 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 - ChatGPT added a guarded natural STEP_UP assist for DROP recovery: only adjacent one-block climbs with blocked lower step, headroom, destination fit and real support; uses MoveControl + JumpControl, never direct velocity or teleport. Exact physical occupancy remains required.
 - Corrected NavPlanner's expansion guard to check before incrementing; 900 is now the maximum, never 901. Budget itself unchanged.
 - Added pure policies and extended `NavDropTakeoffPolicyTest` to 25 assertions; expected route-node test remains 6.
+- Production code checkpoint before handoff documentation: `491b7d0170501e9d86433a52d2703395a4029b06`.
 - Report: `docs/autonomous-village/2026-11-17-A2-IDX4-STEP-UP-EXECUTION-FIX.md`.
 - PENDING HARNESS on exact current HEAD. Static checks first, then A2 Run 1 only. IDX7/IDX8 untouched. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict runs. C4 save/reload OPEN.
