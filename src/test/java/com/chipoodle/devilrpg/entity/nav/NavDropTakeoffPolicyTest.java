@@ -15,6 +15,26 @@ public final class NavDropTakeoffPolicyTest {
                 !NavDropTransitionPolicy.origenFisicamenteAlcanzado(596, 79, 498, 597, 78, 499));
         comprobar("horizontal distance beyond adjacency is rejected",
                 !NavDropTransitionPolicy.origenFisicamenteAlcanzado(595, 78, 498, 597, 78, 499));
+        comprobar("runtime DROP origin requires grounded valid supported fitting feet",
+                NavDropTransitionPolicy.origenFisicamenteAlcanzado(
+                        true, true, true, true, 596, 78, 498, 597, 78, 499));
+        comprobar("runtime DROP origin rejects airborne, invalid, unsupported or non-fitting sources",
+                !NavDropTransitionPolicy.origenFisicamenteAlcanzado(
+                        false, true, true, true, 596, 78, 498, 597, 78, 499)
+                        && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(
+                                true, false, true, true, 596, 78, 498, 597, 78, 499)
+                        && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(
+                                true, true, false, true, 596, 78, 498, 597, 78, 499)
+                        && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(
+                                true, true, true, false, 596, 78, 498, 597, 78, 499));
+        comprobar("unsupported take-off replans only from a grounded valid supported fitting source",
+                NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(false, true, true, true, true));
+        comprobar("unsupported take-off does not replan from airborne or invalid source",
+                !NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(false, false, true, true, true)
+                        && !NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(false, true, false, true, true)
+                        && !NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(false, true, true, false, true)
+                        && !NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(false, true, true, true, false)
+                        && !NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(true, true, true, true, true));
         comprobar("legacy proximity remains broader than physical occupancy",
                 NavDropTransitionPolicy.origenCompatible(596, 77, 498, 597, 78, 499)
                         && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(596, 77, 498, 597, 78, 499));
