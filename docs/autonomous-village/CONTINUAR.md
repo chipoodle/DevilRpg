@@ -432,3 +432,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - `break-runtime` `a2n-20261116-174648` COMPLETO: both targets air, retryCalls=2, delta=40, success mission resumed, retry mission resumed at x=738 after 23 ticks.
 - Independent `BREAK_EDGE_EXCLUDED` and `NAV_BACKTRACK` fixtures still required; not executed in this run.
 - Report: docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-PASS.md. A2 remains OPEN; no 12k.
+
+## 2026-11-16 — Phase19 BREAK exclusion + backtrack runtime
+
+- Synced `3776d463` -> `7e7ab1fe` by fast-forward.
+- Static PASS: Gradle, strict lint, diff-check, diagnostics compile; NavRecoveryControllerTest 10 assertions.
+- `break-edge-excluded` `a2n-20261116-180242`: **COMPLETO**; one fingerprint exclusion, 40-tick retry, alternative BREAK, both blocks solid, mission preserved.
+- `nav-backtrack` `a2n-20261116-180555`: **FAIL**; selected 937 from 939, stopped at 938 because generic arrival tolerance cleared tactical objective before exact return; mission not resumed.
+- Report: docs/autonomous-village/2026-11-16-PHASE19-EXCLUSION-BACKTRACK-RUNTIME.md. A2 remains OPEN; no 12k.

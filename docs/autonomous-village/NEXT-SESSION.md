@@ -90,6 +90,7 @@ Read first, in order:
 31. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-STAND-NUDGE-RUNTIME.md`
 32. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-RUNTIME-FAIL.md`
 33. `docs/autonomous-village/2026-11-16-PHASE19-BREAK-RETRY-PASS.md`
+34. `docs/autonomous-village/2026-11-16-PHASE19-EXCLUSION-BACKTRACK-RUNTIME.md`
 
 ## Permanent collaboration workflow
 
@@ -104,7 +105,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-PHASE19-BREAK-RETRY-PASS.md`. BREAK success and retry fixture COMPLETO on `8b389672`.
+- Latest technical report: `2026-11-16-PHASE19-EXCLUSION-BACKTRACK-RUNTIME.md`. Exclusion PASS; backtrack FAIL at exact return/arrival tolerance.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -143,18 +144,23 @@ Read first, in order:
   `76d3466c` fixed planning: `BREAK_LOS_DIAG` accepts both panes with `hitBlock` equal to `actionPos`.
 - `break-runtime` `a2n-20261116-174648` on HEAD `8b389672`: **COMPLETO**. Both panes air, retry
   calls=2, delta=40, success/retry missions resumed (retry at x=738, ticksAfterBreak=23).
-- Independent fixtures for `BREAK_EDGE_EXCLUDED` and `NAV_BACKTRACK` are still required and were not
-  executed inside the BREAK success/retry fixture.
+- `break-edge-excluded` `a2n-20261116-180242`: **COMPLETO**. Two unverified actions, delta=40,
+  one `BREAK_EDGE_EXCLUDED` (fingerprint, exclusions=1), alternative BREAK selected, both blocks
+  solid, route index unchanged, strategic mission preserved, 0 unexpected calls.
+- `nav-backtrack` `a2n-20261116-180555`: **FAIL**. Selected `937,184,608` from `939`; stopped at
+  `938` because generic `ARRIVE_DISTANCE_SQR` cleared the tactical objective before exact occupancy;
+  no mission-resumed event; timeout in RECOVERING.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. Build an independent deterministic fixture for `BREAK_EDGE_EXCLUDED`: two unverified actions on
-   the same `(stand, actionPos)`, 40-tick retry, then exclusion and alternate edge selection.
-2. Build an independent deterministic fixture for `NAV_BACKTRACK`: two no-progress failures with a
-   valid prior cell, one-shot backtrack, history ≤16, strategic mission resumption.
-3. Do not mix these into the passing BREAK success/retry fixture.
+1. ChatGPT: fix the backtrack arrival contract. The mob selected `937,184,608` from `939`, moved to
+   `938`, and the tactical objective was cleared by generic `ARRIVE_DISTANCE_SQR` before exact
+   occupancy. Require exact cell occupancy (or an explicit adjacent nudge) before clearing the
+   one-shot backtrack and restoring the mission. Do not change cooldown/budgets/acceptance.
+2. Rerun `nav-backtrack` on the exact new SHA; require physicalReturn+missionResumed.
+3. BREAK_EDGE_EXCLUDED is validated; keep its fixture unchanged.
 4. A2 remains OPEN; do not run 12k until five consecutive 8/8 strict `DENTRO-PARED`. C4 save/reload OPEN.
 
 ## Worlds (preserve; do not overwrite)
