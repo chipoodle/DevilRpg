@@ -57,17 +57,34 @@ public final class NavDropTakeoffPolicyTest {
         comprobar("vertical take-off recovery rejects partial routes to another destination",
                 !NavDropTransitionPolicy.rutaAscensoOrigenSegura(safeClimb, previous));
 
-        comprobar("STEP_UP assist accepts one adjacent supported climb",
-                NavStepUpRecoveryPolicy.canAssist(0, 1, -1, true, true, true, true));
-        comprobar("STEP_UP assist rejects same-column vertical impulse",
-                !NavStepUpRecoveryPolicy.canAssist(0, 1, 0, true, true, true, true));
-        comprobar("STEP_UP assist rejects multi-block recovery",
-                !NavStepUpRecoveryPolicy.canAssist(0, 3, -1, true, true, true, true));
-        comprobar("STEP_UP assist rejects missing obstruction, headroom, fit or support",
-                !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, false, true, true, true)
-                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, false, true, true)
-                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, true, false, true)
-                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, true, true, false));
+        comprobar("DROP recovery starts only from a grounded, valid, supported and fitting feet cell",
+                NavStepUpRecoveryPolicy.canStartFrom(true, true, true, true));
+        comprobar("DROP recovery defers planning while the mob is airborne",
+                !NavStepUpRecoveryPolicy.canStartFrom(false, true, true, true));
+        comprobar("DROP recovery rejects an invalid source feet cell",
+                !NavStepUpRecoveryPolicy.canStartFrom(true, false, true, true));
+        comprobar("DROP recovery rejects an unsupported source cell",
+                !NavStepUpRecoveryPolicy.canStartFrom(true, true, false, true));
+        comprobar("DROP recovery rejects a source cell the mob cannot fit",
+                !NavStepUpRecoveryPolicy.canStartFrom(true, true, true, false));
+
+        comprobar("STEP_UP geometry accepts one adjacent one-block climb",
+                NavStepUpRecoveryPolicy.isAdjacentOneBlockStep(0, 1, -1));
+        comprobar("STEP_UP geometry rejects same-column vertical movement",
+                !NavStepUpRecoveryPolicy.isAdjacentOneBlockStep(0, 1, 0));
+        comprobar("STEP_UP geometry rejects a stale multi-block edge",
+                !NavStepUpRecoveryPolicy.isAdjacentOneBlockStep(0, 3, -1));
+
+        comprobar("STEP_UP assist accepts one grounded adjacent supported climb",
+                NavStepUpRecoveryPolicy.canAssist(0, 1, -1, true, true, true, true, true, true));
+        comprobar("STEP_UP assist rejects an airborne or unsupported source",
+                !NavStepUpRecoveryPolicy.canAssist(0, 1, -1, false, true, true, true, true, true)
+                        && !NavStepUpRecoveryPolicy.canAssist(0, 1, -1, true, false, true, true, true, true));
+        comprobar("STEP_UP assist rejects missing obstruction, headroom, fit or destination support",
+                !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, true, false, true, true, true)
+                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, true, true, false, true, true)
+                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, true, true, true, false, true)
+                        && !NavStepUpRecoveryPolicy.canAssist(1, 1, 0, true, true, true, true, true, false));
 
         comprobar("expansion budget permits the first expansion",
                 NavExpansionBudgetPolicy.canExpand(0, 900));

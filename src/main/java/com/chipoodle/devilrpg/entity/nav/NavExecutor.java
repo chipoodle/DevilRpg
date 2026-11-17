@@ -3636,6 +3636,25 @@ public final class NavExecutor {
             return takeoff.equals(objetivoRecuperacionOrigenDrop);
         }
         BlockPos start = mob.blockPosition();
+        boolean grounded = mob.onGround();
+        boolean sourceFeetValid = esPieValido(start);
+        boolean sourceSupported = NavObstruction.hasSupport(mob.level(), start);
+        boolean sourceFits = NavObstruction.fits(mob.level(), mob, start);
+        if (!NavStepUpRecoveryPolicy.canStartFrom(grounded, sourceFeetValid, sourceSupported, sourceFits)) {
+            // blockPosition() can describe a cell the mob is merely passing through while falling.
+            // Never seed a physical recovery A* route from that transient airborne cell.
+            mob.getNavigation().stop();
+            if (NavTrace.on() && now % 10L == 0L) {
+                NavTrace.ev("DROP_TAKEOFF_RECOVERY_WAIT_GROUNDED", "uuid=" + mob.getUUID()
+                        + " live=" + start.toShortString()
+                        + " exact=" + String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f",
+                                mob.getX(), mob.getY(), mob.getZ())
+                        + " onGround=" + grounded + " feetValid=" + sourceFeetValid
+                        + " support=" + sourceSupported + " fits=" + sourceFits
+                        + " takeoff=" + takeoff.toShortString());
+            }
+            return false;
+        }
         NavPlanner.Result result = NavPlanner.plan(mob.level(), mob, start, takeoff,
                 12, VERTICAL_RANGE, MAX_EXPANSIONS_PER_PLAN, policies, construidas,
                 exclusionesDescenso, exclusionesBreak);
@@ -3828,29 +3847,59 @@ public final class NavExecutor {
                 return;
             }
             case STEP_UP -> {
+                int stepDx = node.pos().getX() - mob.blockPosition().getX();
+                int stepDy = node.pos().getY() - mob.blockPosition().getY();
+                int stepDz = node.pos().getZ() - mob.blockPosition().getZ();
+                if (recuperacionOrigenDropActiva && mob.onGround()
+                        && !NavStepUpRecoveryPolicy.isAdjacentOneBlockStep(stepDx, stepDy, stepDz)) {
+                    // The mob landed somewhere other than the planned predecessor. Do not try to
+                    // execute a stale one-block edge from a different elevation; abandon this
+                    // auxiliary route and replan the strategic mission from the live grounded cell.
+                    if (NavTrace.on()) {
+                        NavTrace.ev("DROP_TAKEOFF_RECOVERY_EDGE_STALE", "uuid=" + mob.getUUID()
+                                + " pos=" + mob.blockPosition().toShortString()
+                                + " target=" + node.pos().toShortString()
+                                + " delta=" + stepDx + "," + stepDy + "," + stepDz
+                                + " takeoff=" + objetivoRecuperacionOrigenDrop);
+                    }
+                    finalizarRecuperacionOrigenDrop(now);
+                    return;
+                }
+                if (recuperacionOrigenDropActiva && !mob.onGround()) {
+                    // Preserve horizontal travel during a natural jump/fall, but never ask JumpControl
+                    // to start a second jump until the mob has landed on a verified source cell.
+                    mob.getNavigation().stop();
+                    mob.getMoveControl().setWantedPosition(aim.x, aim.y, aim.z, 1.0D);
+                    if (NavTrace.on() && mob.level().getGameTime() % 10L == 0L) {
+                        NavTrace.ev("DROP_TAKEOFF_STEP_UP_AIRBORNE", "uuid=" + mob.getUUID()
+                                + " pos=" + mob.blockPosition().toShortString()
+                                + " exactY=" + String.format(java.util.Locale.ROOT, "%.2f", mob.getY())
+                                + " target=" + node.pos().toShortString()
+                                + " delta=" + stepDx + "," + stepDy + "," + stepDz);
+                    }
+                    trazarComandoMovimiento(node, "STEP_UP-RECOVERY-AIRBORNE", aim.x, aim.y, aim.z, 1.0D);
+                    return;
+                }
+                boolean sourceSupported = NavObstruction.hasSupport(mob.level(), mob.blockPosition());
                 boolean recoveryStepAssist = recuperacionOrigenDropActiva
                         && NavStepUpRecoveryPolicy.canAssist(
-                                node.pos().getX() - mob.blockPosition().getX(),
-                                node.pos().getY() - mob.blockPosition().getY(),
-                                node.pos().getZ() - mob.blockPosition().getZ(),
+                                stepDx, stepDy, stepDz, mob.onGround(), sourceSupported,
                                 NavObstruction.blockedAtFeet(mob.level(), mob, node.pos().below()),
                                 NavObstruction.headClearOneUp(mob.level(), mob, node.pos().below()),
                                 NavObstruction.fits(mob.level(), mob, node.pos()),
                                 NavObstruction.hasSupport(mob.level(), node.pos()));
                 if (recoveryStepAssist) {
                     // Execute this already-validated one-block climb through vanilla's natural
-                    // JumpControl + MoveControl. Do not leave PathNavigation in charge of a
-                    // vertical waypoint it may report complete without physically climbing.
+                    // JumpControl + MoveControl. Exact physical occupancy remains the only advance condition.
                     mob.getNavigation().stop();
                     mob.getMoveControl().setWantedPosition(aim.x, aim.y, aim.z, 1.0D);
-                    if (mob.onGround()) {
-                        mob.getJumpControl().jump();
-                    }
+                    mob.getJumpControl().jump();
                     if (NavTrace.on() && mob.level().getGameTime() % 10L == 0L) {
                         NavTrace.ev("DROP_TAKEOFF_STEP_UP_ASSIST", "uuid=" + mob.getUUID()
                                 + " from=" + mob.blockPosition().toShortString()
                                 + " target=" + node.pos().toShortString()
                                 + " onGround=" + mob.onGround()
+                                + " sourceSupport=" + sourceSupported
                                 + " support=" + NavObstruction.hasSupport(mob.level(), node.pos())
                                 + " fits=" + NavObstruction.fits(mob.level(), mob, node.pos()));
                     }

@@ -1,4 +1,23 @@
-# Continuación activa — 2026-11-16 (Phase19 BREAK)
+# Continuación activa — 2026-11-17 (A2 airborne DROP recovery)
+
+## Último checkpoint
+
+- Último Harness Run: `a2n-20261117-001624`, probado SHA `7aed2c683852969c323524bbed7d95965c330790`; static PASS, A2 Run 1 FAIL 4/8 strict y 5/8 perímetro.
+- IDX4 evidenció `DROP_TAKEOFF_STEP_UP_ASSIST` con `onGround=false`; la ruta auxiliar se planificó desde `mob.blockPosition()` mientras la entidad estaba en el aire. El mob cayó a y119 y la arista STEP_UP hacia y122 dejó de representar una transición física válida.
+- ChatGPT ha añadido una corrección que exige fuente grounded/feet-valid/support/fits antes de iniciar la ruta auxiliar. Si está cayendo, conserva el DROP pendiente y reintenta desde la celda real una vez aterrizado.
+- En STEP_UP de recuperación, se conserva el movimiento horizontal natural durante el salto/caída, pero JumpControl solo se solicita desde una fuente grounded y soportada. Si el mob aterriza y la arista de un bloque ya quedó obsoleta, se descarta la ruta auxiliar de forma fail-closed y se replantea la misión estratégica desde la posición física actual.
+- No se han relajado presupuestos, colisión, soporte, clearance, seguridad DROP ni criterios de entrada. No teleport ni impulso directo de velocidad.
+- La política agrega cobertura para el origen grounded y la geometría de STEP_UP. Tests pendientes de Harness; ChatGPT no ha ejecutado Gradle/lint/compile/runtime.
+- IDX7 e IDX8 siguen independientes y sin cambios. C4 PASS `[1,0,0]`; save/reload OPEN. A2 OPEN; no Run 2 salvo que Run 1 alcance 8/8 estricto; no full 12k hasta cinco runs consecutivos 8/8 estricto.
+
+## Próxima acción Harness
+
+1. Sincronizar por fast-forward seguro y probar el SHA exacto del checkpoint de implementación publicado por ChatGPT.
+2. Ejecutar Gradle tests, lint estricto, `git diff --check` y compilación de diagnósticos.
+3. Solo si static PASS, ejecutar A2 Run 1. Verificar que la planificación de recuperación no arranca hasta `onGround=true`, `feetValid=true`, `support=true`, `fits=true`; cada STEP_UP assist debe partir grounded y soportado.
+4. Capturar waypoint físico exacto, soporte/fit, take-off reached, restauración del cursor DROP y aterrizaje físico final. Run 2 prohibido si Run 1 no es 8/8 estricto.
+5. Preservar mundos, artefactos y hashes. Harness no modifica producción.
+
 
 Code checkpoint SHA: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; subsequent handoff commits are documentation-only. Always fetch the live branch HEAD before synchronization.
 
