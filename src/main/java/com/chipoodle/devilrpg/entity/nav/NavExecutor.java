@@ -566,7 +566,10 @@ public final class NavExecutor {
             dzPlan = aterrizaje.getZ() - origenPlan.getZ();
             contiguoPlan = NavDropTransitionPolicy.aterrizajeContiguo(origenPlan.getX(), origenPlan.getZ(),
                     aterrizaje.getX(), aterrizaje.getZ());
-            cercaOrigen = NavDropTransitionPolicy.origenFisicamenteAlcanzado(yo.getX(), yo.getY(), yo.getZ(),
+            cercaOrigen = NavDropTransitionPolicy.origenFisicamenteAlcanzado(
+                    mob.onGround(), esPieValido(yo), NavObstruction.hasSupport(mob.level(), yo),
+                    NavObstruction.fitsActualAabb(mob.level(), mob),
+                    yo.getX(), yo.getY(), yo.getZ(),
                     origenPlan.getX(), origenPlan.getY(), origenPlan.getZ());
         }
         if (!(contiguoVivo || (contiguoPlan && cercaOrigen))) {
