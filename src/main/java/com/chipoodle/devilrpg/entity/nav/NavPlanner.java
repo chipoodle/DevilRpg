@@ -328,6 +328,32 @@ public final class NavPlanner {
                                           java.util.Set<BlockPos> construidas,
                                           NavDropExclusionPolicy exclusiones,
                                           NavBreakExclusionPolicy exclusionesBreak) {
+        return planGlobalInternal(level, mob, start, objetivo, maxRadio, verticalRange, maxExpansions,
+                policies, construidas, exclusiones, exclusionesBreak, false);
+    }
+
+    /**
+     * Exact-goal variant for short tactical recoveries. Unlike the strategic global planner's
+     * arrival region, this search succeeds only when both the state cell and feet Y equal the
+     * requested take-off. It uses the same validated movement graph and hard expansion budget.
+     */
+    public static GlobalResult planExact(CollisionGetter level, Mob mob, BlockPos start, BlockPos objetivo,
+                                         int maxRadio, int verticalRange, int maxExpansions,
+                                         NavObstruction.Policies policies,
+                                         java.util.Set<BlockPos> construidas,
+                                         NavDropExclusionPolicy exclusiones,
+                                         NavBreakExclusionPolicy exclusionesBreak) {
+        return planGlobalInternal(level, mob, start, objetivo, maxRadio, verticalRange, maxExpansions,
+                policies, construidas, exclusiones, exclusionesBreak, true);
+    }
+
+    private static GlobalResult planGlobalInternal(CollisionGetter level, Mob mob, BlockPos start, BlockPos objetivo,
+                                                    int maxRadio, int verticalRange, int maxExpansions,
+                                                    NavObstruction.Policies policies,
+                                                    java.util.Set<BlockPos> construidas,
+                                                    NavDropExclusionPolicy exclusiones,
+                                                    NavBreakExclusionPolicy exclusionesBreak,
+                                                    boolean exactGoal) {
         if (start.equals(objetivo)) {
             return new GlobalResult(new NavRoute(List.of(new NavRoute.Node(objetivo, NavRoute.Transition.WALK)),
                     objetivo), objetivo, true, 0, false, "inicio==fin",
@@ -404,7 +430,10 @@ public final class NavPlanner {
 
             @Override
             public boolean goal(long state, int feet) {
-                return esMetaGlobal(BlockPos.of(state), feet, ox, oy, oz);
+                BlockPos position = BlockPos.of(state);
+                return exactGoal
+                        ? position.equals(objetivo) && feet == objetivo.getY()
+                        : esMetaGlobal(position, feet, ox, oy, oz);
             }
 
             @Override
@@ -424,7 +453,8 @@ public final class NavPlanner {
         BlockPos frente = BlockPos.of(resultado.front());
         double mejorDistFrente = distanciaGlobal(frente, objetivo);
         StringBuilder resumen = new StringBuilder();
-        resumen.append("global inicio=").append(start.toShortString())
+        resumen.append("global exactGoal=").append(exactGoal)
+                .append(" inicio=").append(start.toShortString())
                 .append(" meta=").append(objetivo.toShortString())
                 .append(" radio=").append(maxRadio).append(" V=").append(verticalRange)
                 .append(" exp=").append(expansions).append("/").append(maxExpansions)
