@@ -1,6 +1,6 @@
 # CURRENT CHECKPOINT — 2026-11-17 grounded invalid DROP source recovery (PENDING HARNESS)
 
-**Current branch HEAD:** `a4d4d8e8a03b3074492b3504e25e8f26e5a2f09b`.
+**Current branch HEAD:** `a4f4b58098bfc78769bfa6999fa7e132d5a29861`.
 **Production code checkpoint:** `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
 **Detailed report:** `2026-11-17-A2-GROUNDED-INVALID-DROP-SOURCE-RECOVERY-FIX.md`.
 

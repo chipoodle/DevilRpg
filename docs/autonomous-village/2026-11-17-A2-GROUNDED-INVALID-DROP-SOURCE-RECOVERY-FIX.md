@@ -10,7 +10,7 @@
 - Previous dominant state: `grounded=true feetValid=false support=false realAabbFits=true` with stale and live source both `661,72,459`.
 - Current implementation branch: `feature/autonomous-village`.
 - Current code checkpoint: `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
-- Current branch HEAD (documentation-only descendant): `a4d4d8e8a03b3074492b3504e25e8f26e5a2f09b`.
+- Current branch HEAD (documentation-only descendant): `a4f4b58098bfc78769bfa6999fa7e132d5a29861`.
 
 ## Root cause
 
@@ -47,7 +47,7 @@ The assertions are authored but **not executed by ChatGPT**. Harness must confir
 
 ## Harness instructions
 
-1. Safely sync exact live branch HEAD `a4d4d8e8a03b3074492b3504e25e8f26e5a2f09b` (the production code checkpoint is `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`); preserve local/untracked artifacts and worlds.
+1. Safely sync exact live branch HEAD `a4f4b58098bfc78769bfa6999fa7e132d5a29861` (the production code checkpoint is `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`); preserve local/untracked artifacts and worlds.
 2. Static gate first: `gradlew test`, `lint_aldea.py --strict`, `git diff --check`, and `compileJava -Pa2nDiagnostics=true`.
 3. Confirm `NAV_DROP_TAKEOFF_POLICY_TEST: OK (51 assertions)`, plus existing source-cell and route-node suites.
 4. If static passes, run **A2 Run 1 only** in a disposable world.
