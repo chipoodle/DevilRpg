@@ -810,3 +810,13 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Implementation checkpoint: `c17ec47e7277a687fa428841d64ca8c8089e68c1`; handoff doc commit: `5c3a7034b0b01ea1bc01d1e0ab48aa41688e52b2`.
 - Harness static validation is pending. Run A2 Run 1 only if static passes. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict.
 - A2 OPEN; C4 last PASS [1,0,0], save/reload OPEN; IDX7/IDX8 independent. No budgets or safety predicates relaxed.
+
+## 2026-11-17 — A2 Run 1 Phase 24 unsupported take-off
+
+- Synced 8d01b941 -> 37c0aa70 by fast-forward.
+- Verified policy admission and DROP_TAKEOFF_UNSUPPORTED_WAIT/REPLAN present.
+- Static PASS: NAV_SOURCE_CELL 10, NAV_DROP_TAKEOFF 47, NAV_ROUTE_NODE 6.
+- A2 Run 1 `a2n-20261117-142016`: FAIL 1/8 strict, 1/8 perimeter, C4 PASS [1,0,0].
+- Regression: 2102 UNSUPPORTED_WAIT (grounded=true feetValid=false support=false), 2 REPLAN; only idx1 entered.
+- IDX4 bbadffa7: DROP_START 567,122,534 ->567,119,534 repeated 9x; 600 progress, no DROP_DONE/cursor, final same takeoff.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md. A2 OPEN; no 12k.

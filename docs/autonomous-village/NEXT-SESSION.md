@@ -52,7 +52,9 @@
 - Harness result: `2026-11-17-A2-RUN1-EXACT-BOUNDED-RECOVERY-PHASE22.md`.
 - Harness Phase 23 at `69f066cc`: static PASS (10/43/6); exact-edge diag shows candidate `589,95,522` is air/no-support, classified DROP, and exact goal `589,96,522` has `feetSupport=false`. A2 FAIL 5/8, C4 PASS `[1,0,0]`.
 - Harness result: `2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`.
-- **NEXT: ChatGPT must choose a supported take-off/landing; the current exact goal is unsupported.**
+- Harness Phase 24 at `37c0aa70`: static PASS (10/47/6); A2 **regressed to 1/8 strict, 1/8 perimeter**. `DROP_TAKEOFF_UNSUPPORTED_WAIT` fired 2102 times with `grounded=true feetValid=false support=false`; only idx1 entered. C4 PASS `[1,0,0]`.
+- Harness result: `2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`.
+- **NEXT: ChatGPT must fix the unsupported-source wait loop before another A2 run; do not increase budget or relax support.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -236,6 +238,7 @@ Read first, in order:
 51. `docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`
 52. `docs/autonomous-village/2026-11-17-A2-RUN1-EXACT-BOUNDED-RECOVERY-PHASE22.md`
 53. `docs/autonomous-village/2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`
+54. `docs/autonomous-village/2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`
 
 ## Permanent collaboration workflow
 
@@ -250,7 +253,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`. Candidate589,95,522 air/no-support -> DROP; goal589,96,522 feetSupport=false; A2 5/8 strict.
+- Latest technical report: `2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`. Regression: 1/8 strict; 2102 UNSUPPORTED_WAIT with support=false; IDX4 DROP loops without DONE.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -361,10 +364,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: choose a supported take-off/landing. The current exact goal `589,96,522` has
-   `feetSupport=false`, and `589,95,522` is air/no-support classified DROP. No STEP_UP exists.
-2. Do not increase budget (`hitBudget=false`) or relax support/protection/landing.
-3. C4 PASS `[1,0,0]`; IDX7/IDX8 independent. No Run 2 unless 8/8 strict; no 12k until five consecutive.
+1. ChatGPT: fix the `UNSUPPORTED_WAIT` loop (`grounded=true feetValid=false support=false`) before
+   another A2 run. It caused 2,102 waits and reduced perimeter entry to 1/8.
+2. IDX4 loops DROP_START `567,122,534 → 567,119,534` with no descent/DONE/cursor advance.
+3. Do not increase budget or relax support/protection/landing. C4 PASS `[1,0,0]`.
+4. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict runs.
 
 ## Worlds (preserve; do not overwrite)
 
