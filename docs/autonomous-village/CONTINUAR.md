@@ -656,3 +656,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - A2 Run 1 `a2n-20261117-001624`: FAIL 4/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
 - IDX4 assist emitted (567,121 -> 566,122, support/fit true) but mob stalled at567,119; no REACHED, no 901/900. IDX7/IDX8 unchanged.
 - Report: docs/autonomous-village/2026-11-17-A2-RUN1-STEP-UP-ASSIST-FAIL.md. A2 OPEN; no 12k.
+
+## 2026-11-17 — A2 Run 1 grounded take-off recovery
+
+- Synced `9df03028` -> `b3064596` by fast-forward; production190bb657.
+- Static PASS incl NAV_DROP_TAKEOFF_POLICY_TEST 32, NAV_ROUTE_NODE 6, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261117-020800`: FAIL 5/8 strict, 5/8 perimeter, C4 **FAIL** [0,0,0].
+- IDX4 only WAIT_GROUNDED (onGround=false); no accepted route/assist/REACHED; final construction exhausted. No 901/900. IDX7/IDX8 unchanged.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-RECOVERY-FAIL.md. A2 OPEN; no 12k.

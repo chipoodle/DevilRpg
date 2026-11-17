@@ -127,6 +127,7 @@ Read first, in order:
 44. `docs/autonomous-village/2026-11-16-A2-RUN1-FIRST-NODE-DROP-FAIL.md`
 45. `docs/autonomous-village/2026-11-16-A2-RUN1-VERTICAL-TAKEOFF-FAIL.md`
 46. `docs/autonomous-village/2026-11-17-A2-RUN1-STEP-UP-ASSIST-FAIL.md`
+47. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-RECOVERY-FAIL.md`
 
 ## Permanent collaboration workflow
 
@@ -141,7 +142,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-RUN1-STEP-UP-ASSIST-FAIL.md`. Assist emits and budget stays ≤900, but IDX4 stalls at y119 vs waypoint y122.
+- Latest technical report: `2026-11-17-A2-RUN1-GROUNDED-RECOVERY-FAIL.md`. Grounded guards are safe but IDX4 only gets WAIT_GROUNDED; C4 FAIL [0,0,0].
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -235,20 +236,21 @@ Read first, in order:
   `a2n-20261117-001624`: **FAIL**, 4/8 strict, 5/8 perimeter, C4 PASS `[1,0,0]`.
   IDX4 emitted `DROP_TAKEOFF_STEP_UP_ASSIST` (`567,121 -> 566,122`, support/fit true) but stalled at
   `567,119`, never reached the waypoint. No `901/900` entries observed.
+- Grounded fix at `b3064596`: static PASS (NAV_DROP_TAKEOFF 32). A2 Run 1
+  `a2n-20261117-020800`: **FAIL**, 5/8 strict, 5/8 perimeter, **C4 FAIL [0,0,0]**.
+  IDX4 emits only `DROP_TAKEOFF_RECOVERY_WAIT_GROUNDED` (onGround=false); no accepted route, no assist,
+  no recovery reached; final `construccion agotada sin completar el descenso`. No `901/900` entries.
 - IDX7/IDX8 unchanged; A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. ChatGPT: make the STEP_UP assist physically move the mob from `567,119` to `566,122` and execute
-   subsequent recovery waypoints. The assist policy and 900 budget are now working; execution is not.
-   No teleport/arbitrary vertical impulse; preserve support/fit guards.
-2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
-3. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
+1. ChatGPT: make IDX4 find/reach a grounded supported recovery source. Current guards safely wait but
+   never admit a route (`WAIT_GROUNDED` only); no assist/arrival occurs. Preserve onGround/support/fit.
+2. C4 `[0,0,0]` is an independent acceptance failure; do not hide it behind navigation results.
+3. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
+4. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
    Keep C4 save/reload OPEN.
-2. Capture recovery plan summary/route, each exact physical waypoint arrival, support/fit,
-   JUMPUP outcome if used, `DROP_TAKEOFF_RECOVERY_REACHED`, restored route cursor, and final
-   physical DROP landing. If route is rejected or stalls, confirm fail-closed replanning from live position.
 3. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent and untouched.
 4. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
    Keep C4 save/reload OPEN.
