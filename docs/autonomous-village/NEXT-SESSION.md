@@ -184,3 +184,12 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 - No tests/compile/lint/runtime executed by ChatGPT. **PENDING HARNESS** on exact live HEAD.
 - Run static validation and only disposable `nav-backtrack`; require physical return to exact historical cell, one selection, mission resumed, strategic mission preserved, bounded history, no teleport.
 - `BREAK_EDGE_EXCLUDED` remains validated; A2 OPEN; no full 12k until five consecutive strict 8/8; C4 save/reload OPEN.
+
+
+## 2026-11-16 — Phase19 backtrack route-cursor + nudge correction (PENDING HARNESS)
+
+- Harness run `a2n-20261116-182234` passed static validation and exact objective-arrival guard, but runtime still failed: the generic WALK node arrival gate consumed `937` at adjacent `938`, advancing route cursor to idx=2 before the nudge helper could execute.
+- ChatGPT correction checkpoint: `cc817c6314d2b2055dfbba578c5565e3bff9fedf`. `nodoAlcanzado()` now requires exact occupancy for the active backtrack route node; this keeps the WALK node active and lets the existing bounded `aplicarAcercamientoAdyacente()` + `NavAdjacentApproachPolicy` + `MoveControl.setWantedPosition` execute when vanilla navigation is done. Added `BACKTRACK_NODE_OCCUPANCY_REQUIRED`, `BACKTRACK_ADJACENT_NUDGE`, and three pure assertions.
+- No static or runtime validation performed by ChatGPT. **PENDING HARNESS** on exact live HEAD.
+- Run Gradle tests, strict lint, diff-check, diagnostics compile, then a new disposable `nav-backtrack` only. Require exact physical return before clearing tactical target, mission resumed, one selection, history <=16 and no teleport.
+- A2 OPEN; no full 12k before five consecutive strict 8/8; C4 save/reload OPEN.
