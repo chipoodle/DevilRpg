@@ -94,6 +94,7 @@ Read first, in order:
 35. `docs/autonomous-village/2026-11-16-PHASE19-BACKTRACK-EXACT-ARRIVAL-FAIL.md`
 36. `docs/autonomous-village/2026-11-16-PHASE19-NAV-BACKTRACK-EXACT-ARRIVAL-RESULT.md`
 37. `docs/autonomous-village/2026-11-16-A2-STRICT-GATE-RUN1-FAIL.md`
+38. `docs/autonomous-village/2026-11-16-A2-RUN1-FORENSIC-EXTRACT.md`
 
 ## Permanent collaboration workflow
 
@@ -108,7 +109,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-16-A2-STRICT-GATE-RUN1-FAIL.md`. A2 Run 1 FAIL: 5/8 strict; gate remains OPEN.
+- Latest technical report: `2026-11-16-A2-RUN1-FORENSIC-EXTRACT.md`. Confirms DROP node uses state Y not Step.feet; IDX7 local budget exhaustion; IDX8 global/local waypoint rejection.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -159,14 +160,21 @@ Read first, in order:
   - idx7 NAV_FAIL t4209: no-progress budget 10/10 toward `703,68,457` BUILD.
   - idx4 NAV_FAIL t5147: replans 8/8, 24 DROP rejections (landing above), global budget exhausted.
 - Consecutive 8/8 runs: **0**. C4 in Run 1: PASS `[2,0,0]`.
+- Forensic extract confirms the IDX4/IDX8 shared code defect: route nodes use `Step.state`, not
+  `Step.feet`, so DROP nodes carry the search-state Y instead of the landing Y. IDX4 runtime shows
+  node y78 vs mob y77 (`dy=1` rejection); IDX8 has 81 front waypoints but 0/64 valid local.
+- IDX7 BUDGET shows `exp=901/900` for 10/10 attempts with `BUILD-FALLIDO`; no final full plan summary
+  was persisted.
 - A2 focused remains **OPEN**; full 12k not run.
 - Canonical focused gate: five consecutive **8/8 strict `DENTRO-PARED`** runs.
 
 ## Immediate work
 
-1. ChatGPT: address the three reproduced A2 terminal modes separately — idx8 local-waypoint
-   invalidation/budget, idx7 BUILD no-progress budget, idx4 repeated DROP rejection + replan exhaustion.
-   Do not weaken entry criteria, ranges, budgets or collision.
+1. ChatGPT: correct DROP route-node reconstruction to use `Step.feet` (landing Y) rather than
+   `Step.state` in both local/global routes; preserve DROP predecessor/BREAK metadata. This is the
+   confirmed code defect behind IDX4 and the IDX8 local-waypoint rejection.
+2. Separately address IDX7 local expansion/BUILD-FALLIDO exhaustion after the DROP fix is measured.
+3. Do not weaken entry criteria, ranges, budgets or collision. After a new SHA, Harness reruns A2 Run 1.
 2. After a new SHA, Harness reruns A2 Run 1; only 8/8 strict permits Run 2 and the five-run gate.
 3. Keep BREAK/backtrack fixtures unchanged as regression evidence.
 4. C4 save/reload remains OPEN; full 12k only after five consecutive 8/8 strict. A2 OPEN.

@@ -479,3 +479,11 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - Strict entrants: idx1 558, idx2 667, idx3 1062, idx5 702, idx6 649. Non-entrants idx4/7/8, all alive.
 - Terminal failures: idx8 no valid local waypoint/budget (t3411), idx7 BUILD no-progress budget (t4209), idx4 replans 8/8 + DROP rejections (t5147).
 - Gate 0/5 consecutive; full 12k not run. Report: docs/autonomous-village/2026-11-16-A2-STRICT-GATE-RUN1-FAIL.md.
+
+## 2026-11-16 — A2 Run 1 forensic extract
+
+- Read-only extraction from `a2n-20261116-190555`; no runtime, no production changes.
+- IDX4/IDX8 shared code defect confirmed: route nodes use Step.state instead of Step.feet; DROP node y78 while mob at y77 gives dy=1 rejection.
+- IDX7: exp=901/900 on 10/10 attempts, BUILD-FALLIDO, final full plan summary not persisted.
+- IDX8: 81 global front waypoints, 0/64 valid local, A2_LOCAL_STAIR_WRITE INC_FAIL NO_LOCAL_OBJECTIVE.
+- Report: docs/autonomous-village/2026-11-16-A2-RUN1-FORENSIC-EXTRACT.md. A2 remains OPEN; no 12k.
