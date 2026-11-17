@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.entity.nav;
 
+import net.minecraft.core.BlockPos;
+
 /** Pure contract for a directed DROP edge: planned origin -> landing. */
 public final class NavDropTransitionPolicy {
     public static final int MAX_CONTIGUIDAD = 1;
@@ -27,6 +29,18 @@ public final class NavDropTransitionPolicy {
     /** A DROP edge is executable only when its validated landing is strictly below take-off. */
     public static boolean descensoFisicoValido(int takeoffFeet, int landingFeet) {
         return landingFeet < takeoffFeet;
+    }
+
+    /**
+     * Resolves the take-off origin for the DROP currently being executed. The first route node
+     * has no predecessor in the node list, so its origin is the exact position from which the
+     * route was planned. Later DROP nodes must use their immediate predecessor instead.
+     */
+    public static BlockPos origenPlanificado(int routeIndex, BlockPos routeStart, BlockPos previousNode) {
+        if (routeIndex == 0) {
+            return routeStart == null ? null : routeStart.immutable();
+        }
+        return previousNode == null ? null : previousNode.immutable();
     }
 
     public static boolean origenFisicamenteAlcanzado(int liveX, int liveY, int liveZ,
