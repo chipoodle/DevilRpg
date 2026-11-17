@@ -4452,7 +4452,12 @@ public final class NavExecutor {
                 if (NavTrace.on()) {
                     NavTrace.ev("DROP_START", "uuid=" + mob.getUUID() + " idxRuta=" + routeIndex
                             + " aterrizaje=" + node.pos().toShortString() + " salida=" + descenso.salida().toShortString()
-                            + " dy=" + descenso.dy() + " construido=" + descenso.aterrizajeConstruido());
+                            + " dy=" + descenso.dy() + " construido=" + descenso.aterrizajeConstruido()
+                            + " originPlan=" + (origenPlan == null ? "NONE" : origenPlan.toShortString())
+                            + " grounded=" + mob.onGround()
+                            + " liveFeetValid=" + esPieValido(mob.blockPosition())
+                            + " liveSupport=" + NavObstruction.hasSupport(mob.level(), mob.blockPosition())
+                            + " liveAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob));
                 }
                 traceDropDecision("DROP_COMMAND",
                         "takeoff=" + descenso.salida().toShortString()
