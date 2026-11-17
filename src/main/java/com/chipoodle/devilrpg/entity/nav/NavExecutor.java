@@ -3625,9 +3625,8 @@ public final class NavExecutor {
                     + " speed=" + speed);
         }
     }
-    private boolean iniciarRecuperacionFisicaOrigenDrop(BlockPos takeoff, long now) {
-        // The temporary route remains subject to the normal A* and physical transition guards.
-
+    /**
+     * Plans and executes a bounded, non-destructive route back to the take-off of the active DROP.
      * Vanilla PathNavigation may return a completed one-node path when the target is vertically
      * above the mob in the same column. In that case, use the same validated A* movement graph as
      * normal navigation, temporarily suspending (not discarding) the DROP route.
