@@ -377,6 +377,34 @@ public final class NavPlanner {
                         }
                         Arista arista = validarArista(level, mob, pos, candidate, feet, policies,
                                 construidas, exclusionesBreak);
+                        // Exact-recovery forensic: report only the one-block-below-goal candidate
+                        // and its cardinal predecessor. This is deliberately sparse and read-only.
+                        if (exactGoal && candidate.equals(objetivo.below())
+                                && pos.getY() == candidate.getY()
+                                && Math.abs(pos.getX() - candidate.getX())
+                                        + Math.abs(pos.getZ() - candidate.getZ()) == 1
+                                && NavTrace.on()) {
+                            BlockPos feetCell = new BlockPos(candidate.getX(), arista.piesHasta(),
+                                    candidate.getZ());
+                            NavTrace.ev("DROP_TAKEOFF_EXACT_EDGE_DIAG", "from=" + pos.toShortString()
+                                    + " candidate=" + candidate.toShortString()
+                                    + " goal=" + objetivo.toShortString()
+                                    + " kind=" + arista.kind()
+                                    + " accepted=" + arista.valida()
+                                    + " rejection=" + arista.rechazo()
+                                    + " transition=" + arista.transicion()
+                                    + " feetFrom=" + feet + " feetTo=" + arista.piesHasta()
+                                    + " cost=" + arista.coste()
+                                    + " protected=" + policies.isProtected(candidate)
+                                    + " candidateFits=" + NavObstruction.fits(level, mob, candidate)
+                                    + " candidateSupport=" + NavObstruction.hasSupport(level, candidate)
+                                    + " candidateHeadClear=" + NavObstruction.headClearOneUp(level, mob, candidate)
+                                    + " feetFits=" + (arista.piesHasta() != PIES_NO_EJECUTABLE
+                                            && NavObstruction.fits(level, mob, feetCell))
+                                    + " feetSupport=" + (arista.piesHasta() != PIES_NO_EJECUTABLE
+                                            && NavObstruction.hasSupport(level, feetCell))
+                                    + " snapshot={" + NavObstruction.snapshot(level, mob, candidate, policies) + "}");
+                        }
                         contadores[0]++;
                         if (!arista.valida()) {
                             continue;
