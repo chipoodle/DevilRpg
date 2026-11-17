@@ -868,3 +868,12 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - A2 Run 1 `a2n-20261117-153059`: FAIL 3/8 strict, 3/8 perimeter, C4 PASS [1,0,0].
 - IDX4 03df487a: 41 UNSUPPORTED_SOURCE_RECOVERY, 0 candidate/snap, 5 NAV_FAIL no unique supported AABB-overlapping cell; no DROP_DONE/cursor; final567,122,534.
 - Global UNSUPPORTED_SOURCE 77, SNAP_REPLAN0. Report: docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md. A2 OPEN; no 12k.
+
+## 2026-11-17 — A2 Run 1 Phase 26 grounded source selection
+
+- Synced fcd841ec -> 29b82a2c by fast-forward.
+- Static PASS: NAV_SOURCE_CELL 14, NAV_DROP_TAKEOFF 51, NAV_ROUTE_NODE 6.
+- A2 Run 1 `a2n-20261117-155419`: FAIL 2/8 strict, 3/8 perimeter, C4 PASS [2,0,0].
+- Global candidates16, SOURCE_SELECTED0, SNAP_STARTED19, SNAP_REACHED0, SNAP_REPLAN0.
+- IDX4 f6b5e595: candidates574,112,518/576,111,515/577,110,514; 19 snaps started, none reaches occupancy; final577,110,514; no DROP_DONE/cursor for current577,109,513.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-SOURCE-SELECTION-PHASE26.md. A2 OPEN; no 12k.

@@ -96,7 +96,9 @@
 - Harness result: `2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`.
 - Harness Phase 25 at `011373d0`: static PASS (10/51/6); A2 FAIL 3/8 strict, 3/8 perimeter, C4 PASS `[1,0,0]`. IDX4 has 41 `UNSUPPORTED_SOURCE_RECOVERY`, no candidate/snap, 5 NAV_FAILs (`no unique supported AABB-overlapping cell`); no DROP_DONE/cursor.
 - Harness result: `2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md`.
-- **NEXT: ChatGPT must make the AABB source resolver find a supported neighbor at IDX4 `567,122,534` or choose a different grounded source.**
+- Harness Phase 26 at `29b82a2c`: static PASS (14/51/6); A2 FAIL 2/8 strict, 3/8 perimeter, C4 PASS `[2,0,0]`. Candidates exist (16) but `SOURCE_SELECTED=0`, `SNAP_REACHED=0`; IDX4 has 19 snaps started and never completes occupancy.
+- Harness result: `2026-11-17-A2-RUN1-GROUNDED-SOURCE-SELECTION-PHASE26.md`.
+- **NEXT: ChatGPT must make the source snap complete physical occupancy and emit SOURCE_SELECTED/SNAP_REACHED; log eight-neighbor rejection matrix.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -282,6 +284,7 @@ Read first, in order:
 53. `docs/autonomous-village/2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`
 54. `docs/autonomous-village/2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`
 55. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md`
+56. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-SOURCE-SELECTION-PHASE26.md`
 
 ## Permanent collaboration workflow
 
@@ -296,7 +299,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md`. A2 3/8 strict; IDX4 source resolver finds no unique supported AABB neighbor; no DROP_DONE.
+- Latest technical report: `2026-11-17-A2-RUN1-GROUNDED-SOURCE-SELECTION-PHASE26.md`. 2/8 strict; candidates exist but no SOURCE_SELECTED/SNAP_REACHED; 19 snaps started, none completes.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -407,12 +410,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: make the AABB-overlap source resolver find a supported neighbor at IDX4
-   `567,122,534`, or choose a different grounded source. Current result:
-   `no unique supported AABB-overlapping cell`; 41 recovery events, 0 candidate/snap.
-2. IDX4 has no DROP_DONE/cursor advance; it remains at `567,122,534`.
-3. Do not increase budget or relax support/protection/landing. C4 PASS `[1,0,0]`.
-4. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict runs.
+1. ChatGPT: make the source snap complete physical occupancy and emit `SOURCE_SELECTED` +
+   `SNAP_REACHED`. Current run has 16 candidates, 0 selected, 19 snaps started, 0 reached/replan.
+2. Log the eight-neighbor rejection matrix and selection reason when ranking candidates.
+3. IDX4 final `577,110,514`; no DROP_DONE/cursor for current `577,109,513`.
+4. Do not increase budget or relax support/fit. C4 PASS `[2,0,0]`; no Run 2 or 12k.
 
 ## Worlds (preserve; do not overwrite)
 
