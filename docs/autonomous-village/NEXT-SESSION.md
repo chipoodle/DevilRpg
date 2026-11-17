@@ -1,5 +1,18 @@
 # NEXT SESSION — A2 / C4 Stability
 
+## Latest checkpoint — 2026-11-16 DROP route-node feet correction (PENDING HARNESS)
+
+- Forensic source: Run 1 `a2n-20261116-190555`, SHA `2d47d628724a677269e1c3d895759154f56a52c9`.
+- IDX4/IDX8 confirmed route reconstruction defect: DROP route nodes used graph-state Y instead of validated landing `Step.feet`.
+- ChatGPT added `NavRouteNodePolicy`; global complete routes, global partial/frontier routes and local routes now map DROP nodes to `(state.x, feet, state.z)`.
+- BREAK still uses its physical stand as `Node.pos` and preserves the solid target in `Node.actionPos`. Other transitions retain canonical graph state.
+- Added `NavRouteNodePolicyTest` (6 assertions) and registered it in `policyTest`.
+- Code commits: `866d8169`, `38a15bb7`, `cdf4c9f5`, `b19f413c`. Detailed report: `2026-11-16-A2-DROP-ROUTE-FEET-FIX.md`.
+- **PENDING HARNESS**: no Gradle, lint, diff-check, diagnostics compile or runtime has been executed by ChatGPT. Harness must validate exact live HEAD, then rerun A2 Run 1 only.
+- IDX7 BUILD-FALLIDO/local 900-expansion exhaustion is intentionally unchanged pending measurement of this DROP fix. Do not increase budgets or weaken BUILD/collision/entry criteria.
+- A2 remains OPEN; Run 1 must pass 8/8 before Run 2; five consecutive strict 8/8 before full 12k. C4 save/reload remains OPEN.
+
+
 Code checkpoint SHA: `7692a2cc7cbb4420531a7ff1ac0dc379badd10bf`; subsequent handoff commits are documentation-only. Always fetch the live branch HEAD before synchronization.
 
 ## Latest checkpoint — 2026-11-16 Phase19 independent exclusion/backtrack fixtures
@@ -95,6 +108,7 @@ Read first, in order:
 36. `docs/autonomous-village/2026-11-16-PHASE19-NAV-BACKTRACK-EXACT-ARRIVAL-RESULT.md`
 37. `docs/autonomous-village/2026-11-16-A2-STRICT-GATE-RUN1-FAIL.md`
 38. `docs/autonomous-village/2026-11-16-A2-RUN1-FORENSIC-EXTRACT.md`
+39. `docs/autonomous-village/2026-11-16-A2-DROP-ROUTE-FEET-FIX.md`
 
 ## Permanent collaboration workflow
 
@@ -170,14 +184,14 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: correct DROP route-node reconstruction to use `Step.feet` (landing Y) rather than
-   `Step.state` in both local/global routes; preserve DROP predecessor/BREAK metadata. This is the
-   confirmed code defect behind IDX4 and the IDX8 local-waypoint rejection.
-2. Separately address IDX7 local expansion/BUILD-FALLIDO exhaustion after the DROP fix is measured.
-3. Do not weaken entry criteria, ranges, budgets or collision. After a new SHA, Harness reruns A2 Run 1.
-2. After a new SHA, Harness reruns A2 Run 1; only 8/8 strict permits Run 2 and the five-run gate.
-3. Keep BREAK/backtrack fixtures unchanged as regression evidence.
-4. C4 save/reload remains OPEN; full 12k only after five consecutive 8/8 strict. A2 OPEN.
+1. Harness: fetch the live `feature/autonomous-village` HEAD and validate the DROP route-node fix:
+   Gradle tests, strict lint, diff-check and diagnostics compile.
+2. If static checks pass, rerun **A2 Run 1 only** on that exact SHA. Preserve all prior artifacts and
+   original A2/C4 worlds. Do not run Run 2 unless Run 1 reaches 8/8 strict.
+3. Evaluate IDX7 after measuring the DROP correction. If it still fails, return the full local plan
+   summary and BUILD failure trace; ChatGPT will diagnose and implement a separate fix.
+4. Keep BREAK/backtrack fixtures unchanged as regression evidence. Do not run full 12k until five
+   consecutive strict 8/8 runs. C4 save/reload remains OPEN.
 
 ## Worlds (preserve; do not overwrite)
 
