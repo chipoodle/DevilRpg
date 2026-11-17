@@ -43,6 +43,25 @@ public final class NavDropTransitionPolicy {
         return previousNode == null ? null : previousNode.immutable();
     }
 
+    /**
+     * A temporary route used to recover a DROP take-off may walk or climb, but must never
+     * execute destructive, bridging, building, or falling transitions. The destination must
+     * be the exact requested take-off cell; proximity or a partial route is not sufficient.
+     */
+    public static boolean rutaAscensoOrigenSegura(NavRoute route, BlockPos takeoff) {
+        if (route == null || route.isEmpty() || takeoff == null || !takeoff.equals(route.destination())) {
+            return false;
+        }
+        for (NavRoute.Node node : route.nodes()) {
+            if (node == null || (node.transition() != NavRoute.Transition.WALK
+                    && node.transition() != NavRoute.Transition.STEP_UP
+                    && node.transition() != NavRoute.Transition.JUMP_UP)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static boolean origenFisicamenteAlcanzado(int liveX, int liveY, int liveZ,
                                                        int origenX, int origenY, int origenZ) {
         return Math.abs(liveX - origenX) <= MAX_CONTIGUIDAD
