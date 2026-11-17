@@ -220,11 +220,16 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: make the vertical recovery from live y93 to take-off y96 executable while preserving
-   height/support/collision guards. Origin resolution and `ACERCARSE-ORIGEN-DROP` already work; the
-   mob receives a one-node path and does not ascend.
-2. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent.
-3. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
+1. Harness validates the bounded vertical take-off recovery on the exact current branch HEAD:
+   static checks first, then A2 Run 1 only. The executor now plans from the mob's live cell to the
+   exact DROP take-off using the existing NavPlanner. Only complete WALK/STEP_UP/JUMP_UP routes
+   are accepted; DROP/BREAK/BRIDGE/BUILD are rejected. The original DROP route is suspended and
+   restored only after physical take-off occupancy with support and fit.
+2. Capture recovery plan summary/route, each exact physical waypoint arrival, support/fit,
+   JUMPUP outcome if used, `DROP_TAKEOFF_RECOVERY_REACHED`, restored route cursor, and final
+   physical DROP landing. If route is rejected or stalls, confirm fail-closed replanning from live position.
+3. IDX7 BUILD/900-expansion and IDX8 invalid-local-waypoint remain independent and untouched.
+4. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
    Keep C4 save/reload OPEN.
 
 ## Worlds (preserve; do not overwrite)
@@ -267,3 +272,19 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
   docs `bc38d43a2085fef4cd91fad90afb91c95adacda2`.
 - Harness validation pending on exact current HEAD. Expected DROP policy test: 12 assertions.
 - Report: `2026-11-17-A2-IDX4-FIRST-NODE-DROP-ORIGIN-FIX.md`.
+
+
+## 2026-11-17 — IDX4 executable vertical take-off recovery
+
+- Harness run `a2n-20261116-213836` established that origin resolution worked but vanilla
+  same-column vertical `moveTo` returned a one-node path at live y93 instead of ascending to y96.
+- Published bounded auxiliary navigation via existing `NavPlanner.plan`. Only complete routes
+  to the exact take-off using WALK/STEP_UP/JUMP_UP are accepted; no DROP/BREAK/BRIDGE/BUILD.
+- Main DROP route/cursor is suspended and restored only after exact-Y physical take-off with
+  support and fit. Recovery waypoints require exact occupancy; JUMP_UP uses the existing actuator.
+  Planning failure, incomplete route, or stall fails closed and replans from the live position.
+- No safety guards or budgets were relaxed. Test expected: `NAV_DROP_TAKEOFF_POLICY_TEST` 16
+  assertions; `NAV_ROUTE_NODE_POLICY_TEST` 6.
+- Commits: `df3b9e46`, `ebeda4de`, `2cc3aa50`, `d79189aa`, `d7056617`, `800329f6`.
+- Report: `2026-11-17-A2-IDX4-VERTICAL-TAKEOFF-RECOVERY-FIX.md`.
+- PENDING HARNESS; ChatGPT did not execute static or runtime checks.
