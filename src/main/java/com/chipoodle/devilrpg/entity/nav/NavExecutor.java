@@ -549,7 +549,7 @@ public final class NavExecutor {
             dzPlan = aterrizaje.getZ() - origenPlan.getZ();
             contiguoPlan = NavDropTransitionPolicy.aterrizajeContiguo(origenPlan.getX(), origenPlan.getZ(),
                     aterrizaje.getX(), aterrizaje.getZ());
-            cercaOrigen = NavDropTransitionPolicy.origenCompatible(yo.getX(), yo.getY(), yo.getZ(),
+            cercaOrigen = NavDropTransitionPolicy.origenFisicamenteAlcanzado(yo.getX(), yo.getY(), yo.getZ(),
                     origenPlan.getX(), origenPlan.getY(), origenPlan.getZ());
         }
         if (!(contiguoVivo || (contiguoPlan && cercaOrigen))) {
@@ -3719,7 +3719,7 @@ public final class NavExecutor {
                 Descenso descenso = describirDescenso(node.pos(),
                         construidas.contains(node.pos().below()), true, origenPlan);
                 if (origenPlan != null
-                        && !NavDropTransitionPolicy.origenCompatible(mob.blockPosition().getX(),
+                        && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(mob.blockPosition().getX(),
                                 mob.blockPosition().getY(), mob.blockPosition().getZ(),
                                 origenPlan.getX(), origenPlan.getY(), origenPlan.getZ())) {
                     // The DROP is evaluated only from its planned origin. Move there first; the
