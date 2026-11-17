@@ -1,3 +1,23 @@
+# CURRENT CHECKPOINT — 2026-11-17 IDX4 unsupported DROP take-off guard (PENDING HARNESS)
+
+**This checkpoint supersedes the Phase 23 immediate-work instructions below. Historical results remain unchanged.**
+
+- Phase 23 established that planned take-off `589,96,522` is unsupported; the mob later landed at supported `589,93,522`, while the requested landing `589,95,521` had no `DROP_DONE` or cursor advance.
+- Source review found coordinate-only take-off admission: `origenFisicamenteAlcanzado` did not require grounded state, valid feet, support, or actual AABB fit.
+- ChatGPT added a runtime admission overload requiring grounded + valid feet + support + actual AABB fit, and uses it in both DROP execution and descent validation.
+- If the planned take-off itself is unsupported, the executor now refuses the DROP. It waits while airborne; once the mob is grounded in a valid, supported, fitting live cell, it discards the stale DROP route/cache and replans the strategic route from that actual source.
+- New traces: `DROP_TAKEOFF_UNSUPPORTED_WAIT` and `DROP_TAKEOFF_UNSUPPORTED_REPLAN`.
+- Added four policy assertions; expected `NAV_DROP_TAKEOFF_POLICY_TEST: OK (47 assertions)`.
+- Report: `2026-11-17-IDX4-UNSUPPORTED-TAKEOFF-REPLAN-FIX.md`.
+- Implementation commits: policy `59f94193`; test `3ba86c0c`; executor `91aff8df`, `b166fd37`, `c17ec47e`.
+- **Current implementation HEAD before handoff docs:** `c17ec47e7277a687fa428841d64ca8c8089e68c1`. Documentation commits may advance it; always fetch live HEAD before sync.
+- **PENDING HARNESS:** sync exact live HEAD safely; static tests/lint/diff/diagnostics compile first; if static passes, A2 Run 1 only. Capture both new traces plus DROP_START/LANDING_PROGRESS/DONE/CURSOR_ADVANCE.
+- No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict. No budget increase or weakened geometry/support/protection/landing criteria.
+- A2 remains OPEN. C4 last observed PASS [1,0,0], save/reload OPEN. IDX7/IDX8 remain independent and untouched. Original worlds and local artifacts remain protected.
+- ChatGPT has not executed tests, lint, diagnostics compile, or Minecraft runtime.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-17 IDX4 Phase 23 targeted forensic instrumentation
 
 **This section supersedes older immediate-work statements below. Historical entries remain unchanged.**
