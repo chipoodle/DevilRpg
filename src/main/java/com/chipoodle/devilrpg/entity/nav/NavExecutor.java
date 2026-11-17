@@ -197,6 +197,10 @@ public final class NavExecutor {
     private boolean enCadenaDeEtapas;
     private boolean noReiniciarRearmes;
     private BlockPos plannedFrom;
+    /** Original route start preserved while the temporary DROP take-off recovery route is active. */
+    private BlockPos plannedFromDropSuspendido;
+    private boolean plannedFromDropSuspendidoCapturado;
+
     /** Suspended main route while a physically validated path returns to a DROP take-off cell. */
     private NavRoute rutaDropSuspendida;
     private int indiceRutaDropSuspendida;
@@ -3794,7 +3798,7 @@ public final class NavExecutor {
                 12, VERTICAL_RANGE, MAX_EXPANSIONS_PER_PLAN, policies, construidas,
                 exclusionesDescenso, exclusionesBreak);
         boolean safe = !result.hitBudget()
-                && NavDropTransitionPolicy.rutaAscensoOrigenSegura(result.route(), takeoff);
+                && NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(result.route(), start, takeoff);
         if (!safe) {
             int rejectedSignature = route == null ? 0 : route.signature();
             if (NavTrace.on()) {
@@ -3818,6 +3822,9 @@ public final class NavExecutor {
         rutaDropSuspendida = route;
         indiceRutaDropSuspendida = routeIndex;
         objetivoRecuperacionOrigenDrop = takeoff.immutable();
+        plannedFromDropSuspendido = plannedFrom;
+        plannedFromDropSuspendidoCapturado = true;
+        plannedFrom = start.immutable();
         route = result.route();
         routeIndex = 0;
         recuperacionOrigenDropActiva = true;
@@ -3842,6 +3849,11 @@ public final class NavExecutor {
         indiceRutaDropSuspendida = 0;
         objetivoRecuperacionOrigenDrop = null;
         recuperacionOrigenDropActiva = false;
+        if (plannedFromDropSuspendidoCapturado) {
+            plannedFrom = plannedFromDropSuspendido;
+        }
+        plannedFromDropSuspendido = null;
+        plannedFromDropSuspendidoCapturado = false;
     }
 
     private void finalizarRecuperacionOrigenDrop(long now) {
