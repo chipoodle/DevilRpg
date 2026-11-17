@@ -32,6 +32,15 @@ public final class NavArrivalPolicy {
     }
 
     /**
+     * A recovery backtrack is complete only when the mob occupies the exact selected historical cell.
+     * Generic distance tolerance is intentionally insufficient: clearing it early loses the one-shot
+     * recovery target and can strand the executor in RECOVERING before the strategic mission resumes.
+     */
+    public static boolean backtrackArrivalAllowed(boolean pendingBacktrack, boolean exactCellOccupied) {
+        return !pendingBacktrack || exactCellOccupied;
+    }
+
+    /**
      * Route-node arrival gate. A pending constructed stair is not reached by proximity:
      * the entity must physically occupy the verified cell above that stair.
      */
