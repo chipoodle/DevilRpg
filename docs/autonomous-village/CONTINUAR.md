@@ -618,3 +618,13 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - A2 Run 1 `a2n-20261116-225217`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
 - IDX4 accepted STEP_UP-only recovery route but stalled at 588,104,521 vs takeoff588,107,520; later plans empty at 901/900; construction exhausted. IDX7/IDX8 unchanged.
 - Report: docs/autonomous-village/2026-11-16-A2-RUN1-VERTICAL-TAKEOFF-FAIL.md. A2 OPEN; no 12k.
+
+
+## 2026-11-17 — A2 IDX4 guarded STEP_UP execution + expansion budget fix (PENDING HARNESS)
+
+- Previous Run 1 `a2n-20261116-225217` on `38a4b52e`: FAIL 5/8 strict. IDX4's accepted one-node STEP_UP recovery route stalled below take-off; subsequent recovery searches reported 901/900.
+- Added `NavStepUpRecoveryPolicy`: natural JumpControl + MoveControl assist only for an adjacent one-block climb with blocked lower step, clear headroom, destination fit and support. Same-column and multi-block ascent are rejected. Exact physical occupancy/support/fit remain mandatory.
+- Added `NavExpansionBudgetPolicy`; planner checks before increment, so the hard 900 limit cannot execute expansion 901. No budget increase.
+- Extended `NavDropTakeoffPolicyTest` to 25 assertions. Expected `NAV_ROUTE_NODE_POLICY_TEST` remains 6.
+- Report: `docs/autonomous-village/2026-11-17-A2-IDX4-STEP-UP-EXECUTION-FIX.md`.
+- ChatGPT has not run Gradle/lint/compile/runtime. **PENDING HARNESS** on exact live HEAD. Static first, then A2 Run 1 only. IDX7/IDX8 unchanged; no Run 2 unless 8/8 strict; no full 12k until five consecutive 8/8 strict runs. C4 save/reload OPEN.
