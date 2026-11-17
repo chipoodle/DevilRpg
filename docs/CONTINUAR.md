@@ -1,3 +1,16 @@
+# CURRENT A2 / IDX4 CHECKPOINT — 2026-11-17
+
+The active handoff is `docs/autonomous-village/NEXT-SESSION.md`.
+
+- Forensic root cause: AABB support crosses the Z=508 cell boundary while blockPosition remains in Z=507; see `docs/autonomous-village/2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md`.
+- ChatGPT production checkpoint: `b02affb19eb8e37824682090ba99f793a04aea94`.
+- Implementation: unique supported adjacent source resolution from actual AABB, bounded horizontal MoveControl to cell center, real-AABB fit checks, and a strictly bounded one-block DROP permitted only in the temporary route back to original take-off. No teleport, impulse, or relaxed support.
+- Tests added: `NavSourceCellPolicyTest` 10 assertions; `NavDropTakeoffPolicyTest` 40 expected assertions. Pending Harness execution.
+- Next: Harness static validation, then A2 Run 1 only. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict runs.
+- A2 OPEN; IDX7/IDX8 untouched; C4 last run PASS [1,0,0], save/reload OPEN.
+
+---
+
 # Continuación vigente — 2026-11-16
 
 La continuación operativa actual de DevilRpg está en `docs/autonomous-village/NEXT-SESSION.md`.
