@@ -74,14 +74,19 @@ public final class NavDropTransitionPolicy {
             if (node == null) {
                 return false;
             }
+            int deltaY = node.pos().getY() - previousY;
             switch (node.transition()) {
-                case WALK, STEP_UP, JUMP_UP -> {
-                    // Planner has already validated the movement geometry and destination support.
+                case WALK -> {
+                    if (deltaY != 0) return false;
+                }
+                case STEP_UP -> {
+                    if (deltaY != 1) return false;
+                }
+                case JUMP_UP -> {
+                    if (deltaY != 2) return false;
                 }
                 case DROP -> {
-                    if (++drops > 1 || previousY - node.pos().getY() != 1) {
-                        return false;
-                    }
+                    if (++drops > 1 || deltaY != -1) return false;
                 }
                 default -> {
                     return false;
