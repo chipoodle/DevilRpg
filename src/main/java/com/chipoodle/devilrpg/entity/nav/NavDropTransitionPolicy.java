@@ -58,6 +58,40 @@ public final class NavDropTransitionPolicy {
     }
 
     /**
+     * Validates the temporary route from a resolved source cell back to the original DROP take-off.
+     * It may contain ordinary walking/climbing and at most one planner-validated, exactly one-block
+     * descent. Longer/multiple drops and destructive/building transitions remain forbidden.
+     */
+    public static boolean rutaRecuperacionOrigenSegura(NavRoute route, BlockPos start, BlockPos takeoff) {
+        if (route == null || route.isEmpty() || start == null || takeoff == null
+                || !takeoff.equals(route.destination())) {
+            return false;
+        }
+        int previousY = start.getY();
+        int drops = 0;
+        for (NavRoute.Node node : route.nodes()) {
+            if (node == null) {
+                return false;
+            }
+            switch (node.transition()) {
+                case WALK, STEP_UP, JUMP_UP -> {
+                    // Planner has already validated the movement geometry and destination support.
+                }
+                case DROP -> {
+                    if (++drops > 1 || previousY - node.pos().getY() != 1) {
+                        return false;
+                    }
+                }
+                default -> {
+                    return false;
+                }
+            }
+            previousY = node.pos().getY();
+        }
+        return true;
+    }
+
+    /**
      * True only when the mob is physically back on the planned take-off Y and within the
      * horizontal approach tolerance. The old proximity predicate allowed Y +/- 1, which
      * incorrectly treated a mob one block BELOW its take-off as ready to execute a DROP.
