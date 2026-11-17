@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.entity.nav;
 
+import net.minecraft.core.BlockPos;
+
 /** Regression for DROP take-off recovery: proximity below/above the planned Y is not take-off occupancy. */
 public final class NavDropTakeoffPolicyTest {
     private static int assertions;
