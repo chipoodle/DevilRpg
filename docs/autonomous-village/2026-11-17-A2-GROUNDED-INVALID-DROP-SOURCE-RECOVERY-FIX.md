@@ -10,7 +10,7 @@
 - Previous dominant state: `grounded=true feetValid=false support=false realAabbFits=true` with stale and live source both `661,72,459`.
 - Current implementation branch: `feature/autonomous-village`.
 - Current code checkpoint: `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6`.
-- Current branch HEAD (documentation-only descendant): `a4f4b58098bfc78769bfa6999fa7e132d5a29861`.
+- Handoff documentation is a descendant of the code checkpoint below; always resolve the live branch HEAD before syncing.
 
 ## Root cause
 
