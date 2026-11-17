@@ -1,3 +1,16 @@
+# CONTINUAR — checkpoint IDX4 Phase 23
+
+La última fase añade instrumentación forense de solo observación para dos fallos independientes:
+- `DROP_TAKEOFF_EXACT_EDGE_DIAG`: registra por qué se rechaza la arista cardinal hacia el take-off exacto.
+- `DROP_LANDING_PROGRESS` y `DROP_CURSOR_ADVANCE`: separan progreso físico del landing y avance real del cursor.
+
+Commits: `81890f7e80f2281481b479968d149437f59e9346` y `f43249eabda633569277ee73fa64835273a558e8`.
+Informe: `2026-11-17-IDX4-PHASE23-FORENSIC-INSTRUMENTATION.md`.
+
+Harness debe validar el HEAD exacto con tests, lint estricto, diff check y compile de diagnósticos; solo después ejecutar A2 Run 1. A2 sigue OPEN. No Run 2 sin 8/8 estricto y no 12k sin cinco 8/8 consecutivos.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-17 IDX4 AABB source recovery
 
 **This section supersedes older "Immediate work" statements below.** Historical entries remain unchanged.
