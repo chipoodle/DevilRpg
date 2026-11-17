@@ -1,3 +1,23 @@
+# CURRENT CHECKPOINT — 2026-11-17 ranked AABB DROP source selection (PENDING HARNESS)
+
+**Production code checkpoint:** `a795c33d03678e2a12d066645e5dbc927d7f3efb`.
+**Detailed report:** `2026-11-17-A2-GROUNDED-SOURCE-SELECTION-PHASE26.md`.
+
+- Phase 25 tested `011373d0b3423b188611867d7f4751ab2ac88c66`: static PASS, A2 Run 1 FAIL 3/8 perimeter and 3/8 strict; C4 PASS `[1,0,0]`. No Run 2/Full 12K.
+- Phase 25 emitted 77 `DROP_TAKEOFF_UNSUPPORTED_SOURCE_RECOVERY`, zero source snap/replan; IDX4 UUID `03df487a-ff61-482c-9407-ed5cdd0d1b5d` failed at `567,122,534` with grounded=true, feetValid=false, support=false, realAabbFits=true.
+- Root cause in the resolver contract: `uniqueAdjacentCandidate` considered only four cardinal cells at the same Y and returned null when more than one candidate was physically valid. It could also miss a valid diagonal overlap. Thus a set of safe alternatives was treated as a dead-end.
+- New `NavSourceCellPolicy.bestAdjacentCandidate` evaluates all eight same-Y neighbors with positive real-AABB horizontal overlap. The caller still requires `esPieValido` (including protection, feet/head clearance and solid support), explicit support, and `fitsAtCellCenter` for the translated real AABB.
+- Deterministic ranking: greatest actual horizontal overlap area, then nearest candidate center to the mob's current X/Z, then lexicographic X/Z tie-break. No candidate is accepted on proximity alone. The executor uses this selector in both grounded source recovery paths and retains horizontal MoveControl snap plus physical occupancy verification before replanning.
+- Source-cell policy tests expected: 14 assertions (previous 10 + 4 covering multi-candidate deterministic selection, overlap ranking, diagonal-only candidate, and no-safe-candidate rejection). DROP take-off policy remains 51 assertions.
+- **PENDING HARNESS:** safely sync the live branch HEAD (resolve it from Git; the handoff documentation will be a descendant of this code checkpoint), preserve local/untracked files and worlds. Run Gradle tests, strict lint, diff-check, and diagnostics compile. Confirm source-cell policy 14 and DROP take-off 51 assertions.
+- If static validation passes, execute A2 Run 1 only. Inspect candidate selection and snap/replan for IDX4 and the former blocked attackers. Confirm selected source has support, valid feet, protection clearance and centered real-AABB fit; confirm actual physical snap before route planning.
+- If no candidate is selected, capture each of the eight neighbors' overlap, chunk-loaded, protected, feet-valid, support and translated-AABB-fit predicates. Do not widen search vertically, invent a source, or weaken safety predicates without a separate evidence-backed design.
+- No Run 2 unless Run 1 is 8/8 strict. No Full 12K until five consecutive 8/8 strict runs. No budget increases or relaxed support, collision, protection, headroom or landing criteria.
+- A2 remains OPEN. C4 last PASS [1,0,0], save/reload OPEN. IDX7/IDX8 remain independent. Original worlds and local artifacts protected. Harness must not modify production.
+- ChatGPT has not executed Gradle tests, lint, diagnostics compile, or Minecraft runtime.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-17 grounded invalid DROP source recovery (PENDING HARNESS)
 
 **Code checkpoint:** `e80f99d5acd4bf987524d4ab5d5a79ad5392fdd6` (the handoff documentation is committed afterward; always sync the live branch HEAD).
