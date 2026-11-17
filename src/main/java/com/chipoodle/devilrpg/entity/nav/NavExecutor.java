@@ -4150,12 +4150,68 @@ public final class NavExecutor {
                 }
                 Descenso descenso = describirDescenso(node.pos(),
                         construidas.contains(node.pos().below()), true, origenPlan);
+                boolean takeoffSupported = origenPlan != null
+                        && esPieValido(origenPlan)
+                        && NavObstruction.hasSupport(mob.level(), origenPlan)
+                        && NavObstruction.fitsAtCellCenter(mob.level(), mob, origenPlan);
+                boolean liveSourceReady = mob.onGround()
+                        && esPieValido(mob.blockPosition())
+                        && NavObstruction.hasSupport(mob.level(), mob.blockPosition())
+                        && NavObstruction.fitsActualAabb(mob.level(), mob);
+                long sourceCheckTick = mob.level().getGameTime();
+
+                // A route may have been planned while the mob was falling or standing in an
+                // unsupported blockPosition. Coordinate proximity is not a take-off: never
+                // issue DROP from that stale origin. Let physics land the mob, then replan the
+                // strategic route from its actual grounded, supported feet cell.
+                if (origenPlan != null && !takeoffSupported) {
+                    if (NavDropTransitionPolicy.replanificarDesdeOrigenSoportado(
+                            false, mob.onGround(), esPieValido(mob.blockPosition()),
+                            NavObstruction.hasSupport(mob.level(), mob.blockPosition()),
+                            NavObstruction.fitsActualAabb(mob.level(), mob))) {
+                        NavTrace.ev("DROP_TAKEOFF_UNSUPPORTED_REPLAN", "uuid=" + mob.getUUID()
+                                + " tick=" + sourceCheckTick
+                                + " staleTakeoff=" + origenPlan.toShortString()
+                                + " liveSource=" + mob.blockPosition().toShortString()
+                                + " grounded=" + mob.onGround()
+                                + " feetValid=" + esPieValido(mob.blockPosition())
+                                + " support=" + NavObstruction.hasSupport(mob.level(), mob.blockPosition())
+                                + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob)
+                                + " action=discard_stale_drop_and_replan");
+                        route = null;
+                        routeIndex = 0;
+                        plannedFrom = null;
+                        globalCache = null;
+                        globalMision = null;
+                        globalDesde = null;
+                        nextDropRecoveryPlanAt = 0L;
+                        state = NavState.PLANNING;
+                        nextPlanAt = sourceCheckTick;
+                    } else {
+                        mob.getNavigation().stop();
+                        if (NavTrace.on() && sourceCheckTick % 10L == 0L) {
+                            NavTrace.ev("DROP_TAKEOFF_UNSUPPORTED_WAIT", "uuid=" + mob.getUUID()
+                                    + " tick=" + sourceCheckTick
+                                    + " staleTakeoff=" + origenPlan.toShortString()
+                                    + " liveSource=" + mob.blockPosition().toShortString()
+                                    + " grounded=" + mob.onGround()
+                                    + " feetValid=" + esPieValido(mob.blockPosition())
+                                    + " support=" + NavObstruction.hasSupport(mob.level(), mob.blockPosition())
+                                    + " realAabbFits=" + NavObstruction.fitsActualAabb(mob.level(), mob));
+                        }
+                    }
+                    return;
+                }
+
                 if (origenPlan != null
-                        && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(mob.blockPosition().getX(),
-                                mob.blockPosition().getY(), mob.blockPosition().getZ(),
+                        && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(
+                                mob.onGround(), esPieValido(mob.blockPosition()),
+                                NavObstruction.hasSupport(mob.level(), mob.blockPosition()),
+                                NavObstruction.fitsActualAabb(mob.level(), mob),
+                                mob.blockPosition().getX(), mob.blockPosition().getY(), mob.blockPosition().getZ(),
                                 origenPlan.getX(), origenPlan.getY(), origenPlan.getZ())) {
                     lastMoveTarget = origenPlan.toShortString() + ":ACERCARSE-ORIGEN-DROP";
-                    iniciarRecuperacionFisicaOrigenDrop(origenPlan, mob.level().getGameTime());
+                    iniciarRecuperacionFisicaOrigenDrop(origenPlan, sourceCheckTick);
                     return;
                 }
                 ultimoDescenso = descenso.resumen();
