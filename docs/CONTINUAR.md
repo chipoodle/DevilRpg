@@ -1,3 +1,24 @@
+# CONTINUAR — IDX4 Phase 23 (2026-11-17)
+
+Checkpoint vigente: `feature/autonomous-village` HEAD `557a7c9273930d91a377fdfde9e3d862cf2fe46f`.
+
+ChatGPT añadió instrumentación de solo observación para:
+- Registrar el motivo exacto de rechazo de la arista de recuperación hacia el take-off: `DROP_TAKEOFF_EXACT_EDGE_DIAG`.
+- Registrar cada 10 ticks el estado físico del landing DROP: `DROP_LANDING_PROGRESS`.
+- Registrar el avance del cursor tras un landing físicamente alcanzado: `DROP_CURSOR_ADVANCE`.
+
+Código:
+- `NavPlanner.java` blob `65fad9421cdc0e6fb86d175c3ef52090f7d77966`.
+- `NavExecutor.java` blob `f5051593916d562b11aa0b426df337c890335f36`.
+
+Informe: `docs/autonomous-village/2026-11-17-IDX4-PHASE23-FORENSIC-INSTRUMENTATION.md`.
+
+**Pendiente Harness:** validar el SHA exacto con `gradlew test`, lint estricto, `git diff --check` y `compileJava -Pa2nDiagnostics=true`; si todo pasa, ejecutar A2 Run 1 solamente y extraer los tres eventos nuevos. ChatGPT no ha ejecutado estas pruebas ni runtime.
+
+A2 sigue OPEN. No ejecutar Run 2 sin 8/8 strict ni 12k sin cinco corridas consecutivas 8/8 strict. No aumentar presupuestos ni relajar geometría, soporte, protección o aterrizaje. IDX7/IDX8 siguen independientes; C4 save/reload sigue OPEN.
+
+---
+
 # CURRENT A2 / IDX4 CHECKPOINT — 2026-11-17
 
 The active handoff is `docs/autonomous-village/NEXT-SESSION.md`.
