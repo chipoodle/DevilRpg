@@ -4,7 +4,7 @@
 
 - Último Harness Run: `a2n-20261117-001624`, probado SHA `7aed2c683852969c323524bbed7d95965c330790`; static PASS, A2 Run 1 FAIL 4/8 strict y 5/8 perímetro.
 - IDX4 evidenció `DROP_TAKEOFF_STEP_UP_ASSIST` con `onGround=false`; la ruta auxiliar se planificó desde `mob.blockPosition()` mientras la entidad estaba en el aire. El mob cayó a y119 y la arista STEP_UP hacia y122 dejó de representar una transición física válida.
-- ChatGPT ha añadido una corrección que exige fuente grounded/feet-valid/support/fits antes de iniciar la ruta auxiliar. Si está cayendo, conserva el DROP pendiente y reintenta desde la celda real una vez aterrizado.
+- ChatGPT publicó la corrección en el commit `bd638e92dd86214dd8af3a17f1a6726daaea39e8` (parent `9df030281ff0d132d492255342a1e6a03e3e5543`): exige fuente grounded/feet-valid/support/fits antes de iniciar la ruta auxiliar. Si está cayendo, conserva el DROP pendiente y reintenta desde la celda real una vez aterrizado.
 - En STEP_UP de recuperación, se conserva el movimiento horizontal natural durante el salto/caída, pero JumpControl solo se solicita desde una fuente grounded y soportada. Si el mob aterriza y la arista de un bloque ya quedó obsoleta, se descarta la ruta auxiliar de forma fail-closed y se replantea la misión estratégica desde la posición física actual.
 - No se han relajado presupuestos, colisión, soporte, clearance, seguridad DROP ni criterios de entrada. No teleport ni impulso directo de velocidad.
 - La política agrega cobertura para el origen grounded y la geometría de STEP_UP. Tests pendientes de Harness; ChatGPT no ha ejecutado Gradle/lint/compile/runtime.

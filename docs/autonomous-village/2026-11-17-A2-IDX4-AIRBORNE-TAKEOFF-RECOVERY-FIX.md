@@ -2,7 +2,7 @@
 
 ## Status
 
-**IMPLEMENTATION PUBLISHED — PENDING HARNESS.** This report records the correction prompted by Harness run `a2n-20261117-001624`; it does not claim that the new implementation passes runtime.
+**IMPLEMENTATION PUBLISHED — PENDING HARNESS.** Implementation commit: `bd638e92dd86214dd8af3a17f1a6726daaea39e8` (parent `9df030281ff0d132d492255342a1e6a03e3e5543`). This report records the correction prompted by Harness run `a2n-20261117-001624`; it does not claim that the new implementation passes runtime.
 
 ## Evidence and diagnosis
 
