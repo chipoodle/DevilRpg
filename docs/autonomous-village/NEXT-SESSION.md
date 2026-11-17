@@ -6,12 +6,14 @@
 - ChatGPT implementation published through production checkpoint `b02affb19eb8e37824682090ba99f793a04aea94`.
 - New source resolver selects exactly one cardinal same-Y supported cell overlapped by the actual AABB, validates the actual translated AABB at candidate center, then issues bounded horizontal MoveControl only. It requires physical center occupancy and rechecks feet/support/current-AABB fit before A*.
 - Recovery route now permits at most one planner-validated DROP of exactly one block, because resolved source (593,87,508) is one block above original take-off (593,86,507). It rejects longer/multiple drops and all destructive/build/bridge transitions. Temporary route start is saved/restored so the recovery DROP resolves the correct origin.
-- Added `NavSourceCellPolicyTest` (10 assertions); `NavDropTakeoffPolicyTest` now expects 40 assertions; `NavRouteNodePolicyTest` remains 6. **Authored only; Harness has not yet executed them.**
+- Added `NavSourceCellPolicyTest` (10 assertions); `NavDropTakeoffPolicyTest` now expects 40 assertions; `NavRouteNodePolicyTest` remains 6. Harness Phase 21 executed all three: PASS 10/40/6.
 - Detailed implementation: `2026-11-17-IDX4-AABB-SOURCE-RECOVERY-FIX.md`.
 - Harness static gate at `1e65c024` was BLOCKED only by a missing test import; the historical result is preserved in `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`.
 - ChatGPT added `import net.minecraft.core.BlockPos;` to `NavDropTakeoffPolicyTest.java` (test-only), commit `c75165c2135cccbfcc3eddd40abe09adce6766e8`.
 - Confirmed `build.gradle` registers `NavDropTakeoffPolicyTest`, `NavSourceCellPolicyTest`, and `NavRouteNodePolicyTest` in `policyTest`.
-- **NEXT: Harness syncs exact HEAD `c75165c2135cccbfcc3eddd40abe09adce6766e8` and reruns static validation.** A2 Run 1 only after the complete static gate passes.
+- Harness Phase 21 at `77b635d4`: static PASS; source snap reached `596,77,499` with feet/support/real-AABB true, but recovery A* returned empty at `900/900`; A2 FAIL 5/8 strict, C4 PASS `[2,0,0]`.
+- Harness result: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`.
+- **NEXT: ChatGPT makes recovery A* find a route from the valid snapped source to take-off/DROP entry; consider exact-center snap (499.31 vs 499.5).**
 - Do not run A2 Run 2 unless Run 1 reaches 8/8 strict. Do not run full 12k until five consecutive 8/8 strict runs.
 - IDX7/IDX8 untouched. C4 last observed PASS [1,0,0], save/reload OPEN. A2 remains OPEN pending runtime evidence.
 - Harness must not modify production source. Original A2/C4 worlds and local artifacts remain protected.
@@ -186,6 +188,7 @@ Read first, in order:
 48. `docs/autonomous-village/2026-11-17-A2-RUN1-LANDING-ANCHOR-FAIL.md`
 49. `docs/autonomous-village/2026-11-17-IDX4-GROUNDED-INVALID-FORENSICS.md`
 50. `docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`
+51. `docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`
 
 ## Permanent collaboration workflow
 
@@ -200,7 +203,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-RESULT.md`. BLOCKED: missing `import net.minecraft.core.BlockPos` in `NavDropTakeoffPolicyTest`; A2 not run.
+- Latest technical report: `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`. Source snap succeeds; recovery A* empty at 900/900; A2 5/8 strict.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -311,12 +314,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: add the missing `import net.minecraft.core.BlockPos;` to
-   `src/test/java/com/chipoodle/devilrpg/entity/nav/NavDropTakeoffPolicyTest.java` and republish.
-   Test-only compile blocker; do not alter production behavior to work around it.
-2. Harness reruns static validation first, then A2 Run 1 only; no runtime before PASS.
-3. C4 remains independent (last PASS `[1,0,0]`, save/reload OPEN); IDX7/IDX8 remain independent.
-4. No Run 2 unless Run 1 reaches 8/8 strict; no full 12k until five consecutive 8/8 strict runs.
+1. ChatGPT: make the recovery A* produce a route from the valid snapped source `(596,77,499)` to the
+   take-off/DROP entry. Current search returns empty at `900/900`. No budget increase.
+2. Tighten snap completion to exact center if required (`z=499.5`, observed `499.31`).
+3. C4 PASS `[2,0,0]`; IDX7/IDX8 remain independent. No Run 2 unless Run 1 reaches 8/8 strict.
+4. No full 12k until five consecutive 8/8 strict runs.
 
 ## Worlds (preserve; do not overwrite)
 

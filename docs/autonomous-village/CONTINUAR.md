@@ -745,3 +745,12 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Commit: `c75165c2135cccbfcc3eddd40abe09adce6766e8`.
 - Verified in `build.gradle`: `NavDropTakeoffPolicyTest`, `NavSourceCellPolicyTest` and `NavRouteNodePolicyTest` are all registered in `policyTest`.
 - Harness must sync this exact HEAD and rerun static checks. No A2 runtime unless every static gate passes. A2 remains OPEN; Run 2 and 12k remain prohibited by existing gates.
+
+## 2026-11-17 — Phase 21 AABB source recovery
+
+- Synced 438655f4 -> 77b635d4 by fast-forward; production b02affb1.
+- Static PASS: NAV_SOURCE_CELL 10, NAV_DROP_TAKEOFF 40, NAV_ROUTE_NODE 6, lint and diagnostics compile.
+- A2 Run 1 `a2n-20261117-111418`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [2,0,0].
+- IDX4 131e44bf: source candidate 596,77,499; snap reached 596.504,77,499.310 (center 0.19 short); feet/support/AABB true.
+- Recovery A* rejected: from 596,77,499 to takeoff 596,79,498, route empty, exp 900/900. No RECOVERY_REACHED; original DROP command/start but no DROP_DONE/cursor advance.
+- Report: docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md. A2 OPEN; no 12k.
