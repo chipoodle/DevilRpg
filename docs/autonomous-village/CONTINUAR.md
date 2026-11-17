@@ -754,3 +754,14 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - IDX4 131e44bf: source candidate 596,77,499; snap reached 596.504,77,499.310 (center 0.19 short); feet/support/AABB true.
 - Recovery A* rejected: from 596,77,499 to takeoff 596,79,498, route empty, exp 900/900. No RECOVERY_REACHED; original DROP command/start but no DROP_DONE/cursor advance.
 - Report: docs/autonomous-village/2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md. A2 OPEN; no 12k.
+
+
+## 2026-11-17 — IDX4 exact bounded recovery A* (PENDING HARNESS)
+
+- Phase 21 established that source snap succeeds but the old local recovery search returned empty at 900/900; see `2026-11-17-A2-RUN1-AABB-SOURCE-RECOVERY-PHASE21.md`.
+- New `NavPlanner.planExact` uses the existing validated global A* core, requires exact state + feet Y at take-off, bounds horizontal radius to 4 and vertical envelope to 3, and keeps the existing 900 expansion cap.
+- Exact recovery graph rejects BREAK/BUILD/BRIDGE and multi-block DROP edges. Recovery route policy requires the final waypoint to equal take-off and checks WALK=0, STEP_UP=+1, JUMP_UP=+2, DROP=-1 (at most one).
+- Failed auxiliary planning no longer destroys the original route/cursor/`plannedFrom`; retry is cooldown-bounded. Successful restoration emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED`.
+- Source snap retains the 0.20 radial tolerance; Phase 21's 0.19 offset is within it and all physical predicates passed.
+- Fix report: `2026-11-17-IDX4-EXACT-RECOVERY-ASTAR-FIX.md`. Expected DROP policy test total: 43.
+- **PENDING HARNESS** on exact current HEAD. Static checks first, then A2 Run 1 only. A2 OPEN; no Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict. IDX7/IDX8 unchanged; C4 save/reload OPEN.
