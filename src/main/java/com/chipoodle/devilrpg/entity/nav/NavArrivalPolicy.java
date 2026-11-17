@@ -41,6 +41,16 @@ public final class NavArrivalPolicy {
     }
 
     /**
+     * Route nodes normally use their transition-specific arrival policy. A pending recovery backtrack
+     * overrides that result: its route cursor must not consume the selected cell until exact occupancy,
+     * otherwise the executor skips the adjacent nudge and leaves a completed route one block short.
+     */
+    public static boolean backtrackWaypointReached(boolean pendingBacktrack, boolean exactCellOccupied,
+                                                    boolean normalWaypointReached) {
+        return pendingBacktrack ? exactCellOccupied : normalWaypointReached;
+    }
+
+    /**
      * Route-node arrival gate. A pending constructed stair is not reached by proximity:
      * the entity must physically occupy the verified cell above that stair.
      */
