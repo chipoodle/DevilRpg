@@ -74,7 +74,9 @@
 - Harness result: `2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`.
 - Harness Phase 24 at `37c0aa70`: static PASS (10/47/6); A2 **regressed to 1/8 strict, 1/8 perimeter**. `DROP_TAKEOFF_UNSUPPORTED_WAIT` fired 2102 times with `grounded=true feetValid=false support=false`; only idx1 entered. C4 PASS `[1,0,0]`.
 - Harness result: `2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`.
-- **NEXT: ChatGPT must fix the unsupported-source wait loop before another A2 run; do not increase budget or relax support.**
+- Harness Phase 25 at `011373d0`: static PASS (10/51/6); A2 FAIL 3/8 strict, 3/8 perimeter, C4 PASS `[1,0,0]`. IDX4 has 41 `UNSUPPORTED_SOURCE_RECOVERY`, no candidate/snap, 5 NAV_FAILs (`no unique supported AABB-overlapping cell`); no DROP_DONE/cursor.
+- Harness result: `2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md`.
+- **NEXT: ChatGPT must make the AABB source resolver find a supported neighbor at IDX4 `567,122,534` or choose a different grounded source.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -259,6 +261,7 @@ Read first, in order:
 52. `docs/autonomous-village/2026-11-17-A2-RUN1-EXACT-BOUNDED-RECOVERY-PHASE22.md`
 53. `docs/autonomous-village/2026-11-17-A2-RUN1-PHASE23-EDGE-DIAG-RESULT.md`
 54. `docs/autonomous-village/2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`
+55. `docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md`
 
 ## Permanent collaboration workflow
 
@@ -273,7 +276,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md`. Regression: 1/8 strict; 2102 UNSUPPORTED_WAIT with support=false; IDX4 DROP loops without DONE.
+- Latest technical report: `2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md`. A2 3/8 strict; IDX4 source resolver finds no unique supported AABB neighbor; no DROP_DONE.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -384,9 +387,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT: fix the `UNSUPPORTED_WAIT` loop (`grounded=true feetValid=false support=false`) before
-   another A2 run. It caused 2,102 waits and reduced perimeter entry to 1/8.
-2. IDX4 loops DROP_START `567,122,534 → 567,119,534` with no descent/DONE/cursor advance.
+1. ChatGPT: make the AABB-overlap source resolver find a supported neighbor at IDX4
+   `567,122,534`, or choose a different grounded source. Current result:
+   `no unique supported AABB-overlapping cell`; 41 recovery events, 0 candidate/snap.
+2. IDX4 has no DROP_DONE/cursor advance; it remains at `567,122,534`.
 3. Do not increase budget or relax support/protection/landing. C4 PASS `[1,0,0]`.
 4. No Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict runs.
 

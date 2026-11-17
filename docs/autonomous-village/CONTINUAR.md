@@ -840,3 +840,11 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Regression: 2102 UNSUPPORTED_WAIT (grounded=true feetValid=false support=false), 2 REPLAN; only idx1 entered.
 - IDX4 bbadffa7: DROP_START 567,122,534 ->567,119,534 repeated 9x; 600 progress, no DROP_DONE/cursor, final same takeoff.
 - Report: docs/autonomous-village/2026-11-17-A2-RUN1-UNSUPPORTED-TAKEOFF-PHASE24.md. A2 OPEN; no 12k.
+
+## 2026-11-17 — A2 Run 1 Phase 25 grounded-invalid DROP source recovery
+
+- Synced 0e6890de -> 011373d0 by fast-forward.
+- Static PASS: NAV_SOURCE_CELL 10, NAV_DROP_TAKEOFF 51, NAV_ROUTE_NODE 6.
+- A2 Run 1 `a2n-20261117-153059`: FAIL 3/8 strict, 3/8 perimeter, C4 PASS [1,0,0].
+- IDX4 03df487a: 41 UNSUPPORTED_SOURCE_RECOVERY, 0 candidate/snap, 5 NAV_FAIL no unique supported AABB-overlapping cell; no DROP_DONE/cursor; final567,122,534.
+- Global UNSUPPORTED_SOURCE 77, SNAP_REPLAN0. Report: docs/autonomous-village/2026-11-17-A2-RUN1-GROUNDED-INVALID-DROP-SOURCE-PHASE25.md. A2 OPEN; no 12k.
