@@ -35,6 +35,28 @@ public final class NavDropTakeoffPolicyTest {
         comprobar("first route DROP without a recorded start has no invented origin",
                 NavDropTransitionPolicy.origenPlanificado(0, null, previous) == null);
 
+        net.minecraft.core.BlockPos stepOne = new net.minecraft.core.BlockPos(596, 80, 498);
+        net.minecraft.core.BlockPos stepTwo = new net.minecraft.core.BlockPos(596, 81, 498);
+        net.minecraft.core.BlockPos takeoff = new net.minecraft.core.BlockPos(596, 82, 498);
+        NavRoute safeClimb = new NavRoute(java.util.List.of(
+                new NavRoute.Node(stepOne, NavRoute.Transition.STEP_UP),
+                new NavRoute.Node(stepTwo, NavRoute.Transition.STEP_UP),
+                new NavRoute.Node(takeoff, NavRoute.Transition.WALK)), takeoff);
+        comprobar("vertical take-off recovery accepts a complete walk/step-up route",
+                NavDropTransitionPolicy.rutaAscensoOrigenSegura(safeClimb, takeoff));
+        NavRoute unsafeDrop = new NavRoute(java.util.List.of(
+                new NavRoute.Node(stepOne, NavRoute.Transition.DROP),
+                new NavRoute.Node(takeoff, NavRoute.Transition.WALK)), takeoff);
+        comprobar("vertical take-off recovery rejects routes containing DROP",
+                !NavDropTransitionPolicy.rutaAscensoOrigenSegura(unsafeDrop, takeoff));
+        NavRoute unsafeBreak = new NavRoute(java.util.List.of(
+                new NavRoute.Node(stepOne, NavRoute.Transition.BREAK),
+                new NavRoute.Node(takeoff, NavRoute.Transition.WALK)), takeoff);
+        comprobar("vertical take-off recovery rejects destructive routes",
+                !NavDropTransitionPolicy.rutaAscensoOrigenSegura(unsafeBreak, takeoff));
+        comprobar("vertical take-off recovery rejects partial routes to another destination",
+                !NavDropTransitionPolicy.rutaAscensoOrigenSegura(safeClimb, previous));
+
         System.out.println("NAV_DROP_TAKEOFF_POLICY_TEST: OK (" + assertions + " assertions)");
     }
 
