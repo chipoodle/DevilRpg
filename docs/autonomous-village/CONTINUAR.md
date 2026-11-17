@@ -1,3 +1,28 @@
+# Continuity update — 2026-11-17
+
+## Collaboration contract correction
+
+The shared-branch workflow has been audited and reconciled. The following documents are authoritative
+and now agree:
+
+- `CHATGPT-COLLABORATION-POLICY.md`
+- `CHATGPT-HARNESS-WORKFLOW.md`
+- `GOVERNANCE.md` (corrected by `c670f2ba2b979b9ebe1ceaa81d1cbd7cd072765e`)
+- `WORKFLOW.md` (corrected by `9fbc63344acf6e0a575efe1d22b80509cf5b4d5d`)
+
+The repository branch `feature/autonomous-village` is the shared communication channel. ChatGPT
+implements production source changes and documentation corrections directly on that branch. Harness
+synchronizes it locally, executes automated checks/runtime scenarios, measures behavior and publishes
+dated reports/documentation to the same branch. ChatGPT reviews every Harness report and every
+Harness-authored documentation change, corrects inconsistencies and updates the handoff. Harness does
+not implement production source fixes. The user may paste Harness reports in chat; ChatGPT also
+checks the repository report and actual source.
+
+No production source changes or tests were made/run in this documentation-only reconciliation.
+See `NEXT-SESSION.md` for the latest checkpoint and exact next implementation task.
+
+---
+
 # Continuación activa — 2026-11-17 (A2 airborne DROP recovery)
 
 ## Último checkpoint
