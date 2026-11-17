@@ -580,3 +580,33 @@ Status: **PENDING HARNESS**. Fetch and validate exact current HEAD, run Gradle t
 - A2 Run 1 `a2n-20261116-213836`: FAIL 5/8 strict, 5/8 perimeter, C4 PASS [1,0,0].
 - IDX4 origin resolves 589,96,522 from live589,93,522; ACERCARSE-ORIGEN-DROP emitted but one-node path, no ascent, physical origin not reached. IDX7/IDX8 unchanged.
 - Report: docs/autonomous-village/2026-11-16-A2-RUN1-FIRST-NODE-DROP-FAIL.md. A2 OPEN; no 12k.
+
+
+## 2026-11-17 — A2 IDX4 executable vertical take-off recovery (PENDING HARNESS)
+
+- Harness run `a2n-20261116-213836` on `b73ca2de`: static PASS (DROP policy 12, route-node 6);
+  A2 Run 1 FAIL 5/8 strict, 5/8 perimeter. IDX4 resolved take-off `589,96,522` from live
+  `589,93,522`, landing `589,95,521`, but vanilla PathNavigation returned a one-node path at
+  the current cell and movement delta 0. Physical origin was not reached.
+- Root cause: same-column vertical `moveTo` was not executable through vanilla PathNavigation.
+- Added bounded recovery via the existing `NavPlanner.plan` from live position to exact take-off.
+  The temporary route must be complete and may contain only WALK/STEP_UP/JUMP_UP. DROP, BREAK,
+  BRIDGE, and BUILD are rejected. No direct vertical impulse, teleport, block placement, or
+  destruction is used.
+- The original DROP route/cursor is suspended and restored only after physical take-off occupancy
+  at exact Y with support and clearance. Recovery waypoints require exact cell occupancy, support,
+  and fit. STEP_UP uses existing bounded adjacent nudge; JUMP_UP reuses existing jump actuator.
+- If planning fails, route stalls, or route is incomplete, recovery fails closed and the original
+  mission is replanned from the live position. Existing budgets and safety predicates unchanged.
+- Added `NavDropTransitionPolicy.rutaAscensoOrigenSegura` and four assertions;
+  `NAV_DROP_TAKEOFF_POLICY_TEST` expected total: 16. Existing test registration unchanged.
+- Commits: `df3b9e46` policy, `ebeda4de` tests, `2cc3aa50` executor,
+  `d79189aa` stalled/oscillating cleanup, `d7056617` policy comments,
+  `800329f6` executor comments, report `75b4a827`.
+- Report: `docs/autonomous-village/2026-11-17-A2-IDX4-VERTICAL-TAKEOFF-RECOVERY-FIX.md`.
+- ChatGPT did not run tests, lint, compile, or Minecraft. **PENDING HARNESS** on exact current HEAD.
+- Harness: static checks first; then A2 Run 1 only. Capture complete auxiliary route, transitions,
+  physical occupancy/support at each waypoint, jump outcome if used, take-off arrival, restoration
+  of the original DROP cursor, and final physical landing.
+- IDX7/IDX8 remain independent and untouched. No Run 2 unless 8/8 strict; no full 12k until five
+  consecutive 8/8 strict runs. A2 OPEN; C4 save/reload OPEN.
