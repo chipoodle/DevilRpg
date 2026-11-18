@@ -1500,6 +1500,7 @@ public final class NavExecutor {
      * es el ULTIMO waypoint de pie o transicion BUILD seleccionable que quepa en la ventana local; la ventana no cambia.
      */
     private BlockPos elegirObjetivoLocal() {
+        ultimoResultadoEscalon = StairBuildResult.NO_PROGRESS;
         objetivoPermiteConstruccion = false;
         objetivoTransicionLocal = null;
         objetivoAccionLocal = null;
@@ -1558,6 +1559,9 @@ public final class NavExecutor {
                 if (escalon != null) {
                     return escalon;
                 }
+                if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+                    return null;
+                }
             }
             return mision;
         }
@@ -1609,6 +1613,9 @@ public final class NavExecutor {
                 BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo, "sin ruta global");
                 if (escalon != null) {
                     return escalon;
+                }
+                if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+                    return null;
                 }
             }
             ultimoEscalonDeObjetivo = "sin ruta global hacia " + mision.toShortString() + ": " + global.reason()
@@ -1697,6 +1704,9 @@ public final class NavExecutor {
                 if (escalon != null) {
                     return escalon;
                 }
+                if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+                    return null;
+                }
             }
             objetivoPermiteConstruccion = false;
             globalCache = null;
@@ -1712,6 +1722,9 @@ public final class NavExecutor {
                         "waypoint global coincide con posicion actual");
                 if (escalon != null) {
                     return escalon;
+                }
+                if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+                    return null;
                 }
             }
             objetivoPermiteConstruccion = false;
@@ -1745,6 +1758,9 @@ public final class NavExecutor {
             if (escalon != null) {
                 return escalon;
             }
+            if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+                return null;
+            }
         }
         objetivoPermiteConstruccion = objetivoConstruible;
         objetivoTransicionLocal = objetivoTransicion;
@@ -1773,6 +1789,14 @@ public final class NavExecutor {
         }
         StairBuildResult stairOutcome = az.construirEscalonResultado(mision);
         ultimoResultadoEscalon = stairOutcome;
+        if (stairOutcome == StairBuildResult.CADENCE_WAIT) {
+            ultimoEscalonDeObjetivo = causa + ": CADENCE_WAIT; reintentar sin consumir objetivo local";
+            if (NavStairTrace.on()) {
+                NavStairTrace.ev("STAIR_PIPELINE_RETURN", "uuid=" + mob.getUUID()
+                        + " outcome=CADENCE_WAIT causa={" + causa + "}");
+            }
+            return null;
+        }
         if (stairOutcome != StairBuildResult.STAIR_PLACED) {
             if (stairOutcome == StairBuildResult.ACCESS_CLEARED) {
                 globalCache = null;
@@ -1879,6 +1903,10 @@ public final class NavExecutor {
             return false;
         }
         BlockPos siguiente = elegirObjetivoLocal();
+        if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+            ultimoEscalonDeObjetivo = "esperando cadencia de escalera; no consumir paso local";
+            return false;
+        }
         boolean siguientePermiteConstruccion = objetivoPermiteConstruccion;
         if (siguiente == null) {
             fallosDeEscalonDeObjetivo++;
@@ -3312,8 +3340,17 @@ public final class NavExecutor {
                     nextPlanAt = now;
                     return;
                 }
+                if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+                    nextPlanAt = now + 2L;
+                    return;
+                }
             }
-            if (!escalonarObjetivoLocal()) {
+            boolean objetivoEscalonado = escalonarObjetivoLocal();
+            if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+                nextPlanAt = now + 2L;
+                return;
+            }
+            if (!objetivoEscalonado) {
                 if (fallosDeEscalonDeObjetivo >= MAX_FALLOS_DE_ESCALON_DE_OBJETIVO) {
                     noPlanifica("escalonado sin objetivo valido (" + fallosDeEscalonDeObjetivo + " fallos)");
                     fallar("sin objetivo local valido (" + fallosDeEscalonDeObjetivo + "/"

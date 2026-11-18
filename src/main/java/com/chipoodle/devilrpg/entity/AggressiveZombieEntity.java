@@ -3,6 +3,7 @@ package com.chipoodle.devilrpg.entity;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.entity.nav.AdvanceUnderFirePolicy;
 import com.chipoodle.devilrpg.entity.nav.NavBellObjectivePolicy;
+import com.chipoodle.devilrpg.entity.nav.NavStairAnchorPolicy;
 import com.chipoodle.devilrpg.entity.nav.NavStairTrace;
 import com.chipoodle.devilrpg.entity.nav.NavTrace;
 import com.chipoodle.devilrpg.block.DoubleGateBlock;

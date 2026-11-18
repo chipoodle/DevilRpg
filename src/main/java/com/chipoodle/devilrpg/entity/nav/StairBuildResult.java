@@ -4,6 +4,7 @@ package com.chipoodle.devilrpg.entity.nav;
 public enum StairBuildResult {
     STAIR_PLACED,
     ACCESS_CLEARED,
+    CADENCE_WAIT,
     NO_PROGRESS,
     REJECTED,
     FAILED
