@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 47 forensics
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 48A reconciliation
 
 - Production baseline: `61b39793b5e5fd6f747e9040c888ba32662efb2d`; zero-horizontal-distance DROP edge-step admission and four policy assertions added.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.
@@ -18,7 +18,7 @@
 >
 > **A2 Phase46 (validación):** el caso runtime IDX4 vertical-only no se reprodujo; su validación física queda INSUFFICIENT_EVIDENCE. IDX3 muestra 20 `STAIR_PLACED`, pending stairs y fallback `result=null`; la promoción a ruta no está trazada. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`.
 >
-> **A2 Phase47:** IDX3 demuestra 20 colocaciones y 20 `ESCALON-TRAVESADO`; la confirmación de travesía consume el pending antes de la promoción fallback, por eso `result=null`. IDX4 horizontal-zero sigue INSUFFICIENT_EVIDENCE por falta de fixture determinista. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`.
+> **A2 Phase48A (corrección causal):** Phase47 era incorrecto. El fallback sale antes de consultar el pending porque `STAIR_BUILDER_RETURN outcome=NO_PROGRESS` (rama de cooldown/early return, pending=null, motivo antiguo y rechazo=-). El builder coloca 20 veces el mismo escalón `607,93,601`; el mob lo atraviesa 20 veces sin descender. Falta instrumentar `escaleraRetraso` y la generación de candidatos. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 

@@ -5205,3 +5205,10 @@ run/saves; hashes match; structural verification only.
 - IDX3: 20 colocaciones y 20 ESCALON-TRAVESADO. La confirmacion de travesia consume el pending antes de fallback; mismo tick result=null.
 - IDX4 horizontal-zero: INSUFFICIENT_EVIDENCE; no hay fixture determinista comprometido y el caso no ocurrio en run163717.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md. A2 OPEN 4/8.
+
+## 2026-11-18 — A2 Phase 48A IDX3 reconciliation
+
+- Read-only at `d9d544b0`; production `e1530ab3`.
+- Phase47 corrected: fallback exits with STAIR_BUILDER_RETURN NO_PROGRESS before pending; same stair607,93,601 placed/traversed20 times.
+- Need instrumentation for escaleraRetraso and candidate generation; IDX4 fixture still unimplemented.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md. A2 OPEN.

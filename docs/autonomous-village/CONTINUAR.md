@@ -1022,3 +1022,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - IDX3 pending consumido por travesia antes de fallback (20/20). IDX4 horizontal-zero sin fixture.
 - Production unchanged `e1530ab3`. A2 OPEN.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`.
+
+## 2026-11-18 — A2 Phase 48A IDX3 reconciliation
+
+- Phase47 causal explanation corrected: builder NO_PROGRESS before pending; same stair self-loop.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`. A2 OPEN.

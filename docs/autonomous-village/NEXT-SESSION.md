@@ -1,4 +1,21 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 47 forensics
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 48A IDX3 causal reconciliation
+
+**Production SHA:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2`.
+**Current report:** `2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`.
+**Previous report:** `2026-11-18-A2-PHASE47-FORENSICS.md`.
+
+- Phase47 was corrected: the fallback exits on `STAIR_BUILDER_RETURN outcome=NO_PROGRESS` **before**
+  consulting `objetivoSobreUltimoEscalon()`. At t288 the builder returns pending=null with stale success
+  motivo/rechazo=-, the cooldown/early-return branch.
+- The builder places the same stair `607,93,601` 20 times; the mob traverses it 20 times. No descent.
+- Exact `escaleraRetraso` value per call is not logged; instrumentation is required.
+- IDX4 horizontal-zero still lacks an approved deterministic fixture.
+- A2 OPEN at 4/8 strict; C4 PASS `[1,0,0]`. No Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 47 forensics
+
 
 **Production SHA:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2`.
 **Current report:** `2026-11-18-A2-PHASE47-FORENSICS.md`.
@@ -455,6 +472,7 @@ Read first, in order:
 75. `docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`
 76. `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`
 77. `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`
+78. `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`
 
 ## Permanent collaboration workflow
 
@@ -580,9 +598,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 48: fix IDX3 pending-stair order (do not consume pending before fallback promotion) and add the
-   approved deterministic horizontal-zero DROP fixture. Keep Phase44/41/46 frozen; no budget changes.
-2. IDX2 now entered strict; IDX7/IDX8 remain independent.
+1. Phase 49: instrument `escaleraRetraso`/candidate generation and repair the C→next-step break;
+   build the approved horizontal-zero DROP fixture. Keep Phase44/41/46 frozen; no budget changes.
+2. IDX2 entered strict; IDX7/IDX8 remain independent.
 3. A2 OPEN at 4/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
