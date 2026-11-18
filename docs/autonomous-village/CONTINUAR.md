@@ -967,3 +967,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Production `4379dbc2`: bounded edge-step ownership, physical descent validated IDX4/IDX8.
 - A2 2/8 strict; C4 PASS [2,0,0].
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 42 remaining non-entrants
+
+- Read-only at `74782622`; production `4379dbc2`.
+- Six independent causes; Phase41 validated, no regression. A2 2/8.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`. A2 OPEN.

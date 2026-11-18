@@ -5146,3 +5146,9 @@ run/saves; hashes match; structural verification only.
 - Production `4379dbc2`: bounded DropEdgeStep claims MoveControl after path end, steps AABB off support, then natural fall. Tests PASS incl NAV_DROP_EDGE_STEP 12.
 - A2 `a2n-20261118-140906`: IDX4 descends t17-24 lands567,119,534 cursor advances; IDX8 descends t275-279 lands746,63,534. A2 2/8 strict, C4 PASS [2,0,0].
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 42 remaining non-entrants
+
+- Read-only at `74782622`; production `4379dbc2`; run `a2n-20261118-140906`; A2 2/8, C4 PASS [2,0,0].
+- Six independent causes: IDX2 source recovery; IDX3/5 DROP-approach 8/8 replans; IDX4 later non-adjacent DROP landing; IDX7 BUILD budget; IDX8 step/local budget.
+- Phase41 edge-step not a regression (IDX4 t24, IDX8 t279). Report: docs/autonomous-village/2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md. A2 OPEN.

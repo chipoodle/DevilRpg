@@ -1,4 +1,22 @@
-# CURRENT CHECKPOINT — 2026-11-17 ranked AABB DROP source selection (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 42 remaining non-entrants forensic
+
+**Production code checkpoint:** `4379dbc250856b292b6cc2e3703b6aaf3bc8022b`.
+**Branch HEAD:** `747826227a9a6bee9c29cf65cc34f99cb55f3003`.
+**Current report:** `2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`.
+**Previous edge-step fix:** `2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`.
+
+- Phase 42 analyzed `a2n-20261118-140906` (A2 2/8 strict, C4 PASS `[2,0,0]`). All six non-entrants have
+  independent causes: IDX2 source recovery, IDX3/5 DROP-approach replans, IDX4 later non-adjacent DROP
+  landing, IDX7 BUILD budget, IDX8 step/local budget.
+- Phase 41 edge-step is not a regression: IDX4 landed at t24 and IDX8 at t279 before their later blockers.
+- Next diagnostic priority: non-adjacent DROP landing/approach (IDX3/5 and later IDX4); do not reopen the
+  adjacent edge-step.
+- A2 remains OPEN; no Run 2; no 12K before five consecutive 8/8 strict.
+
+---
+
+# HISTORICAL — 2026-11-17 ranked AABB DROP source selection (Phase 26)
+
 
 **Production code checkpoint:** `a795c33d03678e2a12d066645e5dbc927d7f3efb`.
 **Detailed report:** `2026-11-17-A2-GROUNDED-SOURCE-SELECTION-PHASE26.md`.
@@ -331,6 +349,7 @@ Read first, in order:
 69. `docs/autonomous-village/2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md`
 70. `docs/autonomous-village/2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md`
 71. `docs/autonomous-village/2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`
+72. `docs/autonomous-village/2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`
 
 ## Permanent collaboration workflow
 
@@ -345,7 +364,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`. Edge-step validated; IDX4/IDX8 descend and land; A2 2/8.
+- Latest technical report: `2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`. Six independent causes; Phase41 edge-step validated and not a regression; A2 2/8.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -456,9 +475,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Diagnose the remaining A2 non-entrants after the DROP edge-step fix; use run
-   `a2n-20261118-140906`. Edge-step is closed; do not reopen Phase 29/31/34/36/41.
-2. A2 OPEN; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[2,0,0]`.
+1. Phase 43 diagnose the non-adjacent DROP landing/approach (IDX3/5 and IDX4 route index4): why the
+   executor stops 2–3 cells from a validated landing and exhausts 8/8 replans. Keep Phase41 edge-step.
+2. IDX2 (source recovery) and IDX7 (BUILD budget) are independent; do not bundle them.
+3. A2 OPEN; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[2,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 
