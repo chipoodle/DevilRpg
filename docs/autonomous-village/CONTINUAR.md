@@ -1037,3 +1037,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Phase47 causal explanation corrected: builder NO_PROGRESS before pending; same stair self-loop.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 49A validation
+
+- IDX3 anchor refresh upward causes same-stair loop; cooldown consumes local steps.
+- A2 3/8 strict, C4 PASS [1,0,0]. Report: `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`.

@@ -1,4 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A stair instrumentation
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A validation
+
+**Production implementation:** `9d6709f551f394e0ac7be69160c2aa46419d8058` (instrumentation only).
+**Current report:** `2026-11-18-A2-PHASE49A-VALIDATION.md`.
+**RUN_HEAD:** `6677e788e84aabae6e47cad72f342f5c3608cfeb`.
+**Run:** `a2n-20261118-172804` (3/8 strict, C4 PASS `[1,0,0]`).
+
+- IDX3 root cause demonstrated: `ANCHOR_REFRESH` at t2299 moves anchor `607,93 -> 607,94`; next `dy=1`
+  candidate is the same stair `607,93`, repeated. CADENCE_WAIT returns also increment local steps.
+- A2 OPEN at 3/8 strict. No Run2/Full12K.
+- IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; no approved fixture.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 49A stair instrumentation
+
 
 **Production implementation:** `9d6709f551f394e0ac7be69160c2aa46419d8058` (instrumentation only).
 **Previous behavioral baseline:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2`.
@@ -472,6 +487,7 @@ Read first, in order:
 76. `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`
 77. `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`
 78. `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`
+79. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 79. `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`
 
 ## Permanent collaboration workflow
@@ -598,10 +614,12 @@ Read first, in order:
 
 ## Immediate work
 
-1. Validate Phase49A instrumentation on exact SHA `9d6709f551f394e0ac7be69160c2aa46419d8058`: static checks, then A2 Run1 only with both stair trace flags. Diagnose before proposing a behavior fix.
-2. Separately design and implement an approved horizontal-zero DROP fixture; Phase46 remains runtime INSUFFICIENT_EVIDENCE. Keep Phase44/41/46 frozen; no budget changes.
-2. IDX2 entered strict; IDX7/IDX8 remain independent.
-3. A2 OPEN at 4/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
+1. Phase 50: preserve the traversed anchor (`607,93`) instead of refreshing upward to `607,94`, and
+   require the next candidate strictly below it. Do not count pure CADENCE_WAIT as a local stair step.
+   Keep Phase44/41/46 frozen; no budget changes.
+2. IDX4 horizontal-zero still needs its approved fixture; Phase46 remains runtime INSUFFICIENT_EVIDENCE.
+3. IDX2 entered strict; IDX7/IDX8 remain independent.
+4. A2 OPEN at 3/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

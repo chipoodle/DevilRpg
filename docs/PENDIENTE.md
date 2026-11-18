@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A validation
 
 - Production implementation: `9d6709f551f394e0ac7be69160c2aa46419d8058`; instrumentation only, based on `e1530ab3`.
 - Use `-Ddevilrpg.a2n.traceStair=true -Ddevilrpg.a2n.traceStairCandidates=true` to capture cooldown, anchor refresh and every candidate/rejection.
@@ -19,10 +19,12 @@
 > **A2 Phase46 (validación):** el caso runtime IDX4 vertical-only no se reprodujo; su validación física queda INSUFFICIENT_EVIDENCE. IDX3 muestra 20 `STAIR_PLACED`, pending stairs y fallback `result=null`; la promoción a ruta no está trazada. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`.
 >
 > **A2 Phase48A (corrección causal):** Phase47 era incorrecto. El fallback sale antes de consultar el pending porque `STAIR_BUILDER_RETURN outcome=NO_PROGRESS` (rama de cooldown/early return, pending=null, motivo antiguo y rechazo=-). El builder coloca 20 veces el mismo escalón `607,93,601`; el mob lo atraviesa 20 veces sin descender. Falta instrumentar `escaleraRetraso` y la generación de candidatos. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`.
+>
+> **A2 Phase49A (validación de trazas):** el ancla avanzada a `607,93` es sobrescrita por `ANCHOR_REFRESH` a `607,94` en t2299; el siguiente candidato dy=1 vuelve a `607,93`. Cooldown CADENCE_WAIT consume pasos locales. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 
-> **A2:** último runtime evidenciado `a2n-20261118-163717`: 4/8 estrictos, 4/8 perímetro; C4 PASS `[1,0,0]`. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[1,0,0]`; save/reload OPEN.
+> **A2:** último runtime evidenciado `a2n-20261118-172804`: 3/8 estrictos, 3/8 perímetro; C4 PASS `[1,0,0]`. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[1,0,0]`; save/reload OPEN.
 
 # Estado de cola actualizado — 2026-11-12 22:43
 

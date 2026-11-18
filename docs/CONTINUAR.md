@@ -5222,3 +5222,9 @@ run/saves; hashes match; structural verification only.
 - Phase47 corrected: fallback exits with STAIR_BUILDER_RETURN NO_PROGRESS before pending; same stair607,93,601 placed/traversed20 times.
 - Need instrumentation for escaleraRetraso and candidate generation; IDX4 fixture still unimplemented.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 49A validation
+
+- Run `a2n-20261118-172804`; production `9d6709f5`; A2 3/8 strict, C4 PASS [1,0,0].
+- IDX3: ANCHOR_REFRESH t2299 moves anchor607,93 ->607,94; candidate dy1 repeats607,93. CADENCE_WAIT increments local steps.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md. A2 OPEN.
