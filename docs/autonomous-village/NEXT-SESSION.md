@@ -117,7 +117,9 @@
 - Report: `2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md`.
 - Phase 35 read-only: IDX4 adjacent DROP confirmed. `Navigation.stop()` then `aplicarAcercamientoAdyacente(landing)` rejects because Manhattan 1+3+1=5 > DROP max 3; no MoveControl, no descent, 22 attempts at same position. IDX8 never reaches DROP; independent BUILD failure.
 - Report: `2026-11-18-A2-PHASE35-ADJACENT-DROP-NON-DESCENT-DIAGNOSIS.md`.
-- **NEXT: Phase 36 command a horizontal step to the supported take-off cell or separate horizontal adjacency from vertical drop in the nudge predicate.**
+- Harness Phase 36 production `6aec35c6`: adjacent branch now uses horizontal-distance DROP nudge and Navigation.moveTo; telemetry proves commands are emitted but `DROP_DESCENT_STARTED` remains 0 and `DROP_DESCENT_STALLED` occurs (IDX4 54 cmds/5 stalled; IDX8 824/136). A2 2/8 strict, C4 PASS `[2,0,0]`.
+- Report: `2026-11-18-A2-PHASE36-ADJACENT-DROP-TAKEOFF-FIX.md`.
+- **NEXT: Phase 37 diagnose why adjacent Navigation.moveTo produces no vertical movement/step-off; no budget/physics relaxation.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -313,6 +315,7 @@ Read first, in order:
 63. `docs/autonomous-village/2026-11-18-A2-PHASE33-SNAP-CHURN-GEOMETRY-DIAGNOSIS.md`
 64. `docs/autonomous-village/2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md`
 65. `docs/autonomous-village/2026-11-18-A2-PHASE35-ADJACENT-DROP-NON-DESCENT-DIAGNOSIS.md`
+66. `docs/autonomous-village/2026-11-18-A2-PHASE36-ADJACENT-DROP-TAKEOFF-FIX.md`
 
 ## Permanent collaboration workflow
 
@@ -327,7 +330,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-18-A2-PHASE35-ADJACENT-DROP-NON-DESCENT-DIAGNOSIS.md`. IDX4 nudge rejected by Manhattan 5>3 after Navigation.stop(); IDX8 independent BUILD fail.
+- Latest technical report: `2026-11-18-A2-PHASE36-ADJACENT-DROP-TAKEOFF-FIX.md`. Commands emitted; zero DESCENT_STARTED, multiple STALLED; A2 2/8.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -438,12 +441,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 36: in the already-adjacent branch, command a horizontal step to the supported take-off
-   `(567,122,534)` at current Y, or separate horizontal adjacency from vertical drop in the nudge
-   predicate. Keep Phase 29/31/34 and all physical predicates intact.
-2. IDX8 is an independent BUILD-budget failure; do not merge it with the DROP defect.
-3. A2 OPEN; no Run 2 unless 8/8 strict; no 12k before five consecutive 8/8 strict runs.
-4. C4 PASS `[1,0,0]`; save/reload OPEN.
+1. Phase 37: diagnose why the adjacent `Navigation.moveTo(landing)` emits a path but produces no
+   physical Y change/step-off (`DROP_DESCENT_STALLED`). Capture per-tick path/MoveControl, edge
+   collision/AABB and block states. Do not relax support/fit or budgets.
+2. Preserve Phase 29/31/34/36 contracts; no Run 2 or 12k.
+3. A2 OPEN; C4 PASS `[2,0,0]`; save/reload OPEN.
 
 ## Worlds (preserve; do not overwrite)
 

@@ -931,3 +931,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only at `1d1e1e3e`; production `ee0c4fe4`.
 - IDX4 nudge predicate rejects landing because vertical drop counts in Manhattan; no physical command. IDX8 independent BUILD fail.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE35-ADJACENT-DROP-NON-DESCENT-DIAGNOSIS.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 36 adjacent DROP take-off execution
+
+- Production `6aec35c6`: commands emitted with horizontal-distance nudge, but physical descent still absent.
+- Runtime `a2n-20261118-042553`: A2 2/8 strict; C4 PASS [2,0,0]; DROP_DESCENT_STARTED=0.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE36-ADJACENT-DROP-TAKEOFF-FIX.md`. A2 OPEN.

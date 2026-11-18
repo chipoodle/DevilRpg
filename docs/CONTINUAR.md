@@ -5106,3 +5106,10 @@ run/saves; hashes match; structural verification only.
 - IDX4 confirmed: Navigation.stop then aplicarAcercamientoAdyacente(landing) rejected by Manhattan 1+3+1=5 > max3; no MoveControl, no descent, 22 retries same position.
 - IDX8 independent: never reached DROP (intentosDescenso0), failed on BUILD budget.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE35-ADJACENT-DROP-NON-DESCENT-DIAGNOSIS.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 36 adjacent DROP take-off execution
+
+- Production `6aec35c6`: horizontal-distance DROP nudge, Navigation.moveTo command, descent/landing telemetry.
+- Static PASS incl NAV_ADJACENT 15, NAV_DROP_APPROACH 10, DROP 51, source14, snap12/12.
+- Runtime `a2n-20261118-042553`: A2 2/8 strict, 2/8 perimeter, C4 PASS [2,0,0]. IDX4 54 commands/5 stalled/0 started; IDX8 824/136/0; no landing confirmed.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE36-ADJACENT-DROP-TAKEOFF-FIX.md. A2 OPEN.
