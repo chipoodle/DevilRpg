@@ -1,4 +1,21 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 vertical-only DROP fix (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 validation
+
+**Production SHA:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2`.
+**Current report:** `2026-11-18-A2-PHASE46-VALIDATION.md`.
+**Implementation report:** `2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.
+**Previous forensics:** `2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`.
+
+- Phase46 static PASS (`NAV_DROP_EDGE_STEP_POLICY_TEST` 16 assertions). A2 `a2n-20261118-163717` = 4/8
+  strict (idx1, idx2, idx5, idx6), C4 PASS `[1,0,0]`; A2 OPEN.
+- The exact IDX4 vertical-only geometry did not recur, so its runtime path remains INSUFFICIENT_EVIDENCE.
+- IDX3 trace: `ACCESS_CLEARED`/`NO_PROGRESS`, 20 `STAIR_PLACED` outcomes and pending stairs, but fallback
+  `result=null`; exact promotion to route not logged.
+- No Run2/Full12K until five consecutive 8/8 strict.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 46 vertical-only DROP fix
+
 
 **Production baseline:** `61b39793b5e5fd6f747e9040c888ba32662efb2d`.
 **Report:** `2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.
@@ -421,6 +438,7 @@ Read first, in order:
 73. `docs/autonomous-village/2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`
 74. `docs/autonomous-village/2026-11-18-A2-PHASE44-VALIDATION.md`
 75. `docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`
+76. `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`
 
 ## Permanent collaboration workflow
 
@@ -546,10 +564,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 46: decide/implement vertical-only DROP handling (distance0 after exact takeoff occupancy)
-   and separately repair IDX3's local stair fallback cycle. Keep Phase44/41 frozen; no budget changes.
-2. IDX2 source recovery and IDX7/IDX8 budgets remain independent.
-3. A2 OPEN at 3/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[2,0,0]`.
+1. Phase 47: reproduce a deterministic horizontal-zero DROP runtime case and repair the IDX3
+   `STAIR_PLACED`/pending -> fallback `result=null` promotion. Keep Phase44/41 frozen; no budget changes.
+2. IDX2 now entered strict; IDX7/IDX8 remain independent.
+3. A2 OPEN at 4/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

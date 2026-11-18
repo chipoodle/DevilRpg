@@ -5191,3 +5191,10 @@ run/saves; hashes match; structural verification only.
 - IDX3: local objective cycle 607,94,601/613,88,601/608,95,601; fallback result=null; 64/64,10/10; physical stairs24/24.
 - IDX4: vertical-only DROP at597,79,499 ->597,78,499; horizontal dist0 outside Phase41; landing fits/support true, landingHeightReached=false; final horizontal dist72.12.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md. A2 OPEN 3/8.
+
+## 2026-11-18 — A2 Phase 46 validation
+
+- Production `e1530ab3`; static PASS incl NAV_DROP_EDGE_STEP16, approach owner13.
+- A2 `a2n-20261118-163717`: 4/8 strict (idx1,2,5,6), C4 PASS [1,0,0].
+- Vertical-only IDX4 runtime not reproduced -> INSUFFICIENT_EVIDENCE. IDX3 trace: ACCESS_CLEARED/NO_PROGRESS, 20 STAIR_PLACED, pending stairs, fallback null.
+- Phase45 errata: anchor661,71,533 vs mission661,72,533; escalera.colocados 20/24 != traversals. Report: docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md. A2 OPEN.

@@ -1010,3 +1010,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only; production unchanged.
 - IDX3 BUILD/step local cycle fallback null; IDX4 vertical-only DROP distance0 outside Phase41.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 46 validation
+
+- Static PASS; A2 4/8 strict, C4 PASS [1,0,0].
+- Vertical-only case not reproduced; IDX3 pending/fallback null remains.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`. A2 OPEN.

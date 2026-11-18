@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 validation
 
 - Production baseline: `61b39793b5e5fd6f747e9040c888ba32662efb2d`; zero-horizontal-distance DROP edge-step admission and four policy assertions added.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.
@@ -14,13 +14,13 @@
 
 > **Roles obligatorios:** ChatGPT modifica el código de producción directamente en GitHub y publica commits. Harness sincroniza, preserva trabajo local, ejecuta compilaciones/pruebas/lint/runtime, mide y genera reportes. Harness no implementa correcciones de producción; devuelve evidencia a ChatGPT. Ninguno declara validado un SHA sin ejecutar y documentar los checks sobre ese SHA exacto.
 
-> **Checkpoint validado:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d` en `feature/autonomous-village` (Phase44 DROP approach owner). Harness ejecutó static PASS y A2 Run1 `a2n-20261118-145308` = 3/8 estricto, C4 PASS `[2,0,0]`. A2 OPEN.
+> **Checkpoint validado:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2` en `feature/autonomous-village` (Phase46 vertical-only DROP fix). Static PASS (`NAV_DROP_EDGE_STEP_POLICY_TEST` 16). A2 Run1 `a2n-20261118-163717` = 4/8 estricto, C4 PASS `[1,0,0]`. A2 OPEN.
 >
-> **A2 Phase45 (forensics, solo lectura):** IDX3 es un ciclo local BUILD/STEP con fallback `null` (64/64, 10/10); IDX4 es un DROP vertical-only en `597,79,499 -> 597,78,499`, fuera de la activación Phase41 por distancia horizontal>0. Sin cambios de producción. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`.
+> **A2 Phase46 (validación):** el caso runtime IDX4 vertical-only no se reprodujo; su validación física queda INSUFFICIENT_EVIDENCE. IDX3 muestra 20 `STAIR_PLACED`, pending stairs y fallback `result=null`; la promoción a ruta no está trazada. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 
-> **A2:** último runtime evidenciado `a2n-20261118-145308`: 3/8 estrictos, 3/8 perímetro; C4 PASS `[2,0,0]`. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[2,0,0]`; save/reload OPEN.
+> **A2:** último runtime evidenciado `a2n-20261118-163717`: 4/8 estrictos, 4/8 perímetro; C4 PASS `[1,0,0]`. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[1,0,0]`; save/reload OPEN.
 
 # Estado de cola actualizado — 2026-11-12 22:43
 
