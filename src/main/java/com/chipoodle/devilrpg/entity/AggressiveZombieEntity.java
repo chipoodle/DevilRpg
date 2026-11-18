@@ -1917,10 +1917,20 @@ public class AggressiveZombieEntity extends Zombie {
         // realmente atravesado; sin esto todos los intentos se calculaban desde el suelo inicial y la escalera
         // nunca descendia por una cara vertical.
         if (escaleraUltimoColocado != null && !confirmarTravesiaEscalonPendiente()) {
+            NavStairTrace.ev("STAIR_BUILDER_EARLY_RETURN", "uuid=" + getUUID()
+                    + " tick=" + level().getGameTime() + " reason=PENDING_NOT_TRAVERSED"
+                    + " pending=" + escaleraUltimoColocado + " delay=" + escaleraRetraso
+                    + " anchor=" + escaleraAncla + " pos=" + blockPosition().toShortString());
             return false;
         }
         if (escaleraRetraso > 0) {
+            int retrasoBefore = escaleraRetraso;
             escaleraRetraso--;
+            NavStairTrace.ev("STAIR_BUILDER_COOLDOWN", "uuid=" + getUUID()
+                    + " tick=" + level().getGameTime() + " retrasoBefore=" + retrasoBefore
+                    + " retrasoAfter=" + escaleraRetraso + " reason=CADENCE_WAIT"
+                    + " pending=" + escaleraUltimoColocado + " anchor=" + escaleraAncla
+                    + " pos=" + blockPosition().toShortString() + " colocados=" + escaleraColocados);
             return false;
         }
         if (escaleraColocados >= ESCALERA_MAX_BLOQUES) {
@@ -1938,7 +1948,12 @@ public class AggressiveZombieEntity extends Zombie {
             // A2: sin escalon pendiente el ancla debe seguir el soporte REAL actual. Antes solo se
             // actualizaba si ese soporte tenia colision; al caminar por una repisa/aire se quedaba
             // clavada en la posicion inicial (Run40/42: candidatos 566,120,533 con el mob en 607,95,601).
+            BlockPos anchorBefore = escaleraAncla;
             escaleraAncla = blockPosition().below();
+            NavStairTrace.candidate("STAIR_BUILDER_ANCHOR_REFRESH", "uuid=" + getUUID()
+                    + " tick=" + level().getGameTime() + " pos=" + blockPosition().toShortString()
+                    + " supportBelow=" + escaleraAncla.toShortString()
+                    + " anchorBefore=" + anchorBefore + " anchorAfter=" + escaleraAncla);
         }
         BlockPos base = escaleraAncla;
         if (base == null) {
@@ -1985,6 +2000,13 @@ public class AggressiveZombieEntity extends Zombie {
                     probados++;
                     String r = evaluarCeldaDeEscalon(objetivo, base, dy, pasoX, pasoZ,
                             primerPasoLateral);
+                    NavStairTrace.candidate("STAIR_BUILDER_CANDIDATE", "uuid=" + getUUID()
+                            + " tick=" + level().getGameTime() + " base=" + base.toShortString()
+                            + " anchor=" + escaleraAncla + " mob=" + blockPosition().toShortString()
+                            + " mobBelow=" + blockPosition().below().toShortString()
+                            + " candidate=" + objetivo.toShortString() + " dy=" + dy
+                            + " stepX=" + pasoX + " stepZ=" + pasoZ
+                            + " rejection={" + (r == null ? "ACCEPTED_GEOMETRY" : r) + "}");
                     if (r == null) {
                         if (!ponerEscalonConSoporteLateral(objetivo, centro)) {
                             escaleraUltimoRechazo = objetivo.toShortString() + " ponerEscalon=false";
@@ -2318,9 +2340,10 @@ public class AggressiveZombieEntity extends Zombie {
 
     public com.chipoodle.devilrpg.entity.nav.StairBuildResult construirEscalonResultado(final BlockPos objetivo) {
         if (NavStairTrace.on()) {
-            NavStairTrace.ev("STAIR_BUILDER_ENTER", "uuid=" + getUUID() + " pos="
-                    + blockPosition().toShortString() + " target=" + objetivo
-                    + " pending=" + escaleraUltimoColocado + " ancla=" + escaleraAncla
+            NavStairTrace.ev("STAIR_BUILDER_ENTER", "uuid=" + getUUID()
+                    + " tick=" + level().getGameTime() + " pos=" + blockPosition().toShortString()
+                    + " target=" + objetivo + " pending=" + escaleraUltimoColocado
+                    + " ancla=" + escaleraAncla + " retraso=" + escaleraRetraso
                     + " colocados=" + escaleraColocados);
         }
         if (!objetivoExigeConstruccion(objetivo)) {
@@ -2344,10 +2367,11 @@ public class AggressiveZombieEntity extends Zombie {
             ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.FAILED;
         }
         if (NavStairTrace.on()) {
-            NavStairTrace.ev("STAIR_BUILDER_RETURN", "uuid=" + getUUID() + " outcome="
-                    + ultimoResultadoEscalon + " pending=" + escaleraUltimoColocado
-                    + " colocados=" + escaleraColocados + " motivo={" + escaleraMotivo
-                    + "} rechazo={" + escaleraUltimoRechazo + "}");
+            NavStairTrace.ev("STAIR_BUILDER_RETURN", "uuid=" + getUUID()
+                    + " tick=" + level().getGameTime() + " outcome=" + ultimoResultadoEscalon
+                    + " pending=" + escaleraUltimoColocado + " anchor=" + escaleraAncla
+                    + " retraso=" + escaleraRetraso + " colocados=" + escaleraColocados
+                    + " motivo={" + escaleraMotivo + "} rechazo={" + escaleraUltimoRechazo + "}");
         }
         return ultimoResultadoEscalon;
     }
