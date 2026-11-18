@@ -2,7 +2,8 @@
 
 **Production implementation SHA:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`.
 **Implementation parent:** `793816686e4373d4b581264468f2ee92ce431156`.
-**Current report:** `2026-11-18-A2-PHASE44-NON-ADJACENT-DROP-APPROACH-OWNER.md`.
+**Current report:** `2026-11-18-A2-PHASE44-VALIDATION.md`.
+**Implementation report:** `2026-11-18-A2-PHASE44-NON-ADJACENT-DROP-APPROACH-OWNER.md`.
 **Previous forensic report:** `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`.
 
 - Phase43 proved the non-adjacent DROP approach can lose movement ownership after Navigation returns a completed one-node path.
@@ -10,8 +11,7 @@
 - MoveControl advances only toward the already validated supported waypoint. Waypoint safety is rechecked each tick; arrival requires exact block occupancy, grounded state and valid support/AABB fit.
 - Owner bounds: >80 total ticks or >20 no-progress ticks aborts safely to OBSTRUCTED. No planner budgets, safety predicates, landing tolerances or Phase29/31/34/36/41 behavior changed.
 - New policy test: `NAV_DROP_APPROACH_OWNERSHIP_POLICY_TEST` (13 assertions), registered in `gradlew test`; **not run by ChatGPT**.
-- **PENDING HARNESS** on exact SHA `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`: static tests, strict lint, diff-check, diagnostics compile; only if all pass, A2 Run1. No Run2/Full12K.
-- Capture waypoint command/path result, owner selection/progress/reached/abort, Phase41 handoff and physical landing/cursor events for IDX3/5/4.
+- **HARNESS VALIDATION COMPLETE** on `ed31b815`: static PASS; A2 Run1 `a2n-20261118-145308` = 3/8 strict (idx1 t559, idx5 t730, idx6 t650), C4 PASS `[2,0,0]`. Ownership chain Navigation→MoveControl→Phase41 landing validated for IDX3/4/5. A2 remains OPEN.
 - A2 remains **OPEN**. Five consecutive 8/8 strict runs remain the gate before Run2/Full12K.
 - Production commits: `b4f53966f7336d997ace224660d1a5cb892e2786` (initial owner); `5b71f063798fc0fd50be4dd2b4d3d5c58041262a` (lifecycle hardening); `ed31b815193aa4fcde0b088f1a6d110270ba4a9d` (Navigation release on every owner clear).
 - Harness remains execution/evidence owner; it must not modify production.
@@ -385,6 +385,7 @@ Read first, in order:
 71. `docs/autonomous-village/2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`
 72. `docs/autonomous-village/2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`
 73. `docs/autonomous-village/2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`
+74. `docs/autonomous-village/2026-11-18-A2-PHASE44-VALIDATION.md`
 
 ## Permanent collaboration workflow
 
@@ -399,7 +400,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`. Non-adjacent DROP has no movement owner; landing geometry valid, path one-node/completed.
+- Latest technical report: `2026-11-18-A2-PHASE44-VALIDATION.md`. Approach ownership validated; A2 3/8 strict; remaining IDX3 BUILD, IDX4 near-miss72.12, IDX2/7/8 independent.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -510,11 +511,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 44: add a bounded non-adjacent DROP approach owner that advances to the supported waypoint
-   when the path returns completed, then hands off to Phase41 edge-step. DROP only; no budget/predicate
-   changes and no reopening Phase29/31/34/36/41.
-2. IDX2 source recovery and IDX7 BUILD remain independent.
-3. A2 OPEN; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[2,0,0]`.
+1. Phase 45: diagnose IDX4 near-miss (final dist72.12, global budget) and IDX3 BUILD/step 64/64 after
+   validated approach ownership. Keep Phase44/41 contracts frozen.
+2. IDX2 source recovery and IDX7/IDX8 budgets remain independent.
+3. A2 OPEN at 3/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[2,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

@@ -5167,3 +5167,10 @@ run/saves; hashes match; structural verification only.
 - New `NAV_DROP_APPROACH_OWNERSHIP_POLICY_TEST`: 13 assertions, registered but **not run by ChatGPT**.
 - **PENDING HARNESS:** static tests/lint/diff/diagnostics compile on exact SHA, then A2 Run1 only if static passes. Capture owner/path/landing traces for IDX3/5/4. No Run2/Full12K; A2 OPEN.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE44-NON-ADJACENT-DROP-APPROACH-OWNER.md`.
+
+## 2026-11-18 — A2 Phase 44 validation
+
+- Synced HEAD `fd2bbcd0`; production `ed31b815`; static PASS incl NAV_DROP_APPROACH_OWNERSHIP 13.
+- A2 `a2n-20261118-145308`: 3/8 strict (idx1 t559, idx5 t730, idx6 t650), C4 PASS [2,0,0].
+- IDX3/4/5 ownership chain Navigation->MoveControl->Phase41->landing validated. Remaining: IDX3 BUILD64/64, IDX4 dist72.12 global budget, IDX2/7/8 independent.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE44-VALIDATION.md. A2 OPEN.
