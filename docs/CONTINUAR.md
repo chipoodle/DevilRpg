@@ -5062,3 +5062,11 @@ run/saves; hashes match; structural verification only.
 - Static PASS: NAV_SNAP_OWNERSHIP 12, NAV_DROP_TAKEOFF 51, NAV_SOURCE_CELL 14, lint/diff/compile.
 - Runtime `a2n-20261117-170935`: A2 2/8 strict, 2/8 perimeter, C4 PASS [1,0,0]; snap works (SNAP_MOVE_OWNER, SNAP_COMPLETE t211, no contradictory MOVE_COMMAND, collision=false).
 - IDX4 later fails independent `replans agotados (8/8)` at571,115,533. Report: docs/autonomous-village/2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md. A2 OPEN; no 12k.
+
+## 2026-11-17 — A2 Phase 30 IDX4 post-snap replan diagnosis
+
+- Read-only at `b1c69d96` (production `192d0c52`); no runtime/production changes.
+- Confirmed stale oscillation after snap: t615 route accepted, t616 SNAP_GUARD aborts with recentCells24, stores lastRouteSignature; seven identical replans rejected, 8/8 at t3495.
+- Route exists (TRAVERSING and JUMP_UP t553), so not a geometry/planner dead end.
+- Git discrepancy: Phase29 report labeled initial HEAD cebca95b; actual parent was 4afbac50. No rewrite.
+- Report: docs/autonomous-village/2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md. A2 OPEN.

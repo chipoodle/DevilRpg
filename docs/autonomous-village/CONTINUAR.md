@@ -895,3 +895,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Production `192d0c52`: exclusive source snap, center-gated completion, swept/owner telemetry, 12-assertion policy test.
 - Runtime `a2n-20261117-170935`: A2 2/8 strict; C4 PASS [1,0,0]; IDX4 snap completes at t211, later replan exhaustion remains.
 - Report: `docs/autonomous-village/2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`. A2 OPEN.
+
+## 2026-11-17 — A2 Phase 30 IDX4 post-snap replan diagnosis
+
+- Read-only diagnosis at `b1c69d96`; production remains `192d0c52`.
+- Stale oscillation state aborts first post-snap route and poisons `lastRouteSignature`; seven identical replans exhaust 8/8.
+- Report: `docs/autonomous-village/2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md`. A2 OPEN.

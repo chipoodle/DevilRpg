@@ -105,7 +105,9 @@
 - Harness Phase 29 implemented `NavSnapOwnershipPolicy` (production `192d0c52`): pending snap blocks route movement, DROP admission cannot continue until `SNAP_COMPLETE` with 0.20 center + grounded/feet/support/real-AABB. Added `SNAP_MOVE_OWNER`, `SNAP_ADMISSION`, `SNAP_SWEPT_AABB`, `SNAP_GUARD`, `SNAP_COMPLETE`, `SOURCE_SELECTED`.
 - Static PASS: `NAV_SNAP_OWNERSHIP_POLICY_TEST: OK (12)`, DROP 51, source 14. Runtime `a2n-20261117-170935`: A2 2/8 strict, C4 PASS `[1,0,0]`. IDX4 completes snap at t211 with collision=false; later fails `replans agotados (8/8)`.
 - Report: `2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`.
-- **NEXT: Phase 30 diagnose IDX4's post-snap replan exhaustion; snap/admission fix is complete.**
+- Phase 30 read-only diagnosis: ROOT_CAUSE confirmed for post-snap exhaustion. First post-snap route accepted at t615, stale oscillation aborts at t616 and stores `lastRouteSignature`; seven deterministic identical replans are rejected by signature, reaching 8/8 at t3495.
+- Report: `2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md`.
+- **NEXT: Phase 31 reset/isolate stale oscillation history and signature after SNAP_COMPLETE; do not change budgets/snap contract.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -295,6 +297,7 @@ Read first, in order:
 57. `docs/autonomous-village/2026-11-17-A2-PHASE27-SNAP-FORENSIC-DIAGNOSIS.md`
 58. `docs/autonomous-village/2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md`
 59. `docs/autonomous-village/2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`
+60. `docs/autonomous-village/2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md`
 
 ## Permanent collaboration workflow
 
@@ -309,7 +312,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`. Snap admission/ownership fixed and statically/runtime covered; A2 2/8 strict; IDX4 post-snap replan exhaustion remains.
+- Latest technical report: `2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md`. Confirmed stale oscillation abort + stored signature poison seven identical replans; route exists.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -420,9 +423,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 30: diagnose IDX4 post-snap `replans agotados (8/8)` at `571,115,533`; do not reopen the
-   exclusive snap/admission contract.
-2. Keep `SNAP_MOVE_OWNER`/`SNAP_SWEPT_AABB` telemetry. No budget increase; no support/fit relaxation.
+1. Phase 31: reset/isolate stale oscillation history and `lastRouteSignature` after `SNAP_COMPLETE`;
+   first post-snap route must traverse, and identical replans must not be rejected by a poisoned signature.
+2. Do not change the 8/8 limit, budgets, support/fit, or Phase 29 exclusive-snap contract.
 3. A2 OPEN; no Run 2 unless 8/8 strict; no 12k before five consecutive 8/8 strict runs.
 4. C4 PASS `[1,0,0]`; save/reload OPEN.
 
