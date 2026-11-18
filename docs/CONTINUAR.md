@@ -5140,3 +5140,9 @@ run/saves; hashes match; structural verification only.
 - IDX4 TRACE_COMPLETE: local plan exp=1/900, no global; path 2 nodes then null; MoveControl.hasWanted=false all 82 rows; Y=122; verticalCollision=true; no step-off.
 - IDX8 FIXTURE_NO_DROP: no plan in300 ticks, no trace.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 41 DROP edge-step fix
+
+- Production `4379dbc2`: bounded DropEdgeStep claims MoveControl after path end, steps AABB off support, then natural fall. Tests PASS incl NAV_DROP_EDGE_STEP 12.
+- A2 `a2n-20261118-140906`: IDX4 descends t17-24 lands567,119,534 cursor advances; IDX8 descends t275-279 lands746,63,534. A2 2/8 strict, C4 PASS [2,0,0].
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md. A2 OPEN.

@@ -127,7 +127,9 @@
 - Report: `2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md`.
 - Phase 40 fixture: IDX4-like TRACE_COMPLETE (`a2n-20261118-134234`), local plan exp=1/900, no global. 82 travel rows: path 2 nodes then null, MoveControl.hasWanted=false all rows, Y constant122, verticalCollision=true. IDX8-like FIXTURE_NO_DROP (`a2n-20261118-134458`): plan=- for300 ticks, no trace.
 - Report: `2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md`.
-- **NEXT: Phase 41 add bounded edge-step after path ends, using IDX4 trace; fix IDX8 fixture separately.**
+- Phase 41 production `4379dbc2`: bounded DROP edge-step transfers ownership to MoveControl after path end. Real A2 run `a2n-20261118-140906`: IDX4 descends t17-24 and lands at 567,119,534; IDX8 descends t275-279. A2 still 2/8 strict, C4 PASS [2,0,0].
+- Report: `2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`.
+- **NEXT: diagnose remaining A2 non-entrants; edge-step blocker closed.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -328,6 +330,7 @@ Read first, in order:
 68. `docs/autonomous-village/2026-11-18-A2-PHASE38-DROP-DESCENT-PHYSICAL-EXECUTION-TRACE.md`
 69. `docs/autonomous-village/2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md`
 70. `docs/autonomous-village/2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md`
+71. `docs/autonomous-village/2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`
 
 ## Permanent collaboration workflow
 
@@ -342,7 +345,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md`. IDX4 trace high-confidence: path ends at edge, MoveControl inactive, no step-off; IDX8 fixture no-plan.
+- Latest technical report: `2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`. Edge-step validated; IDX4/IDX8 descend and land; A2 2/8.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -453,10 +456,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 41: implement a bounded horizontal edge-step after PathNavigation ends at the landing edge,
-   with normal gravity/collision and no predicate/budget changes. Reuse IDX4 trace as evidence.
-2. Fix the IDX8-like fixture setup separately; do not infer a common cause until it reaches DROP.
-3. A2 OPEN; no Run 2 or 12k. C4 PASS `[2,0,0]`; save/reload OPEN.
+1. Diagnose the remaining A2 non-entrants after the DROP edge-step fix; use run
+   `a2n-20261118-140906`. Edge-step is closed; do not reopen Phase 29/31/34/36/41.
+2. A2 OPEN; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[2,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

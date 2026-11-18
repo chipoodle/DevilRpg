@@ -961,3 +961,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - IDX4-like trace complete: path ends at edge, MoveControl inactive, no Y movement; IDX8 fixture no-plan.
 - Instrumentation reverted; production `6aec35c6` intact.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 41 DROP edge-step fix
+
+- Production `4379dbc2`: bounded edge-step ownership, physical descent validated IDX4/IDX8.
+- A2 2/8 strict; C4 PASS [2,0,0].
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`. A2 OPEN.
