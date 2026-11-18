@@ -3819,6 +3819,7 @@ public final class NavExecutor {
     }
 
     private void clearDropApproachOwner(String reason) {
+        boolean releaseNavigation = dropApproachActive;
         boolean releaseMoveControl = dropApproachActive && dropApproachMoveOwned;
         if (dropApproachActive && NavTrace.on()) {
             NavTrace.ev("DROP_APPROACH_OWNER_CLEARED", "uuid=" + mob.getUUID()
@@ -3834,8 +3835,10 @@ public final class NavExecutor {
         dropApproachTicks = 0;
         dropApproachNoProgress = 0;
         dropApproachBestDistance = Double.MAX_VALUE;
-        if (releaseMoveControl) {
+        if (releaseNavigation) {
             mob.getNavigation().stop();
+        }
+        if (releaseMoveControl) {
             mob.getMoveControl().setWantedPosition(mob.getX(), mob.getY(), mob.getZ(), 0.0D);
         }
     }
