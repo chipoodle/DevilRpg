@@ -973,3 +973,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only at `74782622`; production `4379dbc2`.
 - Six independent causes; Phase41 validated, no regression. A2 2/8.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 43 non-adjacent DROP forensics
+
+- Read-only at `b624546c`; production `4379dbc2`.
+- Non-adjacent DROP has no movement owner; landing geometry valid. Phase41 not involved.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`. A2 OPEN.

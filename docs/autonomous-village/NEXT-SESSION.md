@@ -1,4 +1,21 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 42 remaining non-entrants forensic
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 43 non-adjacent DROP approach/landing
+
+**Production code checkpoint:** `4379dbc250856b292b6cc2e3703b6aaf3bc8022b`.
+**Branch HEAD:** `b624546c8e8174092419bd8d3022845e1b10ae4c`.
+**Current report:** `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`.
+**Previous report:** `2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`.
+
+- Phase 43: IDX3, IDX5 and later IDX4 fail in the non-adjacent DROP approach. Landing geometry is valid
+  where checked (IDX4 `fits/support=true`), but the last path is one-node/completed and no movement owner
+  advances the mob. IDX3/5 freeze 1–2 cells from their supported waypoint and exhaust 8/8 replans.
+- Phase41 edge-step is not involved and not a regression; it only activates when already adjacent.
+- Next: Phase 44 non-adjacent DROP approach owner (supported waypoint then Phase41 edge-step).
+- A2 remains OPEN; no Run 2; no 12K before five consecutive 8/8 strict.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 42 remaining non-entrants
+
 
 **Production code checkpoint:** `4379dbc250856b292b6cc2e3703b6aaf3bc8022b`.
 **Branch HEAD:** `747826227a9a6bee9c29cf65cc34f99cb55f3003`.
@@ -350,6 +367,7 @@ Read first, in order:
 70. `docs/autonomous-village/2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md`
 71. `docs/autonomous-village/2026-11-18-A2-PHASE41-DROP-EDGE-STEP-FIX.md`
 72. `docs/autonomous-village/2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`
+73. `docs/autonomous-village/2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`
 
 ## Permanent collaboration workflow
 
@@ -364,7 +382,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`. Six independent causes; Phase41 edge-step validated and not a regression; A2 2/8.
+- Latest technical report: `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`. Non-adjacent DROP has no movement owner; landing geometry valid, path one-node/completed.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -475,9 +493,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 43 diagnose the non-adjacent DROP landing/approach (IDX3/5 and IDX4 route index4): why the
-   executor stops 2–3 cells from a validated landing and exhausts 8/8 replans. Keep Phase41 edge-step.
-2. IDX2 (source recovery) and IDX7 (BUILD budget) are independent; do not bundle them.
+1. Phase 44: add a bounded non-adjacent DROP approach owner that advances to the supported waypoint
+   when the path returns completed, then hands off to Phase41 edge-step. DROP only; no budget/predicate
+   changes and no reopening Phase29/31/34/36/41.
+2. IDX2 source recovery and IDX7 BUILD remain independent.
 3. A2 OPEN; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[2,0,0]`.
 
 ## Worlds (preserve; do not overwrite)

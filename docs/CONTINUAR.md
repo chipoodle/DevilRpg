@@ -5152,3 +5152,9 @@ run/saves; hashes match; structural verification only.
 - Read-only at `74782622`; production `4379dbc2`; run `a2n-20261118-140906`; A2 2/8, C4 PASS [2,0,0].
 - Six independent causes: IDX2 source recovery; IDX3/5 DROP-approach 8/8 replans; IDX4 later non-adjacent DROP landing; IDX7 BUILD budget; IDX8 step/local budget.
 - Phase41 edge-step not a regression (IDX4 t24, IDX8 t279). Report: docs/autonomous-village/2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 43 non-adjacent DROP forensics
+
+- Read-only at `b624546c`; production `4379dbc2`; run `a2n-20261118-140906`.
+- IDX3/5 frozen at waypoint (one-node completed path, no owner), 8/8 replans. IDX4 later landing577,111,522 fits/support true but withinTolerance=false, no owner from distanceSqr7.065.
+- Phase41 edge-step not involved; no regression. Report: docs/autonomous-village/2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md. A2 OPEN.
