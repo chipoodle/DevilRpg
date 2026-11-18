@@ -5077,3 +5077,11 @@ run/saves; hashes match; structural verification only.
 - Static PASS: NAV_SNAP_POST_RESET 12, NAV_SNAP_OWNERSHIP 12, DROP 51, source 14, lint/diff/compile.
 - Runtime `a2n-20261117-190320`: A2 2/8 strict, 2/8 perimeter, C4 PASS [1,0,0]. 580 reset events; first plan accepted and TRAVERSING; later guards/duplicate protection active.
 - Report: docs/autonomous-village/2026-11-17-A2-PHASE31-POST-SNAP-STATE-RESET-FIX.md. A2 OPEN; no 12k.
+
+## 2026-11-18 — A2 Phase 32 non-entrant forensic
+
+- Read-only at `8d4c9b4f`; production `ec6aa339`; no runtime/production changes.
+- All 8 accounted: idx1/idx6 strict then combat death; idx2 no safe source neighbor; idx7 BUILD budget; idx3/4/5/8 timeout with 135-141 snap resets (~43 ticks/block).
+- Strict=62 radius current `rDentroParedAhora`; perimeter=71 cumulative; first strict events counted by gate.
+- Phase29/31 healthy for looped attackers; signature sentinel 0 not used in duplicate comparison, robustness only.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE32-NON-ENTRANT-FORENSIC-DIAGNOSIS.md. A2 OPEN.

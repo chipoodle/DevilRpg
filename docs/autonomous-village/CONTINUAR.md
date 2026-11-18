@@ -907,3 +907,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Production `ec6aa339`: reset stale oscillation/signature after verified snap; first post-snap route enters TRAVERSING.
 - Runtime `a2n-20261117-190320`: A2 2/8 strict; C4 PASS [1,0,0]; later guards and duplicate protection preserved.
 - Report: `docs/autonomous-village/2026-11-17-A2-PHASE31-POST-SNAP-STATE-RESET-FIX.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 32 non-entrant forensic
+
+- Read-only at `8d4c9b4f`; production `ec6aa339`.
+- 2/8 strict explained: two post-entry deaths, two terminal nav failures, four snap-churn timeouts.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE32-NON-ENTRANT-FORENSIC-DIAGNOSIS.md`. A2 OPEN.
