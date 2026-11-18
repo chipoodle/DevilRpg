@@ -925,3 +925,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Production `ee0c4fe4`: supported approach waypoint before landing; Phase33 corner-cut churn removed.
 - Runtime `a2n-20261117-210328`: A2 2/8 strict; C4 PASS [1,0,0]; adjacent DROP non-descent remains.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 35 adjacent DROP non-descent
+
+- Read-only at `1d1e1e3e`; production `ee0c4fe4`.
+- IDX4 nudge predicate rejects landing because vertical drop counts in Manhattan; no physical command. IDX8 independent BUILD fail.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE35-ADJACENT-DROP-NON-DESCENT-DIAGNOSIS.md`. A2 OPEN.

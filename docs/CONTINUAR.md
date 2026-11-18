@@ -5099,3 +5099,10 @@ run/saves; hashes match; structural verification only.
 - Static PASS: NAV_DROP_APPROACH 10, DROP 51, source 14, snap ownership/reset 12/12.
 - Runtime `a2n-20261117-210328`: A2 2/8 strict, 2/8 perimeter, C4 PASS [1,0,0]; churn idx3 139->14, idx5 141->4, idx4/idx8 0.
 - New blocker: already-adjacent DROP does not descend (idx4 22 attempts, idx8 BUILD FAILED). Report: docs/autonomous-village/2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 35 adjacent DROP non-descent
+
+- Read-only at `1d1e1e3e`; production `ee0c4fe4`; no production/test/runtime changes.
+- IDX4 confirmed: Navigation.stop then aplicarAcercamientoAdyacente(landing) rejected by Manhattan 1+3+1=5 > max3; no MoveControl, no descent, 22 retries same position.
+- IDX8 independent: never reached DROP (intentosDescenso0), failed on BUILD budget.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE35-ADJACENT-DROP-NON-DESCENT-DIAGNOSIS.md. A2 OPEN.
