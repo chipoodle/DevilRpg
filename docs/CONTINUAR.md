@@ -5158,3 +5158,12 @@ run/saves; hashes match; structural verification only.
 - Read-only at `b624546c`; production `4379dbc2`; run `a2n-20261118-140906`.
 - IDX3/5 frozen at waypoint (one-node completed path, no owner), 8/8 replans. IDX4 later landing577,111,522 fits/support true but withinTolerance=false, no owner from distanceSqr7.065.
 - Phase41 edge-step not involved; no regression. Report: docs/autonomous-village/2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase44 non-adjacent DROP approach owner (PENDING HARNESS)
+
+- ChatGPT production implementation: `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`; parent `793816686e4373d4b581264468f2ee92ce431156`.
+- New bounded DROP-only owner transfers from Navigation to MoveControl when path ends before physical waypoint arrival or stalls >20 ticks; timeout >80, no-progress >20; safety revalidated, exact grounded occupancy required.
+- Phase41 edge-step unchanged and receives control only after the supported waypoint is physically occupied.
+- New `NAV_DROP_APPROACH_OWNERSHIP_POLICY_TEST`: 13 assertions, registered but **not run by ChatGPT**.
+- **PENDING HARNESS:** static tests/lint/diff/diagnostics compile on exact SHA, then A2 Run1 only if static passes. Capture owner/path/landing traces for IDX3/5/4. No Run2/Full12K; A2 OPEN.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE44-NON-ADJACENT-DROP-APPROACH-OWNER.md`.

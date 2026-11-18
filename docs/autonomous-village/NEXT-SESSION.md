@@ -1,20 +1,37 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 43 non-adjacent DROP approach/landing
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 44 non-adjacent DROP approach owner
 
-**Production code checkpoint:** `4379dbc250856b292b6cc2e3703b6aaf3bc8022b`.
-**Branch HEAD:** `b624546c8e8174092419bd8d3022845e1b10ae4c`.
-**Current report:** `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`.
-**Previous report:** `2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`.
+**Production implementation SHA:** `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`.
+**Implementation parent:** `793816686e4373d4b581264468f2ee92ce431156`.
+**Current report:** `2026-11-18-A2-PHASE44-NON-ADJACENT-DROP-APPROACH-OWNER.md`.
+**Previous forensic report:** `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`.
 
-- Phase 43: IDX3, IDX5 and later IDX4 fail in the non-adjacent DROP approach. Landing geometry is valid
-  where checked (IDX4 `fits/support=true`), but the last path is one-node/completed and no movement owner
-  advances the mob. IDX3/5 freeze 1–2 cells from their supported waypoint and exhaust 8/8 replans.
-- Phase41 edge-step is not involved and not a regression; it only activates when already adjacent.
-- Next: Phase 44 non-adjacent DROP approach owner (supported waypoint then Phase41 edge-step).
-- A2 remains OPEN; no Run 2; no 12K before five consecutive 8/8 strict.
+- Phase43 proved the non-adjacent DROP approach can lose movement ownership after Navigation returns a completed one-node path.
+- Phase44 adds a bounded DROP-only Navigation → MoveControl approach owner. Navigation retains control while progressing; completed path or >20 no-progress ticks transfers to MoveControl.
+- MoveControl advances only toward the already validated supported waypoint. Waypoint safety is rechecked each tick; arrival requires exact block occupancy, grounded state and valid support/AABB fit.
+- Owner bounds: >80 total ticks or >20 no-progress ticks aborts safely to OBSTRUCTED. No planner budgets, safety predicates, landing tolerances or Phase29/31/34/36/41 behavior changed.
+- New policy test: `NAV_DROP_APPROACH_OWNERSHIP_POLICY_TEST` (13 assertions), registered in `gradlew test`; **not run by ChatGPT**.
+- **PENDING HARNESS** on exact SHA `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`: static tests, strict lint, diff-check, diagnostics compile; only if all pass, A2 Run1. No Run2/Full12K.
+- Capture waypoint command/path result, owner selection/progress/reached/abort, Phase41 handoff and physical landing/cursor events for IDX3/5/4.
+- A2 remains **OPEN**. Five consecutive 8/8 strict runs remain the gate before Run2/Full12K.
+- Production commit: `b4f53966f7336d997ace224660d1a5cb892e2786` (implementation); `5b71f063798fc0fd50be4dd2b4d3d5c58041262a` (lifecycle hardening).
+- Harness remains execution/evidence owner; it must not modify production.
 
 ---
 
-# HISTORICAL — 2026-11-18 A2 Phase 42 remaining non-entrants
+# HISTORICAL — 2026-11-18 A2 Phase 43 non-adjacent DROP approach/landing
+
+**Production code checkpoint:** `4379dbc250856b292b6cc2e3703b6aaf3bc8022b`.
+**Forensic source HEAD:** `b624546c8e8174092419bd8d3022845e1b10ae4c`.
+**Report:** `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`.
+
+- IDX3/5 froze short of the supported waypoint with a one-node completed path and no movement owner; each exhausted 8/8 replans.
+- IDX4's later non-adjacent landing at `577,111,522` had fit/support true but remained outside physical landing tolerance, with no movement owner toward the landing.
+- Phase41 edge-step was not involved and no regression was demonstrated. Missing immediate post-`moveTo` path result remains a forensic limitation.
+- Phase44 is the implementation response; see current checkpoint above. A2 remains OPEN.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 42 remaining non-entrants remaining non-entrants
 
 
 **Production code checkpoint:** `4379dbc250856b292b6cc2e3703b6aaf3bc8022b`.
