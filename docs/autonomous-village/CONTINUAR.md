@@ -901,3 +901,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only diagnosis at `b1c69d96`; production remains `192d0c52`.
 - Stale oscillation state aborts first post-snap route and poisons `lastRouteSignature`; seven identical replans exhaust 8/8.
 - Report: `docs/autonomous-village/2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md`. A2 OPEN.
+
+## 2026-11-17 — A2 Phase 31 post-snap state reset fix
+
+- Production `ec6aa339`: reset stale oscillation/signature after verified snap; first post-snap route enters TRAVERSING.
+- Runtime `a2n-20261117-190320`: A2 2/8 strict; C4 PASS [1,0,0]; later guards and duplicate protection preserved.
+- Report: `docs/autonomous-village/2026-11-17-A2-PHASE31-POST-SNAP-STATE-RESET-FIX.md`. A2 OPEN.

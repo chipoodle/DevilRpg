@@ -5070,3 +5070,10 @@ run/saves; hashes match; structural verification only.
 - Route exists (TRAVERSING and JUMP_UP t553), so not a geometry/planner dead end.
 - Git discrepancy: Phase29 report labeled initial HEAD cebca95b; actual parent was 4afbac50. No rewrite.
 - Report: docs/autonomous-village/2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md. A2 OPEN.
+
+## 2026-11-17 — A2 Phase 31 post-snap state reset fix
+
+- Production `ec6aa339`: one-time reset on verified snap completion clears recentCells/oscillating/occurrences and lastRouteSignature; first plan/route start telemetry added.
+- Static PASS: NAV_SNAP_POST_RESET 12, NAV_SNAP_OWNERSHIP 12, DROP 51, source 14, lint/diff/compile.
+- Runtime `a2n-20261117-190320`: A2 2/8 strict, 2/8 perimeter, C4 PASS [1,0,0]. 580 reset events; first plan accepted and TRAVERSING; later guards/duplicate protection active.
+- Report: docs/autonomous-village/2026-11-17-A2-PHASE31-POST-SNAP-STATE-RESET-FIX.md. A2 OPEN; no 12k.

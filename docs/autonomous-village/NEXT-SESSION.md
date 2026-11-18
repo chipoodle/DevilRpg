@@ -107,7 +107,9 @@
 - Report: `2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`.
 - Phase 30 read-only diagnosis: ROOT_CAUSE confirmed for post-snap exhaustion. First post-snap route accepted at t615, stale oscillation aborts at t616 and stores `lastRouteSignature`; seven deterministic identical replans are rejected by signature, reaching 8/8 at t3495.
 - Report: `2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md`.
-- **NEXT: Phase 31 reset/isolate stale oscillation history and signature after SNAP_COMPLETE; do not change budgets/snap contract.**
+- Harness Phase 31 production `ec6aa339`: one-time `SNAP_POST_RESET` clears `recentCells`/`oscillating`/occurrences and invalidates `lastRouteSignature`; first post-snap plan accepted and TRAVERSING; later guards/duplicate protection preserved. Static 12-assertion post-reset test PASS; runtime `a2n-20261117-190320` A2 2/8 strict, C4 PASS `[1,0,0]`.
+- Report: `2026-11-17-A2-PHASE31-POST-SNAP-STATE-RESET-FIX.md`.
+- **NEXT: Phase 32 diagnose current A2 non-entrants; Phase 29/31 contracts remain protected.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -298,6 +300,7 @@ Read first, in order:
 58. `docs/autonomous-village/2026-11-17-A2-PHASE28-DROP-SNAP-OWNERSHIP-DIAGNOSIS.md`
 59. `docs/autonomous-village/2026-11-17-A2-PHASE29-DROP-SNAP-EXCLUSIVE-OWNERSHIP-FIX.md`
 60. `docs/autonomous-village/2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md`
+61. `docs/autonomous-village/2026-11-17-A2-PHASE31-POST-SNAP-STATE-RESET-FIX.md`
 
 ## Permanent collaboration workflow
 
@@ -312,7 +315,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-17-A2-PHASE30-IDX4-POST-SNAP-REPLAN-DIAGNOSIS.md`. Confirmed stale oscillation abort + stored signature poison seven identical replans; route exists.
+- Latest technical report: `2026-11-17-A2-PHASE31-POST-SNAP-STATE-RESET-FIX.md`. Post-snap reset validated; first plan/route starts TRAVERSING; A2 2/8 strict, C4 PASS.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -423,9 +426,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 31: reset/isolate stale oscillation history and `lastRouteSignature` after `SNAP_COMPLETE`;
-   first post-snap route must traverse, and identical replans must not be rejected by a poisoned signature.
-2. Do not change the 8/8 limit, budgets, support/fit, or Phase 29 exclusive-snap contract.
+1. Phase 32 diagnose current A2 non-entrants and the remaining 2/8 strict result; do not reopen the
+   Phase 29 exclusive-snap or Phase 31 post-reset contracts.
+2. Do not change 8/8, budgets, support/fit, tolerances or Phase 29 semantics.
 3. A2 OPEN; no Run 2 unless 8/8 strict; no 12k before five consecutive 8/8 strict runs.
 4. C4 PASS `[1,0,0]`; save/reload OPEN.
 
