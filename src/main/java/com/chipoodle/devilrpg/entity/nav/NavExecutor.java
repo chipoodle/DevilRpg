@@ -233,6 +233,12 @@ public final class NavExecutor {
     private boolean dropDescentStalledReported;
     private double dropDescentStartY;
     private long dropDescentCommandTick;
+    private boolean dropEdgeStepActive;
+    private BlockPos dropEdgeStepTakeoff;
+    private BlockPos dropEdgeStepLanding;
+    private int dropEdgeStepTicks;
+    private int dropEdgeStepNoProgress;
+    private double dropEdgeStepBestDistance;
 
     // ---- Instrumentación ----
     private int plansRun;
@@ -3663,6 +3669,101 @@ public final class NavExecutor {
      * an adjacent validated cell. Keep the physical-arrival invariant, but nudge the mob into that
      * cell through MoveControl instead of falsely advancing the route.
      */
+    private void activateDropEdgeStep(BlockPos takeoff, BlockPos landing) {
+        dropEdgeStepActive = true;
+        dropEdgeStepTakeoff = takeoff.immutable();
+        dropEdgeStepLanding = landing.immutable();
+        dropEdgeStepTicks = 0;
+        dropEdgeStepNoProgress = 0;
+        dropEdgeStepBestDistance = Double.MAX_VALUE;
+        mob.getNavigation().stop();
+        if (NavTrace.on()) {
+            NavTrace.ev("DROP_EDGE_STEP_SELECTED", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime()
+                    + " takeoff=" + takeoff.toShortString() + " landing=" + landing.toShortString()
+                    + " pos=" + mob.blockPosition().toShortString() + " grounded=" + mob.onGround());
+            NavTrace.ev("DROP_EDGE_STEP_OWNER", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime() + " owner=MOVE_CONTROL transition=DROP");
+        }
+        commandDropEdgeStep(landing, mob.getY(), false);
+    }
+
+    private void tickDropEdgeStep(BlockPos landing, long now) {
+        dropEdgeStepTicks++;
+        net.minecraft.world.phys.AABB box = mob.getBoundingBox();
+        boolean offSupport = NavDropEdgeStepPolicy.fullyOffSupport(box,
+                pos -> NavObstruction.hasSupport(mob.level(), pos));
+        if (offSupport || mob.getY() < dropEdgeStepTakeoff.getY() - 0.05D) {
+            if (NavTrace.on()) {
+                NavTrace.ev("DROP_EDGE_STEP_SUPPORT_CLEARED", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " pos=" + mob.blockPosition().toShortString()
+                        + " aabb=" + box + " support=false");
+                if (mob.getY() < dropEdgeStepTakeoff.getY() - 0.05D) {
+                    NavTrace.ev("DROP_EDGE_STEP_DESCENT_STARTED", "uuid=" + mob.getUUID()
+                            + " tick=" + now + " y=" + mob.getY());
+                }
+            }
+            commandDropEdgeStep(landing, landing.getY(), true);
+            dropEdgeStepActive = false;
+            return;
+        }
+        double dx = (landing.getX() + 0.5D) - mob.getX();
+        double dz = (landing.getZ() + 0.5D) - mob.getZ();
+        double distance = Math.sqrt(dx * dx + dz * dz);
+        if (distance < dropEdgeStepBestDistance - 0.01D) {
+            dropEdgeStepBestDistance = distance;
+            dropEdgeStepNoProgress = 0;
+        } else {
+            dropEdgeStepNoProgress++;
+        }
+        if (NavDropEdgeStepPolicy.noProgress(dropEdgeStepNoProgress)) {
+            clearDropEdgeStep("no_progress");
+            state = NavState.OBSTRUCTED;
+            return;
+        }
+        if (NavDropEdgeStepPolicy.timedOut(dropEdgeStepTicks)) {
+            clearDropEdgeStep("timeout");
+            state = NavState.OBSTRUCTED;
+            return;
+        }
+        commandDropEdgeStep(landing, mob.getY(), false);
+        if (NavTrace.on() && dropEdgeStepTicks % 5 == 0) {
+            NavTrace.ev("DROP_EDGE_STEP_PROGRESS", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " pos=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                            mob.getX(), mob.getY(), mob.getZ())
+                    + " horizontal=" + String.format(java.util.Locale.ROOT, "%.3f", distance)
+                    + " grounded=" + mob.onGround() + " aabb=" + box);
+        }
+    }
+
+    private void commandDropEdgeStep(BlockPos landing, double y, boolean descending) {
+        double tx = NavDropEdgeStepPolicy.horizontalTargetX(landing);
+        double tz = NavDropEdgeStepPolicy.horizontalTargetZ(landing);
+        mob.getMoveControl().setWantedPosition(tx, y, tz, 0.9D);
+        if (NavTrace.on()) {
+            NavTrace.ev(descending ? "DROP_EDGE_STEP_DESCENT_COMMAND" : "DROP_EDGE_STEP_COMMAND",
+                    "uuid=" + mob.getUUID() + " tick=" + mob.level().getGameTime()
+                            + " takeoff=" + (dropEdgeStepTakeoff == null ? "-" : dropEdgeStepTakeoff.toShortString())
+                            + " landing=" + landing.toShortString()
+                            + " target=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f", tx, y, tz)
+                            + " pos=" + mob.blockPosition().toShortString());
+        }
+    }
+
+    private void clearDropEdgeStep(String reason) {
+        if (dropEdgeStepActive && NavTrace.on()) {
+            NavTrace.ev("DROP_EDGE_STEP_ABORTED", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime() + " reason=" + reason
+                    + " pos=" + mob.blockPosition().toShortString());
+        }
+        dropEdgeStepActive = false;
+        dropEdgeStepTakeoff = null;
+        dropEdgeStepLanding = null;
+        dropEdgeStepTicks = 0;
+        dropEdgeStepNoProgress = 0;
+        dropEdgeStepBestDistance = Double.MAX_VALUE;
+    }
+
     private void aplicarAcercamientoAdyacente(NavRoute.Node node, Vec3 aim, double speed) {
         if (node == null || !mob.getNavigation().isDone()) {
             return;
@@ -4137,6 +4238,7 @@ public final class NavExecutor {
 
     private void traverse(long now) {
         if (route == null) {
+            clearDropEdgeStep("route_null");
             state = NavState.PLANNING;
             return;
         }
@@ -4381,6 +4483,13 @@ public final class NavExecutor {
                         aim.x, aim.y, aim.z, 1.0D);
             }
             case DROP -> {
+                if (dropEdgeStepActive) {
+                    if (dropEdgeStepLanding != null && dropEdgeStepLanding.equals(node.pos())) {
+                        tickDropEdgeStep(node.pos(), mob.level().getGameTime());
+                        return;
+                    }
+                    clearDropEdgeStep("route_node_changed");
+                }
                 // A2 Stage 6F · DESCENSO EXPLICITO Y VERIFICADO. El nodo es el ATERRIZAJE: se describe y se valida
                 // (contigüidad, holgura de pies y cuerpo, soporte con colisión —construido y VERIFICADO si es obra
                 // del plan—, caída dentro del límite y CAMINO DE CAÍDA despejado) ANTES de ordenar movimiento. La
@@ -4663,11 +4772,22 @@ public final class NavExecutor {
                                     + Math.abs(approachCurrent.getZ() - node.pos().getZ())));
                 }
                 if (alreadyAdjacent) {
-                    mob.getNavigation().stop();
                     int horizontalDistance = Math.abs(approachCurrent.getX() - node.pos().getX())
                             + Math.abs(approachCurrent.getZ() - node.pos().getZ());
                     boolean fitsLanding = NavObstruction.fits(mob.level(), mob, node.pos());
                     boolean supportLanding = NavObstruction.hasSupport(mob.level(), node.pos());
+                    boolean takeoffOk = esPieValido(approachCurrent)
+                            && NavObstruction.hasSupport(mob.level(), approachCurrent)
+                            && NavObstruction.fitsAtCellCenter(mob.level(), mob, approachCurrent);
+                    if (NavDropEdgeStepPolicy.shouldStart(node.transition() == NavRoute.Transition.DROP,
+                            mob.getNavigation().isDone(), mob.onGround(),
+                            approachCurrent.equals(node.pos()), horizontalDistance,
+                            NavDropEdgeStepPolicy.MAX_HORIZONTAL, takeoffOk, takeoffOk,
+                            supportLanding, fitsLanding)) {
+                        activateDropEdgeStep(approachCurrent, node.pos());
+                        return;
+                    }
+                    mob.getNavigation().stop();
                     boolean nudge = NavAdjacentApproachPolicy.shouldNudgeDrop(
                             mob.getNavigation().isDone(), horizontalDistance, 3,
                             fitsLanding, supportLanding);
@@ -5410,6 +5530,7 @@ public final class NavExecutor {
      * physically validated source cell.
      */
     private void resetPostSnapNavigationState(BlockPos validatedSource, long now) {
+        clearDropEdgeStep("post_snap_reset");
         if (!NavSnapPostResetPolicy.shouldResetAfterSnap(true)) {
             return;
         }
