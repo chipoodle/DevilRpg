@@ -5174,3 +5174,10 @@ run/saves; hashes match; structural verification only.
 - A2 `a2n-20261118-145308`: 3/8 strict (idx1 t559, idx5 t730, idx6 t650), C4 PASS [2,0,0].
 - IDX3/4/5 ownership chain Navigation->MoveControl->Phase41->landing validated. Remaining: IDX3 BUILD64/64, IDX4 dist72.12 global budget, IDX2/7/8 independent.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE44-VALIDATION.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 45 IDX3/IDX4 forensics
+
+- Read-only run `a2n-20261118-145308`; production unchanged.
+- IDX3: local objective cycle 607,94,601/613,88,601/608,95,601; fallback result=null; 64/64,10/10; physical stairs24/24.
+- IDX4: vertical-only DROP at597,79,499 ->597,78,499; horizontal dist0 outside Phase41; landing fits/support true, landingHeightReached=false; final horizontal dist72.12.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md. A2 OPEN 3/8.

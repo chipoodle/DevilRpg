@@ -1,4 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 44 non-adjacent DROP approach owner
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 45 IDX3/IDX4 forensics
+
+**Production SHA:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`.
+**Current report:** `2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`.
+**Previous validation:** `2026-11-18-A2-PHASE44-VALIDATION.md`.
+
+- Phase44/41 contracts remain frozen and validated.
+- Phase45: IDX3 is a local BUILD/step objective cycle with fallback `null` (64/64, 10/10); IDX4 is a
+  vertical-only DROP at `597,79,499` → `597,78,499`, outside Phase41's horizontal-distance>0 activation.
+- A2 OPEN at 3/8 strict (`a2n-20261118-145308`); C4 PASS `[2,0,0]`.
+- No Run2/Full12K until five consecutive 8/8 strict.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 44 non-adjacent DROP approach owner
+
 
 **Production implementation SHA:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`.
 **Implementation parent:** `793816686e4373d4b581264468f2ee92ce431156`.
@@ -386,6 +401,7 @@ Read first, in order:
 72. `docs/autonomous-village/2026-11-18-A2-PHASE42-REMAINING-NON-ENTRANTS-FORENSIC.md`
 73. `docs/autonomous-village/2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`
 74. `docs/autonomous-village/2026-11-18-A2-PHASE44-VALIDATION.md`
+75. `docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`
 
 ## Permanent collaboration workflow
 
@@ -511,8 +527,8 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 45: diagnose IDX4 near-miss (final dist72.12, global budget) and IDX3 BUILD/step 64/64 after
-   validated approach ownership. Keep Phase44/41 contracts frozen.
+1. Phase 46: decide/implement vertical-only DROP handling (distance0 after exact takeoff occupancy)
+   and separately repair IDX3's local stair fallback cycle. Keep Phase44/41 frozen; no budget changes.
 2. IDX2 source recovery and IDX7/IDX8 budgets remain independent.
 3. A2 OPEN at 3/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[2,0,0]`.
 

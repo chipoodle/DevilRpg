@@ -994,3 +994,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Production `ed31b815` static PASS; A2 3/8 strict, C4 PASS [2,0,0].
 - Non-adjacent DROP ownership validated for IDX3/4/5. A2 OPEN.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE44-VALIDATION.md`.
+
+## 2026-11-18 — A2 Phase 45 IDX3/IDX4 forensics
+
+- Read-only; production unchanged.
+- IDX3 BUILD/step local cycle fallback null; IDX4 vertical-only DROP distance0 outside Phase41.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`. A2 OPEN.

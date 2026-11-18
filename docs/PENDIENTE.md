@@ -4,13 +4,13 @@
 
 > **Roles obligatorios:** ChatGPT modifica el código de producción directamente en GitHub y publica commits. Harness sincroniza, preserva trabajo local, ejecuta compilaciones/pruebas/lint/runtime, mide y genera reportes. Harness no implementa correcciones de producción; devuelve evidencia a ChatGPT. Ninguno declara validado un SHA sin ejecutar y documentar los checks sobre ese SHA exacto.
 
-> **Checkpoint de código pendiente de validación:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d` en `feature/autonomous-village` (Phase44 DROP approach owner). ChatGPT implementó el cambio; Harness debe validar exactamente este SHA. El HEAD real de rama puede avanzar con documentación, por lo que debe verificarse antes de sincronizar.
+> **Checkpoint validado:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d` en `feature/autonomous-village` (Phase44 DROP approach owner). Harness ejecutó static PASS y A2 Run1 `a2n-20261118-145308` = 3/8 estricto, C4 PASS `[2,0,0]`. A2 OPEN.
 >
-> **A2 Phase44:** transferencia acotada Navigation → MoveControl para aproximación DROP no adyacente. Nueva política con 13 aserciones registrada, todavía no ejecutada por ChatGPT. Static Harness primero; A2 Run1 solo si todo pasa. A2 OPEN; no Run2/Full12K hasta cinco corridas consecutivas 8/8 estrictas.
+> **A2 Phase45 (forensics, solo lectura):** IDX3 es un ciclo local BUILD/STEP con fallback `null` (64/64, 10/10); IDX4 es un DROP vertical-only en `597,79,499 -> 597,78,499`, fuera de la activación Phase41 por distancia horizontal>0. Sin cambios de producción. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 
-> **A2:** último runtime evidenciado `a2n-20261118-140906`: 2/8 estrictos, 2/8 perímetro; C4 PASS `[2,0,0]`. Phase43 aisló el bloqueo de aproximación DROP no adyacente; Phase44 implementado y pendiente de validación Harness. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[2,0,0]`; save/reload OPEN.
+> **A2:** último runtime evidenciado `a2n-20261118-145308`: 3/8 estrictos, 3/8 perímetro; C4 PASS `[2,0,0]`. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[2,0,0]`; save/reload OPEN.
 
 # Estado de cola actualizado — 2026-11-12 22:43
 
