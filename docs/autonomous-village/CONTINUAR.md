@@ -943,3 +943,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only at `4c002966`; production `6aec35c6`.
 - Command targets landing; paths exist; no vertical movement. Exact physical cause not logged; Stage B required.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE37-DROP-DESCENT-PHYSICAL-FORENSICS.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 38 Stage B attempt (BLOCKED)
+
+- Temporary probe run `a2n-20261118-110342` crashed in global planning before DROP; no tick traces.
+- Instrumentation reverted; production unchanged at `6aec35c6`.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE38-DROP-DESCENT-PHYSICAL-EXECUTION-TRACE.md`. A2 OPEN.

@@ -5120,3 +5120,9 @@ run/saves; hashes match; structural verification only.
 - Real Navigation.moveTo destination is landing center, not takeoff. IDX4/IDX8 have paths n=2 and horizontal movement, but Y unchanged; IDX3/5 emit no descent command.
 - Collision vs MoveControl/nav completion remains NOT_LOGGED; Stage B proposed only.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE37-DROP-DESCENT-PHYSICAL-FORENSICS.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 38 Stage B attempt (BLOCKED)
+
+- Read-only at `cd5890c2`; temporary travel/probe instrumentation added, run `a2n-20261118-110342`, then fully reverted.
+- Run crashed in NavObstruction.fits/NavPlanner watchdog before DROP; no idx4/idx8 tick traces, no phase38 CSV.
+- Original worlds intact. Production unchanged at `6aec35c6`. Report: docs/autonomous-village/2026-11-18-A2-PHASE38-DROP-DESCENT-PHYSICAL-EXECUTION-TRACE.md. A2 OPEN.
