@@ -113,7 +113,9 @@
 - Report: `2026-11-18-A2-PHASE32-NON-ENTRANT-FORENSIC-DIAGNOSIS.md`.
 - Phase 33 forensic: ROOT_CAUSE_CONFIRMED common mechanism. DROP_APPROACH calls `Navigation.moveTo` to landing center, bypassing supported intermediate node; center crosses into unsupported adjacent column, source snap pulls back, repeats every ~43 ticks. idx3/4/5/8 confirmed with first cycle positions.
 - Report: `2026-11-18-A2-PHASE33-SNAP-CHURN-GEOMETRY-DIAGNOSIS.md`.
-- **NEXT: Phase 34 fix DROP approach to honor supported intermediate path cells; do not change Phase 29/31, budgets, or support.**
+- Harness Phase 34 production `ee0c4fe4`: `NavDropApproachPolicy` selects supported adjacent waypoint before landing; DROP no longer direct-targets across unsupported column. Static 10-assertion PASS; runtime `a2n-20261117-210328` A2 2/8 strict, C4 PASS `[1,0,0]`. Churn resets: idx3 139→14, idx5 141→4, idx4/idx8 0.
+- Report: `2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md`.
+- **NEXT: Phase 35 diagnose already-adjacent DROP non-descent (idx4/idx8); do not reopen Phase 29/31 or approach contract.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -307,6 +309,7 @@ Read first, in order:
 61. `docs/autonomous-village/2026-11-17-A2-PHASE31-POST-SNAP-STATE-RESET-FIX.md`
 62. `docs/autonomous-village/2026-11-18-A2-PHASE32-NON-ENTRANT-FORENSIC-DIAGNOSIS.md`
 63. `docs/autonomous-village/2026-11-18-A2-PHASE33-SNAP-CHURN-GEOMETRY-DIAGNOSIS.md`
+64. `docs/autonomous-village/2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md`
 
 ## Permanent collaboration workflow
 
@@ -321,7 +324,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-18-A2-PHASE33-SNAP-CHURN-GEOMETRY-DIAGNOSIS.md`. DROP direct-to-landing corner cut crosses unsupported column; source snap repeats every ~43 ticks.
+- Latest technical report: `2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md`. Approach fix validated; churn reduced 139→14/141→4/135→0/136→0; A2 2/8; adjacent DROP non-descent remains.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -432,9 +435,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 34: make DROP_APPROACH honor the accepted path's supported intermediate cell(s) instead of
-   moving directly to the landing center across an unsupported column. No support/fit relaxation.
-2. Preserve Phase 29 exclusive snap and Phase 31 post-snap reset unchanged.
+1. Phase 35: diagnose why an already-adjacent DROP does not physically descend (idx4/idx8) despite
+   supported current cell and valid landing; do not reopen Phase 29/31 or the approach contract.
+2. Preserve budgets, support/fit, collision, tolerances and 8/8.
 3. A2 OPEN; no Run 2 unless 8/8 strict; no 12k before five consecutive 8/8 strict runs.
 4. C4 PASS `[1,0,0]`; save/reload OPEN.
 

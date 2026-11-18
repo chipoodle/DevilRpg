@@ -5092,3 +5092,10 @@ run/saves; hashes match; structural verification only.
 - ROOT_CAUSE_CONFIRMED common: DROP_APPROACH moveTo landing center bypasses supported intermediate path node; center crosses unsupported adjacent column, source snap pulls back, repeats every ~43 ticks.
 - idx3/4/5/8 first cycles documented with exact positions and DROP targets. Phase29/31 healthy.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE33-SNAP-CHURN-GEOMETRY-DIAGNOSIS.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 34 DROP approach supported-path fix
+
+- Production `ee0c4fe4`: NavDropApproachPolicy selects supported adjacent waypoint before landing; direct landing target no longer skips intermediate column.
+- Static PASS: NAV_DROP_APPROACH 10, DROP 51, source 14, snap ownership/reset 12/12.
+- Runtime `a2n-20261117-210328`: A2 2/8 strict, 2/8 perimeter, C4 PASS [1,0,0]; churn idx3 139->14, idx5 141->4, idx4/idx8 0.
+- New blocker: already-adjacent DROP does not descend (idx4 22 attempts, idx8 BUILD FAILED). Report: docs/autonomous-village/2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md. A2 OPEN.

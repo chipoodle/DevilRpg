@@ -919,3 +919,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only at `03017bba`; production `ec6aa339`.
 - Confirmed DROP direct-to-landing approach cuts through unsupported column; snap churn is self-induced.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE33-SNAP-CHURN-GEOMETRY-DIAGNOSIS.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 34 DROP approach supported-path fix
+
+- Production `ee0c4fe4`: supported approach waypoint before landing; Phase33 corner-cut churn removed.
+- Runtime `a2n-20261117-210328`: A2 2/8 strict; C4 PASS [1,0,0]; adjacent DROP non-descent remains.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE34-DROP-APPROACH-SUPPORTED-PATH-FIX.md`. A2 OPEN.
