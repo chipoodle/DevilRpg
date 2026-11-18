@@ -239,6 +239,14 @@ public final class NavExecutor {
     private int dropEdgeStepTicks;
     private int dropEdgeStepNoProgress;
     private double dropEdgeStepBestDistance;
+    /** Pending/active owner for the supported non-adjacent DROP approach waypoint. */
+    private boolean dropApproachActive;
+    private boolean dropApproachMoveOwned;
+    private BlockPos dropApproachWaypoint;
+    private BlockPos dropApproachLanding;
+    private int dropApproachTicks;
+    private int dropApproachNoProgress;
+    private double dropApproachBestDistance;
 
     // ---- Instrumentación ----
     private int plansRun;
@@ -3664,6 +3672,171 @@ public final class NavExecutor {
         lastMoveTraceZ = mob.getZ();
     }
 
+
+    private boolean dropApproachCellSafe(BlockPos cell) {
+        return cell != null && esPieValido(cell)
+                && NavObstruction.hasSupport(mob.level(), cell)
+                && NavObstruction.fitsAtCellCenter(mob.level(), mob, cell);
+    }
+
+    private boolean dropApproachWaypointReached() {
+        return dropApproachWaypoint != null
+                && mob.blockPosition().equals(dropApproachWaypoint)
+                && mob.onGround()
+                && dropApproachCellSafe(dropApproachWaypoint);
+    }
+
+    private void beginDropApproachTracking(BlockPos waypoint, BlockPos landing) {
+        dropApproachActive = true;
+        dropApproachMoveOwned = false;
+        dropApproachWaypoint = waypoint.immutable();
+        dropApproachLanding = landing.immutable();
+        dropApproachTicks = 0;
+        dropApproachNoProgress = 0;
+        dropApproachBestDistance = horizontalDistanceToDropApproach(waypoint);
+    }
+
+    private double horizontalDistanceToDropApproach(BlockPos waypoint) {
+        double dx = waypoint.getX() + 0.5D - mob.getX();
+        double dz = waypoint.getZ() + 0.5D - mob.getZ();
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /**
+     * Waits for the normal path while it makes progress. If it ends early or stalls, this
+     * DROP-only owner takes MoveControl and advances to the already validated supported waypoint.
+     * Returns true only after physical, grounded occupancy of that waypoint is verified.
+     */
+    private boolean tickDropApproachOwner(BlockPos landing, long now) {
+        if (!dropApproachActive || dropApproachWaypoint == null
+                || dropApproachLanding == null || !dropApproachLanding.equals(landing)) {
+            return false;
+        }
+        if (dropApproachWaypointReached()) {
+            if (NavTrace.on()) {
+                NavTrace.ev("DROP_APPROACH_OWNER_REACHED", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " waypoint=" + dropApproachWaypoint.toShortString()
+                        + " landing=" + landing.toShortString()
+                        + " pos=" + mob.blockPosition().toShortString()
+                        + " grounded=true support=true fit=true owner="
+                        + (dropApproachMoveOwned ? "MOVE_CONTROL" : "NAVIGATION"));
+            }
+            clearDropApproachOwner("waypoint_reached");
+            return true;
+        }
+
+        dropApproachTicks++;
+        if (!dropApproachCellSafe(dropApproachWaypoint)) {
+            abortDropApproachOwner("waypoint_no_longer_safe", now);
+            return false;
+        }
+        if (NavDropApproachOwnershipPolicy.timedOut(dropApproachTicks)) {
+            abortDropApproachOwner("timeout", now);
+            return false;
+        }
+
+        // Do not steer horizontally while airborne. Vanilla gravity/collision remains authoritative.
+        if (!mob.onGround()) {
+            if (dropApproachMoveOwned) {
+                mob.getNavigation().stop();
+            }
+            return false;
+        }
+
+        BlockPos current = mob.blockPosition();
+        boolean currentSupported = esPieValido(current)
+                && !NavDropEdgeStepPolicy.fullyOffSupport(mob.getBoundingBox(),
+                        pos -> NavObstruction.hasSupport(mob.level(), pos))
+                && NavObstruction.fitsActualAabb(mob.level(), mob);
+        if (dropApproachMoveOwned && !currentSupported) {
+            abortDropApproachOwner("current_source_not_physically_supported", now);
+            return false;
+        }
+
+        double distance = horizontalDistanceToDropApproach(dropApproachWaypoint);
+        if (NavDropApproachOwnershipPolicy.madeProgress(distance, dropApproachBestDistance)) {
+            dropApproachBestDistance = distance;
+            dropApproachNoProgress = 0;
+        } else {
+            dropApproachNoProgress++;
+        }
+
+        if (!dropApproachMoveOwned && NavDropApproachOwnershipPolicy.shouldTakeOwnership(
+                true, mob.getNavigation().isDone(), false, dropApproachNoProgress)) {
+            dropApproachMoveOwned = true;
+            dropApproachNoProgress = 0;
+            dropApproachBestDistance = distance;
+            mob.getNavigation().stop();
+            if (NavTrace.on()) {
+                NavTrace.ev("DROP_APPROACH_OWNER_SELECTED", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " owner=MOVE_CONTROL"
+                        + " reason=" + (mob.getNavigation().isDone()
+                                ? "navigation_done_before_waypoint" : "navigation_no_progress")
+                        + " waypoint=" + dropApproachWaypoint.toShortString()
+                        + " landing=" + landing.toShortString()
+                        + " pos=" + current.toShortString()
+                        + " distance=" + String.format(java.util.Locale.ROOT, "%.3f", distance));
+            }
+        }
+
+        if (!dropApproachMoveOwned) {
+            return false;
+        }
+        if (NavDropApproachOwnershipPolicy.noProgress(dropApproachNoProgress)) {
+            abortDropApproachOwner("no_progress", now);
+            return false;
+        }
+
+        mob.getNavigation().stop();
+        mob.getMoveControl().setWantedPosition(
+                dropApproachWaypoint.getX() + 0.5D, mob.getY(),
+                dropApproachWaypoint.getZ() + 0.5D, 0.9D);
+        if (NavTrace.on() && dropApproachTicks % 5 == 0) {
+            NavTrace.ev("DROP_APPROACH_OWNER_PROGRESS", "uuid=" + mob.getUUID()
+                    + " tick=" + now + " owner=MOVE_CONTROL"
+                    + " waypoint=" + dropApproachWaypoint.toShortString()
+                    + " landing=" + landing.toShortString()
+                    + " pos=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                            mob.getX(), mob.getY(), mob.getZ())
+                    + " distance=" + String.format(java.util.Locale.ROOT, "%.3f", distance)
+                    + " noProgress=" + dropApproachNoProgress);
+        }
+        return false;
+    }
+
+    private void abortDropApproachOwner(String reason, long now) {
+        if (NavTrace.on()) {
+            NavTrace.ev("DROP_APPROACH_OWNER_ABORTED", "uuid=" + mob.getUUID()
+                    + " tick=" + now + " reason=" + reason
+                    + " waypoint=" + (dropApproachWaypoint == null ? "-" : dropApproachWaypoint.toShortString())
+                    + " landing=" + (dropApproachLanding == null ? "-" : dropApproachLanding.toShortString())
+                    + " pos=" + mob.blockPosition().toShortString()
+                    + " ticks=" + dropApproachTicks
+                    + " noProgress=" + dropApproachNoProgress);
+        }
+        clearDropApproachOwner(reason);
+        mob.getNavigation().stop();
+        mob.getMoveControl().setWantedPosition(mob.getX(), mob.getY(), mob.getZ(), 0.0D);
+        state = NavState.OBSTRUCTED;
+    }
+
+    private void clearDropApproachOwner(String reason) {
+        if (dropApproachActive && NavTrace.on()) {
+            NavTrace.ev("DROP_APPROACH_OWNER_CLEARED", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime() + " reason=" + reason
+                    + " waypoint=" + (dropApproachWaypoint == null ? "-" : dropApproachWaypoint.toShortString())
+                    + " landing=" + (dropApproachLanding == null ? "-" : dropApproachLanding.toShortString())
+                    + " owner=" + (dropApproachMoveOwned ? "MOVE_CONTROL" : "NAVIGATION"));
+        }
+        dropApproachActive = false;
+        dropApproachMoveOwned = false;
+        dropApproachWaypoint = null;
+        dropApproachLanding = null;
+        dropApproachTicks = 0;
+        dropApproachNoProgress = 0;
+        dropApproachBestDistance = Double.MAX_VALUE;
+    }
+
     /**
      * PathNavigation can return an empty, already-complete path when the mob's bounding box overlaps
      * an adjacent validated cell. Keep the physical-arrival invariant, but nudge the mob into that
@@ -4238,6 +4411,7 @@ public final class NavExecutor {
 
     private void traverse(long now) {
         if (route == null) {
+            clearDropApproachOwner("route_null");
             clearDropEdgeStep("route_null");
             state = NavState.PLANNING;
             return;
@@ -4333,6 +4507,9 @@ public final class NavExecutor {
             NavRoute.Node reachedNode = node;
             int previousRouteIndex = routeIndex;
             routeIndex++;
+            if (reachedNode.transition() == NavRoute.Transition.DROP) {
+                clearDropApproachOwner("landing_confirmed");
+            }
             if (reachedNode.transition() == NavRoute.Transition.DROP && NavTrace.on()) {
                 NavTrace.ev("DROP_LANDING_CONFIRMED", "uuid=" + mob.getUUID()
                         + " tick=" + now + " landing=" + reachedNode.pos().toShortString()
@@ -4483,11 +4660,21 @@ public final class NavExecutor {
                         aim.x, aim.y, aim.z, 1.0D);
             }
             case DROP -> {
+                if (dropApproachActive) {
+                    if (dropApproachLanding == null || !dropApproachLanding.equals(node.pos())) {
+                        clearDropApproachOwner("route_node_changed");
+                        return;
+                    }
+                    if (!tickDropApproachOwner(node.pos(), mob.level().getGameTime())) {
+                        return;
+                    }
+                }
                 if (dropEdgeStepActive) {
                     if (dropEdgeStepLanding != null && dropEdgeStepLanding.equals(node.pos())) {
                         tickDropEdgeStep(node.pos(), mob.level().getGameTime());
                         return;
                     }
+                    clearDropApproachOwner("route_node_changed");
                     clearDropEdgeStep("route_node_changed");
                 }
                 // A2 Stage 6F · DESCENSO EXPLICITO Y VERIFICADO. El nodo es el ATERRIZAJE: se describe y se valida
@@ -4827,19 +5014,26 @@ public final class NavExecutor {
                                 + " reason=unsafe_takeoff_or_landing");
                     }
                 } else {
-                    mob.getNavigation().moveTo(approachWaypoint.getX() + 0.5D, mob.getY(),
+                    boolean pathAccepted = mob.getNavigation().moveTo(approachWaypoint.getX() + 0.5D, mob.getY(),
                             approachWaypoint.getZ() + 0.5D, 0.9D);
+                    beginDropApproachTracking(approachWaypoint, node.pos());
                     if (NavTrace.on()) {
                         NavTrace.ev("DROP_APPROACH_WAYPOINT_COMMAND", "uuid=" + mob.getUUID()
                                 + " tick=" + mob.level().getGameTime()
                                 + " waypoint=" + approachWaypoint.toShortString()
                                 + " landing=" + node.pos().toShortString()
+                                + " pathAccepted=" + pathAccepted
+                                + " navDone=" + mob.getNavigation().isDone()
                                 + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
                                         mob.getX(), mob.getY(), mob.getZ()));
                         NavTrace.ev("DROP_TAKEOFF_APPROACH_COMMAND", "uuid=" + mob.getUUID()
                                 + " tick=" + mob.level().getGameTime()
                                 + " takeoff=" + approachWaypoint.toShortString()
                                 + " landing=" + node.pos().toShortString());
+                    }
+                    if (!pathAccepted || mob.getNavigation().isDone()) {
+                        tickDropApproachOwner(node.pos(), mob.level().getGameTime());
+                        return;
                     }
                 }
                 traceActuatorCommand("DROP_APPROACH", BlockPos.containing(aim), mob.level().getGameTime());
@@ -5530,6 +5724,7 @@ public final class NavExecutor {
      * physically validated source cell.
      */
     private void resetPostSnapNavigationState(BlockPos validatedSource, long now) {
+        clearDropApproachOwner("post_snap_reset");
         clearDropEdgeStep("post_snap_reset");
         if (!NavSnapPostResetPolicy.shouldResetAfterSnap(true)) {
             return;
