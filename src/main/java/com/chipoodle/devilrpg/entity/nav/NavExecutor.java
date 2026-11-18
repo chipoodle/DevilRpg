@@ -4598,8 +4598,57 @@ public final class NavExecutor {
                                 Math.sqrt(mob.distanceToSqr(node.pos().getX() + 0.5D,
                                         node.pos().getY() + 0.5D, node.pos().getZ() + 0.5D))),
                         mob.level().getGameTime());
-                // Descenso: se deja caer al borde en vez de saltar.
-                mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 0.9D);
+                // Descenso: avanzar por una celda de aproximación soportada antes de apuntar al
+                // landing. Un moveTo directo al centro del landing puede cortar la esquina y cruzar
+                // una columna sin soporte aunque la ruta aceptada contenga intermedios válidos.
+                BlockPos approachCurrent = mob.blockPosition();
+                BlockPos approachWaypoint = NavDropApproachPolicy.choose(approachCurrent, node.pos(),
+                        cell -> esPieValido(cell)
+                                && NavObstruction.hasSupport(mob.level(), cell)
+                                && NavObstruction.fitsAtCellCenter(mob.level(), mob, cell));
+                if (approachWaypoint == null) {
+                    if (NavTrace.on()) {
+                        NavTrace.ev("DROP_APPROACH_PATH_ABORT", "uuid=" + mob.getUUID()
+                                + " tick=" + mob.level().getGameTime()
+                                + " current=" + approachCurrent.toShortString()
+                                + " landing=" + node.pos().toShortString()
+                                + " reason=no_supported_approach_cell");
+                    }
+                    state = NavState.OBSTRUCTED;
+                    lastMoveTarget = node.pos().toShortString() + ":DROP-SIN-APROXIMACION";
+                    return;
+                }
+                boolean alreadyAdjacent = approachWaypoint.equals(approachCurrent);
+                if (NavTrace.on()) {
+                    NavTrace.ev("DROP_APPROACH_WAYPOINT_SELECTED", "uuid=" + mob.getUUID()
+                            + " tick=" + mob.level().getGameTime()
+                            + " current=" + approachCurrent.toShortString()
+                            + " waypoint=" + approachWaypoint.toShortString()
+                            + " landing=" + node.pos().toShortString()
+                            + " alreadyAdjacent=" + alreadyAdjacent);
+                }
+                if (alreadyAdjacent) {
+                    mob.getNavigation().stop();
+                    if (NavTrace.on()) {
+                        NavTrace.ev("DROP_APPROACH_WAYPOINT_REACHED", "uuid=" + mob.getUUID()
+                                + " tick=" + mob.level().getGameTime()
+                                + " waypoint=" + approachWaypoint.toShortString()
+                                + " landing=" + node.pos().toShortString()
+                                + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                        mob.getX(), mob.getY(), mob.getZ()));
+                    }
+                } else {
+                    mob.getNavigation().moveTo(approachWaypoint.getX() + 0.5D, mob.getY(),
+                            approachWaypoint.getZ() + 0.5D, 0.9D);
+                    if (NavTrace.on()) {
+                        NavTrace.ev("DROP_APPROACH_WAYPOINT_COMMAND", "uuid=" + mob.getUUID()
+                                + " tick=" + mob.level().getGameTime()
+                                + " waypoint=" + approachWaypoint.toShortString()
+                                + " landing=" + node.pos().toShortString()
+                                + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
+                                        mob.getX(), mob.getY(), mob.getZ()));
+                    }
+                }
                 traceActuatorCommand("DROP_APPROACH", BlockPos.containing(aim), mob.level().getGameTime());
                 aplicarAcercamientoAdyacente(node, aim, 0.9D);
                 trazarComandoMovimiento(node, "DROP", aim.x, aim.y, aim.z, 0.9D);
