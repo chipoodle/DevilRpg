@@ -5133,3 +5133,10 @@ run/saves; hashes match; structural verification only.
 - Watchdog explained: synchronous global A* 8000 expansions x 56 offsets = 448000 edges, multiple bounded collision queries per edge, no tick yield; log says 60.00s (crash text ms-as-s). Probe not causal.
 - Deterministic IDX4/IDX8 DROP fixture designed; validation not executed.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 40 deterministic DROP fixture
+
+- Temporary fixture/probe run `a2n-20261118-134234` (IDX4-like) and `a2n-20261118-134458` (IDX8-like); all instrumentation reverted, production unchanged.
+- IDX4 TRACE_COMPLETE: local plan exp=1/900, no global; path 2 nodes then null; MoveControl.hasWanted=false all 82 rows; Y=122; verticalCollision=true; no step-off.
+- IDX8 FIXTURE_NO_DROP: no plan in300 ticks, no trace.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md. A2 OPEN.

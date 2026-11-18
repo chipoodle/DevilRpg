@@ -955,3 +955,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Read-only at `d3299d7c`; production `6aec35c6`.
 - Watchdog = 448k-edge synchronous A* burst, not probe. Fixture design ready; runtime not executed.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 40 deterministic DROP fixture
+
+- IDX4-like trace complete: path ends at edge, MoveControl inactive, no Y movement; IDX8 fixture no-plan.
+- Instrumentation reverted; production `6aec35c6` intact.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE40-DETERMINISTIC-DROP-FIXTURE-TRACE.md`. A2 OPEN.
