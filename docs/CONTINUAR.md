@@ -5085,3 +5085,10 @@ run/saves; hashes match; structural verification only.
 - Strict=62 radius current `rDentroParedAhora`; perimeter=71 cumulative; first strict events counted by gate.
 - Phase29/31 healthy for looped attackers; signature sentinel 0 not used in duplicate comparison, robustness only.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE32-NON-ENTRANT-FORENSIC-DIAGNOSIS.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 33 snap churn geometry
+
+- Read-only at `03017bba`; production `ec6aa339`; no runtime/production changes.
+- ROOT_CAUSE_CONFIRMED common: DROP_APPROACH moveTo landing center bypasses supported intermediate path node; center crosses unsupported adjacent column, source snap pulls back, repeats every ~43 ticks.
+- idx3/4/5/8 first cycles documented with exact positions and DROP targets. Phase29/31 healthy.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE33-SNAP-CHURN-GEOMETRY-DIAGNOSIS.md. A2 OPEN.
