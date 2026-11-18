@@ -5126,3 +5126,10 @@ run/saves; hashes match; structural verification only.
 - Read-only at `cd5890c2`; temporary travel/probe instrumentation added, run `a2n-20261118-110342`, then fully reverted.
 - Run crashed in NavObstruction.fits/NavPlanner watchdog before DROP; no idx4/idx8 tick traces, no phase38 CSV.
 - Original worlds intact. Production unchanged at `6aec35c6`. Report: docs/autonomous-village/2026-11-18-A2-PHASE38-DROP-DESCENT-PHYSICAL-EXECUTION-TRACE.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 39 planner watchdog and DROP fixture
+
+- Read-only at `d3299d7c`; production `6aec35c6`; no runtime/production changes.
+- Watchdog explained: synchronous global A* 8000 expansions x 56 offsets = 448000 edges, multiple bounded collision queries per edge, no tick yield; log says 60.00s (crash text ms-as-s). Probe not causal.
+- Deterministic IDX4/IDX8 DROP fixture designed; validation not executed.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md. A2 OPEN.

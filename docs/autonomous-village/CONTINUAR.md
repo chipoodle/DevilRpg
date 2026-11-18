@@ -949,3 +949,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Temporary probe run `a2n-20261118-110342` crashed in global planning before DROP; no tick traces.
 - Instrumentation reverted; production unchanged at `6aec35c6`.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE38-DROP-DESCENT-PHYSICAL-EXECUTION-TRACE.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 39 planner watchdog and DROP fixture
+
+- Read-only at `d3299d7c`; production `6aec35c6`.
+- Watchdog = 448k-edge synchronous A* burst, not probe. Fixture design ready; runtime not executed.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md`. A2 OPEN.

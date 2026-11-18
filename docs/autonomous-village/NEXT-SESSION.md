@@ -123,7 +123,9 @@
 - Report: `2026-11-18-A2-PHASE37-DROP-DESCENT-PHYSICAL-FORENSICS.md`.
 - Phase 38 Stage B attempted (`a2n-20261118-110342`) with temporary before/after-travel probes; run hit server watchdog in `NavObstruction.fits`/`NavPlanner` before any DROP. No tick trace produced; instrumentation fully reverted; production `6aec35c6` intact.
 - Report: `2026-11-18-A2-PHASE38-DROP-DESCENT-PHYSICAL-EXECUTION-TRACE.md` (BLOCKED).
-- **NEXT: stabilize/bypass the diagnostic planner hang or use a deterministic adjacent-DROP fixture, then re-authorize Stage B.**
+- Phase 39 static: watchdog explained as synchronous global A* cost — 8,000 expansions × 56 offsets = 448,000 edges, multiple bounded collision queries per edge, no tick yield; log says 60.00s (crash text mislabels ms as s). Probe not causal. Deterministic DROP fixture designed (IDX4/IDX8 geometry), not executed.
+- Report: `2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md`.
+- **NEXT: Phase 40 implement the separate diagnostic DROP fixture and re-run Stage B 40-tick observation; no planner limit changes yet.**
 - ChatGPT implemented exact-goal bounded recovery A* using the existing validated global A* core: horizontal radius 4, vertical envelope 3, unchanged 900 hard cap; no partial/approximate goal acceptance and no BREAK/BUILD/BRIDGE or multi-block DROP.
 - Failed temporary planning now preserves the original strategic route, cursor and `plannedFrom`; retries use cooldown. Successful recovery emits `DROP_TAKEOFF_RECOVERY_ROUTE_RESTORED` with route signature/cursor/origin.
 - The 0.20-block radial source-center tolerance is retained: Phase 21's 0.19 offset is within tolerance and had grounded/feet/support/real-AABB evidence. Exact floating-point center is not required.
@@ -322,6 +324,7 @@ Read first, in order:
 66. `docs/autonomous-village/2026-11-18-A2-PHASE36-ADJACENT-DROP-TAKEOFF-FIX.md`
 67. `docs/autonomous-village/2026-11-18-A2-PHASE37-DROP-DESCENT-PHYSICAL-FORENSICS.md`
 68. `docs/autonomous-village/2026-11-18-A2-PHASE38-DROP-DESCENT-PHYSICAL-EXECUTION-TRACE.md`
+69. `docs/autonomous-village/2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md`
 
 ## Permanent collaboration workflow
 
@@ -336,7 +339,7 @@ Read first, in order:
 
 - Branch: `feature/autonomous-village`
 - Code implementation awaiting validation: `6d5dc7b1d1f72a366d4f6b05626147b9e932481c` (BREAK graph-state, executor and deterministic fixture correction). Documentation commits may advance branch HEAD after this code checkpoint; always fetch and verify actual local/remote HEAD before acting.
-- Latest technical report: `2026-11-18-A2-PHASE38-DROP-DESCENT-PHYSICAL-EXECUTION-TRACE.md`. Stage B BLOCKED: planner watchdog crash before DROP; no traces; instrumentation reverted.
+- Latest technical report: `2026-11-18-A2-PHASE39-PLANNER-WATCHDOG-AND-DROP-FIXTURE-DIAGNOSIS.md`. Watchdog = 448k-edge synchronous A* burst, not probe; DROP fixture design ready.
 - Remote branch must be fetched and checked before any change.
 - Working tree may contain local-only untracked artifacts.
 
@@ -447,10 +450,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. Stage B remains UNRESOLVED. Do not rerun A2 for the probe until the global planner watchdog hang
-   (`NavObstruction`/`NavPlanner`) is stabilized/bypassed for diagnostics, or use a deterministic
-   adjacent-DROP fixture that reaches the first DROP without global planning.
-2. Re-authorize Stage B for IDX4/IDX8 40-tick window only after that; no production fix yet.
+1. Phase 40: implement a separate diagnostic `A2DropFixture` with the IDX4/IDX8 geometry and real
+   entity/goals/Navigation; assert `exp < 8000`, then run the 40-tick Stage B probe. No planner limit,
+   predicate or DROP behavior change.
+2. Do not modify production gameplay in Phase 40; keep fixture/diagnostic code isolated and revert
+   any temporary probe after capture.
 3. A2 OPEN; no Run 2 or 12k. C4 PASS `[2,0,0]`; save/reload OPEN.
 
 ## Worlds (preserve; do not overwrite)
