@@ -1943,8 +1943,8 @@ public class AggressiveZombieEntity extends Zombie {
         // el suelo que el asaltante ya pisaba, `escaleraPisada()` daba true de inmediato (tick 200) y se registraba
         // como "escalon travesado" un bloque que nunca se habia construido.
         // Mientras no haya un escalon pendiente, el mob puede avanzar por suelo natural entre dos tramos.
-        // El ancla sigue el soporte REAL bajo sus pies, incluso despues de escaleras anteriores; solo se congela
-        // mientras existe un bloque colocado que aun debe atravesar fisicamente.
+        // Tras la primera travesia, el ancla puede seguir el soporte actual en horizontal o hacia abajo,
+        // pero nunca subir: una repisa superior no puede borrar el ultimo descenso ya confirmado.
         if (escaleraUltimoColocado == null) {
             // A2: sin escalon pendiente el ancla debe seguir el soporte REAL actual. Antes solo se
             // actualizaba si ese soporte tenia colision; al caminar por una repisa/aire se quedaba

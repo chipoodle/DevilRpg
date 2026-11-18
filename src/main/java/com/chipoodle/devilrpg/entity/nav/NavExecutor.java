@@ -1794,6 +1794,10 @@ public final class NavExecutor {
             if (NavStairTrace.on()) {
                 NavStairTrace.ev("STAIR_PIPELINE_RETURN", "uuid=" + mob.getUUID()
                         + " outcome=CADENCE_WAIT causa={" + causa + "}");
+                NavTrace.ev("A2_LOCAL_STAIR_WAIT", "uuid=" + mob.getUUID()
+                        + " tick=" + mob.level().getGameTime()
+                        + " local=" + escalonesDeObjetivo + "/" + MAX_ESCALONES_DE_OBJETIVO
+                        + " reason=CADENCE_WAIT counters_unchanged=true");
             }
             return null;
         }
