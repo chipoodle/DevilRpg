@@ -303,6 +303,7 @@ tasks.register('policyTest') {
                 'com.chipoodle.devilrpg.entity.nav.NavSourceCellPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavSnapOwnershipPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavSnapPostResetPolicyTest',
+                'com.chipoodle.devilrpg.entity.nav.NavAdjacentApproachPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavDropApproachPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavObjectivePolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavCombatIntentPolicyTest',

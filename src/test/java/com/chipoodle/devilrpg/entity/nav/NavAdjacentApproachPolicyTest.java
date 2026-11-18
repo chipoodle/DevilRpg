@@ -12,7 +12,12 @@ public final class NavAdjacentApproachPolicyTest {
         comprobar("no nudge sin soporte", !NavAdjacentApproachPolicy.shouldNudge(true, true, 1, 2, true, false));
         comprobar("nudge DROP permitido para diagonal vertical de 3 celdas", NavAdjacentApproachPolicy.shouldNudge(true, true, 3, 3, true, true));
         comprobar("nudge normal no permite distancia 3", !NavAdjacentApproachPolicy.shouldNudge(true, true, 3, 2, true, true));
-        System.out.println("NAV_ADJACENT_APPROACH_POLICY_TEST: OK (10 assertions)");
+        comprobar("DROP nudge usa distancia horizontal 2 con caida vertical 3", NavAdjacentApproachPolicy.shouldNudgeDrop(true, 2, 3, true, true));
+        comprobar("DROP nudge rechaza horizontal 4", !NavAdjacentApproachPolicy.shouldNudgeDrop(true, 4, 3, true, true));
+        comprobar("DROP nudge rechaza landing sin fit", !NavAdjacentApproachPolicy.shouldNudgeDrop(true, 2, 3, false, true));
+        comprobar("DROP nudge rechaza landing sin soporte", !NavAdjacentApproachPolicy.shouldNudgeDrop(true, 2, 3, true, false));
+        comprobar("DROP nudge rechaza navigation activa", !NavAdjacentApproachPolicy.shouldNudgeDrop(false, 2, 3, true, true));
+        System.out.println("NAV_ADJACENT_APPROACH_POLICY_TEST: OK (15 assertions)");
     }
     private static void comprobar(String nombre, boolean ok) { if (!ok) throw new AssertionError(nombre); }
 }

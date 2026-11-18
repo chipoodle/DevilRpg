@@ -228,6 +228,11 @@ public final class NavExecutor {
     private boolean postSnapFirstPlanPending;
     private boolean postSnapRouteStartPending;
     private long lastSnapResetTick = -1L;
+    private boolean dropDescentCommanded;
+    private boolean dropDescentStarted;
+    private boolean dropDescentStalledReported;
+    private double dropDescentStartY;
+    private long dropDescentCommandTick;
 
     // ---- Instrumentación ----
     private int plansRun;
@@ -4135,6 +4140,25 @@ public final class NavExecutor {
             state = NavState.PLANNING;
             return;
         }
+        if (dropDescentCommanded) {
+            if (!dropDescentStarted && mob.getY() < dropDescentStartY - 0.05D) {
+                dropDescentStarted = true;
+                if (NavTrace.on()) {
+                    NavTrace.ev("DROP_DESCENT_STARTED", "uuid=" + mob.getUUID() + " tick=" + now
+                            + " startY=" + String.format(java.util.Locale.ROOT, "%.3f", dropDescentStartY)
+                            + " y=" + String.format(java.util.Locale.ROOT, "%.3f", mob.getY())
+                            + " vy=" + String.format(java.util.Locale.ROOT, "%.3f", mob.getDeltaMovement().y));
+                }
+            } else if (!dropDescentStarted && !dropDescentStalledReported
+                    && now - dropDescentCommandTick > 20L) {
+                dropDescentStalledReported = true;
+                if (NavTrace.on()) {
+                    NavTrace.ev("DROP_DESCENT_STALLED", "uuid=" + mob.getUUID() + " tick=" + now
+                            + " y=" + String.format(java.util.Locale.ROOT, "%.3f", mob.getY())
+                            + " grounded=" + mob.onGround());
+                }
+            }
+        }
         if (postSnapRouteStartPending) {
             if (NavTrace.on()) {
                 NavTrace.ev("POST_SNAP_ROUTE_START", "uuid=" + mob.getUUID() + " tick=" + now
@@ -4208,6 +4232,11 @@ public final class NavExecutor {
             int previousRouteIndex = routeIndex;
             routeIndex++;
             if (reachedNode.transition() == NavRoute.Transition.DROP && NavTrace.on()) {
+                NavTrace.ev("DROP_LANDING_CONFIRMED", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " landing=" + reachedNode.pos().toShortString()
+                        + " pos=" + mob.blockPosition().toShortString()
+                        + " grounded=" + mob.onGround()
+                        + " support=" + NavObstruction.hasSupport(mob.level(), mob.blockPosition()));
                 NavTrace.ev("DROP_CURSOR_ADVANCE", "uuid=" + mob.getUUID()
                         + " landing=" + reachedNode.pos().toShortString()
                         + " previousIndex=" + previousRouteIndex
@@ -4626,16 +4655,56 @@ public final class NavExecutor {
                             + " waypoint=" + approachWaypoint.toShortString()
                             + " landing=" + node.pos().toShortString()
                             + " alreadyAdjacent=" + alreadyAdjacent);
+                    NavTrace.ev("DROP_TAKEOFF_APPROACH_SELECTED", "uuid=" + mob.getUUID()
+                            + " tick=" + mob.level().getGameTime()
+                            + " takeoff=" + approachWaypoint.toShortString()
+                            + " landing=" + node.pos().toShortString()
+                            + " horizontal=" + (Math.abs(approachCurrent.getX() - node.pos().getX())
+                                    + Math.abs(approachCurrent.getZ() - node.pos().getZ())));
                 }
                 if (alreadyAdjacent) {
                     mob.getNavigation().stop();
+                    int horizontalDistance = Math.abs(approachCurrent.getX() - node.pos().getX())
+                            + Math.abs(approachCurrent.getZ() - node.pos().getZ());
+                    boolean fitsLanding = NavObstruction.fits(mob.level(), mob, node.pos());
+                    boolean supportLanding = NavObstruction.hasSupport(mob.level(), node.pos());
+                    boolean nudge = NavAdjacentApproachPolicy.shouldNudgeDrop(
+                            mob.getNavigation().isDone(), horizontalDistance, 3,
+                            fitsLanding, supportLanding);
                     if (NavTrace.on()) {
-                        NavTrace.ev("DROP_APPROACH_WAYPOINT_REACHED", "uuid=" + mob.getUUID()
+                        NavTrace.ev("DROP_TAKEOFF_APPROACH_REACHED", "uuid=" + mob.getUUID()
                                 + " tick=" + mob.level().getGameTime()
                                 + " waypoint=" + approachWaypoint.toShortString()
                                 + " landing=" + node.pos().toShortString()
                                 + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
-                                        mob.getX(), mob.getY(), mob.getZ()));
+                                        mob.getX(), mob.getY(), mob.getZ())
+                                + " horizontal=" + horizontalDistance
+                                + " fits=" + fitsLanding + " support=" + supportLanding);
+                    }
+                    if (nudge) {
+                        mob.getNavigation().moveTo(aim.x, aim.y, aim.z, 0.9D);
+                        dropDescentCommanded = true;
+                        dropDescentStarted = false;
+                        dropDescentStalledReported = false;
+                        dropDescentStartY = mob.getY();
+                        dropDescentCommandTick = mob.level().getGameTime();
+                        if (NavTrace.on()) {
+                            NavTrace.ev("DROP_DESCENT_COMMAND", "uuid=" + mob.getUUID()
+                                    + " tick=" + mob.level().getGameTime()
+                                    + " takeoff=" + approachWaypoint.toShortString()
+                                    + " landing=" + node.pos().toShortString()
+                                    + " horizontal=" + horizontalDistance
+                                    + " dy=" + (node.pos().getY() - approachCurrent.getY())
+                                    + " grounded=" + mob.onGround());
+                        }
+                    } else if (NavTrace.on()) {
+                        NavTrace.ev("DROP_TAKEOFF_APPROACH_REJECTED", "uuid=" + mob.getUUID()
+                                + " tick=" + mob.level().getGameTime()
+                                + " waypoint=" + approachWaypoint.toShortString()
+                                + " landing=" + node.pos().toShortString()
+                                + " horizontal=" + horizontalDistance
+                                + " fits=" + fitsLanding + " support=" + supportLanding
+                                + " reason=unsafe_takeoff_or_landing");
                     }
                 } else {
                     mob.getNavigation().moveTo(approachWaypoint.getX() + 0.5D, mob.getY(),
@@ -4647,10 +4716,13 @@ public final class NavExecutor {
                                 + " landing=" + node.pos().toShortString()
                                 + " exact=" + String.format(java.util.Locale.ROOT, "%.3f,%.3f,%.3f",
                                         mob.getX(), mob.getY(), mob.getZ()));
+                        NavTrace.ev("DROP_TAKEOFF_APPROACH_COMMAND", "uuid=" + mob.getUUID()
+                                + " tick=" + mob.level().getGameTime()
+                                + " takeoff=" + approachWaypoint.toShortString()
+                                + " landing=" + node.pos().toShortString());
                     }
                 }
                 traceActuatorCommand("DROP_APPROACH", BlockPos.containing(aim), mob.level().getGameTime());
-                aplicarAcercamientoAdyacente(node, aim, 0.9D);
                 trazarComandoMovimiento(node, "DROP", aim.x, aim.y, aim.z, 0.9D);
             }
             case BUILD -> {
