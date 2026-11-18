@@ -1,4 +1,23 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 45 IDX3/IDX4 forensics
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 vertical-only DROP fix (PENDING HARNESS)
+
+**Production baseline:** `61b39793b5e5fd6f747e9040c888ba32662efb2d`.
+**Report:** `2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.
+**Previous forensics:** `2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`.
+
+- Phase46 production/test change is implemented but not validated; run static checks first.
+- Expected `NAV_DROP_EDGE_STEP_POLICY_TEST: OK (16 assertions)`.
+- A2 remains OPEN at 3/8 strict (`a2n-20261118-145308`); C4 last PASS `[2,0,0]`.
+- Phase45 IDX4: vertical-only DROP, distance 0. Phase46 permits the existing bounded MoveControl actuator
+  to attempt support clearance; landing still requires natural descent and physical confirmation.
+- Phase45 IDX3: local BUILD/STEP cycle remains unresolved. Enable `-Ddevilrpg.a2n.traceStair=true`
+  on next A2 Run1 to capture the missing builder lifecycle; do not change budgets.
+- Phase44 approach ownership and Phase41 actuator lifecycle remain frozen; only zero-distance admission
+  is extended. Phase29/31/34/36 unchanged.
+- No Run2 or Full12K until five consecutive 8/8 strict runs. Harness must not modify production.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 45 IDX3/IDX4 forensics
 
 **Production SHA:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`.
 **Current report:** `2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`.

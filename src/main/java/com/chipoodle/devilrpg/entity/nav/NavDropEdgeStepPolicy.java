@@ -5,7 +5,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.function.Predicate;
 
-/** Bounded horizontal edge-step used only after a DROP path ends at the platform lip. */
+/** Bounded DROP edge-step used after a path reaches the platform lip, including same-column landings. */
 public final class NavDropEdgeStepPolicy {
     public static final int MAX_TICKS = 60;
     public static final int MAX_NO_PROGRESS_TICKS = 20;
@@ -14,12 +14,17 @@ public final class NavDropEdgeStepPolicy {
     private NavDropEdgeStepPolicy() {
     }
 
+    /**
+     * Zero horizontal distance is valid for a vertical-only DROP. MoveControl still targets the
+     * validated landing center; gravity is released only after the complete entity AABB has cleared
+     * every supported column. The caller must prove grounded, supported/fitting takeoff and landing.
+     */
     public static boolean shouldStart(boolean dropTransition, boolean navigationDone, boolean grounded,
                                       boolean atLanding, int horizontalDistance, int maxDistance,
                                       boolean takeoffSupported, boolean takeoffFits,
                                       boolean landingSupported, boolean landingFits) {
         return dropTransition && navigationDone && grounded && !atLanding
-                && horizontalDistance > 0 && horizontalDistance <= maxDistance
+                && horizontalDistance >= 0 && horizontalDistance <= maxDistance
                 && maxDistance > 0 && maxDistance <= MAX_HORIZONTAL
                 && takeoffSupported && takeoffFits && landingSupported && landingFits;
     }

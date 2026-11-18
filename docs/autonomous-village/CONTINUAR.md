@@ -1,3 +1,13 @@
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 (PENDING HARNESS)
+
+- Production baseline: `61b39793b5e5fd6f747e9040c888ba32662efb2d`; zero-horizontal-distance DROP edge-step admission and four policy assertions added.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.
+- Expected `NAV_DROP_EDGE_STEP_POLICY_TEST: OK (16 assertions)`; static/runtime not yet validated.
+- A2 OPEN, last result 3/8 strict; C4 last PASS [2,0,0].
+- Next: static checks first; then A2 Run1 only, with `-Ddevilrpg.a2n.traceStair=true` to diagnose IDX3 builder
+  lifecycle and verify IDX4 support-clear → natural descent → physical landing.
+- No budget increases, no weakened predicates, no Run2/Full12K until five consecutive 8/8 strict. Harness does not modify production.
+---
 # CURRENT CHECKPOINT — 2026-11-17 ranked AABB DROP source selection (PENDING HARNESS)
 
 **Production code checkpoint:** `a795c33d03678e2a12d066645e5dbc927d7f3efb`.
