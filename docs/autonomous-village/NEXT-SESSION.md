@@ -1,14 +1,17 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A validation
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 50 (PENDING HARNESS)
 
-**Production implementation:** `9d6709f551f394e0ac7be69160c2aa46419d8058` (instrumentation only).
-**Current report:** `2026-11-18-A2-PHASE49A-VALIDATION.md`.
-**RUN_HEAD:** `6677e788e84aabae6e47cad72f342f5c3608cfeb`.
-**Run:** `a2n-20261118-172804` (3/8 strict, C4 PASS `[1,0,0]`).
+**Production SHA:** `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`.
+**Previous production SHA:** `9d6709f551f394e0ac7be69160c2aa46419d8058`.
+**Implementation report:** `2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`.
 
-- IDX3 root cause demonstrated: `ANCHOR_REFRESH` at t2299 moves anchor `607,93 -> 607,94`; next `dy=1`
-  candidate is the same stair `607,93`, repeated. CADENCE_WAIT returns also increment local steps.
-- A2 OPEN at 3/8 strict. No Run2/Full12K.
-- IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; no approved fixture.
+- Phase49A proved IDX3's anchor refresh overwrote traversed `607,93` with higher support `607,94`, recreating the same stair.
+- Phase50 preserves the anchor against upward refresh, permits same-level horizontal/downward refresh, and rejects any later stair candidate not strictly below the anchor.
+- Added `CADENCE_WAIT`: cooldown returns defer the tick without consuming local step or failure counters.
+- Added `NavStairAnchorPolicyTest` (8 assertions); extended `StairBuildResultTest` to 6 assertions.
+- **PENDING HARNESS:** static checks first; if they pass, A2 Run1 only on exact SHA above. Harness must not modify production.
+- Phase41/44/46 and all budgets remain unchanged. IDX4 horizontal-zero still lacks an approved fixture.
+- Latest runtime: `a2n-20261118-172804`, A2 3/8 strict, C4 PASS `[1,0,0]`. A2 OPEN.
+- No Run2/Full12K until five consecutive 8/8 strict runs.
 
 ---
 
@@ -487,8 +490,9 @@ Read first, in order:
 76. `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`
 77. `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`
 78. `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`
-79. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 79. `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`
+80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
+81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
 ## Permanent collaboration workflow
 
@@ -614,12 +618,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 50: preserve the traversed anchor (`607,93`) instead of refreshing upward to `607,94`, and
-   require the next candidate strictly below it. Do not count pure CADENCE_WAIT as a local stair step.
-   Keep Phase44/41/46 frozen; no budget changes.
+1. Validate Phase50 on exact production SHA `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`: static checks first, then A2 Run1 only. Verify anchor monotonicity, strict-lower candidates and no local counter writes on CADENCE_WAIT.
 2. IDX4 horizontal-zero still needs its approved fixture; Phase46 remains runtime INSUFFICIENT_EVIDENCE.
 3. IDX2 entered strict; IDX7/IDX8 remain independent.
-4. A2 OPEN at 3/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
+4. A2 OPEN at 3/8 strict; no Run2 or Full12K until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

@@ -1,11 +1,14 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 50 (PENDING HARNESS)
 
-- Production implementation: `9d6709f551f394e0ac7be69160c2aa46419d8058`; instrumentation only, based on `e1530ab3`.
-- Use `-Ddevilrpg.a2n.traceStair=true -Ddevilrpg.a2n.traceStairCandidates=true` to capture cooldown, anchor refresh and every candidate/rejection.
-- No stair behavior, budgets, support/fit predicates, movement ownership or Phase41/44/46 code changed.
-- Harness: preserve local state; static checks first, then A2 Run1 only. No Run2/Full12K. Harness must not modify production.
-- Exact IDX3 C→next-step cause remains OPEN until runtime events establish it. IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; fixture not implemented.
-- Report: `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`.
+- Production SHA: `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`; prior runtime baseline `9d6709f5`.
+- Monotonic stair anchor: after a traversed step, higher support cannot refresh anchor upward; same-level horizontal/downward refresh remains allowed.
+- Every later candidate must be strictly below the traversed anchor.
+- `CADENCE_WAIT` is now a distinct result; it defers two ticks without incrementing local step/failure counters.
+- Expected tests: `NAV_STAIR_ANCHOR_POLICY_TEST: OK (8 assertions)`; `STAIR_BUILD_RESULT_TEST: OK (6 assertions)`.
+- Harness: preserve local state/worlds; static checks first, then A2 Run1 only on exact SHA. No production changes by Harness.
+- Phase41/44/46 and budgets unchanged. IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; fixture not implemented.
+- Latest runtime Phase49A: A2 3/8 strict; C4 PASS [1,0,0]. A2 OPEN. No Run2/Full12K.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`.
 ---
 
 # HISTORICAL CHECKPOINT — 2026-11-18 A2 Phase 46 (PENDING HARNESS)
