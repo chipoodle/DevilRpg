@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 validation
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 47 forensics
 
 - Production baseline: `61b39793b5e5fd6f747e9040c888ba32662efb2d`; zero-horizontal-distance DROP edge-step admission and four policy assertions added.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.
@@ -17,6 +17,8 @@
 > **Checkpoint validado:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2` en `feature/autonomous-village` (Phase46 vertical-only DROP fix). Static PASS (`NAV_DROP_EDGE_STEP_POLICY_TEST` 16). A2 Run1 `a2n-20261118-163717` = 4/8 estricto, C4 PASS `[1,0,0]`. A2 OPEN.
 >
 > **A2 Phase46 (validación):** el caso runtime IDX4 vertical-only no se reprodujo; su validación física queda INSUFFICIENT_EVIDENCE. IDX3 muestra 20 `STAIR_PLACED`, pending stairs y fallback `result=null`; la promoción a ruta no está trazada. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`.
+>
+> **A2 Phase47:** IDX3 demuestra 20 colocaciones y 20 `ESCALON-TRAVESADO`; la confirmación de travesía consume el pending antes de la promoción fallback, por eso `result=null`. IDX4 horizontal-zero sigue INSUFFICIENT_EVIDENCE por falta de fixture determinista. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 

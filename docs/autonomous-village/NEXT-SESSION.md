@@ -1,4 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 validation
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 47 forensics
+
+**Production SHA:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2`.
+**Current report:** `2026-11-18-A2-PHASE47-FORENSICS.md`.
+**Previous validation:** `2026-11-18-A2-PHASE46-VALIDATION.md`.
+
+- IDX3 stair root cause demonstrated: 20 verified placements and 20 `ESCALON-TRAVESADO`; traversal
+  confirmation clears the pending stair before fallback promotion, so the same-tick fallback returns null.
+- IDX4 horizontal-zero runtime remains INSUFFICIENT_EVIDENCE: no committed deterministic fixture and the
+  geometry did not occur in `a2n-20261118-163717`.
+- A2 OPEN at 4/8 strict; C4 PASS `[1,0,0]`. No Run2/Full12K until five consecutive 8/8 strict.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 46 validation
+
 
 **Production SHA:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2`.
 **Current report:** `2026-11-18-A2-PHASE46-VALIDATION.md`.
@@ -439,6 +454,7 @@ Read first, in order:
 74. `docs/autonomous-village/2026-11-18-A2-PHASE44-VALIDATION.md`
 75. `docs/autonomous-village/2026-11-18-A2-PHASE45-IDX3-IDX4-FORENSICS.md`
 76. `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`
+77. `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`
 
 ## Permanent collaboration workflow
 
@@ -564,8 +580,8 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 47: reproduce a deterministic horizontal-zero DROP runtime case and repair the IDX3
-   `STAIR_PLACED`/pending -> fallback `result=null` promotion. Keep Phase44/41 frozen; no budget changes.
+1. Phase 48: fix IDX3 pending-stair order (do not consume pending before fallback promotion) and add the
+   approved deterministic horizontal-zero DROP fixture. Keep Phase44/41/46 frozen; no budget changes.
 2. IDX2 now entered strict; IDX7/IDX8 remain independent.
 3. A2 OPEN at 4/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 

@@ -1016,3 +1016,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Static PASS; A2 4/8 strict, C4 PASS [1,0,0].
 - Vertical-only case not reproduced; IDX3 pending/fallback null remains.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 47 forensics
+
+- IDX3 pending consumido por travesia antes de fallback (20/20). IDX4 horizontal-zero sin fixture.
+- Production unchanged `e1530ab3`. A2 OPEN.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`.

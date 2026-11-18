@@ -5198,3 +5198,10 @@ run/saves; hashes match; structural verification only.
 - A2 `a2n-20261118-163717`: 4/8 strict (idx1,2,5,6), C4 PASS [1,0,0].
 - Vertical-only IDX4 runtime not reproduced -> INSUFFICIENT_EVIDENCE. IDX3 trace: ACCESS_CLEARED/NO_PROGRESS, 20 STAIR_PLACED, pending stairs, fallback null.
 - Phase45 errata: anchor661,71,533 vs mission661,72,533; escalera.colocados 20/24 != traversals. Report: docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 47 forensics
+
+- Read-only at `d9d544b0`; production `e1530ab3`.
+- IDX3: 20 colocaciones y 20 ESCALON-TRAVESADO. La confirmacion de travesia consume el pending antes de fallback; mismo tick result=null.
+- IDX4 horizontal-zero: INSUFFICIENT_EVIDENCE; no hay fixture determinista comprometido y el caso no ocurrio en run163717.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md. A2 OPEN 4/8.
