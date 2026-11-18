@@ -225,6 +225,9 @@ public final class NavExecutor {
     private final Deque<BlockPos> recentCells = new ArrayDeque<>();
     private boolean oscillating;
     private int recentCellOccurrences;
+    private boolean postSnapFirstPlanPending;
+    private boolean postSnapRouteStartPending;
+    private long lastSnapResetTick = -1L;
 
     // ---- Instrumentación ----
     private int plansRun;
@@ -3441,6 +3444,21 @@ public final class NavExecutor {
         // Una ruta con la misma firma que una ya fallada no se reintenta. Compare the executable
         // route, including its final BREAK action target, rather than the WALK-only planning path.
         if (acceptedRoute.signature() == lastRouteSignature) {
+            if (NavTrace.on()) {
+                NavTrace.ev("REPLAN_SIGNATURE_DECISION", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " candidateSignature=" + acceptedRoute.signature()
+                        + " previousSignature=" + lastRouteSignature
+                        + " decision=REJECT_DUPLICATE replansBefore=" + replans
+                        + " replansAfter=" + (replans + 1));
+            }
+            if (postSnapFirstPlanPending) {
+                if (NavTrace.on()) NavTrace.ev("POST_SNAP_FIRST_PLAN", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " start=" + mob.blockPosition().toShortString()
+                        + " goal=" + (objective == null ? "NONE" : objective.toShortString())
+                        + " signature=" + acceptedRoute.signature()
+                        + " decision=REJECT_DUPLICATE state=" + state);
+                postSnapFirstPlanPending = false;
+            }
             routesRejected++;
             replans++;
             nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
@@ -3449,6 +3467,16 @@ public final class NavExecutor {
         }
         route = acceptedRoute;
         routeIndex = 0;
+        if (postSnapFirstPlanPending) {
+            if (NavTrace.on()) NavTrace.ev("POST_SNAP_FIRST_PLAN", "uuid=" + mob.getUUID()
+                    + " tick=" + now + " start=" + mob.blockPosition().toShortString()
+                    + " goal=" + (objective == null ? "NONE" : objective.toShortString())
+                    + " plannedFrom=" + (plannedFrom == null ? "NONE" : plannedFrom.toShortString())
+                    + " signature=" + acceptedRoute.signature()
+                    + " decision=ACCEPT state=" + state);
+            postSnapFirstPlanPending = false;
+            postSnapRouteStartPending = true;
+        }
         if (Boolean.getBoolean("devilrpg.a2n.diagDrop") && !route.isEmpty()) {
             NavRoute.Node n0 = route.currentNode(0);
             com.chipoodle.devilrpg.DevilRpg.LOGGER.info(
@@ -3739,6 +3767,7 @@ public final class NavExecutor {
                     }
                     fuenteDropPendiente = null;
                     inicioSnapFuenteDrop = -1L;
+                    resetPostSnapNavigationState(candidate, now);
                     start = mob.blockPosition();
                 } else {
                     if (NavTrace.on() && now % 10L == 0L) {
@@ -3947,6 +3976,7 @@ public final class NavExecutor {
                 inicioSnapFuenteDrop = -1L;
                 fuenteDropSinCandidatoDesde = null;
                 inicioEsperaFuenteDropSinCandidato = -1L;
+                resetPostSnapNavigationState(current, now);
                 route = null;
                 routeIndex = 0;
                 plannedFrom = null;
@@ -4105,6 +4135,15 @@ public final class NavExecutor {
             state = NavState.PLANNING;
             return;
         }
+        if (postSnapRouteStartPending) {
+            if (NavTrace.on()) {
+                NavTrace.ev("POST_SNAP_ROUTE_START", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " signature=" + route.signature() + " routeIndex=" + routeIndex
+                        + " start=" + mob.blockPosition().toShortString()
+                        + " state=TRAVERSING");
+            }
+            postSnapRouteStartPending = false;
+        }
         // A pending source snap is the sole movement owner. Normal route commands (including DROP)
         // must not run until the snap completes, fails, or is explicitly invalidated.
         if (NavSnapOwnershipPolicy.snapOwnsMovement(fuenteDropPendiente)) {
@@ -4148,6 +4187,10 @@ public final class NavExecutor {
                 return;
             }
             if (NavTrace.on()) {
+                NavTrace.ev("POST_SNAP_GUARD", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " recentCells=" + recentCells.size() + " occurrences=" + recentCellOccurrences
+                        + " oscillating=true pending=" + (fuenteDropPendiente == null ? "NONE" : fuenteDropPendiente.toShortString())
+                        + " postSnapWindow=" + (lastSnapResetTick >= 0L && now >= lastSnapResetTick));
                 NavTrace.ev("SNAP_GUARD", "uuid=" + mob.getUUID() + " tick=" + now
                         + " pending=NONE oscillating=true occurrences=" + recentCellOccurrences
                         + " recentCells=" + recentCells.size() + " action=abort_route");
@@ -5238,6 +5281,38 @@ public final class NavExecutor {
         }
         oscillating = occurrences >= 3 && recentCells.size() >= 8;
         recentCellOccurrences = occurrences;
+    }
+
+    /**
+     * A verified source snap starts a new navigation phase. Clear the pre-snap oscillation
+     * history and invalidate the aborted-route signature exactly once, seeding history with the
+     * physically validated source cell.
+     */
+    private void resetPostSnapNavigationState(BlockPos validatedSource, long now) {
+        if (!NavSnapPostResetPolicy.shouldResetAfterSnap(true)) {
+            return;
+        }
+        int cellsBefore = recentCells.size();
+        boolean oscillatingBefore = oscillating;
+        int occurrencesBefore = recentCellOccurrences;
+        int signatureBefore = lastRouteSignature;
+        recentCells.clear();
+        recentCells.addLast(validatedSource.immutable());
+        oscillating = NavSnapPostResetPolicy.freshOscillating();
+        recentCellOccurrences = NavSnapPostResetPolicy.freshOccurrences();
+        lastRouteSignature = NavSnapPostResetPolicy.freshSignature();
+        postSnapFirstPlanPending = true;
+        postSnapRouteStartPending = false;
+        lastSnapResetTick = now;
+        if (NavTrace.on()) {
+            NavTrace.ev("SNAP_POST_RESET", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " source=" + validatedSource.toShortString()
+                    + " recentCellsBefore=" + cellsBefore + " recentCellsAfter=" + recentCells.size()
+                    + " oscillatingBefore=" + oscillatingBefore + " oscillatingAfter=false"
+                    + " occurrencesBefore=" + occurrencesBefore + " occurrencesAfter=1"
+                    + " signatureBefore=" + signatureBefore + " signatureAfter=0"
+                    + " reason=verified_source_snap_complete");
+        }
     }
 
     /** Se llama cuando algo externo cambió el terreno: invalida la ruta en curso. */
