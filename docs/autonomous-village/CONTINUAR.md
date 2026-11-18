@@ -937,3 +937,9 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Production `6aec35c6`: commands emitted with horizontal-distance nudge, but physical descent still absent.
 - Runtime `a2n-20261118-042553`: A2 2/8 strict; C4 PASS [2,0,0]; DROP_DESCENT_STARTED=0.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE36-ADJACENT-DROP-TAKEOFF-FIX.md`. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 37 DROP descent physical forensics
+
+- Read-only at `4c002966`; production `6aec35c6`.
+- Command targets landing; paths exist; no vertical movement. Exact physical cause not logged; Stage B required.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE37-DROP-DESCENT-PHYSICAL-FORENSICS.md`. A2 OPEN.

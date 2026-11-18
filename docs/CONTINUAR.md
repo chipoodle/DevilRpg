@@ -5113,3 +5113,10 @@ run/saves; hashes match; structural verification only.
 - Static PASS incl NAV_ADJACENT 15, NAV_DROP_APPROACH 10, DROP 51, source14, snap12/12.
 - Runtime `a2n-20261118-042553`: A2 2/8 strict, 2/8 perimeter, C4 PASS [2,0,0]. IDX4 54 commands/5 stalled/0 started; IDX8 824/136/0; no landing confirmed.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE36-ADJACENT-DROP-TAKEOFF-FIX.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 37 DROP descent physical forensics
+
+- Read-only at `4c002966`; production `6aec35c6`; no production/test/runtime changes.
+- Real Navigation.moveTo destination is landing center, not takeoff. IDX4/IDX8 have paths n=2 and horizontal movement, but Y unchanged; IDX3/5 emit no descent command.
+- Collision vs MoveControl/nav completion remains NOT_LOGGED; Stage B proposed only.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE37-DROP-DESCENT-PHYSICAL-FORENSICS.md. A2 OPEN.
