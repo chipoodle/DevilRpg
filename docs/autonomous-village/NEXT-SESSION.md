@@ -31,7 +31,7 @@
 
 ---
 
-# HISTORICAL — 2026-11-18 A2 Phase 42 remaining non-entrants remaining non-entrants
+# HISTORICAL — 2026-11-18 A2 Phase 42 remaining non-entrants
 
 
 **Production code checkpoint:** `4379dbc250856b292b6cc2e3703b6aaf3bc8022b`.

@@ -10,7 +10,7 @@
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 
-> **A2:** último focused `a2n-20261116-112413`: 5/8 estrictos, 6/8 perímetro; gate OPEN. No ejecutar 12k hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** focused PASS en ese run; save/reload OPEN.
+> **A2:** último runtime evidenciado `a2n-20261118-140906`: 2/8 estrictos, 2/8 perímetro; C4 PASS `[2,0,0]`. Phase43 aisló el bloqueo de aproximación DROP no adyacente; Phase44 implementado y pendiente de validación Harness. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[2,0,0]`; save/reload OPEN.
 
 # Estado de cola actualizado — 2026-11-12 22:43
 

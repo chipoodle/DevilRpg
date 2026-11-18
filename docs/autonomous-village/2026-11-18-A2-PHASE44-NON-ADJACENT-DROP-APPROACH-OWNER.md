@@ -6,7 +6,7 @@
 
 - Repository: `chipoodle/DevilRpg`
 - Branch: `feature/autonomous-village`
-- Parent: `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`
+- Implementation parent: `793816686e4373d4b581264468f2ee92ce431156`
 - Production implementation commit: `b4f53966f7336d997ace224660d1a5cb892e2786`
 - Lifecycle hardening commit: `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`
 - Phase43 forensic report: `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`
