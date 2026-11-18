@@ -1,16 +1,15 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 48A IDX3 causal reconciliation
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A stair instrumentation
 
-**Production SHA:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2`.
-**Current report:** `2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`.
-**Previous report:** `2026-11-18-A2-PHASE47-FORENSICS.md`.
+**Production implementation:** `9d6709f551f394e0ac7be69160c2aa46419d8058` (instrumentation only).
+**Previous behavioral baseline:** `e1530ab30591a26237d9ae64c1e9cfefbcbb27f2`.
+**Report:** `2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`.
 
-- Phase47 was corrected: the fallback exits on `STAIR_BUILDER_RETURN outcome=NO_PROGRESS` **before**
-  consulting `objetivoSobreUltimoEscalon()`. At t288 the builder returns pending=null with stale success
-  motivo/rechazo=-, the cooldown/early-return branch.
-- The builder places the same stair `607,93,601` 20 times; the mob traverses it 20 times. No descent.
-- Exact `escaleraRetraso` value per call is not logged; instrumentation is required.
-- IDX4 horizontal-zero still lacks an approved deterministic fixture.
-- A2 OPEN at 4/8 strict; C4 PASS `[1,0,0]`. No Run2/Full12K.
+- Phase48A corrected Phase47: fallback returns on `NO_PROGRESS` before pending-waypoint lookup.
+- Phase49A adds tick/cooldown/anchor/candidate traces only; no behavioral predicates or budgets changed.
+- Enable `-Ddevilrpg.a2n.traceStair=true -Ddevilrpg.a2n.traceStairCandidates=true` for A2 diagnostics.
+- Exact C→next-step cause remains OPEN pending Harness runtime evidence.
+- IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; no approved deterministic fixture is committed.
+- A2 last measured 4/8 strict; C4 last PASS [1,0,0]. No Run2/Full12K until five consecutive 8/8 strict runs.
 
 ---
 
@@ -473,6 +472,7 @@ Read first, in order:
 76. `docs/autonomous-village/2026-11-18-A2-PHASE46-VALIDATION.md`
 77. `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`
 78. `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`
+79. `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`
 
 ## Permanent collaboration workflow
 
@@ -598,8 +598,8 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 49: instrument `escaleraRetraso`/candidate generation and repair the C→next-step break;
-   build the approved horizontal-zero DROP fixture. Keep Phase44/41/46 frozen; no budget changes.
+1. Validate Phase49A instrumentation on exact SHA `9d6709f551f394e0ac7be69160c2aa46419d8058`: static checks, then A2 Run1 only with both stair trace flags. Diagnose before proposing a behavior fix.
+2. Separately design and implement an approved horizontal-zero DROP fixture; Phase46 remains runtime INSUFFICIENT_EVIDENCE. Keep Phase44/41/46 frozen; no budget changes.
 2. IDX2 entered strict; IDX7/IDX8 remain independent.
 3. A2 OPEN at 4/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 

@@ -1,4 +1,14 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 46 (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A (PENDING HARNESS)
+
+- Production implementation: `9d6709f551f394e0ac7be69160c2aa46419d8058`; instrumentation only, based on `e1530ab3`.
+- Use `-Ddevilrpg.a2n.traceStair=true -Ddevilrpg.a2n.traceStairCandidates=true` to capture cooldown, anchor refresh and every candidate/rejection.
+- No stair behavior, budgets, support/fit predicates, movement ownership or Phase41/44/46 code changed.
+- Harness: preserve local state; static checks first, then A2 Run1 only. No Run2/Full12K. Harness must not modify production.
+- Exact IDX3 C→next-step cause remains OPEN until runtime events establish it. IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; fixture not implemented.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`.
+---
+
+# HISTORICAL CHECKPOINT — 2026-11-18 A2 Phase 46 (PENDING HARNESS)
 
 - Production baseline: `61b39793b5e5fd6f747e9040c888ba32662efb2d`; zero-horizontal-distance DROP edge-step admission and four policy assertions added.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.

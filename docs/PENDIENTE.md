@@ -1,13 +1,13 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 48A reconciliation
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 49A (PENDING HARNESS)
 
-- Production baseline: `61b39793b5e5fd6f747e9040c888ba32662efb2d`; zero-horizontal-distance DROP edge-step admission and four policy assertions added.
-- Report: `docs/autonomous-village/2026-11-18-A2-PHASE46-VERTICAL-ONLY-DROP-FIX.md`.
-- Expected `NAV_DROP_EDGE_STEP_POLICY_TEST: OK (16 assertions)`; static/runtime not yet validated.
-- A2 OPEN, last result 3/8 strict; C4 last PASS [2,0,0].
-- Next: static checks first; then A2 Run1 only, with `-Ddevilrpg.a2n.traceStair=true` to diagnose IDX3 builder
-  lifecycle and verify IDX4 support-clear → natural descent → physical landing.
-- No budget increases, no weakened predicates, no Run2/Full12K until five consecutive 8/8 strict. Harness does not modify production.
+- Production implementation: `9d6709f551f394e0ac7be69160c2aa46419d8058`; instrumentation only, based on `e1530ab3`.
+- Use `-Ddevilrpg.a2n.traceStair=true -Ddevilrpg.a2n.traceStairCandidates=true` to capture cooldown, anchor refresh and every candidate/rejection.
+- No stair behavior, budgets, support/fit predicates, movement ownership or Phase41/44/46 code changed.
+- Harness: preserve local state; static checks first, then A2 Run1 only. No Run2/Full12K. Harness must not modify production.
+- Exact IDX3 C→next-step cause remains OPEN until runtime events establish it. IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; fixture not implemented.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`.
 ---
+
 # ESTADO ACTUAL — 2026-11-16 (checkpoint operativo)
 
 > **Fuente vigente:** la continuación activa es `docs/autonomous-village/NEXT-SESSION.md`. La política permanente es `docs/autonomous-village/CHATGPT-COLLABORATION-POLICY.md`; el reparto de responsabilidades y protocolo de handoff están en `docs/autonomous-village/CHATGPT-HARNESS-WORKFLOW.md`. Los registros históricos de este archivo se conservan como evidencia y no son instrucciones vigentes si contradicen el checkpoint actual.
