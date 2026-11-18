@@ -5161,9 +5161,9 @@ run/saves; hashes match; structural verification only.
 
 ## 2026-11-18 — A2 Phase44 non-adjacent DROP approach owner (PENDING HARNESS)
 
-- ChatGPT production implementation: `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`; parent `793816686e4373d4b581264468f2ee92ce431156`.
+- ChatGPT production implementation: `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`; parent `793816686e4373d4b581264468f2ee92ce431156`.
 - New bounded DROP-only owner transfers from Navigation to MoveControl when path ends before physical waypoint arrival or stalls >20 ticks; timeout >80, no-progress >20; safety revalidated, exact grounded occupancy required.
-- Phase41 edge-step unchanged and receives control only after the supported waypoint is physically occupied.
+- Phase41 edge-step unchanged and receives control in the same traversal pass after the supported waypoint is physically occupied; clearing the temporary owner stops any pending Navigation path before the edge-step starts.
 - New `NAV_DROP_APPROACH_OWNERSHIP_POLICY_TEST`: 13 assertions, registered but **not run by ChatGPT**.
 - **PENDING HARNESS:** static tests/lint/diff/diagnostics compile on exact SHA, then A2 Run1 only if static passes. Capture owner/path/landing traces for IDX3/5/4. No Run2/Full12K; A2 OPEN.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE44-NON-ADJACENT-DROP-APPROACH-OWNER.md`.

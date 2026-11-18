@@ -9,6 +9,7 @@
 - Implementation parent: `793816686e4373d4b581264468f2ee92ce431156`
 - Production implementation commit: `b4f53966f7336d997ace224660d1a5cb892e2786`
 - Lifecycle hardening commit: `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`
+- Final movement-release commit: `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`
 - Phase43 forensic report: `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`
 - Current A2 status: **OPEN**
 - No tests, lint, compile, or Minecraft runtime have been executed by ChatGPT.
@@ -22,7 +23,7 @@
 5. The MoveControl owner is DROP-only, targets the center of the already validated waypoint at the mob's current Y, and never injects velocity, teleports, jumps, breaks/builds, or bypasses vanilla collision.
 6. While MoveControl owns the approach, every tick revalidates the waypoint's feet validity, support and centered real-AABB fit. The current source must remain grounded, feet-valid, supported under the real AABB and free of real-AABB collision.
 7. The waypoint is considered reached only when `blockPosition()` equals it, the mob is grounded, and the waypoint safety predicates still pass. Proximity alone never advances the route.
-8. Once reached, the temporary owner is released. The next traversal tick re-enters the existing adjacent DROP branch, where Phase41's unchanged edge-step can take ownership and initiate the natural fall.
+8. Once reached, the temporary owner is released and any pending Navigation path is stopped. The same traversal pass re-enters the existing adjacent DROP branch, where Phase41's unchanged edge-step can take ownership and initiate the natural fall.
 9. The approach owner fails closed after more than 80 ticks or more than 20 ticks without progress. It releases movement, sets `OBSTRUCTED`, and leaves the route's physical landing invariant intact.
 10. Ownership is cleared on route-node change, landing confirmation, route null and post-snap reset.
 
@@ -60,7 +61,7 @@ New trace events:
 - `NAV_DROP_APPROACH_OWNERSHIP_POLICY_TEST` — 13 assertions.
 - Registered in the existing `policyTest` task and therefore `gradlew test`.
 
-**PENDING HARNESS on exact production SHA `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`:**
+**PENDING HARNESS on exact production SHA `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`:**
 
 1. Inspect local branch, HEAD, remote HEAD, divergence, worktree and untracked files. Preserve local-only files, scripts, logs, backups and worlds. Fast-forward only if safe.
 2. Run static validation first: `gradlew test`, strict lint (`python lint_aldea.py --strict`), `git diff --check`, and diagnostics compile (`gradlew compileJava -Pa2nDiagnostics=true`). Record exact commands, exit codes and tested SHA.

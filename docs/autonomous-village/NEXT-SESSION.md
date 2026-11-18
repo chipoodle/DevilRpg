@@ -1,6 +1,6 @@
 # CURRENT CHECKPOINT — 2026-11-18 A2 Phase 44 non-adjacent DROP approach owner
 
-**Production implementation SHA:** `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`.
+**Production implementation SHA:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`.
 **Implementation parent:** `793816686e4373d4b581264468f2ee92ce431156`.
 **Current report:** `2026-11-18-A2-PHASE44-NON-ADJACENT-DROP-APPROACH-OWNER.md`.
 **Previous forensic report:** `2026-11-18-A2-PHASE43-NON-ADJACENT-DROP-FORENSICS.md`.
@@ -10,10 +10,10 @@
 - MoveControl advances only toward the already validated supported waypoint. Waypoint safety is rechecked each tick; arrival requires exact block occupancy, grounded state and valid support/AABB fit.
 - Owner bounds: >80 total ticks or >20 no-progress ticks aborts safely to OBSTRUCTED. No planner budgets, safety predicates, landing tolerances or Phase29/31/34/36/41 behavior changed.
 - New policy test: `NAV_DROP_APPROACH_OWNERSHIP_POLICY_TEST` (13 assertions), registered in `gradlew test`; **not run by ChatGPT**.
-- **PENDING HARNESS** on exact SHA `5b71f063798fc0fd50be4dd2b4d3d5c58041262a`: static tests, strict lint, diff-check, diagnostics compile; only if all pass, A2 Run1. No Run2/Full12K.
+- **PENDING HARNESS** on exact SHA `ed31b815193aa4fcde0b088f1a6d110270ba4a9d`: static tests, strict lint, diff-check, diagnostics compile; only if all pass, A2 Run1. No Run2/Full12K.
 - Capture waypoint command/path result, owner selection/progress/reached/abort, Phase41 handoff and physical landing/cursor events for IDX3/5/4.
 - A2 remains **OPEN**. Five consecutive 8/8 strict runs remain the gate before Run2/Full12K.
-- Production commit: `b4f53966f7336d997ace224660d1a5cb892e2786` (implementation); `5b71f063798fc0fd50be4dd2b4d3d5c58041262a` (lifecycle hardening).
+- Production commits: `b4f53966f7336d997ace224660d1a5cb892e2786` (initial owner); `5b71f063798fc0fd50be4dd2b4d3d5c58041262a` (lifecycle hardening); `ed31b815193aa4fcde0b088f1a6d110270ba4a9d` (Navigation release on every owner clear).
 - Harness remains execution/evidence owner; it must not modify production.
 
 ---

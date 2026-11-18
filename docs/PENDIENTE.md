@@ -4,7 +4,7 @@
 
 > **Roles obligatorios:** ChatGPT modifica el código de producción directamente en GitHub y publica commits. Harness sincroniza, preserva trabajo local, ejecuta compilaciones/pruebas/lint/runtime, mide y genera reportes. Harness no implementa correcciones de producción; devuelve evidencia a ChatGPT. Ninguno declara validado un SHA sin ejecutar y documentar los checks sobre ese SHA exacto.
 
-> **Checkpoint de código pendiente de validación:** `5b71f063798fc0fd50be4dd2b4d3d5c58041262a` en `feature/autonomous-village` (Phase44 DROP approach owner). ChatGPT implementó el cambio; Harness debe validar exactamente este SHA. El HEAD real de rama puede avanzar con documentación, por lo que debe verificarse antes de sincronizar.
+> **Checkpoint de código pendiente de validación:** `ed31b815193aa4fcde0b088f1a6d110270ba4a9d` en `feature/autonomous-village` (Phase44 DROP approach owner). ChatGPT implementó el cambio; Harness debe validar exactamente este SHA. El HEAD real de rama puede avanzar con documentación, por lo que debe verificarse antes de sincronizar.
 >
 > **A2 Phase44:** transferencia acotada Navigation → MoveControl para aproximación DROP no adyacente. Nueva política con 13 aserciones registrada, todavía no ejecutada por ChatGPT. Static Harness primero; A2 Run1 solo si todo pasa. A2 OPEN; no Run2/Full12K hasta cinco corridas consecutivas 8/8 estrictas.
 
