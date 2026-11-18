@@ -3672,7 +3672,6 @@ public final class NavExecutor {
         lastMoveTraceZ = mob.getZ();
     }
 
-
     private boolean dropApproachCellSafe(BlockPos cell) {
         return cell != null && esPieValido(cell)
                 && NavObstruction.hasSupport(mob.level(), cell)
@@ -3761,8 +3760,9 @@ public final class NavExecutor {
             dropApproachNoProgress++;
         }
 
+        boolean navigationDone = mob.getNavigation().isDone();
         if (!dropApproachMoveOwned && NavDropApproachOwnershipPolicy.shouldTakeOwnership(
-                true, mob.getNavigation().isDone(), false, dropApproachNoProgress)) {
+                true, navigationDone, false, dropApproachNoProgress)) {
             dropApproachMoveOwned = true;
             dropApproachNoProgress = 0;
             dropApproachBestDistance = distance;
@@ -3770,7 +3770,7 @@ public final class NavExecutor {
             if (NavTrace.on()) {
                 NavTrace.ev("DROP_APPROACH_OWNER_SELECTED", "uuid=" + mob.getUUID()
                         + " tick=" + now + " owner=MOVE_CONTROL"
-                        + " reason=" + (mob.getNavigation().isDone()
+                        + " reason=" + (navigationDone
                                 ? "navigation_done_before_waypoint" : "navigation_no_progress")
                         + " waypoint=" + dropApproachWaypoint.toShortString()
                         + " landing=" + landing.toShortString()
@@ -3815,12 +3815,11 @@ public final class NavExecutor {
                     + " noProgress=" + dropApproachNoProgress);
         }
         clearDropApproachOwner(reason);
-        mob.getNavigation().stop();
-        mob.getMoveControl().setWantedPosition(mob.getX(), mob.getY(), mob.getZ(), 0.0D);
         state = NavState.OBSTRUCTED;
     }
 
     private void clearDropApproachOwner(String reason) {
+        boolean releaseMoveControl = dropApproachActive && dropApproachMoveOwned;
         if (dropApproachActive && NavTrace.on()) {
             NavTrace.ev("DROP_APPROACH_OWNER_CLEARED", "uuid=" + mob.getUUID()
                     + " tick=" + mob.level().getGameTime() + " reason=" + reason
@@ -3835,6 +3834,10 @@ public final class NavExecutor {
         dropApproachTicks = 0;
         dropApproachNoProgress = 0;
         dropApproachBestDistance = Double.MAX_VALUE;
+        if (releaseMoveControl) {
+            mob.getNavigation().stop();
+            mob.getMoveControl().setWantedPosition(mob.getX(), mob.getY(), mob.getZ(), 0.0D);
+        }
     }
 
     /**
@@ -4501,6 +4504,10 @@ public final class NavExecutor {
             return;
         }
         NavRoute.Node node = route.currentNode(routeIndex);
+        if (dropApproachActive && (node == null || node.transition() != NavRoute.Transition.DROP
+                || dropApproachLanding == null || !dropApproachLanding.equals(node.pos()))) {
+            clearDropApproachOwner("route_node_changed");
+        }
         // A2 Stage 6F · la ruta avanza cuando el nodo esta ALCANZADO de verdad: para un DROP eso exige estar
         // fisicamente en el aterrizaje (a su altura o por debajo) y con suelo, no solo cerca.
         while (node != null && nodoAlcanzado(node)) {
@@ -4525,6 +4532,10 @@ public final class NavExecutor {
             replanteosPorGuarda = 0;
             intentosDeDescenso = 0;
             node = route.currentNode(routeIndex);
+        }
+        if (dropApproachActive && (node == null || node.transition() != NavRoute.Transition.DROP
+                || dropApproachLanding == null || !dropApproachLanding.equals(node.pos()))) {
+            clearDropApproachOwner("route_node_changed");
         }
         if (node == null) {
             if (recuperacionOrigenDropActiva) {
@@ -5030,6 +5041,9 @@ public final class NavExecutor {
                                 + " tick=" + mob.level().getGameTime()
                                 + " takeoff=" + approachWaypoint.toShortString()
                                 + " landing=" + node.pos().toShortString());
+                    }
+                    if (!pathAccepted) {
+                        mob.getNavigation().stop();
                     }
                     if (!pathAccepted || mob.getNavigation().isDone()) {
                         tickDropApproachOwner(node.pos(), mob.level().getGameTime());
