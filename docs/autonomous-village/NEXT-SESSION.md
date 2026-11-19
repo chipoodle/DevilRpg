@@ -1,4 +1,37 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 post-Phase55 forensic analysis
+# CURRENT CHECKPOINT — 2026-11-19 A2 P0 fixes implemented (STATIC VALIDATION PENDING)
+
+**Branch:** `feature/autonomous-village`
+**Forensic baseline:** `3c36bfb21f1fdce64379dc734bbdf90aae550dde`
+**Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
+
+- IDX3/IDX5: same unusable local objective no longer consumes another `escalonesDeObjetivo` step; it increments the existing bounded failure counter and emits `REJECT_REPEAT_UNUSABLE`.
+- IDX4: no-candidate stair search no longer resets the inter-block cooldown. Only a real cooldown decrement is `CADENCE_WAIT`; no candidate is `NO_PROGRESS` and returns to the executor's bounded failure/backoff path.
+- Added `NavLocalObjectiveStepPolicy` and `StairBuildResultPolicy`; registered the new local-objective test in `policyTest`.
+- Expected tests: `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST` 5 assertions; `STAIR_BUILD_RESULT_TEST` 12 assertions.
+- No build, tests, lint or runtime have been executed by ChatGPT. Exact commit is pending Harness validation.
+- IDX7 ascent/BUILD and IDX8 global-search cancellation remain unimplemented; wrapper fix remains separate.
+- No budgets, cooldown durations, collision/support/protection/AABB rules, anchors, traversal checks or acceptance criteria were changed.
+- A2 remains OPEN. Runtime authorization is consumed.
+
+## Immediate work — Harness STATIC ONLY
+
+1. Fast-forward-only sync to exact production implementation HEAD `b41e9687a4be74d24a671340ac41b7e3f1817045`; preserve all local/untracked work, backups, artifacts and worlds. Stop on divergence or overwrite risk.
+2. Verify exact HEAD and the seven changed paths in the implementation report.
+3. Run:
+   - `.\gradlew.bat compileJava --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
+   - `.\gradlew.bat test --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
+   - `python tools\lint_aldea.py --strict`
+   - `git diff --check`
+4. Confirm the new 5-assertion `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST`, the extended 12-assertion `STAIR_BUILD_RESULT_TEST`, and all existing policy tests including `NAV_PLANNER_STATE_TEST` (54 assertions).
+5. Record tested SHA, commands, exit codes, logs, source selection, worktree/untracked preservation and any failures. Harness must not modify production.
+6. Stop after static validation regardless of PASS/FAIL and return the complete report.
+
+**NO RUNTIME:** do not launch Minecraft, wrapper, runServer, A2, C4, Run2 or Full12K. Any new runtime requires fresh explicit authorization.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 post-Phase55 forensic analysis
 
 **Branch:** `feature/autonomous-village`
 **Run analyzed:** `a2n-20261119-151818`
@@ -1010,6 +1043,7 @@ Read first, in order:
 97. `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`
 98. `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`
 99. `docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md`
+100. `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1137,9 +1171,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT to implement P0 fixes for IDX3/5 step-counter repetition and IDX4 no-candidate CADENCE loop.
-2. Then P1 ascent build gate (IDX7) and global cancellation/convergence (IDX8).
-3. No runtime until production fixes and static validation. A2 OPEN; no Run2/Full12K.
+1. Harness validates production implementation HEAD `b41e9687a4be74d24a671340ac41b7e3f1817045` STATIC ONLY; see the P0 implementation report.
+2. After static results, ChatGPT continues with IDX7 BUILD/ascent route semantics and IDX8 cancellation instrumentation.
+3. No runtime until production fixes pass static validation and fresh explicit user authorization is obtained. A2 OPEN; no Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 
