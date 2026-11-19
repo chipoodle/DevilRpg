@@ -1,17 +1,24 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B-R1 — runtime autorizado, pendiente de Harness
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS
 
-**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
-**Harness/documentation HEAD:** `f437f3723f52a802f086f29eb0b5045e6545c3ec`.
-**Validation report:** `docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`.
+**Production implementation SHA:** `f344f33ec122d7885aeb5669eb1f5e7126eadab1`.
+**Previous documentation checkpoint:** `924c62088e6efce9c8e1fcb39fdb76969f238cc8`.
+**Implementation report:** `2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
 
-Phase54B-R1 corrige el límite estricto del loader: el timeout `now >= rChunkDeadline` se comprueba antes de READY; al vencer libera los 289 tickets, marca fallo y cierra INVALIDO sin spawn. Código revisado en GitHub. Harness reportó compileJava, gradlew test, lint estricto y diff-check PASS; navegación y entidades sin cambios. No hay evidencia runtime todavía.
+Phase54B-R1 runtime `a2n-20261119-011138` validó fixture y spawn (289/289 chunks READY en 1 tick; 8/8 atacantes), pero el primer burst global A* activó watchdog de 60.04 s. A2 no tuvo resultado y no hay evidencia runtime de IDX5/IDX3.
 
-**Autorización del usuario recibida:** Harness debe ejecutar exactamente un A2 Run1 sobre el Production SHA anterior, con:
-`-Ddevilrpg.a2n.traceStair=true -Ddevilrpg.a2n.traceStairCandidates=true`.
+Phase55 cambia únicamente el planificador global:
+- A* reanudable con estado OPEN/CLOSED y predecesores persistido entre ticks.
+- Slice de 16 expansiones y máximo 32 extracciones OPEN por executor/tick.
+- Presupuesto global total existente intacto; no se amplía.
+- No se expone ruta parcial ni se consume presupuesto de fallos locales mientras la búsqueda está pendiente.
+- Fixture Phase54B no se modifica; colisión, soporte, protección, costos, heurística, radio y ventana vertical permanecen intactos.
+- Pruebas deterministas de equivalencia incremental/síncrona y límites agregadas a `NavPlannerStateTest`.
 
-Harness es responsable de sincronizar preservando trabajo local/mundos, ejecutar en modo headless y automático, capturar logs/mediciones y publicar el reporte. ChatGPT no debe intentar ejecutar pruebas en CHRIS-PC ni sustituir a Harness. No ejecutar C4 independiente, Run2 ni Full12K.
+**PENDING HARNESS STATIC VALIDATION** sobre el SHA exacto anterior: diagnostics compile, `gradlew test`, lint estricto y diff-check. Confirmar `NAV_PLANNER_STATE_TEST` y nuevas aserciones. Harness no debe modificar producción.
 
-Validar primero loader TICKETS/WAIT/READY 289/289 antes del deadline y las verificaciones de fixture; después, si hay spawn válido, revisar IDX5 `A2_STAIR_CADENCE_ROUTE_PRESERVED` → `MOVE_COMMAND` válido y contadores invariantes durante CADENCE_WAIT. Si el loader falla, clasificar BLOCKED de fixture, no FAIL de navegación. A2 permanece OPEN.
+No se ha ejecutado runtime. Esta autorización para implementar Phase55 NO autoriza un A2 Run1. Esperar revisión del reporte estático y autorización explícita separada. No C4 standalone, Run2 ni Full12K. A2 OPEN.
+
+---
 
 ---
 
