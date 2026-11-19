@@ -84,7 +84,7 @@ public final class NavPlanner {
                                boolean hitBudget, String reason, String summary, boolean pending) {
     }
 
-    private static final int GLOBAL_EXPANSIONS_PER_TICK = 64;
+    private static final int GLOBAL_EXPANSIONS_PER_TICK = 16;
     private static final java.util.Map<Mob, GlobalSearchState> GLOBAL_SEARCHES =
             java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
 
