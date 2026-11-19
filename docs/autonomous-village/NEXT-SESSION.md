@@ -3,7 +3,6 @@
 **Branch:** `feature/autonomous-village`
 **Validated production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
 **Current Harness report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
-**Documentation HEAD:** `e132954551cf3fdd667372384d2c6ab4bddbb220`
 
 - Diagnostics compile, `gradlew test`, strict lint and diff-check: PASS on the exact production SHA.
 - `NAV_PLANNER_STATE_TEST`: OK, **54 assertions actually executed** (51 source call sites; the slice assertion runs four times).
@@ -15,7 +14,7 @@
 
 ---
 
-# HISTORICAL — 2026-11-19 A2 Phase55 compile correction (PENDING)
+# HISTORICAL — 2026-11-19 A2 Phase55 compile correction (VALIDATED IN PHASE55-R2)
 
 
 **Branch:** `feature/autonomous-village`
@@ -27,7 +26,7 @@
 
 Harness static validation found two Java compile errors in `NavPlanner.advanceGlobalSearch`: local `BlockPos state` declarations redeclared the method parameter `GlobalSearchState state`. ChatGPT renamed exactly those two locals and their immediate `routePosition` references to `routeState`. Commit diff was reviewed: only `NavPlanner.java`, four changed lines (two declarations and two references). No algorithm, budgets, tests, collision, support, protection or acceptance logic changed.
 
-**Current status: FIX PUBLISHED — NOT YET VALIDATED.** ChatGPT did not run Gradle, tests, lint, diff-check or Minecraft.
+**Historical status: FIX PUBLISHED — STATIC VALIDATION PASS in Phase55-R2.** Harness later confirmed compile, tests, lint and diff-check on the corrected SHA; see the current checkpoint and R2 report.
 
 **Harness next — STATIC ONLY on exact SHA `11ff43cd338d7a6222a146a2ed642a5546fb2910`:**
 1. Safely fast-forward and preserve local/untracked work and worlds.
