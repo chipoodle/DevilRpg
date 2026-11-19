@@ -25,7 +25,7 @@ The authoritative fixture roster is built from those captured references after g
 - in the fixture AABB,
 - alive,
 - not removed,
-- and `isAddedToLevel()` is true.
+- and is demonstrably tracked: either `isAddedToLevel()` is true or `level.getEntity(UUID)` returns the exact captured object.
 
 The existing `getEntitiesOfClass(Villager.class, AABB)` query remains as a diagnostic comparison, not as the roster source. The harness logs:
 - each join event (UUID, profession, position, loadedFromDisk, cancellation state at listener time),
