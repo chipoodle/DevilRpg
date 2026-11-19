@@ -1559,10 +1559,15 @@ public final class NavExecutor {
                 if (escalon != null) {
                     return escalon;
                 }
-                if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
-                    return null;
+                if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT && NavTrace.on()) {
+                    NavTrace.ev("A2_STAIR_CADENCE_ROUTE_PRESERVED", "uuid=" + mob.getUUID()
+                            + " tick=" + mob.level().getGameTime()
+                            + " waypoint=" + mision.toShortString()
+                            + " source=direct_mission");
                 }
             }
+            // CADENCE_WAIT postpones only the stair attempt. The directly reachable mission
+            // remains a valid non-stair waypoint and must not be discarded.
             return mision;
         }
         if (dentroDeLaVentana(yo, mision) && !objetivoLocalFisicamenteAlcanzable) {
@@ -1764,10 +1769,16 @@ public final class NavExecutor {
             if (escalon != null) {
                 return escalon;
             }
-            if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
-                return null;
+            if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT && NavTrace.on()) {
+                NavTrace.ev("A2_STAIR_CADENCE_ROUTE_PRESERVED", "uuid=" + mob.getUUID()
+                        + " tick=" + mob.level().getGameTime()
+                        + " waypoint=" + objetivo.toShortString()
+                        + " transition=" + objetivoTransicion
+                        + " source=validated_global_route");
             }
         }
+        // A valid global waypoint has already passed the route and physical-foot checks above.
+        // A stair cooldown delays construction, not movement along this independent route.
         objetivoPermiteConstruccion = objetivoConstruible;
         objetivoTransicionLocal = objetivoTransicion;
         objetivoAccionLocal = objetivoTransicion == NavRoute.Transition.BREAK ? objetivoAccion : null;
