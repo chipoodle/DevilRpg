@@ -1,4 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 validation (FAIL)
+
+**Production SHA:** `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
+**Current report:** `2026-11-18-A2-PHASE51-VALIDATION.md`.
+**RUN_ID:** `a2n-20261118-215530` (2/8 strict, C4 PASS `[1,0,0]`).
+
+- Static PASS; both policy tests run in normal Gradle gate (8/6).
+- CADENCE_WAIT validated: 3595 cooldowns, 3542 `A2_LOCAL_STAIR_WAIT`, counters unchanged.
+- Monotonic anchor NOT exercised: 0 constructions/traversals/ANCHOR_REFRESH. `INSUFFICIENT_EVIDENCE`.
+- A2 regressed 3/8 -> 2/8; IDX5 lost its entry. A2 OPEN.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 51 (PENDING HARNESS)
+
 
 **Production implementation SHA:** `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
 **Implementation report:** `docs/autonomous-village/2026-11-18-A2-PHASE51-STAIR-WIRING-FIX.md`.
@@ -517,6 +531,7 @@ Read first, in order:
 78. `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`
 79. `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE50-VALIDATION.md`
+81. `docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -644,11 +659,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 51: wire `NavStairAnchorPolicy.refresh(...)`, return `CADENCE_WAIT` and emit
-   `A2_LOCAL_STAIR_WAIT`, skip local step/fail counters for it, and register both tests in build.gradle.
-2. Revalidate on exact SHA; keep Phase44/41/46 frozen; no budget changes.
-3. IDX2 entered strict; IDX7/IDX8 remain independent.
-4. A2 OPEN at 3/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
+1. Phase 52: get a runtime scenario that actually places/traverses stairs, then validate the monotonic
+   anchor. Investigate why CADENCE_WAIT now yields zero placements and why IDX5 lost its entry.
+2. Keep Phase44/41/46 frozen; no budget or predicate changes.
+3. A2 OPEN at 2/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

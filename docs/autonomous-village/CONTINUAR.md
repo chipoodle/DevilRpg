@@ -1061,3 +1061,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Anchor policy not wired; CADENCE_WAIT not returned. A2 3/8.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE50-VALIDATION.md`.
+
+## 2026-11-18 — A2 Phase 51 validation FAIL
+
+- CADENCE_WAIT passes; monotonic anchor unexercised; A2 2/8, IDX5 regression.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md`.

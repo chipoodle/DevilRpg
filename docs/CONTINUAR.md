@@ -5249,3 +5249,10 @@ run/saves; hashes match; structural verification only.
 - ANCHOR_REFRESH still 607,93->607,94; policy not wired. Cooldown still NO_PROGRESS; CADENCE_WAIT/A2_LOCAL_STAIR_WAIT absent.
 - Tests 8/6 PASS only via init task; not registered in build.gradle.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE50-VALIDATION.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 51 validation FAIL
+
+- Run `a2n-20261118-215530`; production `ea21466a`; A2 2/8 strict, C4 PASS [1,0,0].
+- Static PASS; tests 8/6 now in normal gate. CADENCE_WAIT validated (3595/3542, counters unchanged).
+- Anchor unexercised: 0 constructions/traversals/ANCHOR_REFRESH; A2 regressed from3/8, IDX5 lost entry.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md. A2 OPEN.
