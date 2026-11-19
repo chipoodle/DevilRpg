@@ -85,8 +85,10 @@ public final class NavPlanner {
     }
 
     private static final int GLOBAL_EXPANSIONS_PER_TICK = 16;
-    private static final java.util.Map<Mob, GlobalSearchState> GLOBAL_SEARCHES =
-            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+    /** Owner-held handle: the executor retains the search, with no static entity/session registry. */
+    public static final class GlobalSearchHandle {
+        private GlobalSearchState state;
+    }
 
     private static final class GlobalSearchState {
         final CollisionGetter level;
@@ -362,6 +364,19 @@ public final class NavPlanner {
                 policies, construidas, exclusiones, exclusionesBreak, false);
     }
 
+    /** Advances a retained strategic A* frontier by a bounded slice on each server tick. */
+    public static GlobalResult planGlobalIncremental(CollisionGetter level, Mob mob, BlockPos start,
+                                                       BlockPos objetivo, int maxRadio, int verticalRange,
+                                                       int maxExpansions, NavObstruction.Policies policies,
+                                                       java.util.Set<BlockPos> construidas,
+                                                       NavDropExclusionPolicy exclusiones,
+                                                       NavBreakExclusionPolicy exclusionesBreak,
+                                                       GlobalSearchHandle handle) {
+        if (handle == null) throw new IllegalArgumentException("GlobalSearchHandle is required");
+        return planGlobalInternal(level, mob, start, objetivo, maxRadio, verticalRange, maxExpansions,
+                policies, construidas, exclusiones, exclusionesBreak, false, handle);
+    }
+
     /**
      * Exact-goal variant for short tactical recoveries. Unlike the strategic global planner's
      * arrival region, this search succeeds only when both the state cell and feet Y equal the
@@ -374,7 +389,7 @@ public final class NavPlanner {
                                          NavDropExclusionPolicy exclusiones,
                                          NavBreakExclusionPolicy exclusionesBreak) {
         return planGlobalInternal(level, mob, start, objetivo, maxRadio, verticalRange, maxExpansions,
-                policies, construidas, exclusiones, exclusionesBreak, true);
+                policies, construidas, exclusiones, exclusionesBreak, true, null);
     }
 
     private static GlobalResult planGlobalInternal(CollisionGetter level, Mob mob, BlockPos start, BlockPos objetivo,
@@ -383,17 +398,17 @@ public final class NavPlanner {
                                                     java.util.Set<BlockPos> construidas,
                                                     NavDropExclusionPolicy exclusiones,
                                                     NavBreakExclusionPolicy exclusionesBreak,
-                                                    boolean exactGoal) {
-        GlobalSearchState retained = GLOBAL_SEARCHES.get(mob);
+                                                    boolean exactGoal, GlobalSearchHandle handle) {
+        GlobalSearchState retained = handle == null ? null : handle.state;
         if (retained != null && (!retained.start.equals(start) || !retained.objective.equals(objetivo)
                 || retained.level != level || retained.exactGoal != exactGoal
                 || retained.maxRadio != maxRadio || retained.verticalRange != verticalRange
                 || retained.maxExpansions != maxExpansions)) {
-            GLOBAL_SEARCHES.remove(mob);
+            if (handle != null) handle.state = null;
             retained = null;
         }
         if (retained != null) {
-            return advanceGlobalSearch(mob, retained);
+            return advanceGlobalSearch(mob, retained, handle);
         }
         if (start.equals(objetivo)) {
             return new GlobalResult(new NavRoute(List.of(new NavRoute.Node(objetivo, NavRoute.Transition.WALK)),
@@ -537,12 +552,13 @@ public final class NavPlanner {
         NavGraphSearch.Session search = NavGraphSearch.begin(start.asLong(), start.getY(), graph, maxExpansions);
         GlobalSearchState created = new GlobalSearchState(level, start, objetivo, exactGoal,
                 maxRadio, verticalRange, maxExpansions, contadores, search);
-        GLOBAL_SEARCHES.put(mob, created);
-        return advanceGlobalSearch(mob, created);
+        if (handle != null) handle.state = created;
+        return advanceGlobalSearch(mob, created, handle);
     }
 
-    private static GlobalResult advanceGlobalSearch(Mob mob, GlobalSearchState state) {
-        boolean complete = state.search.advance(GLOBAL_EXPANSIONS_PER_TICK);
+    private static GlobalResult advanceGlobalSearch(Mob mob, GlobalSearchState state, GlobalSearchHandle handle) {
+        int slice = handle == null ? state.maxExpansions : GLOBAL_EXPANSIONS_PER_TICK;
+        boolean complete = state.search.advance(slice);
         if (!complete) {
             String summary = "global pendiente inicio=" + state.start.toShortString()
                     + " meta=" + state.objective.toShortString()
@@ -552,7 +568,7 @@ public final class NavPlanner {
             return new GlobalResult(new NavRoute(List.of(), state.start), state.start, false,
                     state.search.expansions(), false, "planificación global pendiente", summary, true);
         }
-        GLOBAL_SEARCHES.remove(mob);
+        if (handle != null) handle.state = null;
         BlockPos start = state.start;
         BlockPos objetivo = state.objective;
         boolean exactGoal = state.exactGoal;
