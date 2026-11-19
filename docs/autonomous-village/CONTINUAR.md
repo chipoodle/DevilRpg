@@ -1193,3 +1193,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - 12 workers spawned; shepherd/mason alive in NBT and inside AABB. Snapshot omission unexplained.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md`. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 runtime FAIL
+
+- Fixture PASS; A2 0/8 strict,1/8 perimeter; C4 FAIL. A* no watchdog but routing regressed.
+- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md`. A2 OPEN.

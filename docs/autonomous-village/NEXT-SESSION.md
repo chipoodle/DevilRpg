@@ -1,8 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population NBT forensics
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 runtime FAIL
 
-**Branch:** `feature/autonomous-village`  
-**Run:** `a2n-20261119-031255` — BLOCKED before attacker spawn  
-**Production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910` (unchanged)
+**Branch:** `feature/autonomous-village`
+**Run:** `a2n-20261119-093456` — completed without watchdog; no strict entries
+**Production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
+
+- Fixture PASS: 289/289 chunks, 16 villagers/12 professionals, 8/8 spawn.
+- A2 FAIL: 0/8 strict, 1/8 perimeter (idx6 t271); 8 alive, C4 FAIL because guards never fought.
+- Incremental A* avoided watchdog (66 pending slices, 0 watchdog) but key global searches completed
+  `exp=1/8000` with front exhausted; most attackers remained PLANNING.
+- No CADENCE route-preserved event; no stair placement/traversal.
+- One Run1 consumed; no retry. A2 OPEN; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 population NBT forensics
 
 - NBT proof: all 12 workers spawned and survived. SHEPHERD `c690ddc5…` at `708,71,533` and MASON
   `c6ba9a5c…` at `694,71,511` are alive, health20, death0, persistent, inside the verifier AABB.
@@ -15,7 +26,7 @@
 ---
 
 # HISTORICAL — 2026-11-19 A2 Phase55 fixture population source forensics
-**Harness documentation HEAD at blocked report:** `0181bd4e42dfb8f9f70136c1bca4986a42fdbb4d`  
+**Harness documentation HEAD at blocked report:** `0181bd4e42dfb8f9f70136c1bca4986a42fdbb4d`
 **Source-forensics report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-FORENSICS.md`
 
 ## Verified runtime facts
@@ -773,6 +784,7 @@ Read first, in order:
 88. `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
 89. `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md`
 90. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md`
+91. `docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -900,10 +912,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Add read-only population-query diagnostics: per-UUID `getEntitiesOfClass` result, entity-section/chunk
-   loaded state and `level.getEntity(uuid)` presence.
-2. Do not change spawn geometry, profession assignment, navigation or A2 criteria from this evidence.
-3. A2 OPEN; no runtime without new explicit authorization. No Run2/Full12K.
+1. Diagnose the incremental A* routing regression: why global searches finish `exp=1/8000` with front
+   exhausted and leave most attackers PLANNING, despite no watchdog.
+2. Inspect why CADENCE_WAIT never reaches `A2_STAIR_CADENCE_ROUTE_PRESERVED`; no stairs were placed.
+3. A2 OPEN; no retry/Run2/Full12K without new explicit authorization. Fixture remains validated.
 
 ## Worlds (preserve; do not overwrite)
 

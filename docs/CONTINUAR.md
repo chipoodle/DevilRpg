@@ -5346,3 +5346,10 @@ run/saves; hashes match; structural verification only.
 - Read-only NBT: all 12 workers exist; SHEPHERD c690ddc5 at708,71,533 and MASON c6ba9a5c at694,71,511 alive HP20 death0 persistent.
 - Both inside verifier AABB; getEntitiesOfClass snapshot omitted them. Exact query visibility unknown.
 - Report: docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md. No runtime. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 runtime FAIL
+
+- Run a2n-20261119-093456: fixture PASS (289/289,16 villagers/12 professionals,8 spawn).
+- A2 0/8 strict,1/8 perimeter (idx6 t271),8 alive; C4 FAIL guards no combat.
+- Incremental A* no watchdog (66 pending) but key searches exp=1/8000 front exhausted; most PLANNING. No cadence preserved/stairs.
+- Report: docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md. A2 OPEN.
