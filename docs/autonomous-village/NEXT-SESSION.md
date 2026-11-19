@@ -16,8 +16,8 @@
 
 ## Immediate work — Harness STATIC ONLY
 
-1. Fast-forward-only sync to exact production implementation HEAD `b41e9687a4be74d24a671340ac41b7e3f1817045`; preserve all local/untracked work, backups, artifacts and worlds. Stop on divergence or overwrite risk.
-2. Verify exact HEAD and the seven changed paths in the implementation report.
+1. Fast-forward-only sync to the current `feature/autonomous-village` branch tip, which must descend from production implementation commit `b41e9687a4be74d24a671340ac41b7e3f1817045`. Documentation-only handoff commits may follow it. Preserve all local/untracked work, backups, artifacts and worlds. Stop on divergence or overwrite risk.
+2. Record the actual branch HEAD tested and verify the seven changed paths against the source blob SHAs in the implementation report.
 3. Run:
    - `.\gradlew.bat compileJava --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
    - `.\gradlew.bat test --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
