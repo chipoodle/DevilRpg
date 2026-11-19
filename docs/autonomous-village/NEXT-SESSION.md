@@ -14,6 +14,24 @@
 - No budgets, cooldown durations, collision/support/protection/AABB rules, anchors, traversal checks or acceptance criteria were changed.
 - A2 remains OPEN. Runtime authorization is consumed.
 
+## New manual gameplay observation — 2026-11-19
+
+Player manually ran a siege and observed two attackers breach/enter, several attackers ignore the visible breach and dig beneath themselves (some then remain in the holes), and a yellow-named leftover test entity approximately `IDX8` idle at the custom gate.
+
+Source diagnosis and required behavior are recorded in:
+`docs/autonomous-village/2026-11-19-MANUAL-SIEGE-OBSERVATION-GATE-AND-BREACH.md`.
+
+Confirmed source findings:
+- `TraverseGoal` chooses a live combat target's Y (otherwise village center) and explicitly prefers `cavarHaciaAbajo` when that target is more than one block below. This explains why attackers can dig underfoot instead of using an existing breach; exact runtime trigger per zombie remains unverified.
+- `DoubleGateBlock` is a 3×3 EntityBlock assembly. Its hinge cell has a block entity; mob navigation and `breakBlockAt` reject block entities, while the nine-cell cascade exists only in `playerWillDestroy`. Simply allowing the hinge or removing the block-entity guard is insufficient and unsafe.
+- Existing `VillageGenerator.asegurarMuro` checks missing custom gate cells and can rebuild the perimeter, but it defers repair while ANY `AggressiveZombieEntity` remains in a broad radius. A stale/out-of-wave `IDX8` near the gate may therefore suppress restoration even after the real siege resolves.
+
+Player's new design requirement supersedes the older gate comment: the siege must be able to destroy the custom gate as one atomic 3×3 breach, and the village must restore it after the real siege is safely resolved. Existing protection of arbitrary block entities and non-wall village structures must remain intact.
+
+**No production code changed for this observation.** The current P0 static-only Harness checkpoint remains first. After it passes, implement/test atomic gate demolition, reachable-breach preference, correction of target-Y-only underfoot digging, and repair gating based on the active siege/wave rather than any nearby aggressive zombie. No runtime is authorized until static PASS and fresh explicit approval.
+
+---
+
 ## Immediate work — Harness STATIC ONLY
 
 1. Fast-forward-only sync to the current `feature/autonomous-village` branch tip, which must descend from production implementation commit `b41e9687a4be74d24a671340ac41b7e3f1817045`. Documentation-only handoff commits may follow it. Preserve all local/untracked work, backups, artifacts and worlds. Stop on divergence or overwrite risk.
