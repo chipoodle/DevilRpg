@@ -5276,3 +5276,9 @@ run/saves; hashes match; structural verification only.
 - IDX3: 397 builder calls, 380 cooldowns, 2340 candidates all occupied terrain; 0 placements/traversals.
 - IDX5: Phase50 t2 NO_PROGRESS->t3 MOVE; Phase51 t2 CADENCE_WAIT->zero MOVE_COMMAND. Causal link confirmed.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 53 validation BLOCKED
+
+- Static PASS on production `656ce7d0`; tests 8/6.
+- Run `a2n-20261118-233308` crashed in A2NavHarness.prepararRaidFixture/setChunkForced watchdog 60s before spawn. No IDX5/cadence route evidence.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md. A2 OPEN.

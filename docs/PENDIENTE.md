@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 validation BLOCKED
 
 - Production SHA: `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6` (parent `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`).
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE53-CADENCE-ROUTE-PRESERVATION.md`.
@@ -42,6 +42,8 @@
 > **A2 Phase51 (validación FAIL):** CADENCE_WAIT validado (3595 cooldowns, 3542 `A2_LOCAL_STAIR_WAIT`, contadores intactos), pero no hubo ninguna colocación/travesía (`ANCHOR_REFRESH=0`), por lo que el ancla monotónica queda INSUFFICIENT_EVIDENCE. A2 bajó a 2/8 estricto; IDX5 perdió la entrada. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md`.
 >
 > **A2 Phase52 (forense):** IDX3 tiene 397 llamadas, 2340 candidatos y 0 colocaciones porque todo candidato falla por terreno ocupado (`celdaAire=false`). IDX5: Phase50 t2 NO_PROGRESS y t3 MOVE_COMMAND; Phase51 t2 CADENCE_WAIT, cero MOVE_COMMAND. El deferral CADENCE_WAIT bloquea el fallback. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`.
+>
+> **A2 Phase53 (validación BLOCKED):** static PASS sobre `656ce7d0`, pero A2 `a2n-20261118-233308` murió en `A2NavHarness.prepararRaidFixture`/`setChunkForced` (watchdog 60s) antes de spawnear atacantes. Sin evidencia de IDX5/CADENCE route; INSUFFICIENT_EVIDENCE. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 

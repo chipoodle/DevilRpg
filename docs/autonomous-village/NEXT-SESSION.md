@@ -1,4 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 route preservation
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 validation BLOCKED
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
+**Current report:** `2026-11-18-A2-PHASE53-VALIDATION.md`.
+**RUN_ID:** `a2n-20261118-233308` (BLOCKED: fixture chunk-force watchdog).
+**HEAD:** `605426b2c846bc3deac0db670af234f48afa4c2b`.
+
+- Static PASS on exact production SHA; both stair tests 8/6.
+- A2 Run1 crashed in `A2NavHarness.prepararRaidFixture`/`setChunkForced` before any attacker.
+- No IDX5/CADENCE route evidence; `INSUFFICIENT_EVIDENCE`.
+- A2 OPEN; no Run2/Full12K. Need fixture stabilization and a new authorized Run1.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 53 route preservation
+
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6` (parent `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`).
 **Implementation report:** `2026-11-18-A2-PHASE53-CADENCE-ROUTE-PRESERVATION.md`.
@@ -564,6 +579,7 @@ Read first, in order:
 80. `docs/autonomous-village/2026-11-18-A2-PHASE50-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md`
 82. `docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`
+83. `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -691,10 +707,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 53: make CADENCE_WAIT defer only the stair attempt while preserving a valid non-stair
-   fallback/route; diagnose IDX3's all-solid candidate field. Keep Phase44/41/46 frozen.
-2. Monotonic anchor still needs a physical placement/traversal; no budget/predicate changes.
-3. A2 OPEN at 2/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
+1. Stabilize the A2 fixture chunk forcing / use a pre-generated disposable world, then re-authorize one
+   A2 Run1 on `656ce7d0` to validate CADENCE_WAIT route preservation and IDX5.
+2. No production/budget/predicate changes from Harness; monotonic anchor still runtime-unvalidated.
+3. A2 OPEN; no Run 2 or 12k until five consecutive 8/8 strict. C4 last PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 
