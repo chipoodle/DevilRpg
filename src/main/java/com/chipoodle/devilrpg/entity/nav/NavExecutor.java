@@ -1571,6 +1571,14 @@ public final class NavExecutor {
         boolean objetivoLocalFisicamenteAlcanzable =
                 NavWaypointWindowPolicy.directoAlcanzable(desnivelDirecto, policies.maxSafeDrop());
         if (dentroDeLaVentana(yo, mision) && objetivoLocalFisicamenteAlcanzable) {
+            if (globalCache != null && globalCache.pending()) {
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalCache = null;
+                globalMision = null;
+                globalDesde = null;
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
+            }
             if (mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity) {
                 BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo,
                         "mision dentro de ventana local y desnivel ejecutable");
