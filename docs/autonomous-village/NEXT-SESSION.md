@@ -1,4 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 52 forensics
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 route preservation
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6` (parent `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`).
+**Implementation report:** `2026-11-18-A2-PHASE53-CADENCE-ROUTE-PRESERVATION.md`.
+**Status:** IMPLEMENTED — PENDING HARNESS VALIDATION.
+
+- Phase52 proved IDX5's regression: `CADENCE_WAIT` returned null after a valid global waypoint had been selected, suppressing the t3 DROP move; direct-mission fallback had the same early-return pattern.
+- Phase53 removes those two route-discarding returns. The stair attempt remains deferred, but the directly reachable mission or already validated global waypoint is preserved. New trace: `A2_STAIR_CADENCE_ROUTE_PRESERVED`.
+- Only `NavExecutor.java` changed in production. No tests, Gradle, lint, diagnostics compile, or runtime were run by ChatGPT.
+- Harness must validate this exact SHA: static gates first; if PASS, A2 Run1 only. Verify preserved trace → valid MOVE_COMMAND for IDX5 and unchanged counters during cooldown.
+- IDX3 all-solid candidate geometry remains a separate open issue. Monotonic anchor remains runtime-unvalidated until a physical stair is placed and traversed.
+- A2 OPEN. No Run2; no Full12K until five consecutive 8/8 strict `DENTRO-PARED` runs. No Phase41/44/46 changes or budget/safety relaxations.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 52 forensics
 
 **Production SHA:** `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
 **Current report:** `2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`.
