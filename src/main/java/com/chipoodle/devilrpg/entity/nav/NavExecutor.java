@@ -2012,9 +2012,10 @@ public final class NavExecutor {
         boolean mismoObjetivo = siguiente.equals(objective);
         boolean objetivoActualUtilizable = esPieValido(objective)
                 || siguientePermiteConstruccion || accionLocalValida;
+        boolean objetivoDentroVentana = objective != null
+                && dentroDeLaVentana(mob.blockPosition(), objective);
         NavLocalObjectiveStepPolicy.Decision decision = NavLocalObjectiveStepPolicy.decidir(
-                mismoObjetivo, objetivoActualUtilizable,
-                dentroDeLaVentana(mob.blockPosition(), objective));
+                mismoObjetivo, objetivoActualUtilizable, objetivoDentroVentana);
         if (decision == NavLocalObjectiveStepPolicy.Decision.REUTILIZAR) {
             return true; // el waypoint existente sigue siendo ejecutable; se conserva su ruta/transicion
         }
