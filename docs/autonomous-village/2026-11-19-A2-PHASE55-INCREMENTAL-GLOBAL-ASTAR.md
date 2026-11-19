@@ -7,6 +7,7 @@
 - Branch: `feature/autonomous-village`
 - Baseline documentation HEAD: `924c62088e6efce9c8e1fcb39fdb76969f238cc8`
 - Production baseline: `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`
+- **Implementation SHA:** `ec35c910f894e722a445f90ad24af4033ed6b158`
 - Phase54B-R1 runtime: `a2n-20261119-011138`, BLOCKED by 60.04 s global-planner watchdog after 8/8 spawn.
 - This implementation changes production navigation only; Harness must validate the published SHA. ChatGPT did not run Gradle, lint, diagnostics compilation, or Minecraft runtime.
 
