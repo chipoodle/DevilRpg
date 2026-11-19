@@ -1,9 +1,9 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS STATIC
 
-- Production SHA: `f344f33ec122d7885aeb5669eb1f5e7126eadab1`.
+- Production SHA: `ec35c910f894e722a445f90ad24af4033ed6b158`.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
 - Phase54B-R1 fixture PASS: 289/289 chunks READY in 1 tick, all fixture checks PASS, 8/8 spawn. Runtime BLOCKED by 60.04 s watchdog in first global A* burst. No A2/IDX5/IDX3 result.
-- Phase55 introduces resumable global A*: OPEN/CLOSED and predecessor state retained across server ticks; 16 expansions / max 32 OPEN pops per executor/tick; unchanged total global expansion budget.
+- Phase55 introduces resumable global A*: OPEN/CLOSED and predecessor state retained across server ticks; 4 expansions / max 8 OPEN pops per executor/tick; unchanged total global expansion budget.
 - Pending search emits no partial route or movement and consumes no local stair/failure counters. Existing collision/support/protection/heuristic/radius/costs/acceptance gates are unchanged.
 - New deterministic assertions in registered `NavPlannerStateTest`: incremental vs synchronous route equivalence, per-slice bound, no partial result, and unchanged total hard budget.
 - **Harness next: STATIC ONLY** on exact SHA: diagnostics compile, `gradlew test`, strict lint, diff-check. Confirm test name and assertion count. Preserve local work/worlds; Harness must not modify production.
