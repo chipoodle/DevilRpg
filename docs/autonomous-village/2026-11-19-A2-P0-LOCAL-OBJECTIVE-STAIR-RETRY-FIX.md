@@ -86,6 +86,18 @@ Important design boundary: the existing descending stair builder remains descent
 - `src/test/java/com/chipoodle/devilrpg/entity/nav/StairBuildResultTest.java`
 - `build.gradle` (register new policy test in the existing `policyTest` gate)
 
+## 5.1 Source blob checkpoints
+
+| Path | Blob SHA |
+|---|---|
+| `NavExecutor.java` | `2055abca5ad2b1dc90e168394406d3be9b058668` |
+| `AggressiveZombieEntity.java` | `00fb9c6c6131de715ebb4afe66d6d0585e8910dc` |
+| `NavLocalObjectiveStepPolicy.java` | `17d97b6c649d9615566398507b18c10876852ebd` |
+| `StairBuildResultPolicy.java` | `aa2572e0e0bf4f413ac77be52ecf96dc0ac416e7` |
+| `NavLocalObjectiveStepPolicyTest.java` | `eafb796c3b50a0bbb809cb31509327babff78513` |
+| `StairBuildResultTest.java` | `d95d19e8ce50f18292f479ceeea8de80500e5d5e` |
+| `build.gradle` | `cff90db7600e93f124d106529cf1aa8f6a408f38` |
+
 ## 5. Implementation commits
 
 All commits are on `feature/autonomous-village`, descended from the forensic baseline:
@@ -100,7 +112,7 @@ All commits are on `feature/autonomous-village`, descended from the forensic bas
 - `b762e832f5c15f834fa3c18ba17d8b108718141e` — register local objective policy test.
 - `b41e9687a4be74d24a671340ac41b7e3f1817045` — guard nullable current objective in idempotence check.
 
-The compare from forensic baseline to implementation HEAD is fast-forward: 9 commits, 7 files changed, 132 insertions and 46 deletions.
+The compare from forensic baseline to production implementation HEAD is fast-forward: 9 commits, 7 files changed, 133 insertions and 24 deletions.
 
 ## 6. Harness — next task
 
@@ -108,8 +120,8 @@ Validate **exact implementation HEAD**:
 
 `b41e9687a4be74d24a671340ac41b7e3f1817045`
 
-1. Fast-forward-only sync to this commit. Preserve all local/untracked work, backups, diagnostic artifacts and worlds. Stop on divergence or overwrite risk.
-2. Verify branch and exact HEAD; verify all seven changed paths and the two new source/test files.
+1. Fast-forward-only sync to the current `feature/autonomous-village` branch tip, which must descend from production implementation commit `b41e9687a4be74d24a671340ac41b7e3f1817045`. The tip may include only the documented handoff commits after that production commit. Preserve all local/untracked work, backups, diagnostic artifacts and worlds. Stop on divergence or overwrite risk.
+2. Record the actual branch HEAD tested. Verify the seven production/test/build paths against the blob SHAs in this report; do not treat the production implementation commit as the branch tip if documentation commits follow it.
 3. Run static checks only:
    - `.\gradlew.bat compileJava --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
    - `.\gradlew.bat test --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
