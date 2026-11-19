@@ -8,7 +8,25 @@ public final class StairBuildResultTest {
         comprobar("cadence wait is not a stair placement", StairBuildResult.CADENCE_WAIT != StairBuildResult.STAIR_PLACED);
         comprobar("rejected distinct", StairBuildResult.REJECTED != StairBuildResult.FAILED);
         comprobar("only placed is a stair", StairBuildResult.STAIR_PLACED == StairBuildResult.valueOf("STAIR_PLACED"));
-        System.out.println("STAIR_BUILD_RESULT_TEST: OK (6 assertions)");
+        comprobar("no candidate without cooldown is NO_PROGRESS",
+                StairBuildResultPolicy.clasificar(false, false, false, 0, 0)
+                        == StairBuildResult.NO_PROGRESS);
+        comprobar("only a real cooldown decrement is CADENCE_WAIT",
+                StairBuildResultPolicy.clasificar(false, false, false, 10, 9)
+                        == StairBuildResult.CADENCE_WAIT);
+        comprobar("unchanged cooldown is not CADENCE_WAIT",
+                StairBuildResultPolicy.clasificar(false, false, false, 10, 10)
+                        == StairBuildResult.NO_PROGRESS);
+        comprobar("verified pending stair is STAIR_PLACED",
+                StairBuildResultPolicy.clasificar(true, true, false, 0, 0)
+                        == StairBuildResult.STAIR_PLACED);
+        comprobar("verified access clear is distinct",
+                StairBuildResultPolicy.clasificar(true, false, true, 0, 0)
+                        == StairBuildResult.ACCESS_CLEARED);
+        comprobar("unclassified successful builder result fails closed",
+                StairBuildResultPolicy.clasificar(true, false, false, 0, 0)
+                        == StairBuildResult.FAILED);
+        System.out.println("STAIR_BUILD_RESULT_TEST: OK (12 assertions)");
     }
 
     private static void comprobar(String name, boolean ok) {
