@@ -216,7 +216,11 @@ public final class A2NavHarness {
                 int workersResumedAlive = 0;
                 for (java.util.UUID workerId : rTrabajadoresEsperados) {
                     var entity = nivel.getEntity(workerId);
-                    if (entity instanceof net.minecraft.world.entity.npc.Villager worker && worker.isAlive()) {
+                    if (!(entity instanceof net.minecraft.world.entity.npc.Villager)) {
+                        entity = rAldeanosCapturados.get(workerId);
+                    }
+                    if (entity instanceof net.minecraft.world.entity.npc.Villager worker
+                            && worker.isAlive() && !worker.isRemoved()) {
                         professionals++;
                         if (tieneGoalProfesional(worker)) professionalGoals++;
                         if (rTrabajadoresQueReanudaron.contains(workerId)) {
@@ -2042,7 +2046,7 @@ public final class A2NavHarness {
         if (nivel == null || rCentro == null) return;
         var zona = new net.minecraft.world.phys.AABB(rCentro)
                 .inflate(com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D);
-        for (var villager : nivel.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, zona)) {
+        for (var villager : aldeanosCapturadosEn(zona)) {
             if (!villager.isAlive() || villager.isBaby()) continue;
             if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(villager)) {
                 for (var wrapped : villager.goalSelector.getAvailableGoals()) {
@@ -2064,8 +2068,11 @@ public final class A2NavHarness {
         if (rPostRaidIniciado) {
             for (java.util.UUID workerId : rTrabajadoresEsperados) {
                 var entity = nivel.getEntity(workerId);
+                if (!(entity instanceof net.minecraft.world.entity.npc.Villager)) {
+                    entity = rAldeanosCapturados.get(workerId);
+                }
                 if (!(entity instanceof net.minecraft.world.entity.npc.Villager villager)
-                        || !villager.isAlive() || villager.isBaby()) {
+                        || !villager.isAlive() || villager.isRemoved() || villager.isBaby()) {
                     continue;
                 }
                 String expectedGoal = goalProfesionalEsperado(villager);
@@ -2099,7 +2106,7 @@ public final class A2NavHarness {
                 .inflate(com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D);
         java.util.Set<Long> owners = new java.util.HashSet<>();
         int presentes = 0, huerfanas = 0, duplicadas = 0;
-        for (var villager : nivel.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, zona)) {
+        for (var villager : aldeanosCapturadosEn(zona)) {
             var memory = villager.getBrain().getMemory(
                     net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE);
             if (memory.isEmpty()) continue;
