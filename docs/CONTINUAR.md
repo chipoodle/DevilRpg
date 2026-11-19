@@ -1,17 +1,15 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 compile correction — PENDING HARNESS STATIC
 
 La continuación vigente está en `docs/autonomous-village/NEXT-SESSION.md`.
 
-- Production implementation SHA: `9966f807b2fbb13552545cdd181f2f034c7ecbaa`.
-- Informe: `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
-- Phase54B-R1 confirmó fixture PASS (289/289 chunks en 1 tick, 8/8 spawn), pero el servidor murió en el primer burst A* global por watchdog 60.04 s. Sin resultado A2 ni evidencia IDX5/IDX3.
-- Phase55 convierte el A* estratégico en reanudable: 4 expansiones / máximo 8 pops OPEN por executor/tick, conservando la frontera y predecesores. El presupuesto total global permanece igual.
-- Las búsquedas pendientes no publican rutas parciales, no envían movimiento y no consumen contadores locales de fallo/escalera.
-- Fixture, geometría, colisión, soporte, protección, heurística, radio, costos y criterios A2/C4 permanecen intactos.
+- Corrected production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
+- Harness encontró que dos locales `BlockPos state` redeclaraban el parámetro `GlobalSearchState state` en `advanceGlobalSearch`.
+- ChatGPT renombró ambos locales y sus referencias a `routeState`. El commit solo modifica cuatro líneas de `NavPlanner.java`; no cambia lógica ni presupuestos.
+- La validación anterior falló en compilación; `NAV_PLANNER_STATE_TEST` no se ejecutó. La corrección aún no está validada.
+- **Harness debe ejecutar STATIC ONLY** sobre el SHA exacto: diagnostics compile, `gradlew test`, lint estricto y diff-check. Confirmar salida real de `NAV_PLANNER_STATE_TEST` y número de aserciones. No modificar producción.
+- No runtime, A2 Run1, C4, Run2 ni Full12K. A2 OPEN.
 
-**Harness debe ejecutar STATIC ONLY** sobre el SHA exacto: diagnostics compile, `gradlew test`, lint estricto y diff-check; reportar hash y confirmar las nuevas aserciones de `NAV_PLANNER_STATE_TEST`. No modificar producción ni iniciar Minecraft/A2/C4. No hay autorización runtime; solicitarla por separado tras revisión estática.
-
-A2 permanece OPEN. No Run2/Full12K ni C4 standalone.
+---
 
 ---
 
