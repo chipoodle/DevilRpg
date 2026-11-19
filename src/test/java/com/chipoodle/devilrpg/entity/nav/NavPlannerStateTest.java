@@ -127,8 +127,59 @@ public final class NavPlannerStateTest {
         comprobar("ruta conserva STEP_UP y pies y+1", subida.found()
                 && subida.route().get(0).transition() == NavRoute.Transition.STEP_UP
                 && subida.route().get(0).feet() == 65);
+        NavGraphSearch.Graph chain = new NavGraphSearch.Graph() {
+            public void expand(long s, int f, java.util.function.Consumer<NavGraphSearch.Edge> out) {
+                if (s < 4L) out.accept(new NavGraphSearch.Edge(s + 1L, 1.0D,
+                        NavRoute.Transition.WALK, f));
+            }
+            public boolean goal(long s, int f) { return s == 4L; }
+            public double heuristic(long s) { return 4.0D - s; }
+            public double distance(long s) { return 4.0D - s; }
+        };
+        NavGraphSearch.Session incremental = NavGraphSearch.begin(0L, 64, chain, 20);
+        comprobar("A* incremental inicia pendiente", !incremental.complete());
+        comprobar("A* incremental no publica resultado parcial",
+                throwsIllegalState(incremental));
+        int previousExpansions = 0;
+        int slices = 0;
+        while (!incremental.advance(1)) {
+            int currentExpansions = incremental.expansions();
+            comprobar("slice incremental respeta una expansion",
+                    currentExpansions - previousExpansions <= 1);
+            previousExpansions = currentExpansions;
+            slices++;
+            if (slices > 20) break;
+        }
+        NavGraphSearch.Result incrementalResult = incremental.result();
+        NavGraphSearch.Result synchronousResult = NavGraphSearch.search(0L, 64, chain, 20);
+        comprobar("A* incremental completa dentro del presupuesto",
+                incrementalResult.found() && incrementalResult.expansions() <= 20);
+        comprobar("A* incremental conserva la ruta síncrona",
+                incrementalResult.route().equals(synchronousResult.route()));
+        comprobar("A* incremental reconstruye todos los pasos desde el origen",
+                incrementalResult.route().size() == 4
+                        && incrementalResult.route().get(0).state() == 1L
+                        && incrementalResult.route().get(3).state() == 4L);
+        comprobar("A* incremental requirió varios slices", slices >= 3);
+
+        NavGraphSearch.Session bounded = NavGraphSearch.begin(100L, 64, new NavGraphSearch.Graph() {
+            public void expand(long s, int f, java.util.function.Consumer<NavGraphSearch.Edge> out) {
+                out.accept(new NavGraphSearch.Edge(s + 1L, 1.0D, NavRoute.Transition.WALK, f));
+                out.accept(new NavGraphSearch.Edge(s + 2L, 1.0D, NavRoute.Transition.WALK, f));
+            }
+            public boolean goal(long s, int f) { return false; }
+            public double heuristic(long s) { return 0.0D; }
+            public double distance(long s) { return 1.0D; }
+        }, 9);
+        while (!bounded.advance(2)) { /* resume with a strict per-slice ceiling */ }
+        comprobar("A* incremental conserva el presupuesto total duro",
+                bounded.expansions() == 9 && bounded.result().hitBudget());
         if (fallos > 0) { System.out.println("NAV_PLANNER_STATE_TEST: FAIL (" + fallos + ")"); System.exit(1); }
         System.out.println("NAV_PLANNER_STATE_TEST: OK");
+    }
+    private static boolean throwsIllegalState(NavGraphSearch.Session session) {
+        try { session.result(); return false; }
+        catch (IllegalStateException expected) { return true; }
     }
     private static void comprobar(String n, boolean ok) { if (!ok) { fallos++; System.out.println("  FALLO: " + n); } else { System.out.println("  ok: " + n); } }
 }
