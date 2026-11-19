@@ -21,10 +21,9 @@ File: `tools/a2n/A2NavHarness.java`.
 
 The raid fixture now listens to NeoForge `EntityJoinLevelEvent` only while `VillageManager.preGenerate` and the fixture maintenance hook execute. It records exact Villager object references by UUID. The event listener only captures the entity reference and basic entity fields; it does not query chunks or mutate the world.
 
-The authoritative fixture roster is built from those captured references after generation/maintenance. A captured villager is eligible only when it is:
-- in the fixture AABB,
-- alive,
-- not removed,
+The authoritative fixture roster is built from those captured references after generation/maintenance. A captured villager is eligible only when it:
+- intersects the fixture AABB,
+- is alive and not removed,
 - and is demonstrably tracked: either `isAddedToLevel()` is true or `level.getEntity(UUID)` returns the exact captured object.
 
 The existing `getEntitiesOfClass(Villager.class, AABB)` query remains as a diagnostic comparison, not as the roster source. The harness logs:
@@ -86,7 +85,7 @@ The generated/local launcher `build/a2n/lanzar-a2n.ps1` is an ignored local arti
 On the exact current branch HEAD:
 
 1. Safely sync by fast-forward only; preserve all local/untracked artifacts and worlds.
-2. Verify branch and exact HEAD; verify only the two intended tracked files changed since `6bb467b4a64b0b53888b40bcc9cc258c2acbd967`.
+2. Verify branch and exact HEAD; confirm the only non-documentation changes since `6bb467b4a64b0b53888b40bcc9cc258c2acbd967` are `build.gradle` and `tools/a2n/A2NavHarness.java`.
 3. Copy canonical `tools/a2n/A2NavHarness.java` to the documented temporary compile location only as the established workflow requires.
 4. Run:
    - `gradlew.bat compileJava` with `-Pa2nDiagnostics=true` as required by the launcher workflow.
