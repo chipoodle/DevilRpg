@@ -1,7 +1,7 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness routing (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**Implementation HEAD:** `e6da8accb0d68bb0b38376aa077258ea9e4d8a82`
+**Implementation HEAD:** `(ver HEAD exacto en docs/autonomous-village/NEXT-SESSION.md)`
 **Previous runtime:** `a2n-20261119-114535` — BLOCKED; authorization consumed, no retry.
 **Previous static attempt:** `phase55-population-static-20261119-1215` — BLOCKED before compile/test.
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
@@ -23,7 +23,7 @@ changed. ChatGPT has not run compilation/tests/lint.
 
 ## Next — Harness STATIC ONLY
 
-Fast-forward-only sync to exact HEAD `e6da8accb0d68bb0b38376aa077258ea9e4d8a82`. Preserve local work,
+Fast-forward-only sync to exact HEAD `(ver HEAD exacto en docs/autonomous-village/NEXT-SESSION.md)`. Preserve local work,
 untracked files, backups and worlds. Verify the legacy source remains unchanged, canonical blob
 `3205305a10a21ded066c03cb746908e94632e08d`, NavPlanner blob
 `5666e42693fe2e90dff1d2ac1004b59b9b62d7cd`.
