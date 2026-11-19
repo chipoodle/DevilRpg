@@ -29,7 +29,16 @@ import java.util.Set;
  */
 public final class NavPlanner {
     private static final boolean DIAG_DROP = Boolean.getBoolean("devilrpg.a2n.diagDrop");
+    /** First-expansion/lifecycle diagnostics; requires traceNav to install the Harness sink. */
+    private static final boolean TRACE_GLOBAL_SEARCH =
+            Boolean.getBoolean("devilrpg.a2n.traceGlobalSearch");
     private static BlockPos DIAG_START;
+
+    private static void traceGlobalSearch(String event, String detail) {
+        if (TRACE_GLOBAL_SEARCH && NavTrace.on()) {
+            NavTrace.ev(event, detail);
+        }
+    }
 
     /** Coste base de caminar una celda. */
     private static final double COST_WALK = 1.0D;
@@ -100,10 +109,11 @@ public final class NavPlanner {
         final int maxExpansions;
         final int[] counters;
         final NavGraphSearch.Session search;
+        final String entityUuid;
 
         GlobalSearchState(CollisionGetter level, BlockPos start, BlockPos objective, boolean exactGoal,
                           int maxRadio, int verticalRange, int maxExpansions, int[] counters,
-                          NavGraphSearch.Session search) {
+                          NavGraphSearch.Session search, String entityUuid) {
             this.level = level;
             this.start = start.immutable();
             this.objective = objective.immutable();
@@ -113,6 +123,7 @@ public final class NavPlanner {
             this.maxExpansions = maxExpansions;
             this.counters = counters;
             this.search = search;
+            this.entityUuid = entityUuid;
         }
     }
 
@@ -366,7 +377,16 @@ public final class NavPlanner {
 
     /** Cancels a pending search when its owning mission is replaced or invalidated. */
     public static void cancelGlobalSearch(GlobalSearchHandle handle) {
-        if (handle != null) handle.state = null;
+        if (handle != null && handle.state != null) {
+            GlobalSearchState state = handle.state;
+            traceGlobalSearch("GLOBAL_SEARCH_CANCEL", "uuid=" + state.entityUuid
+                    + " start=" + state.start.toShortString()
+                    + " goal=" + state.objective.toShortString()
+                    + " exp=" + state.search.expansions()
+                    + " frontier=" + state.search.frontierSize()
+                    + " reason=owner_cancelled");
+            handle.state = null;
+        }
     }
 
     /** Advances a retained strategic A* frontier by a bounded slice on each server tick. */
@@ -409,6 +429,13 @@ public final class NavPlanner {
                 || retained.level != level || retained.exactGoal != exactGoal
                 || retained.maxRadio != maxRadio || retained.verticalRange != verticalRange
                 || retained.maxExpansions != maxExpansions)) {
+            traceGlobalSearch("GLOBAL_SEARCH_RESTART", "uuid=" + mob.getUUID()
+                    + " oldStart=" + retained.start.toShortString()
+                    + " oldGoal=" + retained.objective.toShortString()
+                    + " newStart=" + start.toShortString()
+                    + " newGoal=" + objetivo.toShortString()
+                    + " oldExp=" + retained.search.expansions()
+                    + " reason=search_parameters_changed");
             if (handle != null) handle.state = null;
             retained = null;
         }
@@ -424,10 +451,22 @@ public final class NavPlanner {
         final double oy = objetivo.getY() + 0.5D;
         final double oz = objetivo.getZ() + 0.5D;
         final int[] contadores = new int[2]; // aristas, encolados
+        final boolean[] firstExpansionTraced = {false};
         NavGraphSearch.Graph graph = new NavGraphSearch.Graph() {
             @Override
             public void expand(long state, int feet, java.util.function.Consumer<NavGraphSearch.Edge> out) {
                 BlockPos pos = BlockPos.of(state);
+                final boolean traceThisExpansion = TRACE_GLOBAL_SEARCH && NavTrace.on()
+                        && !firstExpansionTraced[0];
+                if (traceThisExpansion) {
+                    firstExpansionTraced[0] = true;
+                    traceGlobalSearch("GLOBAL_FIRST_EXPANSION_START", "uuid=" + mob.getUUID()
+                            + " start=" + start.toShortString()
+                            + " goal=" + objetivo.toShortString()
+                            + " expanded=" + pos.toShortString()
+                            + " feet=" + feet + " exactGoal=" + exactGoal
+                            + " verticalRange=" + verticalRange + " maxRadio=" + maxRadio);
+                }
                 for (int[] off : OFFSETS) {
                     BlockPos next = new BlockPos(pos.getX() + off[0], pos.getY(), pos.getZ() + off[1]);
                     for (int dy = -verticalRange; dy <= verticalRange; dy++) {
@@ -438,6 +477,34 @@ public final class NavPlanner {
                         }
                         Arista arista = validarArista(level, mob, pos, candidate, feet, policies,
                                 construidas, exclusionesBreak);
+                        if (traceThisExpansion) {
+                            BlockPos feetCell = arista.piesHasta() == PIES_NO_EJECUTABLE
+                                    ? candidate : new BlockPos(candidate.getX(), arista.piesHasta(), candidate.getZ());
+                            boolean feetFits = arista.piesHasta() != PIES_NO_EJECUTABLE
+                                    && NavObstruction.fits(level, mob, feetCell);
+                            boolean feetSupport = arista.piesHasta() != PIES_NO_EJECUTABLE
+                                    && NavObstruction.hasSupport(level, feetCell);
+                            boolean chunkLoaded = level instanceof net.minecraft.world.level.LevelReader reader
+                                    && reader.hasChunkAt(candidate);
+                            traceGlobalSearch("GLOBAL_FIRST_EXPANSION_CANDIDATE", "uuid=" + mob.getUUID()
+                                    + " from=" + pos.toShortString()
+                                    + " candidate=" + candidate.toShortString()
+                                    + " kind=" + arista.kind()
+                                    + " rejection=" + arista.rechazo()
+                                    + " edgeValid=" + arista.valida()
+                                    + " transition=" + arista.transicion()
+                                    + " feetFrom=" + feet + " feetResult=" + arista.piesHasta()
+                                    + " cost=" + arista.coste()
+                                    + " fits=" + NavObstruction.fits(level, mob, candidate)
+                                    + " hasSupport=" + NavObstruction.hasSupport(level, candidate)
+                                    + " headClear=" + NavObstruction.headClearOneUp(level, mob, candidate)
+                                    + " protected=" + policies.isProtected(candidate)
+                                    + " chunkLoaded=" + chunkLoaded
+                                    + " blockState=" + level.getBlockState(candidate).toString().replace(' ', '_')
+                                    + " feetFits=" + feetFits + " feetSupport=" + feetSupport
+                                    + " action=" + (arista.actionPos() == null ? "-" : arista.actionPos().toShortString())
+                                    + " stand=" + (arista.standPos() == null ? "-" : arista.standPos().toShortString()));
+                        }
                         // Exact-recovery forensic: report only the one-block-below-goal candidate
                         // and its cardinal predecessor. This is deliberately sparse and read-only.
                         if (exactGoal && candidate.equals(objetivo.below())
@@ -556,7 +623,11 @@ public final class NavPlanner {
         };
         NavGraphSearch.Session search = NavGraphSearch.begin(start.asLong(), start.getY(), graph, maxExpansions);
         GlobalSearchState created = new GlobalSearchState(level, start, objetivo, exactGoal,
-                maxRadio, verticalRange, maxExpansions, contadores, search);
+                maxRadio, verticalRange, maxExpansions, contadores, search, mob.getUUID().toString());
+        traceGlobalSearch("GLOBAL_SEARCH_START", "uuid=" + created.entityUuid
+                + " start=" + start.toShortString() + " goal=" + objetivo.toShortString()
+                + " exactGoal=" + exactGoal + " maxRadio=" + maxRadio
+                + " verticalRange=" + verticalRange + " maxExpansions=" + maxExpansions);
         if (handle != null) handle.state = created;
         return advanceGlobalSearch(mob, created, handle);
     }
@@ -589,6 +660,15 @@ public final class NavPlanner {
         int maxExpansions = state.maxExpansions;
         int[] contadores = state.counters;
         NavGraphSearch.Result resultado = state.search.result();
+        traceGlobalSearch("GLOBAL_SEARCH_COMPLETE", "uuid=" + state.entityUuid
+                + " start=" + state.start.toShortString()
+                + " goal=" + state.objective.toShortString()
+                + " exp=" + resultado.expansions()
+                + " frontier=" + state.search.frontierSize()
+                + " found=" + resultado.found()
+                + " hitBudget=" + resultado.hitBudget()
+                + " reason=" + resultado.reason()
+                + " routeNodes=" + resultado.route().size());
         int expansions = resultado.expansions();
         boolean hitBudget = resultado.hitBudget();
         BlockPos found = resultado.found() ? BlockPos.of(resultado.route().get(resultado.route().size() - 1).state()) : null;
