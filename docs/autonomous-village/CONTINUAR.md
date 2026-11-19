@@ -1,15 +1,15 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 compile correction — PENDING HARNESS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 STATIC PASS
 
-- Corrected production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
-- Previous tested SHA `9966f807b2fbb13552545cdd181f2f034c7ecbaa` failed compilation: two local `BlockPos state` declarations redeclared parameter `GlobalSearchState state`.
-- ChatGPT renamed only those two locals and their two references to `routeState`. Commit `11ff43cd338d7a6222a146a2ed642a5546fb2910`; diff reviewed, only four lines in `NavPlanner.java`.
-- No algorithm/budget/policy/test changes. No tests or runtime executed by ChatGPT.
-- **Harness: STATIC ONLY** on the exact corrected SHA: diagnostics compile, `gradlew test` (confirm `NAV_PLANNER_STATE_TEST` runs), strict lint, diff-check. Report actual test output and assertion count. Preserve local work/worlds; do not modify production.
-- No Minecraft/A2 Run1/C4/Run2/Full12K authorization. A2 OPEN.
+- Validated production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
+- Harness report: `2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`.
+- Diagnostics compile, Gradle tests, strict lint and diff-check: PASS on exact SHA.
+- `NAV_PLANNER_STATE_TEST`: OK, 54 executed assertions.
+- Slice: 4 expansions / at most 8 OPEN pops; hard global total expansion budget unchanged.
+- Harness did not modify production; local work preserved; worlds unchanged.
+- No runtime has run. A2 remains OPEN; the Phase54B-R1 watchdog cause now has a statically validated incremental-A* mitigation, but runtime effectiveness is unproven.
+- Next: ChatGPT reviews the implementation and prepares an evidence-focused, single A2 Run1 request. **No runtime until the user explicitly authorizes exactly one A2 Run1.** No C4 standalone, Run2 or Full12K.
 
----
 
----
 
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
