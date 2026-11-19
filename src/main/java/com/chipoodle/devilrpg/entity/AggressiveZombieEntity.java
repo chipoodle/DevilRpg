@@ -1950,10 +1950,16 @@ public class AggressiveZombieEntity extends Zombie {
             // actualizaba si ese soporte tenia colision; al caminar por una repisa/aire se quedaba
             // clavada en la posicion inicial (Run40/42: candidatos 566,120,533 con el mob en 607,95,601).
             BlockPos anchorBefore = escaleraAncla;
-            escaleraAncla = blockPosition().below();
+            BlockPos supportBelow = blockPosition().below();
+            // Si ya se coloco una escalera, el flujo solo llega aqui tras confirmar fisicamente
+            // la travesia del escalon pendiente. Por tanto, escaleraColocados > 0 identifica
+            // una cadena cuyo ancla ya representa un descenso realmente atravesado.
+            boolean hasTraversedStair = escaleraColocados > 0;
+            escaleraAncla = NavStairAnchorPolicy.refresh(anchorBefore, supportBelow, hasTraversedStair);
             NavStairTrace.candidate("STAIR_BUILDER_ANCHOR_REFRESH", "uuid=" + getUUID()
                     + " tick=" + level().getGameTime() + " pos=" + blockPosition().toShortString()
-                    + " supportBelow=" + escaleraAncla.toShortString()
+                    + " supportBelow=" + supportBelow.toShortString()
+                    + " hasTraversedStair=" + hasTraversedStair
                     + " anchorBefore=" + anchorBefore + " anchorAfter=" + escaleraAncla);
         }
         BlockPos base = escaleraAncla;
@@ -1999,8 +2005,10 @@ public class AggressiveZombieEntity extends Zombie {
                     int sz = pasoZ * dz;
                     BlockPos objetivo = new BlockPos(base.getX() + sx, base.getY() - dy, base.getZ() + sz);
                     probados++;
-                    String r = evaluarCeldaDeEscalon(objetivo, base, dy, pasoX, pasoZ,
-                            primerPasoLateral);
+                    String r = escaleraColocados > 0
+                            && !NavStairAnchorPolicy.isStrictlyBelow(objetivo, base)
+                            ? "NOT_BELOW_TRAVERSED_ANCHOR"
+                            : evaluarCeldaDeEscalon(objetivo, base, dy, pasoX, pasoZ, primerPasoLateral);
                     NavStairTrace.candidate("STAIR_BUILDER_CANDIDATE", "uuid=" + getUUID()
                             + " tick=" + level().getGameTime() + " base=" + base.toShortString()
                             + " anchor=" + escaleraAncla + " mob=" + blockPosition().toShortString()
@@ -2356,8 +2364,13 @@ public class AggressiveZombieEntity extends Zombie {
             }
             return ultimoResultadoEscalon;
         }
+        int cooldownBefore = escaleraRetraso;
         boolean result = construirEscalonDescendente(objetivo);
-        if (result && escaleraUltimoColocado != null) {
+        boolean cadenceWait = !result && cooldownBefore > 0
+                && escaleraRetraso == cooldownBefore - 1;
+        if (cadenceWait) {
+            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.CADENCE_WAIT;
+        } else if (result && escaleraUltimoColocado != null) {
             ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.STAIR_PLACED;
         } else if (result && escaleraMotivo != null
                 && escaleraMotivo.contains("obstruccion de acceso removida")) {
