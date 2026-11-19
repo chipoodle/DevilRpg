@@ -2368,20 +2368,10 @@ public class AggressiveZombieEntity extends Zombie {
         }
         int cooldownBefore = escaleraRetraso;
         boolean result = construirEscalonDescendente(objetivo);
-        boolean cadenceWait = !result && cooldownBefore > 0
-                && escaleraRetraso == cooldownBefore - 1;
-        if (cadenceWait) {
-            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.CADENCE_WAIT;
-        } else if (result && escaleraUltimoColocado != null) {
-            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.STAIR_PLACED;
-        } else if (result && escaleraMotivo != null
-                && escaleraMotivo.contains("obstruccion de acceso removida")) {
-            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.ACCESS_CLEARED;
-        } else if (!result) {
-            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.NO_PROGRESS;
-        } else {
-            ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResult.FAILED;
-        }
+        ultimoResultadoEscalon = com.chipoodle.devilrpg.entity.nav.StairBuildResultPolicy.clasificar(
+                result, escaleraUltimoColocado != null,
+                escaleraMotivo != null && escaleraMotivo.contains("obstruccion de acceso removida"),
+                cooldownBefore, escaleraRetraso);
         if (NavStairTrace.on()) {
             NavStairTrace.ev("STAIR_BUILDER_RETURN", "uuid=" + getUUID()
                     + " tick=" + level().getGameTime() + " outcome=" + ultimoResultadoEscalon
