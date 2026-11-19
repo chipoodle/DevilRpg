@@ -1582,8 +1582,8 @@ public final class NavExecutor {
         if (global.hitBudget()
                 && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az) {
             StairBuildResult stairOutcome = az.construirEscalonResultado(mision);
-            ultimoResultadoEscalon = stairOutcome;
             if (stairOutcome == StairBuildResult.CADENCE_WAIT) {
+                ultimoResultadoEscalon = StairBuildResult.CADENCE_WAIT;
                 registrarEsperaCadenciaEscalon("presupuesto global agotado");
                 return null;
             }
@@ -3422,8 +3422,8 @@ public final class NavExecutor {
             // complejas normales conservan su reintento de siempre.
             if (mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az) {
                 StairBuildResult stairOutcome = az.construirEscalonResultado(objective);
-                ultimoResultadoEscalon = stairOutcome;
                 if (stairOutcome == StairBuildResult.CADENCE_WAIT) {
+                    ultimoResultadoEscalon = StairBuildResult.CADENCE_WAIT;
                     registrarEsperaCadenciaEscalon("presupuesto local agotado");
                     nextPlanAt = now + 2L;
                     return;
