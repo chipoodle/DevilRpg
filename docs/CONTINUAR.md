@@ -5421,3 +5421,10 @@ run/saves; hashes match; structural verification only.
 - Run a2n-20261119-151818: JVM_TRACE OK; fixture 16/16,8 spawn; C4 PASS.
 - A2 3/8 strict (IDX1/2/6, all died),3/8 perimeter; IDX3/5 cap64, IDX4 CADENCE, IDX7 no placement, IDX8 PLANNING.
 - No watchdog; no retry. Report: docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md. A2 OPEN.
+
+## 2026-11-19 — A2 post-Phase55 forensic analysis
+
+- IDX3/5: 381 repeated INC_STEP same unusable objective; counter/idempotence defect.
+- IDX4: no-candidate resets delay10 -> endless CADENCE_WAIT. IDX7: ascent dy+3 rejected by descent-only gate.
+- IDX8: cancellations + 8000 budget; 5 restarts on 1-block moves; 5 survivors discarded administratively. Wrapper array-splat bug.
+- Report: docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md. No runtime. A2 OPEN.

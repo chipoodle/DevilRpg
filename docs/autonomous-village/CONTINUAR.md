@@ -1281,3 +1281,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Fixture/C4 PASS; A2 3/8 strict,3/8 perimeter; all strict entrants died.
 - Report: `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`. A2 OPEN.
+
+## 2026-11-19 — A2 post-Phase55 forensic analysis
+
+- Root causes confirmed for IDX3/4/5/7; IDX8 probable. No production changes.
+- Report: `docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md`. A2 OPEN.

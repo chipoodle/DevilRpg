@@ -1,8 +1,20 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Diagnostic Run1 post-Phase55
+# CURRENT CHECKPOINT — 2026-11-19 A2 post-Phase55 forensic analysis
 
 **Branch:** `feature/autonomous-village`
-**Run:** `a2n-20261119-151818`
-**Report:** `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`
+**Run analyzed:** `a2n-20261119-151818`
+**Report:** `docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md`
+
+- IDX3/5: 381 repeated `INC_STEP` for the same unusable objective; step cap is a counter/idempotence defect.
+- IDX4: no-candidate resets 10-tick delay, producing endless CADENCE_WAIT; not the 64 cap.
+- IDX7: `dy=+3` ascent rejected by descent-only build gate.
+- IDX8: repeated caller cancellation + one 8000-budget exhaustion; exact caller not logged.
+- Five restarts caused by one-block start changes; five survivors discarded administratively at Phase B end.
+- Wrapper fails because array splatting binds named args positionally.
+- No runtime; A2 OPEN.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Diagnostic Run1 post-Phase55
 
 - JVM_TRACE confirmed both trace properties true.
 - Fixture PASS: AABB=16, joins=16, 12 professionals, 8/8 spawn.
@@ -997,6 +1009,7 @@ Read first, in order:
 96. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`
 97. `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`
 98. `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`
+99. `docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1124,10 +1137,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Analyze IDX3/IDX5 local stair cap `64/64`, IDX4 CADENCE/no candidate, IDX7 missing placement and
-   IDX8 unfinished global search.
-2. Do not change production without new instructions. No runtime without new explicit authorization.
-3. A2 OPEN; no Run2/Full12K. C4 PASS.
+1. ChatGPT to implement P0 fixes for IDX3/5 step-counter repetition and IDX4 no-candidate CADENCE loop.
+2. Then P1 ascent build gate (IDX7) and global cancellation/convergence (IDX8).
+3. No runtime until production fixes and static validation. A2 OPEN; no Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 
