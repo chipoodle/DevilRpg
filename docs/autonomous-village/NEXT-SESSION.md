@@ -1,14 +1,22 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 50 validation (FAIL)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 (PENDING HARNESS)
 
-**Production SHA:** `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`.
-**Current report:** `2026-11-18-A2-PHASE50-VALIDATION.md`.
-**RUN_ID:** `a2n-20261118-212254` (3/8 strict, C4 PASS `[1,0,0]`).
+**Production implementation SHA:** `0ed873e22946f70374a18a2c12108fff270b6f5b`.
+**Implementation report:** `docs/autonomous-village/2026-11-18-A2-PHASE51-STAIR-WIRING-FIX.md`.
+**Previous validation:** Phase50 `a2n-20261118-212254` — FAIL, 3/8 strict, C4 PASS [1,0,0].
 
-- Static PASS, but runtime shows both corrections are not wired:
-  - `ANCHOR_REFRESH` still assigns `escaleraAncla = blockPosition().below()` (93→94); policy unused.
-  - cooldown still returns false→`NO_PROGRESS`; `CADENCE_WAIT`/`A2_LOCAL_STAIR_WAIT` absent.
-- New tests PASS only via direct init task; they are not registered in `build.gradle`.
-- A2 OPEN at 3/8 strict. No Run2/Full12K.
+- Phase51 wires `NavStairAnchorPolicy.refresh(previous, supportBelow, hasTraversedStair)` into
+  `AggressiveZombieEntity`; post-traversal candidates are defensively required to be strictly below
+  the traversed anchor.
+- The builder now returns `CADENCE_WAIT` only when it actually decrements the cooldown. All three
+  executor call paths preserve that result; `A2_LOCAL_STAIR_WAIT` is emitted and local step/failure
+  counters are not consumed. Plan-level waits defer the next attempt by two ticks.
+- `NavStairAnchorPolicyTest` (8 assertions) and `StairBuildResultTest` (6 assertions) are now
+  registered in the normal `policyTest` gate; `gradlew test` depends on that gate.
+- **PENDING HARNESS:** validate exact SHA above. Static checks first; if all pass, A2 Run1 only.
+  Preserve local/untracked work and worlds; Harness must not modify production.
+- Phase41/44/46 and all budgets/safety predicates remain unchanged.
+- A2 remains OPEN at 3/8 strict; C4 last PASS [1,0,0]. IDX4 horizontal-zero remains
+  INSUFFICIENT_EVIDENCE. No Run2/Full12K until five consecutive 8/8 strict runs.
 
 ---
 
