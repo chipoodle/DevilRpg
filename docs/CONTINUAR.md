@@ -1,6 +1,6 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 global A* diagnostics (PENDING HARNESS)
 
-- Implementation: `1164004368a784a463293e4d6a9bc6c8fc144474`.
+- Implementation: `10719ff82465a0d8997cb2af3af23c9f71292b19`.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS.md`.
 - Opt-in properties: `-Ddevilrpg.a2n.traceNav=true -Ddevilrpg.a2n.traceGlobalSearch=true`.
 - First-expansion candidate reasons and geometry are captured, plus START/COMPLETE/CANCEL/RESTART lifecycle events. No behavior, graph, budget, safety predicate or acceptance change.
