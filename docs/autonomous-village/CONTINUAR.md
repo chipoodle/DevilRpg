@@ -1,4 +1,21 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 obsolete NavFeature dependency removed (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 P0 fixes (STATIC VALIDATION PENDING)
+
+**Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
+**Implementation report:** `2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
+
+- IDX3/5: repeated same unusable objective no longer increments the local-step counter; bounded failure accounting is preserved.
+- IDX4: no-candidate stair attempts no longer reset the inter-block cooldown or become endless CADENCE_WAIT.
+- Added `NavLocalObjectiveStepPolicyTest` (5 assertions) and extended `StairBuildResultTest` to 12 assertions; registered the new test in `policyTest`.
+- Static validation is pending exact SHA. ChatGPT has not run build/tests/lint.
+- IDX7, IDX8 and wrapper remain open; no runtime authorized. A2 OPEN.
+
+**Next:** Harness syncs fast-forward-only to the exact implementation SHA and runs compileJava, test, strict lint and diff-check. Preserve local/untracked work and worlds. Confirm both new/extended test counts and all existing policy tests. Stop after static validation.
+
+**Prohibited:** Minecraft, wrapper, runServer, A2, C4, Run2 and Full12K. No new runtime without explicit user authorization.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 obsolete NavFeature dependency removed (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
 **Source implementation commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
