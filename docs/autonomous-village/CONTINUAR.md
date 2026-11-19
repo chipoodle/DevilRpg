@@ -1158,3 +1158,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - `11ff43cd` compile/test/lint/diff PASS; planner state 54 assertions OK.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55-R2 runtime BLOCKED
+
+- Fixture population gate failed (14 villagers/10 professionals); no spawn/A2 result.
+- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md`. A2 OPEN.

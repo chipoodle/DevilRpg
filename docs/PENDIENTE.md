@@ -1,10 +1,11 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 static PASS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 runtime BLOCKED (fixture)
 
 - Corrected production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
 - Previous SHA `9966f807b2fbb13552545cdd181f2f034c7ecbaa` failed compile because two `BlockPos state` locals redeclared parameter `GlobalSearchState state`.
 - Fix: rename both locals and corresponding `routePosition` arguments to `routeState`. Correction commit changes only four lines in `NavPlanner.java`.
 - The failed R1 compile prevented test execution; Harness R2 subsequently executed the registered test with 54 assertions, OK.
 - **Harness R2 PASS:** compile/test/lint/diff PASS en `11ff43cd`; `NAV_PLANNER_STATE_TEST` ejecutó 54 aserciones (`OK`). Slice4/pops8, presupuesto total sin cambios. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`.
+- **Run1 autorizado `a2n-20261119-031255` BLOCKED:** cargador 289/289 READY en1 tick, pero fixture population 14 villagers/10 professionals vs 12 esperados; 0 atacantes, sin A2/A*/IDX5. No retry. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md`.
 - ChatGPT did not run tests/runtime. No A2 Run1, C4, Run2, Full12K. A2 OPEN.
 
 ---

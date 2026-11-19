@@ -1,4 +1,20 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 STATIC PASS — A2 Run1 AUTHORIZED
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 runtime BLOCKED (fixture population)
+
+**Branch:** `feature/autonomous-village`
+**Production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
+**Current report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md`
+**RUN_ID:** `a2n-20261119-031255`
+
+- Chunk loader PASS: 289/289 READY in 1 tick.
+- Fixture FAILED before spawn: 14 villagers / 10 professionals vs expected 12.
+- No attackers, no A2 result, no A*/IDX5/IDX3 runtime evidence. No watchdog.
+- The single authorized Run1 is consumed; no retry. Next: fixture-only population diagnosis.
+- A2 OPEN; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55-R2 static PASS / Run1 authorized
+
 
 **Branch:** `feature/autonomous-village`
 **Validated production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
@@ -718,6 +734,7 @@ Read first, in order:
 86. `docs/autonomous-village/2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md`
 87. `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`
 88. `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
+89. `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -845,9 +862,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Incremental A* is statically validated on `11ff43cd`; any runtime validation needs new explicit
-   authorization for exactly one A2 Run1.
-2. Fixture remains validated; do not modify it. Monitor the 4-expansion slice for watchdog behavior.
+1. Fixture-only diagnosis: why a generated village has 14 villagers/10 professionals and four `null`
+   professions instead of 12 professionals; determine whether profession assignment/maintenance timing is
+   nondeterministic.
+2. Do not modify navigation/A2 criteria. Do not retry the consumed Run1.
 3. A2 OPEN; no Run2/Full12K. C4 last PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
