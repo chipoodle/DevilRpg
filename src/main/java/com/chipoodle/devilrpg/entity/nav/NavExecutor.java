@@ -1171,6 +1171,8 @@ public final class NavExecutor {
     private boolean misionEnPieCalculada;
     /** A2 Stage 7C · cache de la ruta global (una por tramo, no por tick) y su diagnostico. */
     private NavPlanner.GlobalResult globalCache;
+    /** True while the retained strategic A* frontier is being advanced across server ticks. */
+    private boolean globalSearchPending;
     private BlockPos globalMision;
     private BlockPos globalDesde;
     private int globalExpansionesTotal;
@@ -1500,6 +1502,7 @@ public final class NavExecutor {
      * es el ULTIMO waypoint de pie o transicion BUILD seleccionable que quepa en la ventana local; la ventana no cambia.
      */
     private BlockPos elegirObjetivoLocal() {
+        globalSearchPending = false;
         ultimoResultadoEscalon = StairBuildResult.NO_PROGRESS;
         objetivoPermiteConstruccion = false;
         objetivoTransicionLocal = null;
@@ -1581,6 +1584,15 @@ public final class NavExecutor {
             }
         }
         NavPlanner.GlobalResult global = rutaGlobalHacia(mision);
+        if (global.pending()) {
+            globalSearchPending = true;
+            ultimoEscalonDeObjetivo = global.summary();
+            if (NavTrace.on()) {
+                NavTrace.ev("NAV_GLOBAL_SEARCH_PENDING", "uuid=" + mob.getUUID()
+                        + " tick=" + mob.level().getGameTime() + " " + global.summary());
+            }
+            return null;
+        }
         // El planificador GLOBAL puede agotar su presupuesto antes de producir un waypoint local, aunque el
         // descenso requiera una escalera. El fallback anterior solo se ejecutaba cuando agotaba el presupuesto
         // LOCAL; por eso un atacante en un acantilado quedaba en PLANNING sin llegar a construir.
@@ -1930,6 +1942,10 @@ public final class NavExecutor {
             return false;
         }
         BlockPos siguiente = elegirObjetivoLocal();
+        if (globalSearchPending) {
+            ultimoEscalonDeObjetivo = "búsqueda global incremental pendiente; no consumir intento local";
+            return false;
+        }
         if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
             ultimoEscalonDeObjetivo = "esperando cadencia de escalera; no consumir paso local";
             return false;
@@ -3373,6 +3389,11 @@ public final class NavExecutor {
                 }
             }
             boolean objetivoEscalonado = escalonarObjetivoLocal();
+            if (globalSearchPending) {
+                nextPlanAt = now + 1L;
+                noPlanifica("búsqueda A* global incremental pendiente");
+                return;
+            }
             if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
                 nextPlanAt = now + 2L;
                 return;
