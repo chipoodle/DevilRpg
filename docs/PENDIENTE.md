@@ -3,7 +3,7 @@
 - Corrected production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
 - Previous SHA `9966f807b2fbb13552545cdd181f2f034c7ecbaa` failed compile because two `BlockPos state` locals redeclared parameter `GlobalSearchState state`.
 - Fix: rename both locals and corresponding `routePosition` arguments to `routeState`. Correction commit changes only four lines in `NavPlanner.java`.
-- No tests executed in the failed run; 51 source assertions remain unexecuted until Harness validates.
+- The failed R1 compile prevented test execution; Harness R2 subsequently executed the registered test with 54 assertions, OK.
 - **Harness R2 PASS:** compile/test/lint/diff PASS en `11ff43cd`; `NAV_PLANNER_STATE_TEST` ejecutó 54 aserciones (`OK`). Slice4/pops8, presupuesto total sin cambios. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`.
 - ChatGPT did not run tests/runtime. No A2 Run1, C4, Run2, Full12K. A2 OPEN.
 
