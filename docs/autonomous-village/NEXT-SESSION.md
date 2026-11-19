@@ -1,4 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 50 (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 50 validation (FAIL)
+
+**Production SHA:** `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`.
+**Current report:** `2026-11-18-A2-PHASE50-VALIDATION.md`.
+**RUN_ID:** `a2n-20261118-212254` (3/8 strict, C4 PASS `[1,0,0]`).
+
+- Static PASS, but runtime shows both corrections are not wired:
+  - `ANCHOR_REFRESH` still assigns `escaleraAncla = blockPosition().below()` (93→94); policy unused.
+  - cooldown still returns false→`NO_PROGRESS`; `CADENCE_WAIT`/`A2_LOCAL_STAIR_WAIT` absent.
+- New tests PASS only via direct init task; they are not registered in `build.gradle`.
+- A2 OPEN at 3/8 strict. No Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 50 (PENDING HARNESS)
+
 
 **Production SHA:** `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`.
 **Previous production SHA:** `9d6709f551f394e0ac7be69160c2aa46419d8058`.
@@ -491,6 +506,7 @@ Read first, in order:
 77. `docs/autonomous-village/2026-11-18-A2-PHASE47-FORENSICS.md`
 78. `docs/autonomous-village/2026-11-18-A2-PHASE48A-IDX3-CAUSAL-RECONCILIATION.md`
 79. `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`
+80. `docs/autonomous-village/2026-11-18-A2-PHASE50-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -618,10 +634,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. Validate Phase50 on exact production SHA `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`: static checks first, then A2 Run1 only. Verify anchor monotonicity, strict-lower candidates and no local counter writes on CADENCE_WAIT.
-2. IDX4 horizontal-zero still needs its approved fixture; Phase46 remains runtime INSUFFICIENT_EVIDENCE.
+1. Phase 51: wire `NavStairAnchorPolicy.refresh(...)`, return `CADENCE_WAIT` and emit
+   `A2_LOCAL_STAIR_WAIT`, skip local step/fail counters for it, and register both tests in build.gradle.
+2. Revalidate on exact SHA; keep Phase44/41/46 frozen; no budget changes.
 3. IDX2 entered strict; IDX7/IDX8 remain independent.
-4. A2 OPEN at 3/8 strict; no Run2 or Full12K until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
+4. A2 OPEN at 3/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

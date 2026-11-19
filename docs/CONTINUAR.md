@@ -5231,3 +5231,10 @@ run/saves; hashes match; structural verification only.
 - Run `a2n-20261118-172804`; production `9d6709f5`; A2 3/8 strict, C4 PASS [1,0,0].
 - IDX3: ANCHOR_REFRESH t2299 moves anchor607,93 ->607,94; candidate dy1 repeats607,93. CADENCE_WAIT increments local steps.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 50 validation FAIL
+
+- Run `a2n-20261118-212254`; production `f7a919c2`; A2 3/8 strict, C4 PASS [1,0,0].
+- ANCHOR_REFRESH still 607,93->607,94; policy not wired. Cooldown still NO_PROGRESS; CADENCE_WAIT/A2_LOCAL_STAIR_WAIT absent.
+- Tests 8/6 PASS only via init task; not registered in build.gradle.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE50-VALIDATION.md. A2 OPEN.
