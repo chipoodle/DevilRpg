@@ -1,9 +1,10 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 diagnostics static PASS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 diagnostic runtime BLOCKED
 
 - Production implementation SHA: `10719ff82465a0d8997cb2af3af23c9f71292b19`.
 - Detailed handoff: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS.md`.
 - New opt-in first-expansion candidate and global-search lifecycle diagnostics in `NavPlanner.java`; requires both `traceNav=true` and `traceGlobalSearch=true`.
 - **Harness static PASS:** compile/test/lint/diff OK en `10719ff8`; `NAV_PLANNER_STATE_TEST` 54 aserciones. Blob NavPlanner idéntico. Sin runtime. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS-STATIC-VALIDATION.md`.
+- **Diagnostic Run1 `a2n-20261119-114535` BLOCKED:** fixture population 15 vill/11 prof; SHEPHERD vivo en NBT pero omitido por query. 0 spawn, 0 telemetría A*. `traceGlobalSearch` ausente de JDK_JAVA_OPTIONS; propagación no verificada. Sin retry. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTIC-RUNTIME.md`.
 - No navigation behavior, OFFSETS, budgets, physical predicates, A2/C4 criteria, fixture or worlds changed.
 - Harness: static validation only on exact SHA (compile, Gradle tests, strict lint, diff-check); preserve local/untracked artifacts; do not edit production.
 - Phase55 Run1 authorization consumed. No retry, Run2, standalone C4 or Full12K. A2 OPEN.

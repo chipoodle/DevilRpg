@@ -1221,3 +1221,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - `10719ff8` static PASS; NAV state 54 assertions; no runtime.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS-STATIC-VALIDATION.md`.
+
+## 2026-11-19 — A2 Phase55 diagnostic runtime BLOCKED
+
+- Population query omitted live SHEPHERD; no spawn or A* telemetry. No retry.
+- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTIC-RUNTIME.md`. A2 OPEN.

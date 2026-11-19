@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 diagnostics static PASS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 diagnostic runtime BLOCKED
 
-**Branch:** `feature/autonomous-village`  
-**Implementation SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`  
-**Validated documentation HEAD:** `50fb7a5d8244e8eb5e050bf4800458784de6f8fe`
+**Branch:** `feature/autonomous-village`
+**Run:** `a2n-20261119-114535`
+**Implementation SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`
+
+- Fixture population FAILED: 15 villagers/11 professionals; SHEPHERD missing from query.
+- NBT confirms SHEPHERD `f5ec6f5f…` alive at 708,71,533; query omission reproduced.
+- No attackers spawned, so no `GLOBAL_*` telemetry was exercised.
+- `traceGlobalSearch` was not in the launcher's `JDK_JAVA_OPTIONS`; effective JVM propagation unverified.
+- Authorization consumed; no retry. A2 OPEN; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 diagnostics static PASS
 
 - Compile/test/lint/diff PASS; `NAV_PLANNER_STATE_TEST` 54 assertions OK.
 - `NavPlanner.java` blob at HEAD == `10719ff8` implementation.
@@ -824,6 +834,7 @@ Read first, in order:
 91. `docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md`
 92. `docs/autonomous-village/2026-11-19-A2-PHASE55-ASTAR-FIRST-EXPANSION-FORENSICS.md`
 93. `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS-STATIC-VALIDATION.md`
+94. `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTIC-RUNTIME.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -951,11 +962,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Telemetry is statically valid; request new explicit authorization for exactly one runtime diagnostic
-   Run1 with `traceNav=true` and `traceGlobalSearch=true`.
-2. Capture `GLOBAL_SEARCH_START/FIRST_EXPANSION/CANDIDATE/END/COMPLETE/CANCEL/RESTART` for IDX3/IDX5
-   and the other PLANNING attackers.
-3. A2 OPEN; no retry/Run2/Full12K. Fixture validated.
+1. Fix/diagnose the population query omission (`getEntitiesOfClass` sees 15/11 while NBT has 16/12).
+2. Pass and verify both trace properties directly in `JDK_JAVA_OPTIONS` before any future diagnostic.
+3. New runtime requires explicit authorization. A2 OPEN; no retry/Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 
