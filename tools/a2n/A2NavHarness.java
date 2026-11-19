@@ -2279,6 +2279,7 @@ public final class A2NavHarness {
                     + " profession=" + captured.getVillagerData().getProfession()
                     + " alive=" + captured.isAlive() + " removed=" + captured.isRemoved()
                     + " addedToLevel=" + captured.isAddedToLevel()
+                    + " entityLookupPresent=" + (nivel.getEntity(captured.getUUID()) == captured)
                     + " pos=" + captured.blockPosition().toShortString());
         }
         java.util.Set<java.util.UUID> aabbUuids = new java.util.HashSet<>();
