@@ -1,15 +1,60 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population fix static BLOCKED
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness build routing (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**HEAD:** `73f6f3df8ce4982b29f5cdd88651b44c02eb7eb9`
-**Previous production SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`
-**Validation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md`
+**Implementation HEAD:** `8441818102f59c030f9a39ff2e3f6d13527bf95d`
+**Parent checkpoint:** `62cb5be88fcb5df9aa3c3e3bac8e6899f35d8f52`
+**Previous Harness result:** `phase55-population-static-20261119-1215` — BLOCKED before compile/test
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
 
-- BLOCKED: `src/main/.../debug/A2NavHarness.java` already exists, is tracked, and differs from canonical
-  `tools/a2n/A2NavHarness.java` by 1102 lines. Overwrite/delete is prohibited.
-- Canonical new harness therefore was not compiled or tested.
-- Gradle trace mappings and wrapper pass source review; lint/diff PASS.
-- No runtime. A2 OPEN; no retry/Run2/Full12K.
+## Reconciliation
+
+The tracked legacy source `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` is intentionally
+preserved; it contains 12 methods absent from the shorter canonical reconstruction, including BREAK runtime,
+BREAK edge-excluded, and NAV backtrack scenarios. It must not be overwritten or deleted.
+
+ChatGPT added an explicit Gradle source selector:
+
+- `-Pa2nDiagnostics=true` enables diagnostic sources.
+- `-Pa2nPopulationQueryHarness=true` selects `tools/a2n/A2NavHarness.java`, excludes the legacy
+  `debug/A2NavHarness.java` only from this opted-in compilation, and includes `tools/a2n/` as a source root.
+- Without the new selector, legacy diagnostic builds retain the existing source.
+- Normal builds remain debug-excluded.
+
+The Phase55 PowerShell wrapper now sets/restores both new Gradle selectors plus the two trace properties and
+continues to set the actual server JVM trace flags. The ignored local launcher remains untouched.
+
+## Changed files / commits
+
+- `build.gradle` — `15314dd55abf0c83753f3e2356580269ba4c1929`
+- `tools/a2n/lanzar-phase55-diagnostico.ps1` — `b399a0e657dd00392a643be2870711b047e14e16`
+- `tools/a2n/LEEME.md` — `d291de1cbecb57bc45f3202a1a3a4c0820bc8e1b`,
+  `61f3aecd662db713a449db0919f362f723db0c12`
+- New implementation report — `8441818102f59c030f9a39ff2e3f6d13527bf95d`
+
+No Java production source, `NavPlanner.java`, worlds, fixtures, navigation behavior, acceptance criteria,
+budgets, OFFSETS, collision/support/protection rules, or A2/C4 logic changed. No build/test/lint command was
+executed by ChatGPT.
+
+## Next action — Harness STATIC ONLY on exact HEAD
+
+1. Fast-forward-only sync to `8441818102f59c030f9a39ff2e3f6d13527bf95d`; preserve all local/untracked
+   work and worlds. Stop on divergence or risk.
+2. Verify the legacy tracked file still exists unchanged, canonical source blob remains
+   `3205305a10a21ded066c03cb746908e94632e08d`, and `NavPlanner.java` remains
+   `5666e42693fe2e90dff1d2ac1004b59b9b62d7cd`.
+3. Run:
+   - `.\gradlew.bat compileJava -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
+   - `.\gradlew.bat test -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
+   - `python tools\lint_aldea.py --strict`
+   - `git diff --check`
+4. Prove compile selected the canonical source and verify NeoForge 21.1.249 API compatibility. Record exact commands,
+   exit codes, logs, tested SHA, worktree and untracked state. Harness must not modify production source.
+
+**STATIC ONLY. Do not launch Minecraft, invoke the wrapper, runServer, A2, C4, Run2, or Full12K.** The previous
+runtime authorization is consumed. After static validation, stop regardless of PASS/FAIL and report. A new
+runtime requires fresh explicit user authorization.
+
+A2 remains OPEN; no runtime retry is authorized.
 
 ---
 
