@@ -1,7 +1,8 @@
 # A2 Phase55 — opt-in global A* first-expansion diagnostics
 
-**Implementation SHA:** `1164004368a784a463293e4d6a9bc6c8fc144474`  
-**Parent:** `5af839090be9f16a10d2186bb30ef1d5a646de99`  
+**Final implementation SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`  
+**Direct parent:** `6ed69210b1ab2b352f12f6c7367e704038e16fac`  
+**Source-change commits:** `5af839090be9f16a10d2186bb30ef1d5a646de99`, `1164004368a784a463293e4d6a9bc6c8fc144474`, `10719ff82465a0d8997cb2af3af23c9f71292b19`  
 **Base checkpoint:** `646a099f53cbaa52e71db0688d0061ef3e657ea9`  
 **Branch:** `feature/autonomous-village`  
 **Status:** IMPLEMENTED — STATIC VALIDATION PENDING HARNESS
