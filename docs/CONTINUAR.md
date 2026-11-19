@@ -12,6 +12,7 @@
 - `87f6e0875149bf6492b2a2349eca2513dce6d0b3`: census requires captured villagers to be alive, not removed, and tracked.
 - `a62a0514a9893a016dd4e2d55a6441b468f77ccb` + `a45538bea8b90e31257b9bce0f675bef363aa990`: tracking accepts either `isAddedToLevel()` or exact `level.getEntity(UUID)` identity; per-UUID lookup visibility is logged.
 - `d11cae8c53ec60f94ac5d6e3b5cf86318ea59e5e`: `build.gradle` forwards `-Pa2nTraceGlobalSearch=true` to the actual runServer JVM.
+- `tools/a2n/lanzar-phase55-diagnostico.ps1` is the tracked wrapper that sets both JVM flags and Gradle project properties, then delegates to the ignored local launcher without editing it.
 - The harness logs effective `traceNav` / `traceGlobalSearch` at server startup and aborts raid mode before fixture setup if either is false.
 
 No production navigation source, world, fixture geometry, acceptance criteria, budgets, OFFSETS, collision/support/protection rules or A2/C4 logic changed.
