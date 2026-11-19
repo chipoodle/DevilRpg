@@ -73,7 +73,7 @@ The generated/local launcher `build/a2n/lanzar-a2n.ps1` is an ignored local arti
 
 ## 3. Scope and invariants
 
-- Changed files: `tools/a2n/A2NavHarness.java`, `build.gradle`.
+- Changed code/configuration files: `tools/a2n/A2NavHarness.java`, `build.gradle`, `tools/a2n/lanzar-phase55-diagnostico.ps1`.
 - No production navigation source changed.
 - No changes to A2/C4 acceptance thresholds, worker professions, spawn positions, world geometry, chunk forcing, collision, support, protection, OFFSETS, budgets, cooldowns or A*.
 - No world, fixture data or local-only artifacts changed.
