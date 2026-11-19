@@ -1,7 +1,8 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS STATIC
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 static validation FAIL
 
 - Production SHA: `9966f807b2fbb13552545cdd181f2f034c7ecbaa`.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
+- **Harness static FAIL:** `9966f807` no compila; `NavPlanner.java:617/628` redeclara `BlockPos state` sobre el parámetro `GlobalSearchState state`. `NAV_PLANNER_STATE_TEST` (51 aserciones) no se ejecutó. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`.
 - Phase54B-R1 fixture PASS: 289/289 chunks READY in 1 tick, all fixture checks PASS, 8/8 spawn. Runtime BLOCKED by 60.04 s watchdog in first global A* burst. No A2/IDX5/IDX3 result.
 - Phase55 introduces resumable global A*: OPEN/CLOSED and predecessor state retained across server ticks; 4 expansions / max 8 OPEN pops per executor/tick; unchanged total global expansion budget.
 - Pending search emits no partial route or movement and consumes no local stair/failure counters. Existing collision/support/protection/heuristic/radius/costs/acceptance gates are unchanged.

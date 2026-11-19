@@ -5323,3 +5323,9 @@ run/saves; hashes match; structural verification only.
 - Run a2n-20261119-011138: fixture 289/289 READY 1 tick, 8/8 spawn, village/wall/population PASS.
 - Watchdog at first global A* burst (NavPlanner/NavObstruction, 60.04s); no A2 result, IDX5/IDX3 insufficient.
 - Report: docs/autonomous-village/2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 static validation FAIL
+
+- `9966f807` compileJava FAIL: NavPlanner.java:617/628 redeclara `BlockPos state` sobre parámetro `GlobalSearchState state`.
+- NAV_PLANNER_STATE_TEST (51 assertions) no ejecutado; lint/diff PASS; no runtime.
+- Report: docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md. A2 OPEN.

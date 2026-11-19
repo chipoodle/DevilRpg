@@ -1157,3 +1157,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Fixture validated; planner watchdog aborted run before A2 result.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 static validation FAIL
+
+- Production compile failure at NavPlanner state shadowing; test not run.
+- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`.

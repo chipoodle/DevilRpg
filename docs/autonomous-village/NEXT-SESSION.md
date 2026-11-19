@@ -1,4 +1,20 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS STATIC VALIDATION
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 static validation FAIL
+
+**Branch:** `feature/autonomous-village`
+**Tested production SHA:** `9966f807b2fbb13552545cdd181f2f034c7ecbaa`
+**Current report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`
+**HEAD:** `1679315289534bd885013fefb8c15c34f0bf82f9`
+
+- Compilation FAILS at `NavPlanner.java:617/628`: local `BlockPos state` redeclares the
+  `GlobalSearchState state` parameter.
+- `NAV_PLANNER_STATE_TEST` (51 source assertions) could not run. Lint/diff PASS.
+- No runtime executed. ChatGPT must rename the locals and publish a new SHA for re-validation.
+- A2 OPEN; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 incremental global A* (PENDING HARNESS)
+
 
 **Branch:** `feature/autonomous-village`
 **Production implementation SHA:** `9966f807b2fbb13552545cdd181f2f034c7ecbaa`
@@ -643,6 +659,7 @@ Read first, in order:
 84. `docs/autonomous-village/2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md`
 85. `docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`
 86. `docs/autonomous-village/2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md`
+87. `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -770,10 +787,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Fixture is validated; do not modify it. The remaining blocker is the synchronous global A* burst
-   (448k edge budget) in `NavPlanner`; needs a separate approved design/diagnostic before another Run1.
-2. IDX5 CADENCE route preservation and monotonic anchor remain runtime-unvalidated.
-3. A2 OPEN; no Run2/Full12K without explicit new authorization. C4 last PASS `[1,0,0]`.
+1. ChatGPT fixes `NavPlanner.advanceGlobalSearch` local variable shadowing (`BlockPos routeState`) and
+   publishes a new SHA.
+2. Re-run static validation on that SHA, including `NAV_PLANNER_STATE_TEST`, before any runtime.
+3. Fixture is validated; do not modify it. A2 OPEN; no Run2/Full12K. C4 last PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 
