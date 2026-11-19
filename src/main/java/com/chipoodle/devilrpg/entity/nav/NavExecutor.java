@@ -1173,6 +1173,7 @@ public final class NavExecutor {
     private NavPlanner.GlobalResult globalCache;
     /** True while the retained strategic A* frontier is being advanced across server ticks. */
     private boolean globalSearchPending;
+    private final NavPlanner.GlobalSearchHandle globalSearchHandle = new NavPlanner.GlobalSearchHandle();
     private BlockPos globalMision;
     private BlockPos globalDesde;
     private int globalExpansionesTotal;
@@ -1469,9 +1470,9 @@ public final class NavExecutor {
                 && globalDesde.distSqr(yo) <= CACHE_GLOBAL_SQR) {
             return globalCache;
         }
-        NavPlanner.GlobalResult r = NavPlanner.planGlobal(mob.level(), mob, yo, mision,
+        NavPlanner.GlobalResult r = NavPlanner.planGlobalIncremental(mob.level(), mob, yo, mision,
                 RADIO_GLOBAL_DE_BUSQUEDA, VENTANA_VERTICAL_GLOBAL, MAX_EXPANSIONES_GLOBALES, policies, construidas,
-                exclusionesDescenso, exclusionesBreak);
+                exclusionesDescenso, exclusionesBreak, globalSearchHandle);
         globalExpansionesTotal += r.expansions();
         globalCache = r;
         globalMision = mision;
