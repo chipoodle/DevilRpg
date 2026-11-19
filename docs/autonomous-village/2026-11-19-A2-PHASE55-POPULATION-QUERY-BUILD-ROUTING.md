@@ -49,7 +49,7 @@ This makes the Phase55 runtime wrapper select the same canonical source that the
 Synchronize fast-forward-only to the implementation HEAD recorded in `NEXT-SESSION.md`. Preserve all local
 changes, untracked files, backups and worlds. Confirm:
 
-- The legacy source blob is still `28ea2fb8ce970326c1157046d6cb59e3d1cc5892d` (or report the actual
+- The legacy source blob is still `28ea2fb8ce970326c1157046dcb59e3d1cc5892d` (or report the actual
   unchanged blob if the repository baseline differs).
 - The canonical source is still `3205305a10a21ded066c03cb746908e94632e08d`.
 - `NavPlanner.java` blob is unchanged from `5666e42693fe2e90dff1d2ac1004b59b9b62d7cd`.
