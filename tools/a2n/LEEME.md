@@ -54,22 +54,22 @@ El modo `raid` de `A2NavHarness` exige que ambas propiedades estén activas en e
 [A2N] JVM_TRACE traceNav=true traceGlobalSearch=true ...
 ```
 
-El lanzador local debe propagar ambas opciones en `JDK_JAVA_OPTIONS`:
+Usa el wrapper versionado, que añade ambas propiedades al entorno JVM y las propiedades Gradle, preserva/restaura el entorno del proceso llamador y delega al lanzador local existente sin modificarlo:
 
 ```powershell
-$env:JDK_JAVA_OPTIONS = "-Ddevilrpg.a2n.traceNav=true -Ddevilrpg.a2n.traceGlobalSearch=true"
+.\tools\a2n\lanzar-phase55-diagnostico.ps1 -Modo raid -LimiteMinutos 18
 ```
 
-Y el comando Gradle de `runServer` debe incluir ambas propiedades de proyecto:
+El wrapper establece `JDK_JAVA_OPTIONS` con:
 
 ```text
--Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true
+-Ddevilrpg.a2n.traceNav=true
+-Ddevilrpg.a2n.traceGlobalSearch=true
 ```
 
-`build.gradle` traduce esas propiedades a system properties del proceso servidor. Si falta cualquiera, el modo `raid` termina como `INVALIDO` antes de preparar o modificar el fixture. No se debe iniciar runtime si el registro `JVM_TRACE` no confirma ambas como `true`.
+y `ORG_GRADLE_PROJECT_a2nTraceNav=true` / `ORG_GRADLE_PROJECT_a2nTraceGlobalSearch=true`. `build.gradle` traduce las propiedades Gradle a system properties del proceso `runServer`. Si falta cualquiera, el modo `raid` termina como `INVALIDO` antes de preparar o modificar el fixture. No se debe iniciar runtime si el registro `JVM_TRACE` no confirma ambas como `true`.
 
-La fuente canónica del arnés ahora captura las referencias de aldeanos recibidas por `EntityJoinLevelEvent` durante la generación y mantenimiento del fixture. El censo usa esas referencias vivas y añadidas al nivel; conserva `getEntitiesOfClass(AABB)` únicamente como comparación diagnóstica. Véase `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-FIX.md`.
-
+La fuente canónica del arnés captura las referencias de aldeanos recibidas por `EntityJoinLevelEvent` durante la generación y mantenimiento del fixture. El censo usa esas referencias vivas y no removidas, verificando que estén añadidas al nivel o sean recuperables por UUID exacto; conserva `getEntitiesOfClass(AABB)` únicamente como comparación diagnóstica. Véase `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-FIX.md`.
 **Esta instrucción no autoriza runtime.** La ejecución requiere autorización explícita vigente del usuario.
 
 ## 3 · Modos del arnés
