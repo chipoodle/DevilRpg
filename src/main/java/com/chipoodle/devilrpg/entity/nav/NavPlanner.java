@@ -614,8 +614,8 @@ public final class NavPlanner {
                     .append(" motivo=").append(motivo);
             List<NavRoute.Node> nodosFrente = new ArrayList<>();
             for (NavGraphSearch.Step paso : resultado.route()) {
-                BlockPos state = BlockPos.of(paso.state());
-                BlockPos routePos = NavRouteNodePolicy.routePosition(state, paso.transition(),
+                BlockPos routeState = BlockPos.of(paso.state());
+                BlockPos routePos = NavRouteNodePolicy.routePosition(routeState, paso.transition(),
                         paso.feet(), paso.standPos());
                 nodosFrente.add(new NavRoute.Node(routePos, paso.transition(), paso.actionPos()));
             }
@@ -625,8 +625,8 @@ public final class NavPlanner {
         }
         List<NavRoute.Node> nodes = new ArrayList<>();
         for (NavGraphSearch.Step paso : resultado.route()) {
-            BlockPos state = BlockPos.of(paso.state());
-            BlockPos routePos = NavRouteNodePolicy.routePosition(state, paso.transition(),
+            BlockPos routeState = BlockPos.of(paso.state());
+            BlockPos routePos = NavRouteNodePolicy.routePosition(routeState, paso.transition(),
                     paso.feet(), paso.standPos());
             nodes.add(new NavRoute.Node(routePos, paso.transition(), paso.actionPos()));
         }
