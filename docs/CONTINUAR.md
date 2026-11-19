@@ -1,21 +1,25 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness routing (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 obsolete NavFeature dependency removed
 
 La continuación vigente es `docs/autonomous-village/NEXT-SESSION.md`.
-**HEAD:** `(ver HEAD exacto en docs/autonomous-village/NEXT-SESSION.md)`
-**Informe:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
+**Source implementation commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
+**Informe:** `docs/autonomous-village/2026-11-19-A2-PHASE55-REMOVE-OBSOLETE-NAVFEATURE-HARNESS-DEPENDENCY.md`
 
-Harness encontró correctamente que el destino de copia ya existía y estaba trackeado. ChatGPT resolvió la
-duplicidad sin sobrescribirlo: Gradle selecciona directamente `tools/a2n/A2NavHarness.java` sólo con
-`-Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true`, excluyendo el archivo legacy únicamente en ese
-build. El legacy se conserva para otros diagnósticos. El wrapper Phase55 establece/restaura ambos selectores y
-las propiedades de telemetría.
+Harness confirmó que el routing selecciona correctamente el arnés canónico, pero falló porque éste todavía
+referenciaba `NavFeature`. La migración del 15 de noviembre documenta explícitamente que esa clase y el
+fallback `-Ddevilrpg.nav.custom=true` fueron eliminados. La arquitectura actual crea y tickea `NavExecutor`
+como autoridad única.
 
-**Siguiente:** Harness hace exclusivamente STATIC ONLY en el HEAD exacto: compileJava y test con ambas
-propiedades, strict lint y diff-check. Verifica que compile el fuente canónico y que el legacy permanezca
-intacto. No copia, sobrescribe ni borra fuentes. Preserva cambios locales, untracked y mundos.
+ChatGPT quitó las referencias obsoletas del arnés canónico. Ahora registra la arquitectura real
+`NavExecutor-single-authority`; no se recreó la clase ni se restauró el flag. No hubo cambios a producción,
+NavPlanner, navegación, budgets, fixtures o mundos. Routing y wrapper permanecen intactos. No se ejecutaron
+compilación ni pruebas.
 
-**Prohibido:** Minecraft, wrapper, runServer, A2, C4, Run2, Full12K. La autorización runtime anterior está
-consumida. A2 OPEN; incluso con STATIC PASS, detenerse y reportar.
+**Siguiente:** Harness hace exclusivamente STATIC ONLY en el tip remoto actual: compileJava, test, strict lint y
+diff-check con `-Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true`. Verifica APIs NeoForge, ejecución de
+NAV_PLANNER_STATE_TEST (54 assertions) y preservación de ambos arneses. No modificar producción.
+
+**Prohibido:** Minecraft, wrapper, runServer, A2, C4, Run2 y Full12K. La autorización runtime está consumida.
+A2 OPEN; incluso con STATIC PASS, detenerse y reportar.
 
 ---
 
