@@ -562,8 +562,15 @@ public final class NavPlanner {
     }
 
     private static GlobalResult advanceGlobalSearch(Mob mob, GlobalSearchState state, GlobalSearchHandle handle) {
-        int slice = handle == null ? state.maxExpansions : GLOBAL_EXPANSIONS_PER_TICK;
-        boolean complete = state.search.advance(slice);
+        boolean complete;
+        if (handle == null) {
+            // Legacy callers remain synchronous even if stale OPEN entries require extra queue-pop slices.
+            do {
+                complete = state.search.advance(state.maxExpansions);
+            } while (!complete);
+        } else {
+            complete = state.search.advance(GLOBAL_EXPANSIONS_PER_TICK);
+        }
         if (!complete) {
             String summary = "global pendiente inicio=" + state.start.toShortString()
                     + " meta=" + state.objective.toShortString()
