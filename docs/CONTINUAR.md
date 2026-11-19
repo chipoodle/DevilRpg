@@ -9,7 +9,8 @@
 
 - `cdfcd638963a35045ab468250c1519673eb482f7`: A2 fixture captures exact Villager references from NeoForge `EntityJoinLevelEvent` during preGenerate/maintenance. The roster no longer relies on `getEntitiesOfClass(AABB)`; the AABB query remains as a diagnostic comparison.
 - `4343753cfb829e1ff5b4585e6ef33dc9f8761ff2`: retained references are used for raid defense/job-site and worker audits; UUID lookup has a captured-reference fallback.
-- `87f6e0875149bf6492b2a2349eca2513dce6d0b3`: census requires captured villagers to be alive, not removed, and added to the level; per-UUID state is logged.
+- `87f6e0875149bf6492b2a2349eca2513dce6d0b3`: census requires captured villagers to be alive, not removed, and tracked.
+- `a62a0514a9893a016dd4e2d55a6441b468f77ccb` + `a45538bea8b90e31257b9bce0f675bef363aa990`: tracking accepts either `isAddedToLevel()` or exact `level.getEntity(UUID)` identity; per-UUID lookup visibility is logged.
 - `d11cae8c53ec60f94ac5d6e3b5cf86318ea59e5e`: `build.gradle` forwards `-Pa2nTraceGlobalSearch=true` to the actual runServer JVM.
 - The harness logs effective `traceNav` / `traceGlobalSearch` at server startup and aborts raid mode before fixture setup if either is false.
 
@@ -17,7 +18,7 @@ No production navigation source, world, fixture geometry, acceptance criteria, b
 
 ## Evidence boundary
 
-The previous run proved that the AABB query omitted a Shepherd that was present alive in the saved disposable-world NBT. It did **not** establish why. The new event-based census bypasses the AABB index for fixture roster creation and emits diagnostics to compare the sources; it does not claim the underlying engine visibility anomaly is explained.
+The previous run proved that the AABB query omitted a Shepherd that was present alive in the saved disposable-world NBT. It did **not** establish why. The new event-based census uses retained object references and verifies their live tracking state, bypassing the AABB index for fixture roster creation while emitting diagnostics to compare the sources; it does not claim the underlying engine visibility anomaly is explained.
 
 ## Next action — Harness STATIC ONLY
 
