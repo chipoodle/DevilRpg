@@ -46,6 +46,32 @@ git diff --check
 El lanzador **aborta** si detecta cualquier proceso `java` vivo (incluido un daemon de Gradle): por eso el paso 0
 ejecuta `--stop` antes de cada corrida.
 
+### 2.1 · A2 raid diagnóstico con telemetría global A*
+
+El modo `raid` de `A2NavHarness` exige que ambas propiedades estén activas en el JVM real del servidor. Antes de preparar el fixture registra:
+
+```text
+[A2N] JVM_TRACE traceNav=true traceGlobalSearch=true ...
+```
+
+El lanzador local debe propagar ambas opciones en `JDK_JAVA_OPTIONS`:
+
+```powershell
+$env:JDK_JAVA_OPTIONS = "-Ddevilrpg.a2n.traceNav=true -Ddevilrpg.a2n.traceGlobalSearch=true"
+```
+
+Y el comando Gradle de `runServer` debe incluir ambas propiedades de proyecto:
+
+```text
+-Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true
+```
+
+`build.gradle` traduce esas propiedades a system properties del proceso servidor. Si falta cualquiera, el modo `raid` termina como `INVALIDO` antes de preparar o modificar el fixture. No se debe iniciar runtime si el registro `JVM_TRACE` no confirma ambas como `true`.
+
+La fuente canónica del arnés ahora captura las referencias de aldeanos recibidas por `EntityJoinLevelEvent` durante la generación y mantenimiento del fixture. El censo usa esas referencias vivas y añadidas al nivel; conserva `getEntitiesOfClass(AABB)` únicamente como comparación diagnóstica. Véase `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-FIX.md`.
+
+**Esta instrucción no autoriza runtime.** La ejecución requiere autorización explícita vigente del usuario.
+
 ## 3 · Modos del arnés
 
 | Modo | Qué mide | Entidades | `-NavCustom` |
