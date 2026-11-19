@@ -11,7 +11,7 @@ ChatGPT implementó dos correcciones P0 basadas en el forense de Run1:
 
 Se añadieron políticas puras y pruebas: `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST` (5 assertions) y `STAIR_BUILD_RESULT_TEST` (12 assertions). La nueva prueba está registrada en `policyTest`.
 
-**Pendiente:** Harness debe validar exactamente `b41e9687a4be74d24a671340ac41b7e3f1817045` con compileJava, test, lint estricto y diff-check. ChatGPT no ha ejecutado esas pruebas. No declarar PASS antes del reporte Harness.
+**Pendiente:** Harness debe sincronizar el tip actual de la rama (descendiente de `b41e9687a4be74d24a671340ac41b7e3f1817045`), registrar el HEAD real probado y verificar los blobs de producción del informe; ejecutar compileJava, test, lint estricto y diff-check. ChatGPT no ha ejecutado esas pruebas. No declarar PASS antes del reporte Harness.
 
 IDX7, IDX8 y el wrapper siguen pendientes. No se modificaron presupuestos, cooldowns, anclas, geometría, criterios ni mundos.
 
