@@ -1,4 +1,21 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 post-Phase55 forensic analysis
+# CURRENT CHECKPOINT — 2026-11-19 A2 P0 implementation awaiting static validation
+
+**Branch:** `feature/autonomous-village`
+**Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
+**Report:** `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
+
+- Implemented IDX3/IDX5 repeated-unusable-objective counter fix.
+- Implemented IDX4 no-candidate cooldown-loop fix.
+- Added `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST` (5 assertions).
+- Extended `STAIR_BUILD_RESULT_TEST` to 12 assertions and registered the new policy test in the normal gate.
+- Harness must validate exact HEAD with compileJava, test, strict lint and diff-check. Tests have not been run by ChatGPT.
+- No runtime, worlds or fixtures modified. A2 remains OPEN; no Run2/Full12K.
+
+**Next:** Harness STATIC ONLY on exact implementation SHA. Preserve local/untracked files and worlds; report full logs and test counts. No Minecraft/runtime without new explicit user authorization.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 post-Phase55 forensic analysis
 
 **Branch:** `feature/autonomous-village`
 **Source implementation commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
