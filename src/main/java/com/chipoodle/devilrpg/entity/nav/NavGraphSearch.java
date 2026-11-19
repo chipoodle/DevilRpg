@@ -71,6 +71,8 @@ public final class NavGraphSearch {
     public static final class Session {
         private final Graph graph;
         private final int maxExpansions;
+        private final long start;
+        private final int startFeet;
         private final PriorityQueue<Node> open = new PriorityQueue<>(Comparator.comparingDouble(Node::f)
                 .thenComparingDouble(Node::h));
         private final Map<Long, Double> bestG = new HashMap<>();
@@ -92,6 +94,8 @@ public final class NavGraphSearch {
             if (maxExpansions < 1) throw new IllegalArgumentException("maxExpansions must be positive");
             this.graph = graph;
             this.maxExpansions = maxExpansions;
+            this.start = start;
+            this.startFeet = startFeet;
             double h0 = graph.heuristic(start);
             open.add(new Node(start, 0.0D, h0, h0));
             bestG.put(start, 0.0D);
@@ -122,7 +126,7 @@ public final class NavGraphSearch {
                     bestDist = d;
                     front = current.state();
                 }
-                int feet = feetTo.getOrDefault(current.state(), 0);
+                int feet = feetTo.getOrDefault(current.state(), startFeet);
                 if (graph.goal(current.state(), feet)) {
                     found = current.state();
                     complete = true;
@@ -163,11 +167,11 @@ public final class NavGraphSearch {
             if (!complete) throw new IllegalStateException("search is still pending");
             List<Step> route = new ArrayList<>();
             long cursor = found != Long.MIN_VALUE ? found : front;
-            while (cursor != front && cursor != Long.MIN_VALUE) {
+            while (cursor != start) {
                 Long prev = cameFrom.get(cursor);
                 if (prev == null) break;
                 route.add(new Step(cursor, transitionTo.getOrDefault(cursor, NavRoute.Transition.WALK),
-                        feetTo.getOrDefault(cursor, 0), actionTo.get(cursor), standTo.get(cursor)));
+                        feetTo.getOrDefault(cursor, startFeet), actionTo.get(cursor), standTo.get(cursor)));
                 cursor = prev;
             }
             Collections.reverse(route);
