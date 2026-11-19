@@ -1,13 +1,30 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B-R1 runtime BLOCKED
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS STATIC VALIDATION
 
-**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
-**Current report:** `2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md`.
-**RUN_ID:** `a2n-20261119-011138` (BLOCKED: global planner watchdog after spawn).
+**Branch:** `feature/autonomous-village`
+**Production implementation SHA:** `f344f33ec122d7885aeb5669eb1f5e7126eadab1`
+**Current implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`
+**Previous runtime evidence:** `a2n-20261119-011138`, BLOCKED by global-planner watchdog after 8/8 spawn.
 
-- Fixture validated: 289/289 tickets READY in 1 tick; village/wall/population checks PASS; 8/8 spawn.
-- Run then died in the first global A* burst (`NavPlanner/NavObstruction`) at 60.04 s. No A2 result;
-  IDX5 CADENCE route and IDX3 stair evidence remain INSUFFICIENT_EVIDENCE.
-- No retry authorized. A2 OPEN; no Run2/Full12K.
+Phase55 implements resumable A*:
+- `NavGraphSearch.Session` retains OPEN/CLOSED, G scores, predecessor and route metadata across slices.
+- Strategic `NavPlanner.planGlobalIncremental` advances at 16 expansions / max 32 OPEN pops per executor per tick.
+- Existing hard total global expansion budget is unchanged (default 8,000; existing property clamp 8,000–32,000).
+- `NavExecutor` owns the search handle, remains PLANNING while pending, emits no partial route/movement and consumes no local stair failure counters.
+- Synchronous `planGlobal` compatibility and exact `planExact` path remain synchronous.
+- `NavPlannerStateTest` now includes incremental/synchronous route equivalence, slice ceiling, no partial result and hard total budget assertions.
+
+**Not validated yet:** ChatGPT reviewed source only. No Gradle, diagnostics compile, lint, diff-check or runtime was executed by ChatGPT.
+
+**Harness next — STATIC ONLY:**
+1. Sync safely and preserve local/untracked work and worlds.
+2. Verify branch HEAD includes implementation SHA above and inspect the four-file diff.
+3. Run diagnostics compile, `gradlew test` (confirm `NAV_PLANNER_STATE_TEST` includes the new assertions), `lint_aldea.py --strict`, and `git diff --check`.
+4. Report exact tested SHA, test assertion count and outputs. Harness must not modify production.
+5. Do not start Minecraft, A2 Run1, C4, Run2 or Full12K. A separate runtime authorization is required after static review.
+
+Runtime review after later authorization must capture per-tick pending slices, monotonic expansion progress, no movement from partial routes, total completion latency, tick duration/watchdog, route validity and IDX5/IDX3 evidence. A2 remains OPEN. Phase54B fixture remains validated and must not be changed.
+
+---
 
 ---
 
