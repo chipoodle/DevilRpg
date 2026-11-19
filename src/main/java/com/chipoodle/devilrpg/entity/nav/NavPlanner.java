@@ -671,7 +671,7 @@ public final class NavPlanner {
                 + " frontier=" + state.search.frontierSize()
                 + " found=" + resultado.found()
                 + " hitBudget=" + resultado.hitBudget()
-                + " reason=" + resultado.reason()
+                + " reason=" + resultado.reason().replace(' ', '_')
                 + " routeNodes=" + resultado.route().size());
         int expansions = resultado.expansions();
         boolean hitBudget = resultado.hitBudget();
