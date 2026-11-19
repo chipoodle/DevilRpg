@@ -1,41 +1,46 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population census fix (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness routing (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**Previous blocked runtime:** `a2n-20261119-114535` — authorization consumed; no retry.
-**Previous production SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`
-**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-FIX.md`
+**Implementation HEAD:** `e6da8accb0d68bb0b38376aa077258ea9e4d8a82`
+**Previous runtime:** `a2n-20261119-114535` — BLOCKED; authorization consumed, no retry.
+**Previous static attempt:** `phase55-population-static-20261119-1215` — BLOCKED before compile/test.
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
 
-## Implemented by ChatGPT
+The tracked `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` is a legacy harness and must be
+preserved. It contains BREAK/NAV diagnostic methods absent from the canonical reconstruction. Do not copy over,
+delete, or temporarily replace it.
 
-- `cdfcd638963a35045ab468250c1519673eb482f7`: A2 fixture captures exact Villager references from NeoForge `EntityJoinLevelEvent` during preGenerate/maintenance. The roster no longer relies on `getEntitiesOfClass(AABB)`; the AABB query remains as a diagnostic comparison.
-- `4343753cfb829e1ff5b4585e6ef33dc9f8761ff2`: retained references are used for raid defense/job-site and worker audits; UUID lookup has a captured-reference fallback.
-- `87f6e0875149bf6492b2a2349eca2513dce6d0b3`: census requires captured villagers to be alive, not removed, and tracked.
-- `a62a0514a9893a016dd4e2d55a6441b468f77ccb` + `a45538bea8b90e31257b9bce0f675bef363aa990`: tracking accepts either `isAddedToLevel()` or exact `level.getEntity(UUID)` identity; per-UUID lookup visibility is logged.
-- `d11cae8c53ec60f94ac5d6e3b5cf86318ea59e5e`: `build.gradle` forwards `-Pa2nTraceGlobalSearch=true` to the actual runServer JVM.
-- `tools/a2n/lanzar-phase55-diagnostico.ps1` is the tracked wrapper that sets both JVM flags and Gradle project properties, then delegates to the ignored local launcher without editing it.
-- The harness logs effective `traceNav` / `traceGlobalSearch` at server startup and aborts raid mode before fixture setup if either is false.
+Gradle now has an explicit opt-in route:
+- `-Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true` selects canonical
+  `tools/a2n/A2NavHarness.java`, excludes the legacy source only from that build, and compiles the canonical
+  source directly from `tools/a2n/`.
+- Without `a2nPopulationQueryHarness=true`, existing diagnostic builds keep using the legacy source.
+- Normal builds still exclude debug sources.
 
-No production navigation source, world, fixture geometry, acceptance criteria, budgets, OFFSETS, collision/support/protection rules or A2/C4 logic changed.
+The Phase55 wrapper sets/restores both selector properties and both trace properties, as well as JVM trace flags.
+No production Java, NavPlanner, gameplay, world, fixture geometry, acceptance criteria or navigation policy was
+changed. ChatGPT has not run compilation/tests/lint.
 
-## Evidence boundary
+## Next — Harness STATIC ONLY
 
-The previous run proved that the AABB query omitted a Shepherd that was present alive in the saved disposable-world NBT. It did **not** establish why. The new event-based census uses retained object references and verifies their live tracking state, bypassing the AABB index for fixture roster creation while emitting diagnostics to compare the sources; it does not claim the underlying engine visibility anomaly is explained.
+Fast-forward-only sync to exact HEAD `e6da8accb0d68bb0b38376aa077258ea9e4d8a82`. Preserve local work,
+untracked files, backups and worlds. Verify the legacy source remains unchanged, canonical blob
+`3205305a10a21ded066c03cb746908e94632e08d`, NavPlanner blob
+`5666e42693fe2e90dff1d2ac1004b59b9b62d7cd`.
 
-## Next action — Harness STATIC ONLY
+Run:
+```powershell
+.\gradlew.bat compileJava -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true
+.\gradlew.bat test -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true
+python tools\lint_aldea.py --strict
+git diff --check
+```
 
-Validate the exact current branch HEAD:
+Report exact tested SHA, commands, exit codes, compile source selection, NeoForge 21.1.249 API verification,
+worktree/untracked preservation and logs. No temporary copy is needed.
 
-- `gradlew.bat compileJava` with the diagnostic source inclusion required by the workflow.
-- `gradlew.bat test`.
-- `python tools/lint_aldea.py --strict`.
-- `git diff --check`.
-- Confirm NeoForge 21.1.249 APIs compile: `EntityJoinLevelEvent`, `isAddedToLevel`, `areEntitiesLoaded`.
-- Verify Gradle property mapping `-Pa2nTraceGlobalSearch=true` is passed to the server run config.
-- Preserve all local/untracked files and worlds. Harness must not modify production source.
-
-**STATIC ONLY. Do not launch Minecraft or run A2/C4/Full12K.** The previous runtime authorization is consumed. If static PASS, stop and return the report; another runtime requires fresh explicit user authorization. A2 remains OPEN.
-
----
+**STATIC ONLY:** no Minecraft, wrapper, runServer, A2, C4, Run2 or Full12K. Runtime authorization is consumed;
+even after static PASS, stop and return the report. A2 remains OPEN.
 
 ---
 
