@@ -20,7 +20,7 @@ The synchronous strategic global search expanded up to the existing hard total e
 
 - Added `begin(...)` and `Session.advance(expansionSlice)`.
 - OPEN priority queue, best-G map, CLOSED set, predecessor/transition/action/stand/feet maps, best partial front and total expansion count persist across slices.
-- Each slice expands at most its requested number of nodes and pops at most twice that number from OPEN, including stale entries. The production slice is 16 expansions / at most 32 OPEN pops per executor per tick. This prevents stale queue entries from bypassing the tick bound.
+- Each slice expands at most its requested number of nodes and pops at most twice that number from OPEN, including stale entries. The production slice is 4 expansions / at most 8 OPEN pops per executor per tick. This prevents stale queue entries from bypassing the tick bound.
 - The total `maxExpansions` ceiling remains hard and unchanged.
 - A partial session cannot expose a route: `result()` throws until completion.
 - The existing synchronous `search(...)` API remains as a compatibility wrapper and uses one full-budget slice.
@@ -29,7 +29,7 @@ The synchronous strategic global search expanded up to the existing hard total e
 
 - Added executor-owned `GlobalSearchHandle`; no static entity/session registry.
 - Added `planGlobalIncremental(...)`. The graph adapter and all existing edge validation rules are created once and retained with the A* frontier.
-- Strategic global planning advances at **16 expansions per server tick**. The existing total budget (default 8,000; existing property clamp 8,000–32,000) is not increased.
+- Strategic global planning advances at **4 expansions per server tick**. The existing total budget (default 8,000; existing property clamp 8,000–32,000) is not increased.
 - A changed level, origin, mission, search mode, radius, vertical range or total budget invalidates the retained search and starts a fresh one.
 - Synchronous `planGlobal` and exact-goal `planExact` retain their prior synchronous contracts.
 
