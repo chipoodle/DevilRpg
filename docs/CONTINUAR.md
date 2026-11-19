@@ -5449,3 +5449,9 @@ run/saves; hashes match; structural verification only.
 - IDX4: no-candidate resets delay10 -> endless CADENCE_WAIT. IDX7: ascent dy+3 rejected by descent-only gate.
 - IDX8: cancellations + 8000 budget; 5 restarts on 1-block moves; 5 survivors discarded administratively. Wrapper array-splat bug.
 - Report: docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md. No runtime. A2 OPEN.
+
+## 2026-11-19 — P0 static FAIL + traversal forensics
+
+- compileJava FAIL: NavLocalObjectiveStepPolicy.java:20 cannot resolve Decision.ACEPTAR_NUEVO; tests NOT RUN.
+- Traversal: BreakBlockGoal/TraverseGoal lack active-transition coordination and shared lease; source review A-I in report.
+- Lint/diff PASS; no runtime. Report: docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md. A2 OPEN.

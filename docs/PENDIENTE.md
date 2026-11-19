@@ -1,8 +1,10 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 P0 implementation awaiting static validation
+# CURRENT CHECKPOINT — 2026-11-19 P0 static FAIL + traversal forensics
 
 **Branch:** `feature/autonomous-village`
 **Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
 **Report:** `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
+
+- **Harness STATIC FAIL:** `NavLocalObjectiveStepPolicy.java:20` no resuelve `Decision.ACEPTAR_NUEVO`; tests NOT RUN; lint/diff PASS. Traversal: goals sin coordinación por transición activa. Detalle: `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`.
 
 - Implemented IDX3/IDX5 repeated-unusable-objective counter fix.
 - Implemented IDX4 no-candidate cooldown-loop fix.

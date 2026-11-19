@@ -1303,3 +1303,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Root causes confirmed for IDX3/4/5/7; IDX8 probable. No production changes.
 - Report: `docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md`. A2 OPEN.
+
+## 2026-11-19 — P0 static FAIL + traversal forensics
+
+- New policy compile failure blocks tests; traversal goals lack transition lease.
+- Report: `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`. A2 OPEN.

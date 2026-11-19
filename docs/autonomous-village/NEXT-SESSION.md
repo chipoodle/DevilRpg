@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 P0 fixes implemented (STATIC VALIDATION PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 P0 static FAIL + traversal forensics
 
 **Branch:** `feature/autonomous-village`
-**Forensic baseline:** `3c36bfb21f1fdce64379dc734bbdf90aae550dde`
-**Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
+**Tested HEAD:** `b35c6cb3789ee7a267572521ef39ec3394e1750f`
+**P0 commit:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
+**Report:** `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`
+
+- compileJava FAIL: `NavLocalObjectiveStepPolicy.java:20` cannot resolve `Decision.ACEPTAR_NUEVO`.
+- Tests NOT RUN; lint/diff PASS. Direct javac reproduces; minimal equivalent compiles.
+- Traversal: goals lack active-transition coordination; both passive at priority3 with no lease.
+- No runtime. A2 OPEN.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 P0 fixes implemented (STATIC PENDING)
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
 
 - IDX3/IDX5: same unusable local objective no longer consumes another `escalonesDeObjetivo` step; it increments the existing bounded failure counter and emits `REJECT_REPEAT_UNUSABLE`.
@@ -1061,6 +1071,7 @@ Read first, in order:
 97. `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`
 98. `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`
 99. `docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md`
+100. `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`
 100. `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
@@ -1189,9 +1200,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Harness validates production implementation HEAD `b41e9687a4be74d24a671340ac41b7e3f1817045` STATIC ONLY; see the P0 implementation report.
-2. After static results, ChatGPT continues with IDX7 BUILD/ascent route semantics and IDX8 cancellation instrumentation.
-3. No runtime until production fixes pass static validation and fresh explicit user authorization is obtained. A2 OPEN; no Run2/Full12K.
+1. ChatGPT must correct `NavLocalObjectiveStepPolicy` so it compiles; publish a new HEAD.
+2. Re-run the exact static gate and report real assertions before any runtime.
+3. Do not implement traversal redesign yet; review the active-transition/lease proposal. A2 OPEN; no Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 
