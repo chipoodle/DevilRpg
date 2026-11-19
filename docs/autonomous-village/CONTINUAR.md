@@ -1,46 +1,48 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness routing (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 obsolete NavFeature dependency removed (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**Implementation HEAD:** `(ver HEAD exacto en docs/autonomous-village/NEXT-SESSION.md)`
-**Previous runtime:** `a2n-20261119-114535` — BLOCKED; authorization consumed, no retry.
-**Previous static attempt:** `phase55-population-static-20261119-1215` — BLOCKED before compile/test.
-**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
+**Source implementation commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-REMOVE-OBSOLETE-NAVFEATURE-HARNESS-DEPENDENCY.md`
+**Previous Harness result:** `phase55-routing-static-20261119-1400` — FAIL at compile due obsolete `NavFeature` references.
 
-The tracked `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` is a legacy harness and must be
-preserved. It contains BREAK/NAV diagnostic methods absent from the canonical reconstruction. Do not copy over,
-delete, or temporarily replace it.
+The migration record `2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md` proves `NavFeature` and the
+`-Ddevilrpg.nav.custom=true` fallback flag were deliberately deleted. Current production source confirms
+`AggressiveZombieEntity` constructs `NavExecutor` and ticks it every server-side `aiStep`. Do not recreate
+the deleted flag/class.
 
-Gradle now has an explicit opt-in route:
-- `-Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true` selects canonical
-  `tools/a2n/A2NavHarness.java`, excludes the legacy source only from that build, and compiles the canonical
-  source directly from `tools/a2n/`.
-- Without `a2nPopulationQueryHarness=true`, existing diagnostic builds keep using the legacy source.
-- Normal builds still exclude debug sources.
-
-The Phase55 wrapper sets/restores both selector properties and both trace properties, as well as JVM trace flags.
-No production Java, NavPlanner, gameplay, world, fixture geometry, acceptance criteria or navigation policy was
-changed. ChatGPT has not run compilation/tests/lint.
+ChatGPT removed the obsolete compile-time references from the canonical harness only:
+- Raid setup reports `navCustomEfectivo=true modo=NavExecutor-single-authority featureFlag=eliminado`.
+- Trace header reports `navCustom=NavExecutor-single-authority`.
+- No production Java source, navigation behavior, budgets, policy, fixture, world or criteria changed.
+- Gradle routing and wrapper remain unchanged.
+- ChatGPT has not executed compile/test/lint.
 
 ## Next — Harness STATIC ONLY
 
-Fast-forward-only sync to exact HEAD `(ver HEAD exacto en docs/autonomous-village/NEXT-SESSION.md)`. Preserve local work,
-untracked files, backups and worlds. Verify the legacy source remains unchanged, canonical blob
-`3205305a10a21ded066c03cb746908e94632e08d`, NavPlanner blob
-`5666e42693fe2e90dff1d2ac1004b59b9b62d7cd`.
+Fast-forward-only sync to the current remote tip containing source commit
+`a029e4eb790109df94acb1e07f8cac52f8b88ff8`. Preserve local/untracked files, backups and worlds; stop on
+divergence or overwrite risk.
+
+Verify:
+- canonical source blob `914d26da4f9a553f43936812ddc303ed56a24243`;
+- no compile-time `NavFeature` / `customNavigation()` references in canonical source;
+- legacy harness blob `28ea2fb8ce970326c1157046dcb59e3d1cc5892d`;
+- NavPlanner blob `5666e42693fe2e90dff1d2ac1004b59b9b62d7cd`;
+- Gradle routing and wrapper unchanged.
 
 Run:
 ```powershell
-.\gradlew.bat compileJava -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true
-.\gradlew.bat test -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true
+.\gradlew.bat compileJava --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true
+.\gradlew.bat test --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true
 python tools\lint_aldea.py --strict
 git diff --check
 ```
 
-Report exact tested SHA, commands, exit codes, compile source selection, NeoForge 21.1.249 API verification,
-worktree/untracked preservation and logs. No temporary copy is needed.
+Record exact SHA, commands, exit codes, tests/assertions, logs, compile source selection and worktree/untracked
+preservation. Harness must not modify production source.
 
-**STATIC ONLY:** no Minecraft, wrapper, runServer, A2, C4, Run2 or Full12K. Runtime authorization is consumed;
-even after static PASS, stop and return the report. A2 remains OPEN.
+**STATIC ONLY:** no Minecraft, wrapper, runServer, A2, C4, Run2 or Full12K. Runtime authorization is consumed.
+Stop after static validation regardless of result. A2 remains OPEN.
 
 ---
 
