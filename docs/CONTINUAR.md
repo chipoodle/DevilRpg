@@ -1,12 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 BLOCKED
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS
 
-**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
-**Validation:** `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`.
-**Documentation HEAD:** `ecaa4b28ddf991b409db2666dc3c896db7921d2d`.
+La continuación vigente está en `docs/autonomous-village/NEXT-SESSION.md`.
 
-Static checks PASSed. A2 Run1 `a2n-20261118-233308` BLOCKED during fixture setup, before any attacker spawned: `A2NavHarness.prepararRaidFixture` spent 60.04 seconds in `ServerLevel.setChunkForced` while forcing a 17×17 chunk region. No IDX5 or route-preservation evidence; no A2 result; C4 not reached. No retry.
+- Production implementation SHA: `f344f33ec122d7885aeb5669eb1f5e7126eadab1`.
+- Informe: `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
+- Phase54B-R1 confirmó fixture PASS (289/289 chunks en 1 tick, 8/8 spawn), pero el servidor murió en el primer burst A* global por watchdog 60.04 s. Sin resultado A2 ni evidencia IDX5/IDX3.
+- Phase55 convierte el A* estratégico en reanudable: 16 expansiones / máximo 32 pops OPEN por executor/tick, conservando la frontera y predecesores. El presupuesto total global permanece igual.
+- Las búsquedas pendientes no publican rutas parciales, no envían movimiento y no consumen contadores locales de fallo/escalera.
+- Fixture, geometría, colisión, soporte, protección, heurística, radio, costos y criterios A2/C4 permanecen intactos.
 
-Next action: investigate and stabilize only the diagnostic fixture (or use a pre-generated disposable world), with bounded non-blocking chunk preparation and explicit timeout/failure. Do not change navigation production, budgets, Phase41/44/46 or acceptance predicates. Once ready, request authorization for exactly one A2 Run1 on `656ce7d0...`. No Run2/Full12K before five consecutive 8/8 strict runs.
+**Harness debe ejecutar STATIC ONLY** sobre el SHA exacto: diagnostics compile, `gradlew test`, lint estricto y diff-check; reportar hash y confirmar las nuevas aserciones de `NAV_PLANNER_STATE_TEST`. No modificar producción ni iniciar Minecraft/A2/C4. No hay autorización runtime; solicitarla por separado tras revisión estática.
+
+A2 permanece OPEN. No Run2/Full12K ni C4 standalone.
+
+---
 
 ---
 
