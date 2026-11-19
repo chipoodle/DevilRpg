@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 runtime FAIL
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 first-expansion forensics
 
 **Branch:** `feature/autonomous-village`
-**Run:** `a2n-20261119-093456` — completed without watchdog; no strict entries
+**Run:** `a2n-20261119-093456` — read-only diagnosis complete
 **Production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
+
+- IDX3/IDX5 `exp=1` proven first-expansion failure: `aristas=56`, `encolados=0`.
+- Both starts are 1×1 shafts; all eight adjacent columns solid. `OFFSETS` lacks a vertical-only `(0,0)`
+  edge, so safe descent is not representable and OPEN empties.
+- Exact per-candidate rejection enum mix is not logged; opt-in first-expansion telemetry specified.
+- No runtime consumed. A2 OPEN; no retry/Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 runtime FAIL
 
 - Fixture PASS: 289/289 chunks, 16 villagers/12 professionals, 8/8 spawn.
 - A2 FAIL: 0/8 strict, 1/8 perimeter (idx6 t271); 8 alive, C4 FAIL because guards never fought.
@@ -785,6 +795,7 @@ Read first, in order:
 89. `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md`
 90. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md`
 91. `docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md`
+92. `docs/autonomous-village/2026-11-19-A2-PHASE55-ASTAR-FIRST-EXPANSION-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -912,10 +923,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Diagnose the incremental A* routing regression: why global searches finish `exp=1/8000` with front
-   exhausted and leave most attackers PLANNING, despite no watchdog.
-2. Inspect why CADENCE_WAIT never reaches `A2_STAIR_CADENCE_ROUTE_PRESERVED`; no stairs were placed.
-3. A2 OPEN; no retry/Run2/Full12K without new explicit authorization. Fixture remains validated.
+1. Add the opt-in first-expansion telemetry from the forensic report to identify the exact rejection mix.
+2. Separately review whether the global graph needs a vertical-only safe-descent edge; do not implement
+   without production authorization.
+3. A2 OPEN; no retry/Run2/Full12K. Fixture remains validated.
 
 ## Worlds (preserve; do not overwrite)
 

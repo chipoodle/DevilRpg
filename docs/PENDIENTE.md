@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 runtime FAIL
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 first-expansion forensics
 
 - Production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910` (unchanged).
 - Run `a2n-20261119-031255`: BLOCKED before attackers; 289/289 chunks READY in 1 tick; population 14 = 4 founder guards + 10 professionals, expected 12 workers.
@@ -8,6 +8,7 @@
 - Detailed checklist: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-FORENSICS.md`.
 - **NBT read-only:** los 12 workers existen; SHEPHERD `c690ddc5…` 708,71,533 y MASON `c6ba9a5c…` 694,71,511 viven (HP20, death0, persistent) y están dentro del AABB; el snapshot `getEntitiesOfClass` los omitió. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md`.
 - **Run1 autorizado `a2n-20261119-093456` FAIL:** fixture PASS (289/289,16 vill/12 prof,8 spawn), A2 0/8 estricto,1/8 perímetro (idx6 t271), 8 vivos; C4 FAIL por guardas sin combate. A* incremental evitó watchdog pero terminó exp=1/8000 frente agotado y la mayoría quedó PLANNING. Sin retry. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md`.
+- **Forense read-only:** IDX3/IDX5 completan `exp=1` con `aristas=56` y `encolados=0`: primer nodo genera los 56 vecinos y todos se rechazan. Ambos están en pozos 1×1 con columnas adyacentes sólidas; `OFFSETS` no incluye arista vertical `(0,0)`. Falta telemetría por candidato. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-ASTAR-FIRST-EXPANSION-FORENSICS.md`.
 - Next: Harness read-only inspection of existing logs and safe read-only entity NBT. No runtime, no world mutation, no production edits by Harness.
 - Single Run1 authorization consumed. No retry, Run2, C4 standalone or Full12K. A2 OPEN; Phase55 runtime unmeasured.
 

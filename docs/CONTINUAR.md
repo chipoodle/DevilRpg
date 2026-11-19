@@ -5353,3 +5353,10 @@ run/saves; hashes match; structural verification only.
 - A2 0/8 strict,1/8 perimeter (idx6 t271),8 alive; C4 FAIL guards no combat.
 - Incremental A* no watchdog (66 pending) but key searches exp=1/8000 front exhausted; most PLANNING. No cadence preserved/stairs.
 - Report: docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 first-expansion A* forensics
+
+- IDX3/IDX5 exp1: first node generates 56 candidates, 0 accepted; OPEN empty.
+- Starts are 1x1 shafts, adjacent columns solid; OFFSETS lacks vertical-only (0,0) edge.
+- Exact rejection enum missing; opt-in telemetry specified. Report: docs/autonomous-village/2026-11-19-A2-PHASE55-ASTAR-FIRST-EXPANSION-FORENSICS.md.
+- No runtime. A2 OPEN.

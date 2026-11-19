@@ -1198,3 +1198,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Fixture PASS; A2 0/8 strict,1/8 perimeter; C4 FAIL. A* no watchdog but routing regressed.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 first-expansion A* forensics
+
+- exp1/aristas56/encolados0 proven; 1x1 shaft trapping; no vertical-only edge.
+- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-ASTAR-FIRST-EXPANSION-FORENSICS.md`. A2 OPEN.
