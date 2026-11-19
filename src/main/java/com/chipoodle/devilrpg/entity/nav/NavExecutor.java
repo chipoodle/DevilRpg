@@ -2006,16 +2006,35 @@ public final class NavExecutor {
                     + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO + "]";
             return false;
         }
-        fallosDeEscalonDeObjetivo = 0;
-        // A2 Stage 7D · la idempotencia solo vale si el objetivo SIGUE siendo utilizable. Antes bastaba con que la
-        // celda coincidiera: si el mundo la habia dejado solida, se devolvia "true" sin cambiar nada y el llamante
-        // salia sin planificar en cada tick (bucle medido en `a2n-20261017-121902`).
+        // La idempotencia tiene dos salidas distintas: reutilizar un waypoint que sigue siendo ejecutable,
+        // o rechazar una repeticion que sigue siendo inutilizable. Esta segunda salida NO es un nuevo escalon.
         boolean accionLocalValida = esAccionLocalValida(objective);
-        if (siguiente.equals(objective)
-                && (esPieValido(objective) || siguientePermiteConstruccion || accionLocalValida)
-                && dentroDeLaVentana(mob.blockPosition(), objective)) {
-            return true; // el waypoint de pie/accion sigue siendo valido: no se reinicia la ruta ni su transicion
+        boolean mismoObjetivo = siguiente.equals(objective);
+        boolean objetivoActualUtilizable = esPieValido(objective)
+                || siguientePermiteConstruccion || accionLocalValida;
+        NavLocalObjectiveStepPolicy.Decision decision = NavLocalObjectiveStepPolicy.decidir(
+                mismoObjetivo, objetivoActualUtilizable,
+                dentroDeLaVentana(mob.blockPosition(), objective));
+        if (decision == NavLocalObjectiveStepPolicy.Decision.REUTILIZAR) {
+            return true; // el waypoint existente sigue siendo ejecutable; se conserva su ruta/transicion
         }
+        if (decision == NavLocalObjectiveStepPolicy.Decision.RECHAZAR_REPETIDO_INUTILIZABLE) {
+            fallosDeEscalonDeObjetivo++;
+            ultimoEscalonDeObjetivo = "objetivo local repetido e inutilizable "
+                    + siguiente.toShortString() + " [fallo " + fallosDeEscalonDeObjetivo + "/"
+                    + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO + "]";
+            if (NavTrace.on()) {
+                NavTrace.ev("A2_LOCAL_STAIR_WRITE", "uuid=" + mob.getUUID() + " tick="
+                        + mob.level().getGameTime() + " op=REJECT_REPEAT_UNUSABLE"
+                        + " objective=" + siguiente.toShortString()
+                        + " local=" + escalonesDeObjetivo
+                        + " fallos=" + fallosDeEscalonDeObjetivo);
+            }
+            return false;
+        }
+        // Solo una identidad de objetivo nueva puede consumir un escalon. El contador de fallos
+        // vuelve a cero al cambiar realmente de objetivo, no al volver a elegir el mismo candidato.
+        fallosDeEscalonDeObjetivo = 0;
         escalonesDeObjetivo++;
         if (!NavLocalObjectiveProgressPolicy.aceptar(mob.blockPosition().getY(),
                 misionFinal.getY(), siguiente.getY(),
