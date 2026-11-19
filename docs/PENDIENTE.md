@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 fixture population forensics
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population NBT forensics
 
 - Production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910` (unchanged).
 - Run `a2n-20261119-031255`: BLOCKED before attackers; 289/289 chunks READY in 1 tick; population 14 = 4 founder guards + 10 professionals, expected 12 workers.
@@ -6,6 +6,7 @@
 - Missing roster professions: SHEPHERD slot 5 (+47,0,0) and MASON slot 11 (+33,0,-22). Exact failure point remains UNKNOWN.
 - Source review: all 12 worker slots are iterated, but spawn API currently hides per-slot success/failure; spawn can return null without slot-specific evidence. Final report lacks before/after entity snapshots.
 - Detailed checklist: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-FORENSICS.md`.
+- **NBT read-only:** los 12 workers existen; SHEPHERD `c690ddc5…` 708,71,533 y MASON `c6ba9a5c…` 694,71,511 viven (HP20, death0, persistent) y están dentro del AABB; el snapshot `getEntitiesOfClass` los omitió. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md`.
 - Next: Harness read-only inspection of existing logs and safe read-only entity NBT. No runtime, no world mutation, no production edits by Harness.
 - Single Run1 authorization consumed. No retry, Run2, C4 standalone or Full12K. A2 OPEN; Phase55 runtime unmeasured.
 

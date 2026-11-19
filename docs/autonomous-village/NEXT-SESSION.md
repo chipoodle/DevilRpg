@@ -1,8 +1,20 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 fixture population forensics
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population NBT forensics
 
 **Branch:** `feature/autonomous-village`  
 **Run:** `a2n-20261119-031255` — BLOCKED before attacker spawn  
-**Production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910` (unchanged)  
+**Production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910` (unchanged)
+
+- NBT proof: all 12 workers spawned and survived. SHEPHERD `c690ddc5…` at `708,71,533` and MASON
+  `c6ba9a5c…` at `694,71,511` are alive, health20, death0, persistent, inside the verifier AABB.
+- The 03:19:08 `getEntitiesOfClass` population snapshot omitted them; exact query-visibility cause is
+  unknown (no per-tick entity-section snapshot).
+- Fixture spawn/profession logic is not implicated. Next: add read-only query diagnostics; no runtime
+  without new authorization.
+- A2 OPEN; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 fixture population source forensics
 **Harness documentation HEAD at blocked report:** `0181bd4e42dfb8f9f70136c1bca4986a42fdbb4d`  
 **Source-forensics report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-FORENSICS.md`
 
@@ -760,6 +772,7 @@ Read first, in order:
 87. `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`
 88. `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
 89. `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md`
+90. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -887,11 +900,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Fixture-only diagnosis: why a generated village has 14 villagers/10 professionals and four `null`
-   professions instead of 12 professionals; determine whether profession assignment/maintenance timing is
-   nondeterministic.
-2. Do not modify navigation/A2 criteria. Do not retry the consumed Run1.
-3. A2 OPEN; no Run2/Full12K. C4 last PASS `[1,0,0]`.
+1. Add read-only population-query diagnostics: per-UUID `getEntitiesOfClass` result, entity-section/chunk
+   loaded state and `level.getEntity(uuid)` presence.
+2. Do not change spawn geometry, profession assignment, navigation or A2 criteria from this evidence.
+3. A2 OPEN; no runtime without new explicit authorization. No Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 

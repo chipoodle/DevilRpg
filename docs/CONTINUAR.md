@@ -5340,3 +5340,9 @@ run/saves; hashes match; structural verification only.
 - Run a2n-20261119-031255: chunk loader 289/289 READY 1 tick; fixture population 14/10 professionals vs 12; 0 spawn.
 - No A2/A*/IDX5/IDX3 evidence; no retry. Production `11ff43cd`.
 - Report: docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 population NBT forensics
+
+- Read-only NBT: all 12 workers exist; SHEPHERD c690ddc5 at708,71,533 and MASON c6ba9a5c at694,71,511 alive HP20 death0 persistent.
+- Both inside verifier AABB; getEntitiesOfClass snapshot omitted them. Exact query visibility unknown.
+- Report: docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md. No runtime. A2 OPEN.
