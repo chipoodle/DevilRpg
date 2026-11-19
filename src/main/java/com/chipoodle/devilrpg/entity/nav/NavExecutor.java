@@ -2651,6 +2651,9 @@ public final class NavExecutor {
         // A2 Stage 7B · la MISION FINAL es la que fija el llamante y NO cambia con el escalonado. Una mision nueva
         // reinicia los contadores del escalonado (el reenvio del MISMO objetivo no toca el progreso).
         if (!immutable.equals(this.misionFinal)) {
+            NavPlanner.cancelGlobalSearch(globalSearchHandle);
+            globalSearchStart = null;
+            globalSearchLastExpansions = 0;
             limpiarRecuperacionOrigenDrop();
             recoveryBacktrackObjective = null;
             com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPUP] MISSIONCHANGE old={} new={} objective={}",
