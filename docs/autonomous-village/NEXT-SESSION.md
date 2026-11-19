@@ -1270,3 +1270,37 @@ Hashes and sizes are in `2026-11-15-PHASE2-FIXES.md`.
 - Added four pure assertions; expected DROP policy test total 36. WAIT trace includes velocity and landingAnchor.
 - Report: `2026-11-17-A2-IDX4-LANDING-ANCHOR-FIX.md`. PENDING HARNESS. A2 Run 1 only after static PASS; no Run 2 unless 8/8 strict; no 12k until five consecutive 8/8 strict.
 - C4 `assignmentsClean=false` remains independent and unchanged; IDX7/IDX8 untouched.
+
+
+## 2026-11-19 — Revisión del orden de decisión de traversal (diagnóstico; sin cambios de producción)
+
+El usuario propuso evaluar el orden: avanzar → romper si bloqueado → excavar si la ruta necesita bajar → escalar si necesita subir. Se revisó el código actual en la rama `feature/autonomous-village`:
+
+- `AggressiveZombieEntity.java`, blob `00fb9c6c6131de715ebb4afe66d6d0585e8910dc`.
+- `NavExecutor.java`, blob `2055abca5ad2b1dc90e168394406d3be9b058668`.
+
+Hallazgos confirmados:
+
+1. `NavExecutor` es la autoridad única de navegación normal y ejecuta la ruta validada.
+2. Hay dos goals pasivos e independientes para modificar terreno cuando el zombie se atasca: `BreakBlockGoal` y `TraverseGoal`. No reclaman MOVE/LOOK; por ello sus decisiones no forman una única secuencia coordinada.
+3. `BreakBlockGoal.tick()` usa su propio detector de falta de movimiento. En marcha sin target intenta `breakBrechaAhead` limitado al anillo real; con target rompe obstáculo o escalón según altura del target.
+4. `TraverseGoal.tick()` también detecta falta de movimiento. Actualmente:
+   - si target/centro está más de 1 bloque abajo, intenta `cavarHaciaAbajo` primero;
+   - si está más de 1 bloque arriba, intenta `apilarBloqueParaSubir` primero;
+   - si no tuvo éxito, prueba `puentearHacia` y `apilarBloqueParaSubir` en orden aleatorio;
+   - si todavía no hizo nada, vuelve a intentar `cavarHaciaAbajo`, sin exigir que la ruta haya seleccionado una transición DROP válida.
+5. `TraverseGoal.objetivoDeLaMarcha()` toma el target de combate vivo o, si no existe, el centro de aldea. Es un destino estratégico/táctico, no necesariamente el siguiente nodo de la ruta. Por eso su coordenada Y global no es evidencia suficiente para excavar/escalar localmente.
+6. El comentario histórico en el código documenta que la selección por altura ya provocó excavación dominante y que los intentos con orden fijo también dieron resultados incorrectos. No se debe resolver con un simple intercambio ciego de llamadas.
+
+Dirección de diseño para la corrección (pendiente de implementación):
+
+- Mantener `NavExecutor` como fuente de verdad: inspeccionar la transición/nodo activo y el motivo de no progreso antes de alterar terreno.
+- Si la ruta tiene siguiente paso WALK/JUMP/STEP_UP/DROP y es físicamente válido, dejar avanzar; no ejecutar herramientas de terreno por una diferencia de Y del destino final.
+- Si el paso está bloqueado, preferir una brecha ya abierta y transitable; si el obstáculo de la ruta es rompible y está dentro del contrato de asedio, romperlo antes de crear túneles/hoyos alternativos.
+- Construir escalón solo ante una transición de subida local que la ruta/geométrica valide y con soporte/headroom.
+- Excavar solo ante una transición DROP real y validada, nunca como fallback genérico por target inferior ni como último intento incondicional.
+- Coordinar o retirar la duplicación de decisiones entre `BreakBlockGoal` y `TraverseGoal`; evitar que dos detectores de atasco emitan acciones incompatibles sobre el mismo zombie.
+- Añadir políticas puras y tests que cubran prioridad WALK/avance, BREAK de obstáculo, DROP validado, STEP_UP/BUILD validado, target inferior sin DROP (no cavar), y ausencia de transición de ruta (no acción vertical).
+- Preservar presupuestos, protección del recinto, restricciones de block entities salvo la futura excepción atómica específica del portón, y todas las invariantes A2/C4.
+
+Estado: diagnóstico source-level solamente. No se modificó producción, no se ejecutó build/test/lint/runtime. Este análisis no sustituye el checkpoint inmediato de Harness STATIC ONLY para P0 indicado arriba. No autoriza runtime. Tras cerrar ese checkpoint, implementar el rediseño coordinado y someterlo a STATIC ONLY antes de solicitar autorización de runtime.
