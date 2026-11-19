@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 validation BLOCKED
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 54A fixture forensics
 
 - Production SHA: `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6` (parent `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`).
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE53-CADENCE-ROUTE-PRESERVATION.md`.
@@ -44,6 +44,8 @@
 > **A2 Phase52 (forense):** IDX3 tiene 397 llamadas, 2340 candidatos y 0 colocaciones porque todo candidato falla por terreno ocupado (`celdaAire=false`). IDX5: Phase50 t2 NO_PROGRESS y t3 MOVE_COMMAND; Phase51 t2 CADENCE_WAIT, cero MOVE_COMMAND. El deferral CADENCE_WAIT bloquea el fallback. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`.
 >
 > **A2 Phase53 (validación BLOCKED):** static PASS sobre `656ce7d0`, pero A2 `a2n-20261118-233308` murió en `A2NavHarness.prepararRaidFixture`/`setChunkForced` (watchdog 60s) antes de spawnear atacantes. Sin evidencia de IDX5/CADENCE route; INSUFFICIENT_EVIDENCE. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`.
+>
+> **A2 Phase54A (forense de fixture):** 289 `setChunkForced` síncronos (ticket + `getChunk` bloqueante) en un solo `ServerTickEvent.Pre`; generación fría >60s. El loop terminó después del watchdog (`C4 CHUNKS forced=289`). Recomendado mundo desechable pre-generado + fase de tickets no bloqueante y timeout. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md`.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 

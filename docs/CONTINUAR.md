@@ -5282,3 +5282,9 @@ run/saves; hashes match; structural verification only.
 - Static PASS on production `656ce7d0`; tests 8/6.
 - Run `a2n-20261118-233308` crashed in A2NavHarness.prepararRaidFixture/setChunkForced watchdog 60s before spawn. No IDX5/cadence route evidence.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 54A fixture forensics
+
+- Read-only; run a2n-20261118-233308. 289 setChunkForced synchronous in one tick; cold generation >60s watchdog. Loop completed after watchdog.
+- Recommended pre-generated disposable world + non-blocking ticket/wait + timeout before spawn.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md. A2 OPEN.

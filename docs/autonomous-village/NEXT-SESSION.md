@@ -1,4 +1,21 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 validation BLOCKED
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 54A fixture forensics
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
+**Current report:** `2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md`.
+**Previous blocked run:** `a2n-20261118-233308`.
+**HEAD:** `605426b2c846bc3deac0db670af234f48afa4c2b`.
+
+- Root cause: 289 synchronous `setChunkForced` calls (each adds ticket + blocking `getChunk`) in one
+  `ServerTickEvent.Pre`; cold generation exceeded the 60 s watchdog. The loop completed after the
+  watchdog (`C4 CHUNKS forced=289` at 23:40:19).
+- Recommended: pre-generated disposable world + non-blocking ticket/wait phase + timeout; no spawn
+  until fixture verified.
+- A2 remains OPEN; no Run2/Full12K until the fixture is fixed and a new Run1 is authorized.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 53 validation BLOCKED
+
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
 **Current report:** `2026-11-18-A2-PHASE53-VALIDATION.md`.
@@ -580,6 +597,7 @@ Read first, in order:
 81. `docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md`
 82. `docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`
 83. `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`
+84. `docs/autonomous-village/2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -707,9 +725,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Stabilize the A2 fixture chunk forcing / use a pre-generated disposable world, then re-authorize one
-   A2 Run1 on `656ce7d0` to validate CADENCE_WAIT route preservation and IDX5.
-2. No production/budget/predicate changes from Harness; monotonic anchor still runtime-unvalidated.
+1. Fix the diagnostic fixture only: pre-generated disposable world or non-blocking ticket/wait phase,
+   explicit timeout, verify before spawn. No production/navigation changes.
+2. Then re-authorize one A2 Run1 on `656ce7d0` for CADENCE_WAIT route preservation and IDX5.
 3. A2 OPEN; no Run 2 or 12k until five consecutive 8/8 strict. C4 last PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
