@@ -1,25 +1,24 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 routing static FAIL
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**HEAD:** `(ver HEAD exacto en docs/autonomous-village/NEXT-SESSION.md)`
-**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
+**Source implementation commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-REMOVE-OBSOLETE-NAVFEATURE-HARNESS-DEPENDENCY.md`
 
-- **Harness FAIL:** routing selecciona `tools/a2n/A2NavHarness.java` (probado por rutas de error), pero compilación falla con 7 × `cannot find symbol: class NavFeature` (líneas1323-1328,1737). Tests fallan igual; NAV test NOT RUN. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`.
+- Harness report `phase55-routing-static-20261119-1400`: routing PASS, compile/test FAIL due seven stale references
+  to `NavFeature`; NAV_PLANNER_STATE_TEST NOT RUN; strict lint and diff-check PASS.
+- Migration report from 2026-11-15 proves `NavFeature` and `-Ddevilrpg.nav.custom=true` were deliberately
+  deleted. Current production source constructs and ticks `NavExecutor` unconditionally server-side.
+- ChatGPT removed the obsolete references from canonical `tools/a2n/A2NavHarness.java`; it now reports
+  `NavExecutor-single-authority`. No class/flag was recreated.
+- Gradle routing and wrapper unchanged. No production Java, NavPlanner, gameplay, world, fixture or criteria
+  changed. No compile/test run by ChatGPT.
 
-- Harness anterior BLOCKED correctamente: el destino `src/main/.../debug/A2NavHarness.java` existía y estaba
-  trackeado; no se sobrescribió ni eliminó.
-- ChatGPT añadió selección Gradle explícita: `-Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true`
-  compila `tools/a2n/A2NavHarness.java` directamente y excluye el legacy sólo en ese build. Los builds
-  diagnósticos normales conservan el legacy.
-- Wrapper Phase55 establece/restaura los selectores y ambas propiedades de traza.
-- Fuentes Java gameplay/NavPlanner, mundos, fixture, criterios, budgets y navegación sin cambios.
-- ChatGPT no ejecutó compile/test/lint.
+**Siguiente:** Harness STATIC ONLY en el HEAD remoto actual. Ejecutar compileJava, test, strict lint y diff-check
+con las propiedades de selección canónica. Confirmar que se compila el fuente canónico, que no hay referencias
+NavFeature, que NeoForge APIs compilan y que NAV_PLANNER_STATE_TEST (54 assertions) se ejecuta. Preservar local,
+untracked, mundos y el arnés legacy.
 
-**Siguiente:** Harness STATIC ONLY en SHA exacto: compileJava, test, strict lint, diff-check; probar APIs NeoForge
-21.1.249 y confirmar selección del fuente canónico. Preservar todo trabajo local/untracked/mundos.
-
-**NO runtime:** no Minecraft, wrapper, runServer, A2, C4, Run2 ni Full12K. La autorización anterior está
-consumida. A2 permanece OPEN.
+**NO runtime:** no Minecraft, wrapper, runServer, A2, C4, Run2 ni Full12K. Autorización consumida. A2 OPEN.
 
 ---
 
