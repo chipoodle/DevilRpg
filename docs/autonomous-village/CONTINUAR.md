@@ -1,14 +1,23 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 50 (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 (PENDING HARNESS)
 
-- Production SHA: `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`; prior runtime baseline `9d6709f5`.
-- Monotonic stair anchor: after a traversed step, higher support cannot refresh anchor upward; same-level horizontal/downward refresh remains allowed.
-- Every later candidate must be strictly below the traversed anchor.
-- `CADENCE_WAIT` is now a distinct result; it defers two ticks without incrementing local step/failure counters.
-- Expected tests: `NAV_STAIR_ANCHOR_POLICY_TEST: OK (8 assertions)`; `STAIR_BUILD_RESULT_TEST: OK (6 assertions)`.
-- Harness: preserve local state/worlds; static checks first, then A2 Run1 only on exact SHA. No production changes by Harness.
-- Phase41/44/46 and budgets unchanged. IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; fixture not implemented.
-- Latest runtime Phase49A: A2 3/8 strict; C4 PASS [1,0,0]. A2 OPEN. No Run2/Full12K.
-- Report: `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`.
+**Production implementation SHA:** `0ed873e22946f70374a18a2c12108fff270b6f5b`.
+**Implementation report:** `docs/autonomous-village/2026-11-18-A2-PHASE51-STAIR-WIRING-FIX.md`.
+**Previous validation:** Phase50 `a2n-20261118-212254` — FAIL, 3/8 strict, C4 PASS [1,0,0].
+
+- Phase51 wires `NavStairAnchorPolicy.refresh(previous, supportBelow, hasTraversedStair)` into
+  `AggressiveZombieEntity`; post-traversal candidates are defensively required to be strictly below
+  the traversed anchor.
+- The builder now returns `CADENCE_WAIT` only when it actually decrements the cooldown. All three
+  executor call paths preserve that result; `A2_LOCAL_STAIR_WAIT` is emitted and local step/failure
+  counters are not consumed. Plan-level waits defer the next attempt by two ticks.
+- `NavStairAnchorPolicyTest` (8 assertions) and `StairBuildResultTest` (6 assertions) are now
+  registered in the normal `policyTest` gate; `gradlew test` depends on that gate.
+- **PENDING HARNESS:** validate exact SHA above. Static checks first; if all pass, A2 Run1 only.
+  Preserve local/untracked work and worlds; Harness must not modify production.
+- Phase41/44/46 and all budgets/safety predicates remain unchanged.
+- A2 remains OPEN at 3/8 strict; C4 last PASS [1,0,0]. IDX4 horizontal-zero remains
+  INSUFFICIENT_EVIDENCE. No Run2/Full12K until five consecutive 8/8 strict runs.
+
 ---
 
 # HISTORICAL CHECKPOINT — 2026-11-18 A2 Phase 46 (PENDING HARNESS)
