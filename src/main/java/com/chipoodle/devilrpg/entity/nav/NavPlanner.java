@@ -398,7 +398,7 @@ public final class NavPlanner {
         if (start.equals(objetivo)) {
             return new GlobalResult(new NavRoute(List.of(new NavRoute.Node(objetivo, NavRoute.Transition.WALK)),
                     objetivo), objetivo, true, 0, false, "inicio==fin",
-                    "global inicio==fin " + objetivo.toShortString());
+                    "global inicio==fin " + objetivo.toShortString(), false);
         }
         final double ox = objetivo.getX() + 0.5D;
         final double oy = objetivo.getY() + 0.5D;
