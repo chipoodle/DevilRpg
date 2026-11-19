@@ -1,4 +1,17 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 (PENDING HARNESS)
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
+**Implementation report:** `docs/autonomous-village/2026-11-18-A2-PHASE53-CADENCE-ROUTE-PRESERVATION.md`.
+
+Phase52 proved the IDX5 regression: `CADENCE_WAIT` suppressed an already validated global waypoint and no movement command followed. Phase53 preserves that non-stair route (and the directly reachable mission fallback) while deferring only stair construction. New trace: `A2_STAIR_CADENCE_ROUTE_PRESERVED`.
+
+**Harness next:** validate the exact SHA with safe fast-forward, preserve local work/worlds, run static checks first, then A2 Run1 only if all pass. Verify trace → valid `MOVE_COMMAND` for IDX5, unchanged cooldown counters, and no false stair placement. No GUI/focus/user intervention. Do not Run2 or Full12K. IDX3 all-solid candidate geometry remains separate; monotonic anchor remains runtime-unvalidated.
+
+A2 remains OPEN at 2/8 strict. Phase41/44/46 and all budgets/safety predicates remain unchanged.
+
+---
+
+# HISTORICAL CHECKPOINT — 2026-11-18 A2 Phase 51 (PENDING HARNESS)
 
 **Production implementation SHA:** `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
 **Implementation report:** `docs/autonomous-village/2026-11-18-A2-PHASE51-STAIR-WIRING-FIX.md`.
