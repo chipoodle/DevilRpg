@@ -5371,3 +5371,9 @@ run/saves; hashes match; structural verification only.
 - Starts are 1x1 shafts, adjacent columns solid; OFFSETS lacks vertical-only (0,0) edge.
 - Exact rejection enum missing; opt-in telemetry specified. Report: docs/autonomous-village/2026-11-19-A2-PHASE55-ASTAR-FIRST-EXPANSION-FORENSICS.md.
 - No runtime. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 diagnostics static PASS
+
+- `10719ff8`: compile/test/lint/diff PASS; NAV_PLANNER_STATE_TEST 54 assertions.
+- NavPlanner blob identical at HEAD; telemetry opt-in (traceNav+traceGlobalSearch), no runtime.
+- Report: docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS-STATIC-VALIDATION.md. A2 OPEN.

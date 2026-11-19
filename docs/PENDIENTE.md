@@ -1,8 +1,9 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 global A* diagnostics (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 diagnostics static PASS
 
 - Production implementation SHA: `10719ff82465a0d8997cb2af3af23c9f71292b19`.
 - Detailed handoff: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS.md`.
 - New opt-in first-expansion candidate and global-search lifecycle diagnostics in `NavPlanner.java`; requires both `traceNav=true` and `traceGlobalSearch=true`.
+- **Harness static PASS:** compile/test/lint/diff OK en `10719ff8`; `NAV_PLANNER_STATE_TEST` 54 aserciones. Blob NavPlanner idéntico. Sin runtime. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS-STATIC-VALIDATION.md`.
 - No navigation behavior, OFFSETS, budgets, physical predicates, A2/C4 criteria, fixture or worlds changed.
 - Harness: static validation only on exact SHA (compile, Gradle tests, strict lint, diff-check); preserve local/untracked artifacts; do not edit production.
 - Phase55 Run1 authorization consumed. No retry, Run2, standalone C4 or Full12K. A2 OPEN.

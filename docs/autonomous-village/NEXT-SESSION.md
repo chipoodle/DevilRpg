@@ -1,9 +1,17 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 opt-in first-expansion diagnostics (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 diagnostics static PASS
 
 **Branch:** `feature/autonomous-village`  
 **Implementation SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`  
-**Direct parent:** `6ed69210b1ab2b352f12f6c7367e704038e16fac`  
-**Base:** `646a099f53cbaa52e71db0688d0061ef3e657ea9`  
+**Validated documentation HEAD:** `50fb7a5d8244e8eb5e050bf4800458784de6f8fe`
+
+- Compile/test/lint/diff PASS; `NAV_PLANNER_STATE_TEST` 54 assertions OK.
+- `NavPlanner.java` blob at HEAD == `10719ff8` implementation.
+- Telemetry remains opt-in (`traceGlobalSearch` + `traceNav`), default off.
+- No runtime executed. A2 OPEN; any runtime diagnostic needs new explicit authorization.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 opt-in first-expansion diagnostics (PENDING)
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS.md`
 
 - ChatGPT implemented only opt-in diagnostics in `NavPlanner.java`; no navigation behavior or acceptance rule changed.
@@ -815,6 +823,7 @@ Read first, in order:
 90. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-NBT-FORENSICS.md`
 91. `docs/autonomous-village/2026-11-19-A2-PHASE55-RUNTIME-VALIDATION.md`
 92. `docs/autonomous-village/2026-11-19-A2-PHASE55-ASTAR-FIRST-EXPANSION-FORENSICS.md`
+93. `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -942,10 +951,11 @@ Read first, in order:
 
 ## Immediate work
 
-1. Add the opt-in first-expansion telemetry from the forensic report to identify the exact rejection mix.
-2. Separately review whether the global graph needs a vertical-only safe-descent edge; do not implement
-   without production authorization.
-3. A2 OPEN; no retry/Run2/Full12K. Fixture remains validated.
+1. Telemetry is statically valid; request new explicit authorization for exactly one runtime diagnostic
+   Run1 with `traceNav=true` and `traceGlobalSearch=true`.
+2. Capture `GLOBAL_SEARCH_START/FIRST_EXPANSION/CANDIDATE/END/COMPLETE/CANCEL/RESTART` for IDX3/IDX5
+   and the other PLANNING attackers.
+3. A2 OPEN; no retry/Run2/Full12K. Fixture validated.
 
 ## Worlds (preserve; do not overwrite)
 
