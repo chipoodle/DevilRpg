@@ -12,6 +12,7 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -53,6 +54,12 @@ public final class A2NavHarness {
     private static int fallosDeInstrumento;
     private static final StringBuilder DETALLE = new StringBuilder();
 
+    // Captura referencias exactas de aldeanos incorporados durante la generación del fixture.
+    // Evita depender exclusivamente del índice espacial AABB que omitió entidades vivas en runs previos.
+    private static boolean rCapturandoAldeanos;
+    private static final java.util.Map<java.util.UUID, net.minecraft.world.entity.npc.Villager>
+            rAldeanosCapturados = new java.util.LinkedHashMap<>();
+
     private A2NavHarness() {
     }
 
@@ -60,6 +67,35 @@ public final class A2NavHarness {
     public static void alArrancar(final ServerStartedEvent evento) {
         nivel = evento.getServer().overworld();
         DevilRpg.LOGGER.info("[A2N] ARRANCADO modo={} (arnes RECONSTRUIDO Stage 7K)", MODE);
+        DevilRpg.LOGGER.info("[A2N] JVM_TRACE traceNav={} traceGlobalSearch={} java={} vendor={}",
+                Boolean.getBoolean("devilrpg.a2n.traceNav"),
+                Boolean.getBoolean("devilrpg.a2n.traceGlobalSearch"),
+                System.getProperty("java.version"), System.getProperty("java.vendor"));
+    }
+
+    @SubscribeEvent
+    public static void capturarAldeanoDeFixture(final EntityJoinLevelEvent evento) {
+        if (!rCapturandoAldeanos || nivel == null || evento.getLevel() != nivel
+                || !(evento.getEntity() instanceof net.minecraft.world.entity.npc.Villager villager)) {
+            return;
+        }
+        rAldeanosCapturados.put(villager.getUUID(), villager);
+        log("C4 POPULATION JOIN uuid=" + villager.getUUID()
+                + " profession=" + villager.getVillagerData().getProfession()
+                + " pos=" + villager.blockPosition().toShortString()
+                + " loadedFromDisk=" + evento.loadedFromDisk()
+                + " canceledAtListener=" + evento.isCanceled());
+    }
+
+    private static java.util.List<net.minecraft.world.entity.npc.Villager> aldeanosCapturadosEn(
+            net.minecraft.world.phys.AABB bounds) {
+        java.util.List<net.minecraft.world.entity.npc.Villager> result = new java.util.ArrayList<>();
+        for (var villager : rAldeanosCapturados.values()) {
+            if (!villager.isRemoved() && villager.isAlive() && bounds.intersects(villager.getBoundingBox())) {
+                result.add(villager);
+            }
+        }
+        return result;
     }
 
     @SubscribeEvent
@@ -68,6 +104,15 @@ public final class A2NavHarness {
             return;
         }
         if ("raid".equals(MODE)) {
+            // No iniciar si la telemetría solicitada no llegó al JVM real del servidor.
+            if (!Boolean.getBoolean("devilrpg.a2n.traceNav")
+                    || !Boolean.getBoolean("devilrpg.a2n.traceGlobalSearch")) {
+                hecho = true;
+                cerrar("INVALIDO", "JVM_TRACE_PROPERTIES missing: traceNav="
+                        + Boolean.getBoolean("devilrpg.a2n.traceNav") + " traceGlobalSearch="
+                        + Boolean.getBoolean("devilrpg.a2n.traceGlobalSearch"), evento.getServer());
+                return;
+            }
             // Edit 4: fixture -> spawn -> muestreo por tick + fases A/B. Sin totales ni veredictos.
             if (!rPreparado) {
                 rPreparado = true;
@@ -157,9 +202,8 @@ public final class A2NavHarness {
             }
             if (rPostRaidIniciado && ++rPostRaidTicks >= R_RECUPERACION_TICKS) {
                 int[] assignments = auditarAsignacionesJobSite();
-                var villagers = nivel.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
-                        new net.minecraft.world.phys.AABB(rCentro).inflate(
-                                com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D));
+                var villagers = aldeanosCapturadosEn(new net.minecraft.world.phys.AABB(rCentro).inflate(
+                        com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D));
                 int alive = 0;
                 for (var villager : villagers) {
                     if (villager.isAlive() && !villager.isBaby()) alive++;
@@ -2167,7 +2211,16 @@ public final class A2NavHarness {
             log("C4 FIXTURE INVALIDO: mundo no virgen para objective=0 o centro no cargado; no se sobrescribe");
             return;
         }
-        if (!com.chipoodle.devilrpg.world.VillageManager.preGenerate(level, objectiveIndex, requestedCenter)) {
+        rAldeanosCapturados.clear();
+        rCapturandoAldeanos = true;
+        boolean preGenerated;
+        try {
+            preGenerated = com.chipoodle.devilrpg.world.VillageManager.preGenerate(
+                    level, objectiveIndex, requestedCenter);
+        } finally {
+            rCapturandoAldeanos = false;
+        }
+        if (!preGenerated) {
             fallosDeInstrumento++;
             rFixtureOk = false;
             log("C4 FIXTURE INVALIDO: preGenerate no completó la aldea");
@@ -2197,16 +2250,37 @@ public final class A2NavHarness {
         rCeldasAnillo = wallColumns.size() * R_ALTURA_MURO_VALIDADA;
         rCeldasAnilloAhora = integridadAnillo(server);
         try {
+            rCapturandoAldeanos = true;
             com.chipoodle.devilrpg.world.VillageManager.ejecutarMantenimientoParaArnes(level, objectiveIndex, center);
         } catch (RuntimeException ex) {
             fallosDeInstrumento++;
             rFixtureOk = false;
             log("C4 MAINTENANCE ERROR: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
             return;
+        } finally {
+            rCapturandoAldeanos = false;
         }
-        var villagers = level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
-                new net.minecraft.world.phys.AABB(center).inflate(
-                        com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D));
+        var populationBounds = new net.minecraft.world.phys.AABB(center).inflate(
+                com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D);
+        var aabbVillagers = level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, populationBounds);
+        var villagers = aldeanosCapturadosEn(populationBounds);
+        java.util.Set<java.util.UUID> aabbUuids = new java.util.HashSet<>();
+        for (var villager : aabbVillagers) aabbUuids.add(villager.getUUID());
+        for (var villager : villagers) {
+            if (!aabbUuids.contains(villager.getUUID())) {
+                long chunkPos = new net.minecraft.world.level.ChunkPos(villager.blockPosition()).toLong();
+                log("C4 POPULATION AABB_OMITTED uuid=" + villager.getUUID()
+                        + " profession=" + villager.getVillagerData().getProfession()
+                        + " pos=" + villager.blockPosition().toShortString()
+                        + " entityLookupPresent=" + (level.getEntity(villager.getUUID()) == villager)
+                        + " addedToLevel=" + villager.isAddedToLevel()
+                        + " entitiesLoaded=" + level.areEntitiesLoaded(chunkPos)
+                        + " chunkLoaded=" + level.hasChunkAt(villager.blockPosition()));
+            }
+        }
+        log("C4 POPULATION SOURCES aabb=" + aabbVillagers.size()
+                + " joinEvents=" + villagers.size() + " capturedOnly="
+                + villagers.stream().filter(v -> !aabbUuids.contains(v.getUUID())).count());
         int guards = 0, founders = 0, guardGoals = 0, equipped = 0, professionals = 0, professionGoals = 0;
         java.util.Map<String, Integer> roster = new java.util.TreeMap<>();
         for (var villager : villagers) {
