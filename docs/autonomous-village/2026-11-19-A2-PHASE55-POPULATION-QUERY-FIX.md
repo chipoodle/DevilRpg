@@ -14,6 +14,7 @@ The blocked run `a2n-20261119-114535` demonstrated a mismatch between the fixtur
   - `d11cae8c53ec60f94ac5d6e3b5cf86318ea59e5e` — forward global-search trace property to runServer JVM.
   - `4343753cfb829e1ff5b4585e6ef33dc9f8761ff2` — retain captured villager references through raid audit.
   - `87f6e0875149bf6492b2a2349eca2513dce6d0b3` — require tracked captured villagers in fixture census.
+  - `8aa7f1df340f9adf9fefcec21733130712909a6e` and `565d716b9c43845811b499ac53761a2f4512930e` — add and harden a tracked PowerShell wrapper that guarantees both JVM and Gradle trace properties.
 
 ## 1. Population census correction
 
@@ -54,7 +55,7 @@ and maps it directly to child-server JVM system property:
 devilrpg.a2n.traceGlobalSearch=true
 ```
 
-The existing `a2nTraceNav` mapping remains available for `devilrpg.a2n.traceNav`. The local launcher must pass both Gradle properties and/or set both JVM options in `JDK_JAVA_OPTIONS`:
+The existing `a2nTraceNav` mapping remains available for `devilrpg.a2n.traceNav`. Use the tracked wrapper `tools/a2n/lanzar-phase55-diagnostico.ps1` for a future authorized raid run. It removes stale values for the two trace options, sets both to `true` in `JDK_JAVA_OPTIONS`, sets both `ORG_GRADLE_PROJECT_*` values (which Gradle reads as project properties), delegates to the existing ignored local launcher, then restores the caller's environment. Example invocation (only after fresh runtime authorization):
 
 ```text
 -Ddevilrpg.a2n.traceNav=true
@@ -69,7 +70,7 @@ At `ServerStartedEvent`, A2NavHarness logs the effective values from the actual 
 
 In `raid` mode, if either property is false, the harness terminates as INVALIDO before preparing or modifying the fixture. This avoids spending a runtime authorization on an uninstrumented run.
 
-The generated/local launcher `build/a2n/lanzar-a2n.ps1` is an ignored local artifact and was not modified by ChatGPT. Harness must preserve it and pass `-Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true` to the Gradle runServer invocation; it must also set both options in `JDK_JAVA_OPTIONS` as requested by the previous handoff. The server's `JVM_TRACE` line is the authoritative effective-value check.
+The generated/local launcher `build/a2n/lanzar-a2n.ps1` remains untouched. The tracked wrapper delegates to it without editing it. The server's `JVM_TRACE` line is the authoritative effective-value check.
 
 ## 3. Scope and invariants
 
@@ -85,7 +86,7 @@ The generated/local launcher `build/a2n/lanzar-a2n.ps1` is an ignored local arti
 On the exact current branch HEAD:
 
 1. Safely sync by fast-forward only; preserve all local/untracked artifacts and worlds.
-2. Verify branch and exact HEAD; confirm the only non-documentation changes since `6bb467b4a64b0b53888b40bcc9cc258c2acbd967` are `build.gradle` and `tools/a2n/A2NavHarness.java`.
+2. Verify branch and exact HEAD; confirm the only non-documentation changes since `6bb467b4a64b0b53888b40bcc9cc258c2acbd967` are `build.gradle`, `tools/a2n/A2NavHarness.java`, and `tools/a2n/lanzar-phase55-diagnostico.ps1`.
 3. Copy canonical `tools/a2n/A2NavHarness.java` to the documented temporary compile location only as the established workflow requires.
 4. Run:
    - `gradlew.bat compileJava` with `-Pa2nDiagnostics=true` as required by the launcher workflow.
