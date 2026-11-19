@@ -26,8 +26,6 @@ Runtime review after later authorization must capture per-tick pending slices, m
 
 ---
 
----
-
 # HISTORICAL — 2026-11-19 A2 Phase 54B-R1 strict timeout
 
 
