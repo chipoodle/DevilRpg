@@ -118,7 +118,7 @@ public final class NavExecutor {
     private static final int RADIO_GLOBAL_DE_BUSQUEDA = 112;
     /** Sonda vertical por arista de la busqueda global (la ruta puede subir/bajar mucho en total). */
     private static final int VENTANA_VERTICAL_GLOBAL = 3;
-    /** Presupuesto TOTAL duro por búsqueda global; el trabajo se reanuda en slices de 16 expansiones por tick. */
+    /** Presupuesto TOTAL duro por búsqueda global; el trabajo se reanuda en slices de 4 expansiones por tick. */
     private static final int MAX_EXPANSIONES_GLOBALES = presupuestoGlobal();
 
     private static int presupuestoGlobal() {
