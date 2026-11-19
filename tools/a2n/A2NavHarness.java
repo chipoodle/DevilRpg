@@ -91,7 +91,9 @@ public final class A2NavHarness {
             net.minecraft.world.phys.AABB bounds) {
         java.util.List<net.minecraft.world.entity.npc.Villager> result = new java.util.ArrayList<>();
         for (var villager : rAldeanosCapturados.values()) {
-            if (villager.isAddedToLevel() && !villager.isRemoved() && villager.isAlive()
+            boolean tracked = villager.isAddedToLevel()
+                    || (nivel != null && nivel.getEntity(villager.getUUID()) == villager);
+            if (tracked && !villager.isRemoved() && villager.isAlive()
                     && bounds.intersects(villager.getBoundingBox())) {
                 result.add(villager);
             }
