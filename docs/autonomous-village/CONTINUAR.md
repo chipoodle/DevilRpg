@@ -1,3 +1,27 @@
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 BLOCKED
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
+**Validation report:** `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`.
+**Documentation HEAD:** `ecaa4b28ddf991b409db2666dc3c896db7921d2d`.
+
+Static checks all PASSed on the exact production SHA. The sole authorized A2 Run1,
+`a2n-20261118-233308`, BLOCKED before attacker spawn: the server watchdog detected a 60.04-second
+tick while `A2NavHarness.prepararRaidFixture` called `ServerLevel.setChunkForced` for the 17×17
+chunk region. No A2 result, no C4, and no IDX5 route-preservation evidence exist. This is a fixture
+setup failure, not a Phase53 navigation PASS or FAIL.
+
+**Next:** fixture-only forensic work. Inspect chunk-force semantics, region size, generation/load
+behavior and existing disposable/pre-generated world options. Any proposed Harness-side fixture
+change must preserve production behavior, world safety and acceptance criteria; use bounded,
+observable setup with a clear timeout and explicit failure rather than blocking a server tick.
+Do not modify `NavExecutor`, navigation budgets or Phase41/44/46. Once fixture setup is safe,
+request authorization before exactly one A2 Run1 on `656ce7d0...`.
+
+A2 OPEN. No Run2/Full12K until five consecutive 8/8 strict `DENTRO-PARED` runs. Anchor runtime
+still requires natural physical stair placement and traversal.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 (PENDING HARNESS)
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
