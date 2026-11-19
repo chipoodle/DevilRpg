@@ -1,3 +1,22 @@
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 opt-in first-expansion diagnostics (PENDING HARNESS)
+
+**Branch:** `feature/autonomous-village`  
+**Implementation SHA:** `1164004368a784a463293e4d6a9bc6c8fc144474`  
+**Parent:** `5af839090be9f16a10d2186bb30ef1d5a646de99`  
+**Base:** `646a099f53cbaa52e71db0688d0061ef3e657ea9`  
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS.md`
+
+- ChatGPT implemented only opt-in diagnostics in `NavPlanner.java`; no navigation behavior or acceptance rule changed.
+- Enable with both `-Ddevilrpg.a2n.traceNav=true` and `-Ddevilrpg.a2n.traceGlobalSearch=true`.
+- First expansion logs each candidate's obstruction kind/rejection, fit/support/head-clear/protection, chunk-loaded state, block state, feet result and BREAK positions; summary reports candidates/enqueued.
+- Lifecycle events: START, COMPLETE, CANCEL and parameter-change RESTART.
+- Per-candidate logging is limited to the first graph expansion of each new search. No changes to OFFSETS, A* decisions, budgets, collision/support/protection or A2/C4.
+- **Next: Harness STATIC ONLY** on exact SHA above: diagnostics compile/compileJava, `gradlew test`, strict lint, `git diff --check`; report exact SHA and outputs. Harness must not edit production.
+- No runtime authorization: the single Phase55 Run1 authorization was consumed by `a2n-20261119-093456`. No A2 retry, Run2, standalone C4 or Full12K.
+- A2 remains OPEN. Static validation is pending; ChatGPT did not execute tests.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 first-expansion forensics
 
 **Branch:** `feature/autonomous-village`
