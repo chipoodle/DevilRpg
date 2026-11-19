@@ -61,7 +61,12 @@ El wrapper establece `JDK_JAVA_OPTIONS` con:
 -Ddevilrpg.a2n.traceGlobalSearch=true
 ```
 
-y `ORG_GRADLE_PROJECT_a2nTraceNav=true` / `ORG_GRADLE_PROJECT_a2nTraceGlobalSearch=true`. `build.gradle` traduce las propiedades Gradle a system properties del proceso `runServer`. Si falta cualquiera, el modo `raid` termina como `INVALIDO` antes de preparar o modificar el fixture. No se debe iniciar runtime si el registro `JVM_TRACE` no confirma ambas como `true`.
+También define `ORG_GRADLE_PROJECT_a2nTraceNav=true`,
+`ORG_GRADLE_PROJECT_a2nTraceGlobalSearch=true`, `ORG_GRADLE_PROJECT_a2nDiagnostics=true` y
+`ORG_GRADLE_PROJECT_a2nPopulationQueryHarness=true`. Así Gradle compila la fuente canónica de
+`tools/a2n/A2NavHarness.java` y excluye sólo en ese build el arnés legacy trackeado. El wrapper restaura
+las cuatro variables de proyecto y `JDK_JAVA_OPTIONS` al terminar. `build.gradle` traduce las propiedades
+Gradle a system properties del proceso `runServer`. Si falta cualquiera, el modo `raid` termina como `INVALIDO` antes de preparar o modificar el fixture. No se debe iniciar runtime si el registro `JVM_TRACE` no confirma ambas como `true`.
 
 La fuente canónica del arnés captura las referencias de aldeanos recibidas por `EntityJoinLevelEvent` durante la generación y mantenimiento del fixture. El censo usa esas referencias vivas y no removidas, verificando que estén añadidas al nivel o sean recuperables por UUID exacto; conserva `getEntitiesOfClass(AABB)` únicamente como comparación diagnóstica. Véase `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-FIX.md`.
 **Esta instrucción no autoriza runtime.** La ejecución requiere autorización explícita vigente del usuario.
