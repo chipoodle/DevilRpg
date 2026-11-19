@@ -1,4 +1,20 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 54A fixture forensics
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B fixture implementation
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
+**Current report:** `2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`.
+**Initial HEAD:** `759d042feb332006d42c8d3835c3ca53266af633`.
+
+- Harness-only fixture fix: 289 chunks requested via non-blocking
+  `ServerChunkCache.updateChunkForced`; poll `hasChunkAt`; 600-tick timeout; spawn only after READY and all
+  existing virgin/preGenerate/center checks.
+- No blocking `setChunkForced`/`getChunk` in raid preparation. Navigation/entity production unchanged.
+- Static PASS; runtime NOT executed. Need explicit authorization for one A2 Run1 on `656ce7d0`.
+- A2 OPEN; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 54A fixture forensics
+
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
 **Current report:** `2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md`.
@@ -597,6 +613,7 @@ Read first, in order:
 82. `docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`
 83. `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`
 84. `docs/autonomous-village/2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md`
+85. `docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -724,10 +741,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Fix the diagnostic fixture only: pre-generated disposable world or non-blocking ticket/wait phase,
-   explicit timeout, verify before spawn. No production/navigation changes.
-2. Then re-authorize one A2 Run1 on `656ce7d0` for CADENCE_WAIT route preservation and IDX5.
-3. A2 OPEN; no Run 2 or 12k until five consecutive 8/8 strict. C4 last PASS `[1,0,0]`.
+1. Authorize exactly one A2 Run1 on `656ce7d0` with both stair trace properties to test the new fixture
+   loader and validate CADENCE_WAIT route preservation / IDX5.
+2. Do not change navigation production, budgets or predicates. No Run2/Full12K.
+3. A2 OPEN; C4 last PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

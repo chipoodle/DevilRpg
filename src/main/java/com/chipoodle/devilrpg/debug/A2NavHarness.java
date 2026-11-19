@@ -133,6 +133,14 @@ public final class A2NavHarness {
         if ("raid".equals(MODE)) {
             // Edit 4: fixture -> spawn -> muestreo por tick + fases A/B. Sin totales ni veredictos.
             if (!rPreparado) {
+                if (!prepararCargaChunksRaid(evento.getServer())) {
+                    if (rChunkLoadFailed) {
+                        hecho = true;
+                        cerrar("INVALIDO", "RAID FIXTURE INVALIDO - chunk load timeout/failure | fallosDeInstrumento="
+                                + fallosDeInstrumento, evento.getServer());
+                    }
+                    return;
+                }
                 rPreparado = true;
                 prepararRaidFixture(evento.getServer());
                 if (rFixtureOk) {
@@ -2110,6 +2118,14 @@ public final class A2NavHarness {
     // ================================================================================================
     private static boolean rPreparado;
     private static boolean rFixtureOk;
+    private static boolean rChunkTicketsRequested;
+    private static boolean rChunkLoadFailed;
+    private static long rChunkDeadline;
+    private static int rChunkLastLoaded = -1;
+    private static final java.util.List<net.minecraft.world.level.ChunkPos> rChunkPositions =
+            new java.util.ArrayList<>();
+    private static final int rChunkTimeoutTicks =
+            Integer.getInteger("a2n.fixtureChunkTimeoutTicks", 600);
     private static int rCeldasAnillo;
     private static BlockPos rCentro;
     private static BlockPos rAncla;
@@ -3063,21 +3079,74 @@ public final class A2NavHarness {
     }
 
 
+    /**
+     * Non-blocking chunk loading for the C4/A2 fixture. updateChunkForced only updates the
+     * distance-manager FORCED ticket; it does not call getChunk() on the server thread. The
+     * 289 required chunks are polled until every one is loaded, with a hard timeout.
+     */
+    private static boolean prepararCargaChunksRaid(final MinecraftServer server) {
+        final BlockPos requestedCenter = new BlockPos(661, 71, 533);
+        final var level = server.overworld();
+        if (!rChunkTicketsRequested) {
+            rChunkTicketsRequested = true;
+            rChunkPositions.clear();
+            for (int dx = -8; dx <= 8; dx++) {
+                for (int dz = -8; dz <= 8; dz++) {
+                    rChunkPositions.add(new net.minecraft.world.level.ChunkPos(
+                            (requestedCenter.getX() >> 4) + dx,
+                            (requestedCenter.getZ() >> 4) + dz));
+                }
+            }
+            for (net.minecraft.world.level.ChunkPos pos : rChunkPositions) {
+                level.getChunkSource().updateChunkForced(pos, true);
+            }
+            rChunkDeadline = level.getGameTime() + rChunkTimeoutTicks;
+            log("C4 CHUNKS TICKETS requested=" + rChunkPositions.size()
+                    + " ticketOnly=true timeoutTicks=" + rChunkTimeoutTicks
+                    + " center=" + requestedCenter.toShortString());
+            return false;
+        }
+        int loaded = 0;
+        for (net.minecraft.world.level.ChunkPos pos : rChunkPositions) {
+            if (level.hasChunkAt(new BlockPos(pos.getMinBlockX(), requestedCenter.getY(), pos.getMinBlockZ()))) {
+                loaded++;
+            }
+        }
+        long now = level.getGameTime();
+        if (loaded != rChunkLastLoaded || now % 20L == 0L) {
+            rChunkLastLoaded = loaded;
+            log("C4 CHUNKS WAIT loaded=" + loaded + "/" + rChunkPositions.size()
+                    + " pending=" + (rChunkPositions.size() - loaded)
+                    + " elapsed=" + (now - (rChunkDeadline - rChunkTimeoutTicks))
+                    + " remaining=" + Math.max(0L, rChunkDeadline - now));
+        }
+        if (loaded == rChunkPositions.size()) {
+            log("C4 CHUNKS READY loaded=" + loaded + "/" + rChunkPositions.size()
+                    + " center=" + requestedCenter.toShortString()
+                    + " elapsed=" + (now - (rChunkDeadline - rChunkTimeoutTicks)));
+            return true;
+        }
+        if (now > rChunkDeadline) {
+            for (net.minecraft.world.level.ChunkPos pos : rChunkPositions) {
+                level.getChunkSource().updateChunkForced(pos, false);
+            }
+            fallosDeInstrumento++;
+            rChunkLoadFailed = true;
+            log("C4 CHUNKS TIMEOUT loaded=" + loaded + "/" + rChunkPositions.size()
+                    + " pending=" + (rChunkPositions.size() - loaded)
+                    + " timeoutTicks=" + rChunkTimeoutTicks + " ticketsReleased=true");
+            return false;
+        }
+        return false;
+    }
+
     private static void prepararRaidFixture(final MinecraftServer server) {
         final int objectiveIndex = 0;
         final BlockPos requestedCenter = new BlockPos(661, 71, 533);
         final var level = server.overworld();
         final var saved = com.chipoodle.devilrpg.world.VillageSavedData.get(level);
-        int forced = 0;
-        for (int dx = -8; dx <= 8; dx++) {
-            for (int dz = -8; dz <= 8; dz++) {
-                level.setChunkForced((requestedCenter.getX() >> 4) + dx,
-                        (requestedCenter.getZ() >> 4) + dz, true);
-                forced++;
-            }
-        }
-        log("C4 CHUNKS forced=" + forced + " center=" + requestedCenter.toShortString()
-                + " loaded=" + level.hasChunkAt(requestedCenter));
+        log("C4 CHUNKS loaded=" + level.hasChunkAt(requestedCenter)
+                + " center=" + requestedCenter.toShortString() + " ticketOnly=true");
         if (!level.hasChunkAt(requestedCenter) || saved.isGenerated(objectiveIndex)
                 || !level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
                         new net.minecraft.world.phys.AABB(requestedCenter).inflate(100.0D)).isEmpty()) {
