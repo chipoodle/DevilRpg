@@ -2056,7 +2056,9 @@ public class AggressiveZombieEntity extends Zombie {
             return true; // accion de despeje verificada; aun no hay escalon pendiente
         }
         escaleraUltimoRechazo = "ningun candidato valido de " + probados + ":" + intentos;
-        escaleraRetraso = ESCALERA_ENTRE_BLOQUES;
+        // NO_PROGRESS no inicia la cadencia entre bloques: ese cooldown solo corresponde a una
+        // colocacion verificada o a un despeje de acceso verificado. El ejecutor aplica su backoff
+        // acotado de fallos de objetivo para no ciclar NO_CANDIDATE -> CADENCE_WAIT indefinidamente.
         return false;
     }
 
