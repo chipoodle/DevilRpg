@@ -8,7 +8,7 @@
 - Implemented IDX4 no-candidate cooldown-loop fix.
 - Added `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST` (5 assertions).
 - Extended `STAIR_BUILD_RESULT_TEST` to 12 assertions and registered the new policy test in the normal gate.
-- Harness must validate exact HEAD with compileJava, test, strict lint and diff-check. Tests have not been run by ChatGPT.
+- Harness must sync the current branch tip descending from the implementation commit, record the actual tested HEAD, verify the source blob SHAs, and run compileJava, test, strict lint and diff-check. Tests have not been run by ChatGPT.
 - No runtime, worlds or fixtures modified. A2 remains OPEN; no Run2/Full12K.
 
 **Next:** Harness STATIC ONLY on exact implementation SHA. Preserve local/untracked files and worlds; report full logs and test counts. No Minecraft/runtime without new explicit user authorization.
