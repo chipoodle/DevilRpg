@@ -1,14 +1,17 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 static PASS
 
 **Branch:** `feature/autonomous-village`
-**Tested production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
-**Current report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
-**HEAD:** `7f823e6cac852906f7fc887818920b182d9b2fe0`
+**Validated production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
+**Current Harness report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
+**Documentation HEAD:** `e132954551cf3fdd667372384d2c6ab4bddbb220`
 
-- Compile/test/lint/diff PASS.
-- `NAV_PLANNER_STATE_TEST`: 54 executed assertions, OK.
-- SLICE=4 expansions, 8 OPEN pops/tick; total budget unchanged.
-- No runtime executed. A2 OPEN; no Run2/Full12K.
+- Diagnostics compile, `gradlew test`, strict lint and diff-check: PASS on the exact production SHA.
+- `NAV_PLANNER_STATE_TEST`: OK, **54 assertions actually executed** (51 source call sites; the slice assertion runs four times).
+- Incremental strategic A*: 4 expansions and at most 8 OPEN pops per slice; hard total global expansion budget unchanged.
+- Production source was not modified by Harness; local work preserved; worlds not modified.
+- Runtime has **not** been executed. Phase54B fixture remains validated; Phase54B-R1 runtime previously BLOCKED by the synchronous global A* watchdog.
+- **A2 remains OPEN.** The incremental planner's runtime effect is still unproven. No A2 Run1, C4, Run2 or Full12K is authorized.
+- Next action: ChatGPT reviews runtime instrumentation and source, then requests a separate explicit authorization for exactly one A2 Run1. On that run, capture pending-slice progression, per-tick duration/watchdog, total planning latency, route completion/rejection, no movement while pending, and IDX5/IDX3 evidence. Stop after Run1 and report; no automatic Run2.
 
 ---
 
