@@ -91,7 +91,8 @@ public final class A2NavHarness {
             net.minecraft.world.phys.AABB bounds) {
         java.util.List<net.minecraft.world.entity.npc.Villager> result = new java.util.ArrayList<>();
         for (var villager : rAldeanosCapturados.values()) {
-            if (!villager.isRemoved() && villager.isAlive() && bounds.intersects(villager.getBoundingBox())) {
+            if (villager.isAddedToLevel() && !villager.isRemoved() && villager.isAlive()
+                    && bounds.intersects(villager.getBoundingBox())) {
                 result.add(villager);
             }
         }
@@ -2271,6 +2272,13 @@ public final class A2NavHarness {
                 com.chipoodle.devilrpg.world.VillageGenerator.FENCE_RADIUS + 20.0D);
         var aabbVillagers = level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class, populationBounds);
         var villagers = aldeanosCapturadosEn(populationBounds);
+        for (var captured : rAldeanosCapturados.values()) {
+            log("C4 POPULATION CAPTURED uuid=" + captured.getUUID()
+                    + " profession=" + captured.getVillagerData().getProfession()
+                    + " alive=" + captured.isAlive() + " removed=" + captured.isRemoved()
+                    + " addedToLevel=" + captured.isAddedToLevel()
+                    + " pos=" + captured.blockPosition().toShortString());
+        }
         java.util.Set<java.util.UUID> aabbUuids = new java.util.HashSet<>();
         for (var villager : aabbVillagers) aabbUuids.add(villager.getUUID());
         for (var villager : villagers) {
