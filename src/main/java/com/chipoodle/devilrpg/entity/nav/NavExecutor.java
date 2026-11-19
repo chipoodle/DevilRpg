@@ -1175,6 +1175,7 @@ public final class NavExecutor {
     private boolean globalSearchPending;
     private final NavPlanner.GlobalSearchHandle globalSearchHandle = new NavPlanner.GlobalSearchHandle();
     private int globalSearchLastExpansions;
+    private BlockPos globalSearchStart;
     private long lastGlobalPendingTraceTick = Long.MIN_VALUE;
     private BlockPos globalMision;
     private BlockPos globalDesde;
@@ -1473,14 +1474,18 @@ public final class NavExecutor {
             return globalCache;
         }
         boolean continuing = globalCache != null && globalCache.pending()
-                && mision.equals(globalMision) && globalDesde != null
-                && globalDesde.distSqr(yo) <= CACHE_GLOBAL_SQR;
-        if (!continuing) globalSearchLastExpansions = 0;
+                && mision.equals(globalMision) && globalSearchStart != null
+                && globalSearchStart.equals(yo);
+        if (!continuing) {
+            globalSearchLastExpansions = 0;
+            globalSearchStart = yo.immutable();
+        }
         NavPlanner.GlobalResult r = NavPlanner.planGlobalIncremental(mob.level(), mob, yo, mision,
                 RADIO_GLOBAL_DE_BUSQUEDA, VENTANA_VERTICAL_GLOBAL, MAX_EXPANSIONES_GLOBALES, policies, construidas,
                 exclusionesDescenso, exclusionesBreak, globalSearchHandle);
         globalExpansionesTotal += Math.max(0, r.expansions() - globalSearchLastExpansions);
         globalSearchLastExpansions = r.pending() ? r.expansions() : 0;
+        if (!r.pending()) globalSearchStart = null;
         globalCache = r;
         globalMision = mision;
         globalDesde = yo.immutable();
