@@ -3120,13 +3120,7 @@ public final class A2NavHarness {
                     + " elapsed=" + (now - (rChunkDeadline - rChunkTimeoutTicks))
                     + " remaining=" + Math.max(0L, rChunkDeadline - now));
         }
-        if (loaded == rChunkPositions.size()) {
-            log("C4 CHUNKS READY loaded=" + loaded + "/" + rChunkPositions.size()
-                    + " center=" + requestedCenter.toShortString()
-                    + " elapsed=" + (now - (rChunkDeadline - rChunkTimeoutTicks)));
-            return true;
-        }
-        if (now > rChunkDeadline) {
+        if (now >= rChunkDeadline) {
             for (net.minecraft.world.level.ChunkPos pos : rChunkPositions) {
                 level.getChunkSource().updateChunkForced(pos, false);
             }
@@ -3136,6 +3130,12 @@ public final class A2NavHarness {
                     + " pending=" + (rChunkPositions.size() - loaded)
                     + " timeoutTicks=" + rChunkTimeoutTicks + " ticketsReleased=true");
             return false;
+        }
+        if (loaded == rChunkPositions.size()) {
+            log("C4 CHUNKS READY loaded=" + loaded + "/" + rChunkPositions.size()
+                    + " center=" + requestedCenter.toShortString()
+                    + " elapsed=" + (now - (rChunkDeadline - rChunkTimeoutTicks)));
+            return true;
         }
         return false;
     }

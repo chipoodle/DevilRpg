@@ -138,3 +138,40 @@ C4 11D064E21C7F63982ADD07F7EC862ECFB5CFD6918609D6459ACBC32BC4138EDF
 ```
 
 A2 remains OPEN. No Run2/Full12K.
+
+## Addendum Phase54B-R1 — strict timeout ordering
+
+Initial HEAD: `a868991755eef4f1464a507c31713723a0266f87`.
+
+Problem fixed: the loader checked `loaded == 289` before the deadline, so a completion at or after the
+deadline could still log READY and spawn.
+
+Current order:
+
+```text
+poll loaded
+if now >= rChunkDeadline:
+    release 289 tickets
+    fallosDeInstrumento++
+    rChunkLoadFailed=true
+    log C4 CHUNKS TIMEOUT ...
+    return false
+if loaded == 289:
+    log C4 CHUNKS READY ...
+    return true
+```
+
+Therefore READY is emitted only while `now < rChunkDeadline`. On timeout the caller sees
+`rChunkLoadFailed`, closes `INVALIDO`, and never calls `prepararRaidAsaltantes`.
+
+Validation:
+
+```text
+compileJava -Pa2nDiagnostics=true: PASS
+gradlew test: PASS
+lint_aldea.py --strict: PASS
+git diff --check: PASS
+Navigation/entity diff vs a8689917: empty
+```
+
+No A2 Run1, C4, Run2 or Full12K was executed. Runtime remains pending explicit authorization.

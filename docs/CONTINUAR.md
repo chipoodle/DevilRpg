@@ -5306,3 +5306,9 @@ run/saves; hashes match; structural verification only.
 - Harness-only: updateChunkForced tickets + hasChunkAt polling + timeout600; spawn only after READY/verifications.
 - Static PASS; navigation/entity production unchanged; no runtime executed.
 - Report: docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md. A2 OPEN.
+
+## 2026-11-19 — A2 Phase 54B-R1 strict timeout
+
+- Fixture loader now checks `now >= rChunkDeadline` before READY; late completion becomes TIMEOUT, releases tickets, no spawn.
+- Static PASS; navigation/entity setup untouched; no runtime executed.
+- Report addendum: docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md. A2 OPEN.

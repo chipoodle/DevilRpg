@@ -1,15 +1,14 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B fixture implementation
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B-R1 strict timeout
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
-**Current report:** `2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`.
-**Initial HEAD:** `759d042feb332006d42c8d3835c3ca53266af633`.
+**Current report:** `2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md` (addendum R1).
+**Previous HEAD:** `a868991755eef4f1464a507c31713723a0266f87`.
 
-- Harness-only fixture fix: 289 chunks requested via non-blocking
-  `ServerChunkCache.updateChunkForced`; poll `hasChunkAt`; 600-tick timeout; spawn only after READY and all
-  existing virgin/preGenerate/center checks.
-- No blocking `setChunkForced`/`getChunk` in raid preparation. Navigation/entity production unchanged.
-- Static PASS; runtime NOT executed. Need explicit authorization for one A2 Run1 on `656ce7d0`.
-- A2 OPEN; no Run2/Full12K.
+- Fixture: 289 non-blocking FORCED tickets + `hasChunkAt` polling; **timeout `now >= deadline` is checked
+  before READY**, so completion at/after the deadline cannot spawn. Timeout releases tickets and closes
+  INVALIDO.
+- Static PASS; navigation/entity production unchanged; no runtime executed.
+- Need explicit authorization for one A2 Run1 on `656ce7d0`. A2 OPEN; no Run2/Full12K.
 
 ---
 

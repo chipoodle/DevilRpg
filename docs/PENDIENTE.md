@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B fixture implementation
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B-R1 strict timeout
 
 - Production SHA: `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6` (parent `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`).
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE53-CADENCE-ROUTE-PRESERVATION.md`.
@@ -48,6 +48,8 @@
 > **A2 Phase54A (forense de fixture):** 289 `setChunkForced` síncronos (ticket + `getChunk` bloqueante) en un solo `ServerTickEvent.Pre`; generación fría >60s. El loop terminó después del watchdog (`C4 CHUNKS forced=289`). Recomendado mundo desechable pre-generado + fase de tickets no bloqueante y timeout. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md`.
 >
 > **A2 Phase54B (harness):** fixture migrado a `ServerChunkCache.updateChunkForced` no bloqueante + polling `hasChunkAt` + timeout600; spawn sólo tras READY y verificaciones. Static PASS; runtime pendiente de autorización. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`.
+>
+> **A2 Phase54B-R1:** el timeout se comprueba antes de READY con `now >= deadline`; si vence, libera los 289 tickets, marca `rChunkLoadFailed` y cierra INVALIDO sin spawn. Static PASS; runtime pendiente.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 

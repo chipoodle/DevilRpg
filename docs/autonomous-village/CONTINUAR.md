@@ -1126,3 +1126,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Non-blocking chunk ticket state machine in A2NavHarness; static PASS; runtime pending.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`.
+
+## 2026-11-19 — A2 Phase 54B-R1 strict timeout
+
+- Timeout precedes READY; late completion cannot spawn.
+- Static PASS; report addendum Phase54B. A2 OPEN.
