@@ -1,6 +1,6 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS
 
-**Production implementation SHA:** `f344f33ec122d7885aeb5669eb1f5e7126eadab1`.
+**Production implementation SHA:** `ec35c910f894e722a445f90ad24af4033ed6b158`.
 **Previous documentation checkpoint:** `924c62088e6efce9c8e1fcb39fdb76969f238cc8`.
 **Implementation report:** `2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
 
@@ -8,7 +8,7 @@ Phase54B-R1 runtime `a2n-20261119-011138` validó fixture y spawn (289/289 chunk
 
 Phase55 cambia únicamente el planificador global:
 - A* reanudable con estado OPEN/CLOSED y predecesores persistido entre ticks.
-- Slice de 16 expansiones y máximo 32 extracciones OPEN por executor/tick.
+- Slice de 4 expansiones y máximo 8 extracciones OPEN por executor/tick.
 - Presupuesto global total existente intacto; no se amplía.
 - No se expone ruta parcial ni se consume presupuesto de fallos locales mientras la búsqueda está pendiente.
 - Fixture Phase54B no se modifica; colisión, soporte, protección, costos, heurística, radio y ventana vertical permanecen intactos.
