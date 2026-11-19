@@ -1,14 +1,14 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 50 validation (FAIL)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 (PENDING HARNESS)
 
-- Production SHA: `f7a919c2ececcf9c745e5e95a8f141ee124ca25e`; prior runtime baseline `9d6709f5`.
-- Monotonic stair anchor: after a traversed step, higher support cannot refresh anchor upward; same-level horizontal/downward refresh remains allowed.
-- Every later candidate must be strictly below the traversed anchor.
-- `CADENCE_WAIT` is now a distinct result; it defers two ticks without incrementing local step/failure counters.
-- Expected tests: `NAV_STAIR_ANCHOR_POLICY_TEST: OK (8 assertions)`; `STAIR_BUILD_RESULT_TEST: OK (6 assertions)`.
-- Harness: preserve local state/worlds; static checks first, then A2 Run1 only on exact SHA. No production changes by Harness.
-- Phase41/44/46 and budgets unchanged. IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE; fixture not implemented.
-- Latest runtime Phase49A: A2 3/8 strict; C4 PASS [1,0,0]. A2 OPEN. No Run2/Full12K.
-- Report: `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`.
+- Production implementation SHA: `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
+- Implementation report: `docs/autonomous-village/2026-11-18-A2-PHASE51-STAIR-WIRING-FIX.md`.
+- Phase50 validation: FAIL, A2 3/8 strict and 3/8 perimeter; C4 PASS [1,0,0].
+- Phase51 wires the monotonic stair anchor refresh and strict-below candidate guard; cooldown now propagates as `CADENCE_WAIT` without consuming local step/failure counters.
+- Both stair policy tests (8 + 6 assertions) are registered in the normal `policyTest` gate; `gradlew test` must execute them.
+- Harness must validate this exact production SHA, preserve all local-only work/worlds, run static checks first, then A2 Run1 only if every static check passes. Harness must not modify production.
+- Phase41/44/46 and all budgets/safety predicates remain unchanged. IDX4 horizontal-zero remains INSUFFICIENT_EVIDENCE.
+- No Run2 or Full12K until five consecutive 8/8 strict `DENTRO-PARED` runs. A2 remains OPEN.
+
 ---
 
 # ESTADO ACTUAL — 2026-11-16 (checkpoint operativo)
