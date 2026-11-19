@@ -1,16 +1,45 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 static PASS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 STATIC PASS — A2 Run1 AUTHORIZED
 
 **Branch:** `feature/autonomous-village`
 **Validated production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
-**Current Harness report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
+**Static report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
+**Runtime authorization:** explicit authorization received from the project owner on 2026-11-19 for exactly ONE A2 Run1.
 
-- Diagnostics compile, `gradlew test`, strict lint and diff-check: PASS on the exact production SHA.
-- `NAV_PLANNER_STATE_TEST`: OK, **54 assertions actually executed** (51 source call sites; the slice assertion runs four times).
-- Incremental strategic A*: 4 expansions and at most 8 OPEN pops per slice; hard total global expansion budget unchanged.
-- Production source was not modified by Harness; local work preserved; worlds not modified.
-- Runtime has **not** been executed. Phase54B fixture remains validated; Phase54B-R1 runtime previously BLOCKED by the synchronous global A* watchdog.
-- **A2 remains OPEN.** The incremental planner's runtime effect is still unproven. No A2 Run1, C4, Run2 or Full12K is authorized.
-- Next action: ChatGPT reviews runtime instrumentation and source, then requests a separate explicit authorization for exactly one A2 Run1. On that run, capture pending-slice progression, per-tick duration/watchdog, total planning latency, route completion/rejection, no movement while pending, and IDX5/IDX3 evidence. Stop after Run1 and report; no automatic Run2.
+## Verified state
+
+- Phase55-R2 diagnostics compile, `gradlew test`, strict lint and diff-check: PASS on exact production SHA `11ff43cd`.
+- `NAV_PLANNER_STATE_TEST`: OK, 54 assertions actually executed.
+- Incremental strategic A*: 4 expansions and at most 8 OPEN pops per `Session.advance` slice; hard total global expansion budget unchanged.
+- ChatGPT read the collaboration policy, this checkpoint, Harness workflow, continuation indexes, Phase55 implementation/static report, Phase54B fixture report and Phase54B-R1 blocked runtime report.
+- ChatGPT inspected the live branch source. `NavGraphSearch.java`, `NavPlanner.java`, `NavExecutor.java` and `A2NavHarness.java` match their blobs at production SHA `11ff43cd`; no production change is needed before this validation.
+- Phase54B non-blocking chunk fixture was previously validated at 289/289 chunks READY in 1 tick, 8/8 attackers spawned, wall/population checks PASS. Do not modify this fixture.
+- Previous Phase54B-R1 runtime `a2n-20261119-011138` was BLOCKED by the synchronous global A* watchdog before A2 evaluation; it is not an A2 FAIL.
+
+## Authorized next action — Harness owns execution
+
+Harness must safely sync the current remote branch, preserve all local/untracked work and worlds, and verify the production sources still match `11ff43cd338d7a6222a146a2ed642a5546fb2910`. Then execute exactly ONE standard, automated/headless **A2 Run1** using the existing validated Phase54B fixture and normal A2 Run1 configuration.
+
+Capture:
+- Fixture readiness, wall/population verification and all 8 spawn/registration outcomes.
+- Per-UUID `NAV_GLOBAL_SEARCH_PENDING` progression: tick, cumulative expansions, `slice=4`, frontier size; confirm monotonic progress across slices and that the search is not restarted.
+- Runtime tick duration/watchdog outcome and total planning latency; record route completion, exhaustion, invalidation or timeout.
+- No partial route, local waypoint or `MOVE_COMMAND` while that entity's global search is pending; after completion, record route summary and subsequent physical/local validation.
+- IDX5 cadence-route-preservation trace, subsequent valid movement and unchanged cooldown/local failure counters, if that path is reached.
+- IDX3 candidate/anchor/build lifecycle, actual physical stair placement and traversal, if reached. Do not infer missing events.
+- Final A2 strict `DENTRO-PARED` entrants and perimeter contacts separately, per-index entry ticks/terminal reasons, bell/conquest evidence, and all raw log/artifact paths.
+
+The implementation slice is 4 expansions / at most 8 OPEN pops per `Session.advance`; do not raise it. Existing total search budget and all navigation, collision, support, protection, landing, wall and acceptance rules remain unchanged. Pending trace is throttled to 20 ticks; report its actual sampling limits and do not claim unobserved per-tick values.
+
+## Hard stop / exclusions
+
+- Exactly one A2 Run1. Stop after it and publish the report, even if PASS.
+- No retry, Run2, standalone C4, Full12K, or any other runtime scenario.
+- No production source edits by Harness. Do not modify the Phase54B fixture or acceptance criteria.
+- Use the established headless/automated path; no foreground Minecraft GUI or user intervention.
+- If synchronization conflicts, local work/worlds are at risk, fixture verification fails, or the run is BLOCKED, stop without retry and document exact evidence.
+- Preserve protected worlds and all local-only artifacts. ChatGPT will review the report and decide/implement any next correction.
+
+A2 remains OPEN pending this single runtime result. Static PASS is not gameplay acceptance.
 
 ---
 
