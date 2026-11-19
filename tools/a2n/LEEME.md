@@ -10,41 +10,35 @@
 | **Fuente canónica del arnés** | `tools/a2n/A2NavHarness.java` | **Sí** (como `tools/arnes/GuardHarness.java`) |
 | Superviviente del arnés perdido (parcial, no compilable como suite) | `tools/a2n/A2NavHarness.java.partial` | Sí (testigo de la pérdida) |
 | Copia dañada tal cual se encontró | `build/a2n/recovery/A2NavHarness-DAMAGED-7H-*.java` | No (`build/` ignorado) |
-| Copia de compilación temporal | `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` | No (se borra siempre) |
+| Arnés legacy conservado | `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` | Sí; no sobrescribir |
+| Selección Phase55 | `tools/a2n/A2NavHarness.java` | Sí; Gradle lo incorpora directamente sólo con `-Pa2nPopulationQueryHarness=true` |
 | Mundos, logs, salidas | `build/a2n/a2n-<AAAAMMDD-HHMMSS>/` | No (`build/` ignorado) |
 
-**Regla de oro:** el arnés se **edita sólo en `tools/a2n/`** y se **copia** a `src/.../debug/` para compilar.
-Nunca al revés. Un fichero en `build/` **no** es la fuente: `gradlew clean` o un borrado lo eliminan (fue la
-causa de la pérdida de Stage 7H).
+**Regla de oro:** el arnés canónico se **edita sólo en `tools/a2n/`**. El antiguo
+`src/.../debug/A2NavHarness.java` se conserva como arnés legacy y nunca se sobrescribe ni elimina para
+validar Phase55. Gradle selecciona la fuente canónica directamente mediante un source root opt-in, excluyendo
+el legacy sólo en esa compilación. Un fichero en `build/` **no** es la fuente: `gradlew clean` o un borrado
+lo eliminan (fue la causa de la pérdida de Stage 7H).
 
-## 2 · Secuencia segura de ejecución
+## 2 · Secuencia segura de compilación y ejecución
+
+La fuente legacy de `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` ya está versionada y
+contiene modos históricos que no están todos en la reconstrucción canónica. **No copiar, sobrescribir ni borrar**
+ese archivo.
+
+Para validar/ejecutar el arnés canónico Phase55, Gradle incorpora `tools/a2n/A2NavHarness.java` directamente
+y excluye el legacy sólo cuando se activa explícitamente el selector:
 
 ```powershell
-# 0) Nunca Gradle y juego a la vez
-(Get-CimInstance Win32_Process -Filter "Name like 'java%'").Count   # debe ser 0 (los daemons de Gradle también cuentan para el lanzador)
-.\gradlew.bat --stop
-
-# 1) Copiar la fuente canónica al paquete de compilación y compilar
-Copy-Item tools\a2n\A2NavHarness.java src\main\java\com\chipoodle\devilrpg\debug\A2NavHarness.java -Force
-.\gradlew.bat compileJava
-
-# 2) Un modo por corrida (el lanzador crea mundo aislado en build\a2n\<run>\game)
-.\build\a2n\lanzar-a2n.ps1 -Modo edges   -LimiteMinutos 10
-.\build\a2n\lanzar-a2n.ps1 -Modo stage6e -NavCustom true -LimiteMinutos 12
-.\build\a2n\lanzar-a2n.ps1 -Modo stage6f -NavCustom true -LimiteMinutos 10
-.\build\a2n\lanzar-a2n.ps1 -Modo stairs  -NavCustom true -Presupuesto 900 -Semilla 12345 -LimiteMinutos 18
-
-# 3) Limpiar SIEMPRE el fichero temporal de producción
-Remove-Item src\main\java\com\chipoodle\devilrpg\debug\A2NavHarness.java -Force
-
-# 4) Validación
-.\gradlew.bat compileJava
-python tools\lint_aldea.py --strict
-git diff --check
+.\gradlew.bat compileJava -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true
+.\gradlew.bat test -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true
 ```
 
-El lanzador **aborta** si detecta cualquier proceso `java` vivo (incluido un daemon de Gradle): por eso el paso 0
-ejecuta `--stop` antes de cada corrida.
+Sin `-Pa2nPopulationQueryHarness=true`, los builds diagnósticos existentes conservan el arnés legacy.
+Sin `-Pa2nDiagnostics=true`, las clases debug siguen excluidas del build normal.
+
+Para otros modos históricos, usa el lanzador documentado en su sección correspondiente; no cambies ni copies
+manualmente el fuente del paquete debug.
 
 ### 2.1 · A2 raid diagnóstico con telemetría global A*
 
