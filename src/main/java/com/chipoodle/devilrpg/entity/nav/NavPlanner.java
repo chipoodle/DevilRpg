@@ -601,6 +601,10 @@ public final class NavPlanner {
                                 arista.standPos()));
                     }
                 }
+                if (traceThisExpansion) {
+                    traceGlobalSearch("GLOBAL_FIRST_EXPANSION_END", "uuid=" + mob.getUUID()
+                            + " candidates=" + contadores[0] + " enqueued=" + contadores[1]);
+                }
             }
 
             @Override
