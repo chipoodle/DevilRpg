@@ -1,6 +1,6 @@
 # CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 (PENDING HARNESS)
 
-**Production implementation SHA:** `0ed873e22946f70374a18a2c12108fff270b6f5b`.
+**Production implementation SHA:** `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
 **Implementation report:** `docs/autonomous-village/2026-11-18-A2-PHASE51-STAIR-WIRING-FIX.md`.
 **Previous validation:** Phase50 `a2n-20261118-212254` — FAIL, 3/8 strict, C4 PASS [1,0,0].
 
@@ -10,6 +10,8 @@
 - The builder now returns `CADENCE_WAIT` only when it actually decrements the cooldown. All three
   executor call paths preserve that result; `A2_LOCAL_STAIR_WAIT` is emitted and local step/failure
   counters are not consumed. Plan-level waits defer the next attempt by two ticks.
+- Other budget-fallback outcomes retain their prior behavior; only `CADENCE_WAIT` updates the
+  executor wait state.
 - `NavStairAnchorPolicyTest` (8 assertions) and `StairBuildResultTest` (6 assertions) are now
   registered in the normal `policyTest` gate; `gradlew test` depends on that gate.
 - **PENDING HARNESS:** validate exact SHA above. Static checks first; if all pass, A2 Run1 only.
