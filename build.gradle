@@ -79,6 +79,10 @@ neoForge {
             if (providers.gradleProperty('a2nTraceNav').isPresent()) {
                 systemProperty 'devilrpg.a2n.traceNav', providers.gradleProperty('a2nTraceNav').get()
             }
+            if (providers.gradleProperty('a2nTraceGlobalSearch').isPresent()) {
+                systemProperty 'devilrpg.a2n.traceGlobalSearch',
+                        providers.gradleProperty('a2nTraceGlobalSearch').get()
+            }
             if (providers.gradleProperty('a2nGuardDiag').isPresent()) {
                 systemProperty 'devilrpg.guarddiag', providers.gradleProperty('a2nGuardDiag').get()
             }
