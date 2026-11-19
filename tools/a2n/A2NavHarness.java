@@ -1319,13 +1319,9 @@ public final class A2NavHarness {
 
     private static void prepararRaidAsaltantes(final MinecraftServer server) {
         var nivelR = server.overworld();
-        // Configuracion EFECTIVA de navegacion custom: entradas documentadas por NavFeature.
-        String prop = System.getProperty(com.chipoodle.devilrpg.entity.nav.NavFeature.PROPERTY);
-        String env = System.getenv(com.chipoodle.devilrpg.entity.nav.NavFeature.ENV);
-        boolean efectivo = com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation();
-        rNavConfig = "propiedad=" + com.chipoodle.devilrpg.entity.nav.NavFeature.PROPERTY + "=" + prop
-                + " env=" + com.chipoodle.devilrpg.entity.nav.NavFeature.ENV + "=" + env
-                + " navCustomEfectivo=" + com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation();
+        // La migracion NavExecutor single-authority elimino NavFeature y su fallback por bandera.
+        // AggressiveZombieEntity construye NavExecutor en su constructor y lo tickea en cada tick servidor.
+        rNavConfig = "navCustomEfectivo=true modo=NavExecutor-single-authority featureFlag=eliminado";
         log("NAVCUSTOM " + rNavConfig);
         // Edit 32 · los puntos de asalto deben estar en SUPERFICIE real, no en una plataforma
         // artificial dentro de una montaña. La ventana vertical admite hasta 80 bloques sobre el centro.
@@ -1734,7 +1730,7 @@ public final class A2NavHarness {
             java.nio.file.Files.createDirectories(dir);
             trOut = java.nio.file.Files.newBufferedWriter(dir.resolve("nav-trace.log"));
             trOut.write("# schema=a2n-navtrace/1 run=" + run + " traceNav=" + TRACE_NAV
-                    + " navCustom=" + com.chipoodle.devilrpg.entity.nav.NavFeature.customNavigation() + "\n");
+                    + " navCustom=NavExecutor-single-authority" + "\n");
             trOut.write("# cols=tickServidor,raidTick,idx,uuid,tipo,x,y,z,bbox,objetivo,dist2D,dist3D,movio,estado,cambioEstado,rutaAccion,descenso\n");
             log("TRACE NAV habilitado: " + dir.resolve("nav-trace.log"));
             // Edit 11(b): puente produccion -> este artefacto. NavTrace no hace nada si la bandera esta
