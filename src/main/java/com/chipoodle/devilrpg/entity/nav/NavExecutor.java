@@ -1581,7 +1581,13 @@ public final class NavExecutor {
         // LOCAL; por eso un atacante en un acantilado quedaba en PLANNING sin llegar a construir.
         if (global.hitBudget()
                 && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az) {
-            boolean escalonColocado = az.construirEscalonHacia(mision);
+            StairBuildResult stairOutcome = az.construirEscalonResultado(mision);
+            ultimoResultadoEscalon = stairOutcome;
+            if (stairOutcome == StairBuildResult.CADENCE_WAIT) {
+                registrarEsperaCadenciaEscalon("presupuesto global agotado");
+                return null;
+            }
+            boolean escalonColocado = stairOutcome == StairBuildResult.STAIR_PLACED;
             if (escalonColocado) {
                 BlockPos escalonTransitable = az.objetivoSobreUltimoEscalon();
                 if (escalonTransitable != null && dentroDeLaVentana(yo, escalonTransitable)
@@ -1776,6 +1782,20 @@ public final class NavExecutor {
      * Ultimo recurso acotado cuando la ruta global no ofrece ningun waypoint local utilizable aunque no haya
      * agotado el presupuesto. Solo construye si AggressiveZombieEntity confirma que la geometria exige escalera.
      */
+    private void registrarEsperaCadenciaEscalon(final String causa) {
+        ultimoEscalonDeObjetivo = causa + ": CADENCE_WAIT; reintentar sin consumir objetivo local";
+        if (NavStairTrace.on()) {
+            NavStairTrace.ev("STAIR_PIPELINE_RETURN", "uuid=" + mob.getUUID()
+                    + " outcome=CADENCE_WAIT causa={" + causa + "}");
+        }
+        if (NavTrace.on()) {
+            NavTrace.ev("A2_LOCAL_STAIR_WAIT", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime()
+                    + " local=" + escalonesDeObjetivo + "/" + MAX_ESCALONES_DE_OBJETIVO
+                    + " reason=CADENCE_WAIT counters_unchanged=true");
+        }
+    }
+
     private BlockPos intentarConstruirEscalonSinWaypoint(final BlockPos mision, final BlockPos yo,
             final String causa) {
         if (NavStairTrace.on()) {
@@ -1790,15 +1810,7 @@ public final class NavExecutor {
         StairBuildResult stairOutcome = az.construirEscalonResultado(mision);
         ultimoResultadoEscalon = stairOutcome;
         if (stairOutcome == StairBuildResult.CADENCE_WAIT) {
-            ultimoEscalonDeObjetivo = causa + ": CADENCE_WAIT; reintentar sin consumir objetivo local";
-            if (NavStairTrace.on()) {
-                NavStairTrace.ev("STAIR_PIPELINE_RETURN", "uuid=" + mob.getUUID()
-                        + " outcome=CADENCE_WAIT causa={" + causa + "}");
-                NavTrace.ev("A2_LOCAL_STAIR_WAIT", "uuid=" + mob.getUUID()
-                        + " tick=" + mob.level().getGameTime()
-                        + " local=" + escalonesDeObjetivo + "/" + MAX_ESCALONES_DE_OBJETIVO
-                        + " reason=CADENCE_WAIT counters_unchanged=true");
-            }
+            registrarEsperaCadenciaEscalon(causa);
             return null;
         }
         if (stairOutcome != StairBuildResult.STAIR_PLACED) {
@@ -3408,10 +3420,18 @@ public final class NavExecutor {
             // A2 Stage 4K: la exhaucion de presupuesto SOLO se enruta a CONSTRUCCION si el objetivo activo exige
             // construccion por geometria real (caida > segura Y sin aterrizaje intermedio soportado). Las rutas
             // complejas normales conservan su reintento de siempre.
-            if (mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az
-                    && az.construirEscalonHacia(objective)) {
-                reconstruccionEnrutada = "presupuesto agotado + objetivo exige construccion -> escalon";
-                return; // sigue en PLANNING; el objetivo se conserva
+            if (mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az) {
+                StairBuildResult stairOutcome = az.construirEscalonResultado(objective);
+                ultimoResultadoEscalon = stairOutcome;
+                if (stairOutcome == StairBuildResult.CADENCE_WAIT) {
+                    registrarEsperaCadenciaEscalon("presupuesto local agotado");
+                    nextPlanAt = now + 2L;
+                    return;
+                }
+                if (stairOutcome == StairBuildResult.STAIR_PLACED) {
+                    reconstruccionEnrutada = "presupuesto agotado + objetivo exige construccion -> escalon";
+                    return; // sigue en PLANNING; el objetivo se conserva
+                }
             }
             // A2 FASE 3 · El presupuesto agotado es INCONCLUYENTE mientras haya PROGRESO MEDIBLE. Si el ente
             // se acerca de verdad al objetivo, el contador vuelve a cero. Sin progreso, la repeticion tiene
