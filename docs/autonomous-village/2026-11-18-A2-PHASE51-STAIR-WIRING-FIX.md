@@ -8,11 +8,12 @@ tests. ChatGPT has reviewed the source diff but has **not** run Gradle, lint, di
 or Minecraft runtime.
 
 - Previous validated/report checkpoint: `53756dcc3b041a8b9c579095070da296fbb7d1fe`
-- Production implementation HEAD: `0ed873e22946f70374a18a2c12108fff270b6f5b`
+- Production implementation HEAD: `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`
 - Implementation commits:
   - `1df7ecab16c88680056bcfdd314433ac4dbb3475` — wire monotonic anchor policy
   - `76ce8de3231e0d7de15611292201d328528f6021` — propagate cadence waits
   - `0ed873e22946f70374a18a2c12108fff270b6f5b` — register policy tests
+  - `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e` — preserve prior non-wait fallback semantics; only CADENCE_WAIT updates the executor wait state
 
 ## 1. Monotonic anchor is now wired
 
@@ -41,7 +42,10 @@ remain in force.
 by exactly one. An untraversed pending stair, a rejected candidate, exhausted placement budget, or
 other no-progress path remains distinct and is not mislabeled as a cadence wait.
 
-All executor call paths that can invoke the stair builder now preserve the typed result:
+All executor call paths that can invoke the stair builder now preserve CADENCE_WAIT without changing
+the previous handling of other boolean-builder outcomes. In particular, the global/local budget
+fallbacks set the executor wait state only for CADENCE_WAIT; ACCESS_CLEARED, REJECTED and ordinary
+NO_PROGRESS retain their previous fallback behavior:
 
 - the normal no-waypoint pipeline;
 - the global-route budget fallback inside `elegirObjetivoLocal`;
