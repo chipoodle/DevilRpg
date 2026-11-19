@@ -1628,9 +1628,9 @@ public final class NavExecutor {
                 if (escalonTransitable != null && dentroDeLaVentana(yo, escalonTransitable)
                         && esPieValido(escalonTransitable)) {
                     globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                    NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                    globalSearchStart = null;
+                    globalSearchLastExpansions = 0;
                     globalMision = null;
                     globalDesde = null;
                     objetivoPermiteConstruccion = false;
@@ -1754,9 +1754,9 @@ public final class NavExecutor {
             }
             objetivoPermiteConstruccion = false;
             globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+            NavPlanner.cancelGlobalSearch(globalSearchHandle);
+            globalSearchStart = null;
+            globalSearchLastExpansions = 0;
             globalDesde = null;
             ultimoEscalonDeObjetivo = "ruta global sin waypoint de pie VALIDO dentro de la ventana desde "
                     + yo.toShortString() + (descartados ? " (habia waypoints pero el mundo cambio)" : "")
@@ -1863,9 +1863,9 @@ public final class NavExecutor {
         if (stairOutcome != StairBuildResult.STAIR_PLACED) {
             if (stairOutcome == StairBuildResult.ACCESS_CLEARED) {
                 globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
                 globalMision = null;
                 globalDesde = null;
                 objetivoPermiteConstruccion = false;
@@ -1886,9 +1886,9 @@ public final class NavExecutor {
             // construirEscalonHacia tambien puede haber despejado una obstruccion minable del corredor.
             // No hay escalon pendiente: invalidar la ruta para recalcular desde el mundo ya modificado.
             globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+            NavPlanner.cancelGlobalSearch(globalSearchHandle);
+            globalSearchStart = null;
+            globalSearchLastExpansions = 0;
             globalMision = null;
             globalDesde = null;
             objetivoPermiteConstruccion = false;
@@ -1913,9 +1913,9 @@ public final class NavExecutor {
         }
         if (!dentroDeLaVentana(yo, escalonTransitable) || !esPieValido(escalonTransitable)) {
             globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+            NavPlanner.cancelGlobalSearch(globalSearchHandle);
+            globalSearchStart = null;
+            globalSearchLastExpansions = 0;
             globalMision = null;
             globalDesde = null;
             ultimoEscalonDeObjetivo = causa + ": escalon verificado sin celda de pies local valida";
@@ -2699,9 +2699,9 @@ public final class NavExecutor {
                 this.route = null;
                 this.routeIndex = 0;
                 this.globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
                 this.globalDesde = null;
                 this.state = NavState.PLANNING;
                 this.nextPlanAt = 0L;
@@ -2736,9 +2736,9 @@ public final class NavExecutor {
             // A2 Stage 7C · mision nueva: tambien se reinicia el presupuesto de re-estadios y la ruta global.
             reestadiosGlobales = 0;
             globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+            NavPlanner.cancelGlobalSearch(globalSearchHandle);
+            globalSearchStart = null;
+            globalSearchLastExpansions = 0;
             globalDesde = null;
         }
         objectiveSubmissions++;
@@ -3590,9 +3590,9 @@ public final class NavExecutor {
                             + " reason=precondition_changed_before_route_acceptance");
                 }
                 globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
                 globalMision = null;
                 globalDesde = null;
                 objetivoTransicionLocal = null;
@@ -3610,9 +3610,9 @@ public final class NavExecutor {
                             + " reason=local_route_does_not_end_at_attack_stand");
                 }
                 globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
                 globalMision = null;
                 globalDesde = null;
                 objetivoTransicionLocal = null;
@@ -4428,9 +4428,9 @@ public final class NavExecutor {
                 routeIndex = 0;
                 plannedFrom = null;
                 globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
                 globalMision = null;
                 globalDesde = null;
                 nextDropRecoveryPlanAt = 0L;
@@ -4652,9 +4652,9 @@ public final class NavExecutor {
                 limpiarRecuperacionOrigenDrop();
                 plannedFrom = null;
                 globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
                 globalMision = null;
                 globalDesde = null;
                 route = null;
@@ -4946,9 +4946,9 @@ public final class NavExecutor {
                         routeIndex = 0;
                         plannedFrom = null;
                         globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                        NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                        globalSearchStart = null;
+                        globalSearchLastExpansions = 0;
                         globalMision = null;
                         globalDesde = null;
                         nextDropRecoveryPlanAt = 0L;
@@ -5039,9 +5039,9 @@ public final class NavExecutor {
                             routeIndex = 0;
                             lastRouteSignature = 0;
                             globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                            NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                            globalSearchStart = null;
+                            globalSearchLastExpansions = 0;
                             globalMision = null;
                             globalDesde = null;
                             state = NavState.PLANNING;
@@ -5081,9 +5081,9 @@ public final class NavExecutor {
                     routeIndex = 0;
                     lastRouteSignature = 0;
                     globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                    NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                    globalSearchStart = null;
+                    globalSearchLastExpansions = 0;
                     globalDesde = null;
                     state = NavState.PLANNING;
                     return;
@@ -5285,9 +5285,9 @@ public final class NavExecutor {
                     objective = misionFinal == null ? null : misionFinal.immutable();
                     plannedFrom = null;
                     globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                    NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                    globalSearchStart = null;
+                    globalSearchLastExpansions = 0;
                     globalDesde = null;
                     state = NavState.PLANNING;
                     ultimaAccionDeRuta = actionPos.toShortString() + ":" + node.transition()
@@ -5451,9 +5451,9 @@ public final class NavExecutor {
                 plannedFrom = null;
                 lastRouteSignature = suspendedSignature;
                 globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
                 globalMision = null;
                 globalDesde = null;
                 nodoSeguido = null;
@@ -5742,9 +5742,9 @@ public final class NavExecutor {
                 reestadiosGlobales++;
                 recoveryActions = 0;
                 globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
                 globalDesde = null;
                 route = null;
                 routeIndex = 0;
