@@ -1,7 +1,7 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS STATIC VALIDATION
 
 **Branch:** `feature/autonomous-village`
-**Production implementation SHA:** `ec35c910f894e722a445f90ad24af4033ed6b158`
+**Production implementation SHA:** `9966f807b2fbb13552545cdd181f2f034c7ecbaa`
 **Current implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`
 **Previous runtime evidence:** `a2n-20261119-011138`, BLOCKED by global-planner watchdog after 8/8 spawn.
 
