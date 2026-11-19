@@ -55,11 +55,17 @@ and maps it directly to child-server JVM system property:
 devilrpg.a2n.traceGlobalSearch=true
 ```
 
-The existing `a2nTraceNav` mapping remains available for `devilrpg.a2n.traceNav`. Use the tracked wrapper `tools/a2n/lanzar-phase55-diagnostico.ps1` for a future authorized raid run. It removes stale values for the two trace options, sets both to `true` in `JDK_JAVA_OPTIONS`, sets both `ORG_GRADLE_PROJECT_*` values (which Gradle reads as project properties), delegates to the existing ignored local launcher, then restores the caller's environment. Example invocation (only after fresh runtime authorization):
+The existing `a2nTraceNav` mapping remains available for `devilrpg.a2n.traceNav`. Use the tracked wrapper `tools/a2n/lanzar-phase55-diagnostico.ps1` for a future authorized raid run. It removes stale values for the two trace options, sets both to `true` in `JDK_JAVA_OPTIONS`, sets both `ORG_GRADLE_PROJECT_*` values (which Gradle reads as project properties), delegates to the existing ignored local launcher, then restores the caller's environment. The wrapper sets these JVM options:
 
 ```text
 -Ddevilrpg.a2n.traceNav=true
 -Ddevilrpg.a2n.traceGlobalSearch=true
+```
+
+Future authorized invocation:
+
+```powershell
+.\\tools\\a2n\\lanzar-phase55-diagnostico.ps1 -Modo raid -LimiteMinutos 18
 ```
 
 At `ServerStartedEvent`, A2NavHarness logs the effective values from the actual server process:
