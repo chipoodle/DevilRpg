@@ -5256,3 +5256,10 @@ run/saves; hashes match; structural verification only.
 - Static PASS; tests 8/6 now in normal gate. CADENCE_WAIT validated (3595/3542, counters unchanged).
 - Anchor unexercised: 0 constructions/traversals/ANCHOR_REFRESH; A2 regressed from3/8, IDX5 lost entry.
 - Report: docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md. A2 OPEN.
+
+## 2026-11-18 — A2 Phase 52 stair/IDX5 forensics
+
+- Run `a2n-20261118-225649`; production `ea21466a`; A2 2/8 strict, C4 PASS [1,0,0].
+- IDX3: 397 builder calls, 380 cooldowns, 2340 candidates all occupied terrain; 0 placements/traversals.
+- IDX5: Phase50 t2 NO_PROGRESS->t3 MOVE; Phase51 t2 CADENCE_WAIT->zero MOVE_COMMAND. Causal link confirmed.
+- Report: docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md. A2 OPEN.

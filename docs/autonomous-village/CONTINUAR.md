@@ -1066,3 +1066,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - CADENCE_WAIT passes; monotonic anchor unexercised; A2 2/8, IDX5 regression.
 - Report: `docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md`.
+
+## 2026-11-18 — A2 Phase 52 stair/IDX5 forensics
+
+- IDX3 all candidates occupied geometry; IDX5 CADENCE_WAIT deferral blocks fallback/movement.
+- Report: `docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`. A2 OPEN.

@@ -1,4 +1,20 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 validation (FAIL)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 52 forensics
+
+**Production SHA:** `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
+**Current report:** `2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`.
+**RUN_ID:** `a2n-20261118-225649` (2/8 strict, C4 PASS `[1,0,0]`).
+
+- IDX3: 397 builder calls, 380 cooldowns, 2,340 candidates, **all rejected by occupied terrain**
+  (`celdaAire=false`); 0 placements/traversals. Not an anchor loop.
+- IDX5 regression: at t2 Phase50 returned NO_PROGRESS and moved at t3; Phase51 returns CADENCE_WAIT,
+  defers planning, and issues **zero MOVE_COMMAND**. Causal link confirmed.
+- Monotonic anchor remains runtime-unvalidated (no physical stair).
+- A2 OPEN at 2/8; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-18 A2 Phase 51 validation (FAIL)
+
 
 **Production SHA:** `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
 **Current report:** `2026-11-18-A2-PHASE51-VALIDATION.md`.
@@ -532,6 +548,7 @@ Read first, in order:
 79. `docs/autonomous-village/2026-11-18-A2-PHASE49A-STAIR-DIAGNOSTIC-INSTRUMENTATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE50-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md`
+82. `docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -659,9 +676,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Phase 52: get a runtime scenario that actually places/traverses stairs, then validate the monotonic
-   anchor. Investigate why CADENCE_WAIT now yields zero placements and why IDX5 lost its entry.
-2. Keep Phase44/41/46 frozen; no budget or predicate changes.
+1. Phase 53: make CADENCE_WAIT defer only the stair attempt while preserving a valid non-stair
+   fallback/route; diagnose IDX3's all-solid candidate field. Keep Phase44/41/46 frozen.
+2. Monotonic anchor still needs a physical placement/traversal; no budget/predicate changes.
 3. A2 OPEN at 2/8 strict; no Run 2 or 12k until five consecutive 8/8 strict. C4 PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)

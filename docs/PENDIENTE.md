@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 51 validation (FAIL)
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 52 forensics
 
 - Production implementation SHA: `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
 - Implementation report: `docs/autonomous-village/2026-11-18-A2-PHASE51-STAIR-WIRING-FIX.md`.
@@ -28,10 +28,12 @@
 > **A2 Phase50 (validación FAIL):** `ANCHOR_REFRESH` sigue asignando `blockPosition().below()` (93→94) y el cooldown sigue devolviendo `NO_PROGRESS`; `CADENCE_WAIT`/`A2_LOCAL_STAIR_WAIT` no aparecen. Los tests nuevos pasan sólo por tarea init, no están registrados en build.gradle. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE50-VALIDATION.md`.
 >
 > **A2 Phase51 (validación FAIL):** CADENCE_WAIT validado (3595 cooldowns, 3542 `A2_LOCAL_STAIR_WAIT`, contadores intactos), pero no hubo ninguna colocación/travesía (`ANCHOR_REFRESH=0`), por lo que el ancla monotónica queda INSUFFICIENT_EVIDENCE. A2 bajó a 2/8 estricto; IDX5 perdió la entrada. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE51-VALIDATION.md`.
+>
+> **A2 Phase52 (forense):** IDX3 tiene 397 llamadas, 2340 candidatos y 0 colocaciones porque todo candidato falla por terreno ocupado (`celdaAire=false`). IDX5: Phase50 t2 NO_PROGRESS y t3 MOVE_COMMAND; Phase51 t2 CADENCE_WAIT, cero MOVE_COMMAND. El deferral CADENCE_WAIT bloquea el fallback. Detalle: `docs/autonomous-village/2026-11-18-A2-PHASE52-STAIR-IDX5-FORENSICS.md`.
 
 > **Phase19 BREAK:** Harness pasó Gradle/lint/diff-check sobre `ecdfaff6`, pero no observó eventos BREAK runtime. ChatGPT corrigió la identidad del estado post-BREAK, el avance por proximidad, la ocupación exacta del stand y el traspaso del action target a la ruta local. Se añadieron `NavBreakGraphStateTest`, `NavBreakRoutePolicyTest` y el modo determinista `A2NavHarness -Da2n.mode=break-runtime`. Todo lo nuevo sigue **pendiente de validación Harness**. Detalle: `docs/autonomous-village/2026-11-16-PHASE19-BREAK-GRAPH-STATE-FIX.md`.
 
-> **A2:** último runtime evidenciado `a2n-20261118-215530`: 2/8 estrictos, 2/8 perímetro; C4 PASS `[1,0,0]`. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[1,0,0]`; save/reload OPEN.
+> **A2:** último runtime evidenciado `a2n-20261118-225649`: 2/8 estrictos, 2/8 perímetro; C4 PASS `[1,0,0]`. A2 OPEN. No ejecutar Run2 ni Full12K hasta cinco corridas consecutivas 8/8 estrictas `DENTRO-PARED`. **C4:** último PASS `[1,0,0]`; save/reload OPEN.
 
 # Estado de cola actualizado — 2026-11-12 22:43
 
