@@ -27,8 +27,12 @@ try {
         '-Ddevilrpg.a2n.traceNav=true',
         '-Ddevilrpg.a2n.traceGlobalSearch=true'
     )
-    $env:JDK_JAVA_OPTIONS = (@(($jdkOptions.Trim()), $requiredOptions) |
-        ForEach-Object { $_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ' '
+    $effectiveOptions = @()
+    if (-not [string]::IsNullOrWhiteSpace($jdkOptions.Trim())) {
+        $effectiveOptions += $jdkOptions.Trim()
+    }
+    $effectiveOptions += $requiredOptions
+    $env:JDK_JAVA_OPTIONS = $effectiveOptions -join ' '
 
     # Gradle convierte ORG_GRADLE_PROJECT_* en project properties; build.gradle las
     # propaga explícitamente al proceso runServer, sin depender del daemon padre.
