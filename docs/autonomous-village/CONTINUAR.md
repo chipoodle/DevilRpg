@@ -1,22 +1,13 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 compile correction — PENDING HARNESS
 
-**Production implementation SHA:** `9966f807b2fbb13552545cdd181f2f034c7ecbaa`.
-**Previous documentation checkpoint:** `924c62088e6efce9c8e1fcb39fdb76969f238cc8`.
-**Implementation report:** `2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
+- Corrected production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
+- Previous tested SHA `9966f807b2fbb13552545cdd181f2f034c7ecbaa` failed compilation: two local `BlockPos state` declarations redeclared parameter `GlobalSearchState state`.
+- ChatGPT renamed only those two locals and their two references to `routeState`. Commit `11ff43cd338d7a6222a146a2ed642a5546fb2910`; diff reviewed, only four lines in `NavPlanner.java`.
+- No algorithm/budget/policy/test changes. No tests or runtime executed by ChatGPT.
+- **Harness: STATIC ONLY** on the exact corrected SHA: diagnostics compile, `gradlew test` (confirm `NAV_PLANNER_STATE_TEST` runs), strict lint, diff-check. Report actual test output and assertion count. Preserve local work/worlds; do not modify production.
+- No Minecraft/A2 Run1/C4/Run2/Full12K authorization. A2 OPEN.
 
-Phase54B-R1 runtime `a2n-20261119-011138` validó fixture y spawn (289/289 chunks READY en 1 tick; 8/8 atacantes), pero el primer burst global A* activó watchdog de 60.04 s. A2 no tuvo resultado y no hay evidencia runtime de IDX5/IDX3.
-
-Phase55 cambia únicamente el planificador global:
-- A* reanudable con estado OPEN/CLOSED y predecesores persistido entre ticks.
-- Slice de 4 expansiones y máximo 8 extracciones OPEN por executor/tick.
-- Presupuesto global total existente intacto; no se amplía.
-- No se expone ruta parcial ni se consume presupuesto de fallos locales mientras la búsqueda está pendiente.
-- Fixture Phase54B no se modifica; colisión, soporte, protección, costos, heurística, radio y ventana vertical permanecen intactos.
-- Pruebas deterministas de equivalencia incremental/síncrona y límites agregadas a `NavPlannerStateTest`.
-
-**PENDING HARNESS STATIC VALIDATION** sobre el SHA exacto anterior: diagnostics compile, `gradlew test`, lint estricto y diff-check. Confirmar `NAV_PLANNER_STATE_TEST` y nuevas aserciones. Harness no debe modificar producción.
-
-No se ha ejecutado runtime. Esta autorización para implementar Phase55 NO autoriza un A2 Run1. Esperar revisión del reporte estático y autorización explícita separada. No C4 standalone, Run2 ni Full12K. A2 OPEN.
+---
 
 ---
 
