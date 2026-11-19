@@ -1,7 +1,7 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness routing (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**HEAD:** `e6da8accb0d68bb0b38376aa077258ea9e4d8a82`
+**HEAD:** `(ver HEAD exacto en docs/autonomous-village/NEXT-SESSION.md)`
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
 
 - Harness anterior BLOCKED correctamente: el destino `src/main/.../debug/A2NavHarness.java` existía y estaba
