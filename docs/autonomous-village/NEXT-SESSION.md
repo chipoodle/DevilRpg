@@ -1,13 +1,13 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 incremental global A* — PENDING HARNESS STATIC VALIDATION
 
 **Branch:** `feature/autonomous-village`
-**Production implementation SHA:** `f344f33ec122d7885aeb5669eb1f5e7126eadab1`
+**Production implementation SHA:** `ec35c910f894e722a445f90ad24af4033ed6b158`
 **Current implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`
 **Previous runtime evidence:** `a2n-20261119-011138`, BLOCKED by global-planner watchdog after 8/8 spawn.
 
 Phase55 implements resumable A*:
 - `NavGraphSearch.Session` retains OPEN/CLOSED, G scores, predecessor and route metadata across slices.
-- Strategic `NavPlanner.planGlobalIncremental` advances at 16 expansions / max 32 OPEN pops per executor per tick.
+- Strategic `NavPlanner.planGlobalIncremental` advances at 4 expansions / max 8 OPEN pops per executor per tick.
 - Existing hard total global expansion budget is unchanged (default 8,000; existing property clamp 8,000–32,000).
 - `NavExecutor` owns the search handle, remains PLANNING while pending, emits no partial route/movement and consumes no local stair failure counters.
 - Synchronous `planGlobal` compatibility and exact `planExact` path remain synchronous.
