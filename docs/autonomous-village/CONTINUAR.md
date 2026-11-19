@@ -1,6 +1,6 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 opt-in global A* diagnostics
 
-**Implementation SHA:** `1164004368a784a463293e4d6a9bc6c8fc144474`  
+**Implementation SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`  
 **Report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS.md`
 
 ChatGPT implemented bounded, opt-in first-expansion candidate diagnostics and global-search lifecycle events in `NavPlanner.java`. Enable both `-Ddevilrpg.a2n.traceNav=true` and `-Ddevilrpg.a2n.traceGlobalSearch=true`. Per-candidate events occur only for the first graph expansion of each new search. No movement behavior, graph edges, budgets, physical predicates, A2/C4 criteria, fixture or worlds were changed.
