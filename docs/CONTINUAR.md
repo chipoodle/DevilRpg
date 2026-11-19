@@ -1,3 +1,15 @@
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 BLOCKED
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
+**Validation:** `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`.
+**Documentation HEAD:** `ecaa4b28ddf991b409db2666dc3c896db7921d2d`.
+
+Static checks PASSed. A2 Run1 `a2n-20261118-233308` BLOCKED during fixture setup, before any attacker spawned: `A2NavHarness.prepararRaidFixture` spent 60.04 seconds in `ServerLevel.setChunkForced` while forcing a 17×17 chunk region. No IDX5 or route-preservation evidence; no A2 result; C4 not reached. No retry.
+
+Next action: investigate and stabilize only the diagnostic fixture (or use a pre-generated disposable world), with bounded non-blocking chunk preparation and explicit timeout/failure. Do not change navigation production, budgets, Phase41/44/46 or acceptance predicates. Once ready, request authorization for exactly one A2 Run1 on `656ce7d0...`. No Run2/Full12K before five consecutive 8/8 strict runs.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 (PENDING HARNESS)
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
