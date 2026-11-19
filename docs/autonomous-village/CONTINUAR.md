@@ -9,7 +9,7 @@
 - Static validation is pending exact SHA. ChatGPT has not run build/tests/lint.
 - IDX7, IDX8 and wrapper remain open; no runtime authorized. A2 OPEN.
 
-**Next:** Harness syncs fast-forward-only to the exact implementation SHA and runs compileJava, test, strict lint and diff-check. Preserve local/untracked work and worlds. Confirm both new/extended test counts and all existing policy tests. Stop after static validation.
+**Next:** Harness syncs fast-forward-only to the current branch tip descending from implementation SHA, records the actual tested HEAD, verifies the source blob SHAs in the implementation report, and runs compileJava, test, strict lint and diff-check. Preserve local/untracked work and worlds. Confirm both new/extended test counts and all existing policy tests. Stop after static validation.
 
 **Prohibited:** Minecraft, wrapper, runServer, A2, C4, Run2 and Full12K. No new runtime without explicit user authorization.
 
