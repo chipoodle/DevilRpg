@@ -1,15 +1,40 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 STATIC PASS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 fixture population forensics
 
-- Validated production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
-- Harness report: `2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`.
-- Diagnostics compile, Gradle tests, strict lint and diff-check: PASS on exact SHA.
-- `NAV_PLANNER_STATE_TEST`: OK, 54 executed assertions.
-- Slice: 4 expansions / at most 8 OPEN pops; hard global total expansion budget unchanged.
-- Harness did not modify production; local work preserved; worlds unchanged.
-- No runtime has run. A2 remains OPEN; the Phase54B-R1 watchdog cause now has a statically validated incremental-A* mitigation, but runtime effectiveness is unproven.
-- Next: ChatGPT reviews the implementation and prepares an evidence-focused, single A2 Run1 request. **No runtime until the user explicitly authorizes exactly one A2 Run1.** No C4 standalone, Run2 or Full12K.
+**Branch:** `feature/autonomous-village`  
+**Run:** `a2n-20261119-031255` — BLOCKED before attacker spawn  
+**Production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910` (unchanged)  
+**Harness documentation HEAD at blocked report:** `0181bd4e42dfb8f9f70136c1bca4986a42fdbb4d`  
+**Source-forensics report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-FORENSICS.md`
 
+## Verified runtime facts
 
+- Chunk loader: 289/289 READY in 1 tick.
+- Fixture population gate: 14 villagers, 4 founders/guards, 10 professionals vs 12 expected; roster lacks SHEPHERD and MASON.
+- Zero attackers spawned; no A2 result, no A* progression, no IDX5/IDX3 evidence, no watchdog.
+- Static baseline remains PASS on production SHA `11ff43cd`: compile, Gradle tests, 54 `NAV_PLANNER_STATE_TEST` assertions, strict lint and diff-check.
+- The one authorized A2 Run1 is consumed. No retry, Run2, standalone C4 or Full12K.
+
+## Source-review correction
+
+The four `NONE` professions described in the Harness report are **expected founder guards**, not four missing worker professions: `spawnGuardiasFundadores` creates four founders with null profession, and the gate classifies guards before professionals.
+
+The actual mismatch is 4 founders + 10 professionals rather than 4 founders + 12 professionals. The missing roster entries map to worker slot 5 SHEPHERD (offset +47,0,0) and slot 11 MASON (offset +33,0,-22). This does not yet establish whether either worker failed to spawn, died/was removed, changed profession during maintenance, or fell outside the final query.
+
+Source observability gap: `spawnVillagers` attempts all 12 slots, but `spawnOneVillager` returns void; `spawnVillagerAt` can return null on entity creation/insertion failure without a slot-specific failure log. `huecoLibre` also falls back to its original position if no clear two-block position is found. The report contains only the final population snapshot, not a before/after UUID/slot diff.
+
+## Next action — Harness, read-only only
+
+Inspect existing artifacts for `a2n-20261119-031255` only, following the detailed checklist in `2026-11-19-A2-PHASE55-POPULATION-FORENSICS.md`:
+
+- Extract spawn, warning, death/suffocation/removal, profession-reset and maintenance logs.
+- Determine whether SHEPHERD/MASON spawned and whether their entities later died/disappeared.
+- If the existing disposable world is available and safe, inspect entity NBT read-only; do not load-and-save or mutate it.
+- Return a per-slot table for all 12 worker slots, UUIDs, positions, profession/XP/age/health and terminal evidence; list the four expected founders separately.
+- Mark missing evidence UNKNOWN. Do not infer a cause from the final roster alone.
+
+**No Minecraft launch or runtime. No world edits. No production edits by Harness.** ChatGPT will implement any required production correction after the read-only evidence.
+
+A2 remains OPEN. Phase55 runtime behavior remains unmeasured.
 
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
