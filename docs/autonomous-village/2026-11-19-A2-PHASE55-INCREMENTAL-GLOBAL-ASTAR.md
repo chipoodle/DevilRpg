@@ -1,3 +1,14 @@
+# Phase55 compile correction — 2026-11-19
+
+**Correction commit / corrected production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
+**Previous static validation:** FAIL at `9966f807b2fbb13552545cdd181f2f034c7ecbaa`; see `2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`.
+
+Harness identified two illegal local declarations named `BlockPos state` inside `advanceGlobalSearch(..., GlobalSearchState state, ...)`. Both were renamed to `routeState`; both `routePosition` calls now use that renamed local. The reviewed source diff is limited to those four identifier/reference changes in `NavPlanner.java`. No search behavior, expansion limits, budgets, route policy, or tests changed.
+
+**Status: FIX PUBLISHED — PENDING HARNESS STATIC REVALIDATION.** ChatGPT did not execute compile, tests, lint, diff-check, or runtime. Harness must validate the exact corrected SHA above. Static only; no Minecraft/A2/C4 runtime authorization.
+
+---
+
 # A2 Phase55 — incremental global A* implementation
 
 **Status: IMPLEMENTED — PENDING HARNESS STATIC VALIDATION. No runtime authorized or executed.**
