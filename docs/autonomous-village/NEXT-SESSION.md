@@ -1,13 +1,63 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 routing static FAIL
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**Tested HEAD:** `c2e44f78c09c2a4819860a75e5db171140e54b52`
-**Validation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`
+**Harness failure tested HEAD:** `c2e44f78c09c2a4819860a75e5db171140e54b52`
+**Source correction commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-REMOVE-OBSOLETE-NAVFEATURE-HARNESS-DEPENDENCY.md`
+**Implementation report commit:** `20991bfaa05683de8c458035127e7edce7f12c0d`
 
-- Routing PASS: compile selected `tools/a2n/A2NavHarness.java`, legacy untouched.
-- Compile FAIL: 7 × `cannot find symbol: class NavFeature` at lines 1323-1328 and 1737.
-- Tests FAIL with same compile errors; NAV test NOT RUN. Lint/diff PASS.
-- No runtime. A2 OPEN; no retry/Run2/Full12K.
+## Last validation evidence
+
+Harness run `phase55-routing-static-20261119-1400`:
+- Gradle routing PASS: javac selected `tools/a2n/A2NavHarness.java`, not the legacy file.
+- `compileJava` FAIL: seven missing-symbol errors for `NavFeature`.
+- `gradlew test` FAIL at the same compile errors; `NAV_PLANNER_STATE_TEST` NOT RUN.
+- Strict lint PASS; `git diff --check` PASS.
+- No runtime, world or fixture modification. Harness left production untouched.
+
+## Root cause and correction
+
+The missing `NavFeature` was deliberately deleted in
+`docs/autonomous-village/2026-11-15-NAVEXECUTOR-SINGLE-AUTHORITY-MIGRATION.md`, along with the old
+`-Ddevilrpg.nav.custom=true` fallback to `AggressiveZombiePathPlanner`. The current architecture has one
+movement authority: `AggressiveZombieEntity` constructs `NavExecutor` and ticks it on each server-side
+`aiStep`. This is independently verified in current source. Do not recreate `NavFeature` or its old flag.
+
+ChatGPT removed obsolete compile-time references from canonical `tools/a2n/A2NavHarness.java`:
+- Raid log now says `navCustomEfectivo=true modo=NavExecutor-single-authority featureFlag=eliminado`.
+- Trace header identifies `NavExecutor-single-authority`.
+- No production Java, `NavPlanner.java`, gameplay behavior, budgets, policies, fixtures, worlds, A2/C4 criteria
+  or Gradle routing changed.
+- The legacy harness remains untouched.
+
+Verified source blob after correction:
+`914d26da4f9a553f43936812ddc303ed56a24243`.
+
+## Next action — Harness STATIC ONLY
+
+Fast-forward-only sync to the current remote tip containing source commit
+`a029e4eb790109df94acb1e07f8cac52f8b88ff8`. Preserve local-only changes, untracked files, backups and worlds;
+stop on divergence or overwrite risk.
+
+Verify:
+- canonical source blob `914d26da4f9a553f43936812ddc303ed56a24243` and no compile-time `NavFeature` /
+  `customNavigation()` references;
+- legacy harness blob `28ea2fb8ce970326c1157046dcb59e3d1cc5892d`;
+- `NavPlanner.java` blob `5666e42693fe2e90dff1d2ac1004b59b9b62d7cd`;
+- Gradle routing and wrapper unchanged.
+
+Run exactly:
+- `.\gradlew.bat compileJava --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
+- `.\gradlew.bat test --info -Pa2nDiagnostics=true -Pa2nPopulationQueryHarness=true -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`
+- `python tools\lint_aldea.py --strict`
+- `git diff --check`
+
+Record exact tested SHA, commands, exit codes, test names/assertions (especially NAV_PLANNER_STATE_TEST, 54 assertions),
+logs, source selection, worktree and untracked preservation. Verify NeoForge APIs used by the population fix.
+Harness must not modify production source.
+
+**STATIC ONLY. Do not launch Minecraft, wrapper, runServer, A2, C4, Run2 or Full12K.** Runtime authorization is
+consumed. Stop after static validation regardless of result. A2 remains OPEN.
 
 ---
 
