@@ -7,7 +7,7 @@
 - Branch: `feature/autonomous-village`
 - Baseline documentation HEAD: `924c62088e6efce9c8e1fcb39fdb76969f238cc8`
 - Production baseline: `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`
-- **Implementation SHA:** `ec35c910f894e722a445f90ad24af4033ed6b158`
+- **Implementation SHA:** `9966f807b2fbb13552545cdd181f2f034c7ecbaa`
 - Phase54B-R1 runtime: `a2n-20261119-011138`, BLOCKED by 60.04 s global-planner watchdog after 8/8 spawn.
 - This implementation changes production navigation only; Harness must validate the published SHA. ChatGPT did not run Gradle, lint, diagnostics compilation, or Minecraft runtime.
 
@@ -32,7 +32,7 @@ The synchronous strategic global search expanded up to the existing hard total e
 - Added `planGlobalIncremental(...)`. The graph adapter and all existing edge validation rules are created once and retained with the A* frontier.
 - Strategic global planning advances at **4 expansions per server tick**. The existing total budget (default 8,000; existing property clamp 8,000–32,000) is not increased.
 - A changed level, origin, mission, search mode, radius, vertical range or total budget invalidates the retained search and starts a fresh one.
-- Synchronous `planGlobal` and exact-goal `planExact` retain their prior synchronous contracts.
+- Synchronous `planGlobal` and exact-goal `planExact` retain their prior synchronous contracts, including repeated bounded queue-pop slices when stale OPEN entries are present.
 
 ### 3. Executor integration — `NavExecutor`
 
