@@ -1,4 +1,25 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 obsolete NavFeature dependency removed
+# CURRENT CHECKPOINT — 2026-11-19 A2 P0 fixes (STATIC VALIDATION PENDING)
+
+La continuación vigente es `docs/autonomous-village/NEXT-SESSION.md`.
+**Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`.
+**Informe:** `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`.
+
+ChatGPT implementó dos correcciones P0 basadas en el forense de Run1:
+
+- IDX3/IDX5: repetir el mismo objetivo local inutilizable ya no consume otro escalón; se contabiliza como fallo acotado.
+- IDX4: la ausencia de candidatos ya no reinicia el cooldown entre bloques; `CADENCE_WAIT` queda reservado al decremento real del cooldown.
+
+Se añadieron políticas puras y pruebas: `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST` (5 assertions) y `STAIR_BUILD_RESULT_TEST` (12 assertions). La nueva prueba está registrada en `policyTest`.
+
+**Pendiente:** Harness debe validar exactamente `b41e9687a4be74d24a671340ac41b7e3f1817045` con compileJava, test, lint estricto y diff-check. ChatGPT no ha ejecutado esas pruebas. No declarar PASS antes del reporte Harness.
+
+IDX7, IDX8 y el wrapper siguen pendientes. No se modificaron presupuestos, cooldowns, anclas, geometría, criterios ni mundos.
+
+**Prohibido:** Minecraft, wrapper, runServer, A2, C4, Run2 y Full12K. La autorización runtime está consumida. A2 OPEN.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 obsolete NavFeature dependency removed
 
 La continuación vigente es `docs/autonomous-village/NEXT-SESSION.md`.
 **Source implementation commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
