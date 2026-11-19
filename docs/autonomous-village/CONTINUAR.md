@@ -1,3 +1,16 @@
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 opt-in global A* diagnostics
+
+**Implementation SHA:** `1164004368a784a463293e4d6a9bc6c8fc144474`  
+**Report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS.md`
+
+ChatGPT implemented bounded, opt-in first-expansion candidate diagnostics and global-search lifecycle events in `NavPlanner.java`. Enable both `-Ddevilrpg.a2n.traceNav=true` and `-Ddevilrpg.a2n.traceGlobalSearch=true`. Per-candidate events occur only for the first graph expansion of each new search. No movement behavior, graph edges, budgets, physical predicates, A2/C4 criteria, fixture or worlds were changed.
+
+**Next — Harness STATIC ONLY:** validate exact SHA `1164004368a784a463293e4d6a9bc6c8fc144474` with diagnostics compile/compileJava, `gradlew test`, `lint_aldea.py --strict`, and `git diff --check`. Report tested SHA, commands, exit codes and outputs. Harness must not modify production.
+
+**No runtime authorization.** Phase55 Run1 authorization was consumed by `a2n-20261119-093456`; no retry, Run2, standalone C4 or Full12K. A2 remains OPEN.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 fixture population forensics
 
 **Branch:** `feature/autonomous-village`  
