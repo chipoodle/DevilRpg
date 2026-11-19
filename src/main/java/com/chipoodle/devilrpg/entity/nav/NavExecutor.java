@@ -1174,6 +1174,8 @@ public final class NavExecutor {
     /** True while the retained strategic A* frontier is being advanced across server ticks. */
     private boolean globalSearchPending;
     private final NavPlanner.GlobalSearchHandle globalSearchHandle = new NavPlanner.GlobalSearchHandle();
+    private int globalSearchLastExpansions;
+    private long lastGlobalPendingTraceTick = Long.MIN_VALUE;
     private BlockPos globalMision;
     private BlockPos globalDesde;
     private int globalExpansionesTotal;
@@ -1470,16 +1472,23 @@ public final class NavExecutor {
                 && globalDesde.distSqr(yo) <= CACHE_GLOBAL_SQR) {
             return globalCache;
         }
+        boolean continuing = globalCache != null && globalCache.pending()
+                && mision.equals(globalMision) && globalDesde != null
+                && globalDesde.distSqr(yo) <= CACHE_GLOBAL_SQR;
+        if (!continuing) globalSearchLastExpansions = 0;
         NavPlanner.GlobalResult r = NavPlanner.planGlobalIncremental(mob.level(), mob, yo, mision,
                 RADIO_GLOBAL_DE_BUSQUEDA, VENTANA_VERTICAL_GLOBAL, MAX_EXPANSIONES_GLOBALES, policies, construidas,
                 exclusionesDescenso, exclusionesBreak, globalSearchHandle);
-        globalExpansionesTotal += r.expansions();
+        globalExpansionesTotal += Math.max(0, r.expansions() - globalSearchLastExpansions);
+        globalSearchLastExpansions = r.pending() ? r.expansions() : 0;
         globalCache = r;
         globalMision = mision;
         globalDesde = yo.immutable();
         ultimoGlobalDiag = r.summary();
-        com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} RUTA GLOBAL: {}", mob.getId(),
-                r.summary());
+        if (!r.pending()) {
+            com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} RUTA GLOBAL: {}", mob.getId(),
+                    r.summary());
+        }
         return r;
     }
 
@@ -1588,9 +1597,12 @@ public final class NavExecutor {
         if (global.pending()) {
             globalSearchPending = true;
             ultimoEscalonDeObjetivo = global.summary();
-            if (NavTrace.on()) {
+            long traceTick = mob.level().getGameTime();
+            if (NavTrace.on() && (lastGlobalPendingTraceTick == Long.MIN_VALUE
+                    || traceTick - lastGlobalPendingTraceTick >= 20L)) {
+                lastGlobalPendingTraceTick = traceTick;
                 NavTrace.ev("NAV_GLOBAL_SEARCH_PENDING", "uuid=" + mob.getUUID()
-                        + " tick=" + mob.level().getGameTime() + " " + global.summary());
+                        + " tick=" + traceTick + " " + global.summary());
             }
             return null;
         }
