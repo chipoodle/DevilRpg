@@ -131,14 +131,19 @@ sourceSets.test {
 // diagnostico con `-Pa2nDiagnostics=true`. El fuente se conserva intacto y el classpath normal
 // (runClient/runServer) no contiene ninguna clase de `com.chipoodle.devilrpg.debug`.
 def includeA2Diagnostics = providers.gradleProperty('a2nDiagnostics').getOrElse('false') == 'true'
+def useA2PopulationQueryHarness = providers.gradleProperty('a2nPopulationQueryHarness').getOrElse('false') == 'true'
 def includeA2ProbeOnly = providers.gradleProperty('a2nProbeOnly').getOrElse('false') == 'true'
+
+if (useA2PopulationQueryHarness && !includeA2Diagnostics) {
+    throw new GradleException('a2nPopulationQueryHarness requires -Pa2nDiagnostics=true')
+}
 def includeA4Lab = providers.gradleProperty('a4nLab').getOrElse('false') == 'true'
 sourceSets.main {
     java {
         if (!includeA2Diagnostics) {
             exclude 'com/chipoodle/devilrpg/debug/**'
         } else {
-            // The C4 server run loads only the canonical A2NavHarness; other debug subscribers
+            // The C4 server run loads only the selected A2NavHarness; other debug subscribers
             // must not compete for startup, ticks, worlds, or shutdown.
             exclude 'com/chipoodle/devilrpg/debug/A2EntryProbe.java'
             exclude 'com/chipoodle/devilrpg/debug/A2FoundationBootstrap.java'
@@ -150,6 +155,13 @@ sourceSets.main {
             exclude 'com/chipoodle/devilrpg/debug/ForestryTaskBoundaryProbe.java'
             exclude 'com/chipoodle/devilrpg/debug/N4GoalLab.java'
             exclude 'com/chipoodle/devilrpg/debug/R3TerrainLab.java'
+        }
+        if (useA2PopulationQueryHarness) {
+            // Phase55 population-query diagnostic: compile the maintained canonical source from
+            // tools/a2n, while preserving (and excluding only from this opt-in build) the older
+            // tracked debug harness. Other diagnostic builds continue using the legacy source.
+            exclude 'com/chipoodle/devilrpg/debug/A2NavHarness.java'
+            sourceSets.main.java.srcDir file('tools/a2n')
         }
         if (includeA2ProbeOnly) {
             // Probe-only diagnostic: ArenaFoundationProbe may load, but no A2 harness/probe entry point.
