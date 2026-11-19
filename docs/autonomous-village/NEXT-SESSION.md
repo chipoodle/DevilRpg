@@ -1,3 +1,19 @@
+# CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 runtime BLOCKED
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
+**Validation report:** `2026-11-18-A2-PHASE53-VALIDATION.md`.
+**Run:** `a2n-20261118-233308` — BLOCKED before attacker spawn.
+**Documentation HEAD:** `ecaa4b28ddf991b409db2666dc3c896db7921d2d`.
+
+- Static validation PASS on exact production SHA: Gradle tests (including stair policy 8/6), strict lint, diff check, diagnostics compile.
+- Runtime stopped in `A2NavHarness.prepararRaidFixture` at `ServerLevel.setChunkForced` (line 3074); watchdog reported a 60.04-second server tick. No attackers spawned.
+- Therefore Phase53 route preservation and IDX5 remain INSUFFICIENT_EVIDENCE; no A2 result and C4 was not reached. No retry was run.
+- A2 remains OPEN. The next task is fixture-only investigation: understand the 17×17 forced-chunk operation and determine a safe bounded/pre-generated disposable fixture path. Do not edit navigation production code or weaken test criteria.
+- After fixture repair, request explicit authorization for exactly one A2 Run1 on production SHA `656ce7d0...`. Do not rerun before authorization.
+- No Run2/Full12K until five consecutive 8/8 strict `DENTRO-PARED` runs. Phase41/44/46, budgets and physical predicates remain unchanged.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-18 A2 Phase 53 validation BLOCKED
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
