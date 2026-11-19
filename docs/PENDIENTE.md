@@ -1,12 +1,13 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 runtime BLOCKED (fixture)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 fixture population forensics
 
-- Corrected production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
-- Previous SHA `9966f807b2fbb13552545cdd181f2f034c7ecbaa` failed compile because two `BlockPos state` locals redeclared parameter `GlobalSearchState state`.
-- Fix: rename both locals and corresponding `routePosition` arguments to `routeState`. Correction commit changes only four lines in `NavPlanner.java`.
-- The failed R1 compile prevented test execution; Harness R2 subsequently executed the registered test with 54 assertions, OK.
-- **Harness R2 PASS:** compile/test/lint/diff PASS en `11ff43cd`; `NAV_PLANNER_STATE_TEST` ejecutó 54 aserciones (`OK`). Slice4/pops8, presupuesto total sin cambios. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`.
-- **Run1 autorizado `a2n-20261119-031255` BLOCKED:** cargador 289/289 READY en1 tick, pero fixture population 14 villagers/10 professionals vs 12 esperados; 0 atacantes, sin A2/A*/IDX5. No retry. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-RUNTIME-BLOCKED.md`.
-- ChatGPT did not run tests/runtime. No A2 Run1, C4, Run2, Full12K. A2 OPEN.
+- Production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910` (unchanged).
+- Run `a2n-20261119-031255`: BLOCKED before attackers; 289/289 chunks READY in 1 tick; population 14 = 4 founder guards + 10 professionals, expected 12 workers.
+- Four `NONE` professions are expected null-profession founder guards, not evidence of four lost worker jobs.
+- Missing roster professions: SHEPHERD slot 5 (+47,0,0) and MASON slot 11 (+33,0,-22). Exact failure point remains UNKNOWN.
+- Source review: all 12 worker slots are iterated, but spawn API currently hides per-slot success/failure; spawn can return null without slot-specific evidence. Final report lacks before/after entity snapshots.
+- Detailed checklist: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-FORENSICS.md`.
+- Next: Harness read-only inspection of existing logs and safe read-only entity NBT. No runtime, no world mutation, no production edits by Harness.
+- Single Run1 authorization consumed. No retry, Run2, C4 standalone or Full12K. A2 OPEN; Phase55 runtime unmeasured.
 
 ---
 
