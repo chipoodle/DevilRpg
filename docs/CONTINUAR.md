@@ -2,7 +2,7 @@
 
 La continuación vigente está en `docs/autonomous-village/NEXT-SESSION.md`.
 
-- Production implementation SHA: `ec35c910f894e722a445f90ad24af4033ed6b158`.
+- Production implementation SHA: `9966f807b2fbb13552545cdd181f2f034c7ecbaa`.
 - Informe: `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
 - Phase54B-R1 confirmó fixture PASS (289/289 chunks en 1 tick, 8/8 spawn), pero el servidor murió en el primer burst A* global por watchdog 60.04 s. Sin resultado A2 ni evidencia IDX5/IDX3.
 - Phase55 convierte el A* estratégico en reanudable: 4 expansiones / máximo 8 pops OPEN por executor/tick, conservando la frontera y predecesores. El presupuesto total global permanece igual.
