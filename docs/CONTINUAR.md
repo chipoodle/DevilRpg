@@ -5,15 +5,13 @@ La continuación vigente está en `docs/autonomous-village/NEXT-SESSION.md`.
 - Production implementation SHA: `ec35c910f894e722a445f90ad24af4033ed6b158`.
 - Informe: `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
 - Phase54B-R1 confirmó fixture PASS (289/289 chunks en 1 tick, 8/8 spawn), pero el servidor murió en el primer burst A* global por watchdog 60.04 s. Sin resultado A2 ni evidencia IDX5/IDX3.
-- Phase55 convierte el A* estratégico en reanudable: 16 expansiones / máximo 32 pops OPEN por executor/tick, conservando la frontera y predecesores. El presupuesto total global permanece igual.
+- Phase55 convierte el A* estratégico en reanudable: 4 expansiones / máximo 8 pops OPEN por executor/tick, conservando la frontera y predecesores. El presupuesto total global permanece igual.
 - Las búsquedas pendientes no publican rutas parciales, no envían movimiento y no consumen contadores locales de fallo/escalera.
 - Fixture, geometría, colisión, soporte, protección, heurística, radio, costos y criterios A2/C4 permanecen intactos.
 
 **Harness debe ejecutar STATIC ONLY** sobre el SHA exacto: diagnostics compile, `gradlew test`, lint estricto y diff-check; reportar hash y confirmar las nuevas aserciones de `NAV_PLANNER_STATE_TEST`. No modificar producción ni iniciar Minecraft/A2/C4. No hay autorización runtime; solicitarla por separado tras revisión estática.
 
 A2 permanece OPEN. No Run2/Full12K ni C4 standalone.
-
----
 
 ---
 
