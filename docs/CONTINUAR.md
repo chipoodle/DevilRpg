@@ -5415,3 +5415,9 @@ run/saves; hashes match; structural verification only.
 - Canonical tools harness selected; legacy untouched; NavFeature only comment.
 - compile/test/lint/diff PASS; NAV_PLANNER_STATE_TEST 54 assertions; no runtime.
 - Report: docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-19 — A2 Diagnostic Run1 post-Phase55
+
+- Run a2n-20261119-151818: JVM_TRACE OK; fixture 16/16,8 spawn; C4 PASS.
+- A2 3/8 strict (IDX1/2/6, all died),3/8 perimeter; IDX3/5 cap64, IDX4 CADENCE, IDX7 no placement, IDX8 PLANNING.
+- No watchdog; no retry. Report: docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md. A2 OPEN.

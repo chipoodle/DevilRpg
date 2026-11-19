@@ -1,10 +1,11 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 NavFeature removal static PASS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Diagnostic Run1 post-Phase55
 
 **Branch:** `feature/autonomous-village`
 **Source implementation commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-REMOVE-OBSOLETE-NAVFEATURE-HARNESS-DEPENDENCY.md`
 
 - **Harness PASS:** canonical seleccionado, legacy intacto. NavFeature solo en comentario. compile/test/lint/diff OK; NAV_PLANNER_STATE_TEST 54 aserciones. Sin runtime. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`.
+- **A2 Diagnostic Run1 `a2n-20261119-151818` FAIL:** JVM_TRACE OK, fixture PASS (16/16,8 spawn), A2 3/8 estricto (IDX1/2/6) y 3/8 perímetro; los 3 estrictos murieron; C4 PASS. IDX3/5 tope escalones64/64, IDX4 CADENCE sin candidato, IDX7 sin colocación, IDX8 PLANNING. Sin watchdog. Sin retry. Detalle: `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`.
 
 - Harness report `phase55-routing-static-20261119-1400`: routing PASS, compile/test FAIL due seven stale references
   to `NavFeature`; NAV_PLANNER_STATE_TEST NOT RUN; strict lint and diff-check PASS.

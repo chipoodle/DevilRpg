@@ -1276,3 +1276,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - `b96f79f2` static PASS; canonical selected; no runtime.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-19 — A2 Diagnostic Run1 post-Phase55
+
+- Fixture/C4 PASS; A2 3/8 strict,3/8 perimeter; all strict entrants died.
+- Report: `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`. A2 OPEN.

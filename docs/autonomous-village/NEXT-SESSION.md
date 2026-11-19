@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 NavFeature removal static PASS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Diagnostic Run1 post-Phase55
 
 **Branch:** `feature/autonomous-village`
-**Tested HEAD:** `b96f79f2edde53ea1049ef3ae0fd9f9ea9d84fdd`
-**Validation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`
+**Run:** `a2n-20261119-151818`
+**Report:** `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`
+
+- JVM_TRACE confirmed both trace properties true.
+- Fixture PASS: AABB=16, joins=16, 12 professionals, 8/8 spawn.
+- A2 FAIL: 3/8 strict (IDX1/2/6), 3/8 perimeter, all 3 strict entrants died; C4 PASS.
+- IDX3/5 hit local stair cap 64/64; IDX4 CADENCE/no candidate; IDX7 no placement; IDX8 still PLANNING.
+- No watchdog. Authorization consumed; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 NavFeature removal static PASS
 
 - Canonical harness selected; legacy untouched.
 - NavFeature references eliminated (only a comment remains).
@@ -986,6 +996,7 @@ Read first, in order:
 95. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md`
 96. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`
 97. `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`
+98. `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1113,10 +1124,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Static gate is PASS on `b96f79f2`; request new explicit authorization for an A2 diagnostic Run1 with
-   both trace properties to exercise the new population census and `GLOBAL_*` telemetry.
-2. Do not change navigation/A2 criteria. Preserve fixture and worlds.
-3. A2 OPEN; no retry/Run2/Full12K.
+1. Analyze IDX3/IDX5 local stair cap `64/64`, IDX4 CADENCE/no candidate, IDX7 missing placement and
+   IDX8 unfinished global search.
+2. Do not change production without new instructions. No runtime without new explicit authorization.
+3. A2 OPEN; no Run2/Full12K. C4 PASS.
 
 ## Worlds (preserve; do not overwrite)
 
