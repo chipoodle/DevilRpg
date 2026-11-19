@@ -1254,3 +1254,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Population query omitted live SHEPHERD; no spawn or A* telemetry. No retry.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTIC-RUNTIME.md`. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 population fix static BLOCKED
+
+- Tracked debug harness conflicts with canonical; no overwrite allowed. Static compile not run.
+- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md`. A2 OPEN.

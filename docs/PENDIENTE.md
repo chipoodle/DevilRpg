@@ -1,9 +1,11 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population census fix (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population fix static BLOCKED
 
 **Branch:** `feature/autonomous-village`
 **Previous blocked runtime:** `a2n-20261119-114535` — authorization consumed; no retry.
 **Previous production SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-FIX.md`
+
+- **Harness BLOCKED:** `src/main/.../debug/A2NavHarness.java` ya existe, está trackeado y difiere del canónico `tools/a2n/A2NavHarness.java` (1102 líneas). No se sobrescribe/borra. Nuevo harness NO compilado. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md`.
 
 ## Implemented by ChatGPT
 

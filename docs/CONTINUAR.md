@@ -5413,3 +5413,9 @@ run/saves; hashes match; structural verification only.
 - Run a2n-20261119-114535: fixture population 15/11; SHEPHERD alive in NBT but omitted by query; 0 spawn.
 - No GLOBAL_* telemetry exercised; traceGlobalSearch absent from launcher JDK_JAVA_OPTIONS. Authorization consumed, no retry.
 - Report: docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTIC-RUNTIME.md. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 population fix static BLOCKED
+
+- `debug/A2NavHarness.java` tracked exists and differs 1102 lines from canonical tools source; overwrite/delete prohibited.
+- New harness not compiled/tested; gradle/wrapper source review PASS; lint/diff PASS; no runtime.
+- Report: docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md. A2 OPEN.

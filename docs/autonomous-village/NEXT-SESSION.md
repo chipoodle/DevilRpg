@@ -1,9 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population census fix (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population fix static BLOCKED
 
 **Branch:** `feature/autonomous-village`
-**Previous blocked runtime:** `a2n-20261119-114535` — authorization consumed; no retry.
+**HEAD:** `73f6f3df8ce4982b29f5cdd88651b44c02eb7eb9`
 **Previous production SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`
-**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-FIX.md`
+**Validation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md`
+
+- BLOCKED: `src/main/.../debug/A2NavHarness.java` already exists, is tracked, and differs from canonical
+  `tools/a2n/A2NavHarness.java` by 1102 lines. Overwrite/delete is prohibited.
+- Canonical new harness therefore was not compiled or tested.
+- Gradle trace mappings and wrapper pass source review; lint/diff PASS.
+- No runtime. A2 OPEN; no retry/Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 population census fix (PENDING)
 
 ## Implemented by ChatGPT
 
@@ -860,6 +870,7 @@ Read first, in order:
 92. `docs/autonomous-village/2026-11-19-A2-PHASE55-ASTAR-FIRST-EXPANSION-FORENSICS.md`
 93. `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS-STATIC-VALIDATION.md`
 94. `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTIC-RUNTIME.md`
+95. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -987,9 +998,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Fix/diagnose the population query omission (`getEntitiesOfClass` sees 15/11 while NBT has 16/12).
-2. Pass and verify both trace properties directly in `JDK_JAVA_OPTIONS` before any future diagnostic.
-3. New runtime requires explicit authorization. A2 OPEN; no retry/Run2/Full12K.
+1. ChatGPT must reconcile the tracked `debug/A2NavHarness.java` with canonical `tools/a2n/A2NavHarness.java`
+   or define a supported compile path, then publish a new HEAD.
+2. Re-run static validation only; no runtime authorization exists.
+3. A2 OPEN; no retry/Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 
