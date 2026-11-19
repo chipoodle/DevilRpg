@@ -87,7 +87,7 @@ These are expected outputs, **not execution results**. Harness must verify them.
 
 ## 5. Harness validation request
 
-Validate exact implementation SHA `0ed873e22946f70374a18a2c12108fff270b6f5b`:
+Validate exact implementation SHA `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`:
 
 1. Preserve local/untracked files, diagnostic artifacts and all worlds; synchronize by safe fast-forward only.
 2. Run:
