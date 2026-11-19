@@ -361,7 +361,7 @@ public final class NavPlanner {
                                           NavDropExclusionPolicy exclusiones,
                                           NavBreakExclusionPolicy exclusionesBreak) {
         return planGlobalInternal(level, mob, start, objetivo, maxRadio, verticalRange, maxExpansions,
-                policies, construidas, exclusiones, exclusionesBreak, false);
+                policies, construidas, exclusiones, exclusionesBreak, false, null);
     }
 
     /** Advances a retained strategic A* frontier by a bounded slice on each server tick. */
