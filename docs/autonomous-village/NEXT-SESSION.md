@@ -1,4 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B-R1 strict timeout
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase 54B-R1 runtime BLOCKED
+
+**Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
+**Current report:** `2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md`.
+**RUN_ID:** `a2n-20261119-011138` (BLOCKED: global planner watchdog after spawn).
+
+- Fixture validated: 289/289 tickets READY in 1 tick; village/wall/population checks PASS; 8/8 spawn.
+- Run then died in the first global A* burst (`NavPlanner/NavObstruction`) at 60.04 s. No A2 result;
+  IDX5 CADENCE route and IDX3 stair evidence remain INSUFFICIENT_EVIDENCE.
+- No retry authorized. A2 OPEN; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase 54B-R1 strict timeout
+
 
 **Production SHA:** `656ce7d0f6182fd15e0b1bbb0bd6684c180bd0e6`.
 **Current report:** `2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md` (addendum R1).
@@ -613,6 +627,7 @@ Read first, in order:
 83. `docs/autonomous-village/2026-11-18-A2-PHASE53-VALIDATION.md`
 84. `docs/autonomous-village/2026-11-18-A2-PHASE54A-FIXTURE-FORENSICS.md`
 85. `docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`
+86. `docs/autonomous-village/2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -740,10 +755,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Authorize exactly one A2 Run1 on `656ce7d0` with both stair trace properties to test the new fixture
-   loader and validate CADENCE_WAIT route preservation / IDX5.
-2. Do not change navigation production, budgets or predicates. No Run2/Full12K.
-3. A2 OPEN; C4 last PASS `[1,0,0]`.
+1. Fixture is validated; do not modify it. The remaining blocker is the synchronous global A* burst
+   (448k edge budget) in `NavPlanner`; needs a separate approved design/diagnostic before another Run1.
+2. IDX5 CADENCE route preservation and monotonic anchor remain runtime-unvalidated.
+3. A2 OPEN; no Run2/Full12K without explicit new authorization. C4 last PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 

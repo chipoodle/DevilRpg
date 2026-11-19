@@ -5312,3 +5312,9 @@ run/saves; hashes match; structural verification only.
 - Fixture loader now checks `now >= rChunkDeadline` before READY; late completion becomes TIMEOUT, releases tickets, no spawn.
 - Static PASS; navigation/entity setup untouched; no runtime executed.
 - Report addendum: docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md. A2 OPEN.
+
+## 2026-11-19 — A2 Phase 54B-R1 runtime BLOCKED
+
+- Run a2n-20261119-011138: fixture 289/289 READY 1 tick, 8/8 spawn, village/wall/population PASS.
+- Watchdog at first global A* burst (NavPlanner/NavObstruction, 60.04s); no A2 result, IDX5/IDX3 insufficient.
+- Report: docs/autonomous-village/2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md. A2 OPEN.

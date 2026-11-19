@@ -1147,3 +1147,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Timeout precedes READY; late completion cannot spawn.
 - Static PASS; report addendum Phase54B. A2 OPEN.
+
+## 2026-11-19 — A2 Phase 54B-R1 runtime BLOCKED
+
+- Fixture validated; planner watchdog aborted run before A2 result.
+- Report: `docs/autonomous-village/2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md`. A2 OPEN.
