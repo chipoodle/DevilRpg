@@ -1,4 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 compile correction — PENDING HARNESS STATIC REVALIDATION
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 static PASS
+
+**Branch:** `feature/autonomous-village`
+**Tested production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
+**Current report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
+**HEAD:** `7f823e6cac852906f7fc887818920b182d9b2fe0`
+
+- Compile/test/lint/diff PASS.
+- `NAV_PLANNER_STATE_TEST`: 54 executed assertions, OK.
+- SLICE=4 expansions, 8 OPEN pops/tick; total budget unchanged.
+- No runtime executed. A2 OPEN; no Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 compile correction (PENDING)
+
 
 **Branch:** `feature/autonomous-village`
 **Corrected production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
@@ -671,6 +686,7 @@ Read first, in order:
 85. `docs/autonomous-village/2026-11-19-A2-PHASE54B-FIXTURE-IMPLEMENTATION.md`
 86. `docs/autonomous-village/2026-11-19-A2-PHASE54B-R1-RUNTIME-VALIDATION.md`
 87. `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`
+88. `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -798,10 +814,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT fixes `NavPlanner.advanceGlobalSearch` local variable shadowing (`BlockPos routeState`) and
-   publishes a new SHA.
-2. Re-run static validation on that SHA, including `NAV_PLANNER_STATE_TEST`, before any runtime.
-3. Fixture is validated; do not modify it. A2 OPEN; no Run2/Full12K. C4 last PASS `[1,0,0]`.
+1. Incremental A* is statically validated on `11ff43cd`; any runtime validation needs new explicit
+   authorization for exactly one A2 Run1.
+2. Fixture remains validated; do not modify it. Monitor the 4-expansion slice for watchdog behavior.
+3. A2 OPEN; no Run2/Full12K. C4 last PASS `[1,0,0]`.
 
 ## Worlds (preserve; do not overwrite)
 
