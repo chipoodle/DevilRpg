@@ -16,6 +16,8 @@ if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
 $previousJdkJavaOptions = $env:JDK_JAVA_OPTIONS
 $previousTraceNav = $env:ORG_GRADLE_PROJECT_a2nTraceNav
 $previousTraceGlobalSearch = $env:ORG_GRADLE_PROJECT_a2nTraceGlobalSearch
+$previousA2Diagnostics = $env:ORG_GRADLE_PROJECT_a2nDiagnostics
+$previousPopulationQueryHarness = $env:ORG_GRADLE_PROJECT_a2nPopulationQueryHarness
 $exitCode = 1
 
 try {
@@ -39,6 +41,10 @@ try {
     $env:ORG_GRADLE_PROJECT_a2nTraceNav = 'true'
     $env:ORG_GRADLE_PROJECT_a2nTraceGlobalSearch = 'true'
 
+    # Selecciona el arnés canónico Phase55 sin reemplazar el A2NavHarness legacy trackeado.
+    $env:ORG_GRADLE_PROJECT_a2nDiagnostics = 'true'
+    $env:ORG_GRADLE_PROJECT_a2nPopulationQueryHarness = 'true'
+
     & $launcher @LauncherArgs
     if ($null -ne $LASTEXITCODE) {
         $exitCode = $LASTEXITCODE
@@ -50,6 +56,8 @@ finally {
     $env:JDK_JAVA_OPTIONS = $previousJdkJavaOptions
     $env:ORG_GRADLE_PROJECT_a2nTraceNav = $previousTraceNav
     $env:ORG_GRADLE_PROJECT_a2nTraceGlobalSearch = $previousTraceGlobalSearch
+    $env:ORG_GRADLE_PROJECT_a2nDiagnostics = $previousA2Diagnostics
+    $env:ORG_GRADLE_PROJECT_a2nPopulationQueryHarness = $previousPopulationQueryHarness
 }
 
 exit $exitCode
