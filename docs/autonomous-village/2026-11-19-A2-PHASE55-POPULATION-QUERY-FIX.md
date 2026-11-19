@@ -93,14 +93,15 @@ On the exact current branch HEAD:
 
 1. Safely sync by fast-forward only; preserve all local/untracked artifacts and worlds.
 2. Verify branch and exact HEAD; confirm the only non-documentation changes since `6bb467b4a64b0b53888b40bcc9cc258c2acbd967` are `build.gradle`, `tools/a2n/A2NavHarness.java`, and `tools/a2n/lanzar-phase55-diagnostico.ps1`.
-3. Copy canonical `tools/a2n/A2NavHarness.java` to the documented temporary compile location only as the established workflow requires.
+3. Check whether `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` already exists. If it exists, do not overwrite it; preserve it and stop for reconciliation. If absent, copy the canonical `tools/a2n/A2NavHarness.java` there as a temporary compile source and record that Harness created it.
 4. Run:
-   - `gradlew.bat compileJava` with `-Pa2nDiagnostics=true` as required by the launcher workflow.
-   - `gradlew.bat test`.
+   - `gradlew.bat compileJava -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`.
+   - `gradlew.bat test -Pa2nTraceNav=true -Pa2nTraceGlobalSearch=true`.
    - `python tools/lint_aldea.py --strict`.
    - `git diff --check`.
-5. Confirm the exact `EntityJoinLevelEvent`, `isAddedToLevel`, `areEntitiesLoaded`, and Gradle system-property APIs compile on NeoForge 21.1.249.
-6. Do not launch Minecraft, create a world, or execute A2/C4/Full12K. This is static validation only.
-7. Report exact SHA, commands, exit codes, test output, worktree status, and preserved untracked files.
+5. Remove only the temporary `src/main/java/com/chipoodle/devilrpg/debug/A2NavHarness.java` that Harness itself created. Never overwrite or delete a pre-existing file.
+6. Confirm the exact `EntityJoinLevelEvent`, `isAddedToLevel`, `areEntitiesLoaded`, `Level.getEntity(UUID)`, and Gradle system-property APIs compile on NeoForge 21.1.249. Inspect the PowerShell wrapper without executing it.
+7. Do not launch Minecraft, create a world, or execute A2/C4/Full12K. This is static validation only.
+8. Report exact SHA, commands, exit codes, test output, worktree status, and preserved untracked files.
 
 After static PASS, stop. The next runtime diagnostic requires a new explicit user authorization. A2 remains OPEN; no conclusion about IDX3/IDX5 or global A* can be drawn from the blocked run.
