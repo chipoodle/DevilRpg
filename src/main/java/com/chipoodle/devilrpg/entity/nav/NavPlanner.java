@@ -364,6 +364,11 @@ public final class NavPlanner {
                 policies, construidas, exclusiones, exclusionesBreak, false, null);
     }
 
+    /** Cancels a pending search when its owning mission is replaced or invalidated. */
+    public static void cancelGlobalSearch(GlobalSearchHandle handle) {
+        if (handle != null) handle.state = null;
+    }
+
     /** Advances a retained strategic A* frontier by a bounded slice on each server tick. */
     public static GlobalResult planGlobalIncremental(CollisionGetter level, Mob mob, BlockPos start,
                                                        BlockPos objetivo, int maxRadio, int verticalRange,
