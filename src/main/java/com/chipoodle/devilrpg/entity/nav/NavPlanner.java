@@ -81,7 +81,37 @@ public final class NavPlanner {
      * unico destino admisible para el siguiente tramo (no se elige por distancia, se elige porque se llego).
      */
     public record GlobalResult(NavRoute route, BlockPos frente, boolean alcanzoMision, int expansions,
-                               boolean hitBudget, String reason, String summary) {
+                               boolean hitBudget, String reason, String summary, boolean pending) {
+    }
+
+    private static final int GLOBAL_EXPANSIONS_PER_TICK = 64;
+    private static final java.util.Map<Mob, GlobalSearchState> GLOBAL_SEARCHES =
+            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    private static final class GlobalSearchState {
+        final CollisionGetter level;
+        final BlockPos start;
+        final BlockPos objective;
+        final boolean exactGoal;
+        final int maxRadio;
+        final int verticalRange;
+        final int maxExpansions;
+        final int[] counters;
+        final NavGraphSearch.Session search;
+
+        GlobalSearchState(CollisionGetter level, BlockPos start, BlockPos objective, boolean exactGoal,
+                          int maxRadio, int verticalRange, int maxExpansions, int[] counters,
+                          NavGraphSearch.Session search) {
+            this.level = level;
+            this.start = start.immutable();
+            this.objective = objective.immutable();
+            this.exactGoal = exactGoal;
+            this.maxRadio = maxRadio;
+            this.verticalRange = verticalRange;
+            this.maxExpansions = maxExpansions;
+            this.counters = counters;
+            this.search = search;
+        }
     }
 
     /** Motivo por el que una arista NO es ejecutable (para no perder los contadores del diagnostico). */
@@ -354,6 +384,17 @@ public final class NavPlanner {
                                                     NavDropExclusionPolicy exclusiones,
                                                     NavBreakExclusionPolicy exclusionesBreak,
                                                     boolean exactGoal) {
+        GlobalSearchState retained = GLOBAL_SEARCHES.get(mob);
+        if (retained != null && (!retained.start.equals(start) || !retained.objective.equals(objetivo)
+                || retained.level != level || retained.exactGoal != exactGoal
+                || retained.maxRadio != maxRadio || retained.verticalRange != verticalRange
+                || retained.maxExpansions != maxExpansions)) {
+            GLOBAL_SEARCHES.remove(mob);
+            retained = null;
+        }
+        if (retained != null) {
+            return advanceGlobalSearch(mob, retained);
+        }
         if (start.equals(objetivo)) {
             return new GlobalResult(new NavRoute(List.of(new NavRoute.Node(objetivo, NavRoute.Transition.WALK)),
                     objetivo), objetivo, true, 0, false, "inicio==fin",
@@ -493,7 +534,33 @@ public final class NavPlanner {
                 return distanciaGlobal(BlockPos.of(state), objetivo);
             }
         };
-        NavGraphSearch.Result resultado = NavGraphSearch.search(start.asLong(), start.getY(), graph, maxExpansions);
+        NavGraphSearch.Session search = NavGraphSearch.begin(start.asLong(), start.getY(), graph, maxExpansions);
+        GlobalSearchState created = new GlobalSearchState(level, start, objetivo, exactGoal,
+                maxRadio, verticalRange, maxExpansions, contadores, search);
+        GLOBAL_SEARCHES.put(mob, created);
+        return advanceGlobalSearch(mob, created);
+    }
+
+    private static GlobalResult advanceGlobalSearch(Mob mob, GlobalSearchState state) {
+        boolean complete = state.search.advance(GLOBAL_EXPANSIONS_PER_TICK);
+        if (!complete) {
+            String summary = "global pendiente inicio=" + state.start.toShortString()
+                    + " meta=" + state.objective.toShortString()
+                    + " exp=" + state.search.expansions() + "/" + state.maxExpansions
+                    + " slice=" + GLOBAL_EXPANSIONS_PER_TICK
+                    + " frontera=" + state.search.frontierSize();
+            return new GlobalResult(new NavRoute(List.of(), state.start), state.start, false,
+                    state.search.expansions(), false, "planificación global pendiente", summary, true);
+        }
+        GLOBAL_SEARCHES.remove(mob);
+        BlockPos start = state.start;
+        BlockPos objetivo = state.objective;
+        boolean exactGoal = state.exactGoal;
+        int maxRadio = state.maxRadio;
+        int verticalRange = state.verticalRange;
+        int maxExpansions = state.maxExpansions;
+        int[] contadores = state.counters;
+        NavGraphSearch.Result resultado = state.search.result();
         int expansions = resultado.expansions();
         boolean hitBudget = resultado.hitBudget();
         BlockPos found = resultado.found() ? BlockPos.of(resultado.route().get(resultado.route().size() - 1).state()) : null;
@@ -526,7 +593,7 @@ public final class NavPlanner {
             }
             resumen.append(" rutaFrente=").append(nodosFrente.size());
             return new GlobalResult(new NavRoute(nodosFrente, frente), frente, false, expansions, hitBudget,
-                    motivo, resumen.toString());
+                    motivo, resumen.toString(), false);
         }
         List<NavRoute.Node> nodes = new ArrayList<>();
         for (NavGraphSearch.Step paso : resultado.route()) {
@@ -537,7 +604,7 @@ public final class NavPlanner {
         }
         resumen.append(" ruta=").append(nodes.size());
         return new GlobalResult(new NavRoute(nodes, objetivo), objetivo, true, expansions, hitBudget,
-                "meta alcanzada", resumen.toString());
+                "meta alcanzada", resumen.toString(), false);
     }
 
     /** A2 Stage 7C · cota inferior admisible horizontal + vertical hacia la region de meta. */
