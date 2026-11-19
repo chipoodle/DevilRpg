@@ -1,15 +1,13 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 static validation FAIL
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 compile correction — PENDING HARNESS
 
-- Production SHA: `9966f807b2fbb13552545cdd181f2f034c7ecbaa`.
-- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`.
-- **Harness static FAIL:** `9966f807` no compila; `NavPlanner.java:617/628` redeclara `BlockPos state` sobre el parámetro `GlobalSearchState state`. `NAV_PLANNER_STATE_TEST` (51 aserciones) no se ejecutó. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`.
-- Phase54B-R1 fixture PASS: 289/289 chunks READY in 1 tick, all fixture checks PASS, 8/8 spawn. Runtime BLOCKED by 60.04 s watchdog in first global A* burst. No A2/IDX5/IDX3 result.
-- Phase55 introduces resumable global A*: OPEN/CLOSED and predecessor state retained across server ticks; 4 expansions / max 8 OPEN pops per executor/tick; unchanged total global expansion budget.
-- Pending search emits no partial route or movement and consumes no local stair/failure counters. Existing collision/support/protection/heuristic/radius/costs/acceptance gates are unchanged.
-- New deterministic assertions in registered `NavPlannerStateTest`: incremental vs synchronous route equivalence, per-slice bound, no partial result, and unchanged total hard budget.
-- **Harness next: STATIC ONLY** on exact SHA: diagnostics compile, `gradlew test`, strict lint, diff-check. Confirm test name and assertion count. Preserve local work/worlds; Harness must not modify production.
-- ChatGPT has not executed tests or runtime. No runtime authorization yet; no A2 Run1, Run2, Full12K or standalone C4.
-- A2 OPEN. Phase54B fixture is validated; do not modify it.
+- Corrected production SHA: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
+- Previous SHA `9966f807b2fbb13552545cdd181f2f034c7ecbaa` failed compile because two `BlockPos state` locals redeclared parameter `GlobalSearchState state`.
+- Fix: rename both locals and corresponding `routePosition` arguments to `routeState`. Correction commit changes only four lines in `NavPlanner.java`.
+- No tests executed in the failed run; 51 source assertions remain unexecuted until Harness validates.
+- **Harness next: STATIC ONLY** on exact corrected SHA: diagnostics compile, `gradlew test`, strict lint, diff-check; report actual test output/assertion count. Preserve local work/worlds; Harness must not modify production.
+- ChatGPT did not run tests/runtime. No A2 Run1, C4, Run2, Full12K. A2 OPEN.
+
+---
 
 ---
 
