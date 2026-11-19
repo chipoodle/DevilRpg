@@ -1465,7 +1465,7 @@ public final class NavExecutor {
      */
     private NavPlanner.GlobalResult rutaGlobalHacia(final BlockPos mision) {
         BlockPos yo = mob.blockPosition();
-        if (globalCache != null && mision.equals(globalMision) && globalDesde != null
+        if (globalCache != null && !globalCache.pending() && mision.equals(globalMision) && globalDesde != null
                 && globalDesde.distSqr(yo) <= CACHE_GLOBAL_SQR) {
             return globalCache;
         }
