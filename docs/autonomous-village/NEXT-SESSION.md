@@ -1,15 +1,26 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 static validation FAIL
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 compile correction — PENDING HARNESS STATIC REVALIDATION
 
 **Branch:** `feature/autonomous-village`
-**Tested production SHA:** `9966f807b2fbb13552545cdd181f2f034c7ecbaa`
-**Current report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`
-**HEAD:** `1679315289534bd885013fefb8c15c34f0bf82f9`
+**Corrected production SHA:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
+**Correction commit:** `11ff43cd338d7a6222a146a2ed642a5546fb2910`
+**Previous failing tested SHA:** `9966f807b2fbb13552545cdd181f2f034c7ecbaa`
+**Previous Harness report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-STATIC-VALIDATION.md`
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-INCREMENTAL-GLOBAL-ASTAR.md`
 
-- Compilation FAILS at `NavPlanner.java:617/628`: local `BlockPos state` redeclares the
-  `GlobalSearchState state` parameter.
-- `NAV_PLANNER_STATE_TEST` (51 source assertions) could not run. Lint/diff PASS.
-- No runtime executed. ChatGPT must rename the locals and publish a new SHA for re-validation.
-- A2 OPEN; no Run2/Full12K.
+Harness static validation found two Java compile errors in `NavPlanner.advanceGlobalSearch`: local `BlockPos state` declarations redeclared the method parameter `GlobalSearchState state`. ChatGPT renamed exactly those two locals and their immediate `routePosition` references to `routeState`. Commit diff was reviewed: only `NavPlanner.java`, four changed lines (two declarations and two references). No algorithm, budgets, tests, collision, support, protection or acceptance logic changed.
+
+**Current status: FIX PUBLISHED — NOT YET VALIDATED.** ChatGPT did not run Gradle, tests, lint, diff-check or Minecraft.
+
+**Harness next — STATIC ONLY on exact SHA `11ff43cd338d7a6222a146a2ed642a5546fb2910`:**
+1. Safely fast-forward and preserve local/untracked work and worlds.
+2. Verify exact tested SHA and inspect the one-file correction diff.
+3. Run diagnostics compile, `gradlew test`, strict lint, and `git diff --check`.
+4. Confirm `NAV_PLANNER_STATE_TEST` executes; report its actual output and assertion count (51 source assertions were authored previously, but were not executed in the failed run).
+5. Publish a documentation-only validation report and update handoffs. Harness must not alter production.
+
+No Minecraft, A2 Run1, C4, Run2 or Full12K. This correction does not grant runtime authorization. A2 remains OPEN.
+
+---
 
 ---
 
