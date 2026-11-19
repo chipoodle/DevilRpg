@@ -109,8 +109,13 @@ public final class NavGraphSearch {
             if (expansionSlice < 1) throw new IllegalArgumentException("expansionSlice must be positive");
             if (complete) return true;
             int expandedThisSlice = 0;
-            while (!open.isEmpty() && expandedThisSlice < expansionSlice) {
+            int poppedThisSlice = 0;
+            int maxPopsThisSlice = expansionSlice > Integer.MAX_VALUE / 2
+                    ? Integer.MAX_VALUE : expansionSlice * 2;
+            while (!open.isEmpty() && expandedThisSlice < expansionSlice
+                    && poppedThisSlice < maxPopsThisSlice) {
                 Node current = open.poll();
+                poppedThisSlice++;
                 if (closed.contains(current.state())) continue;
                 if (expansions >= maxExpansions) {
                     hitBudget = true;
@@ -191,5 +196,4 @@ public final class NavGraphSearch {
         }
         return session.result();
     }
-}
 }
