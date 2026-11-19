@@ -5,13 +5,13 @@
 
 Harness identified two illegal local declarations named `BlockPos state` inside `advanceGlobalSearch(..., GlobalSearchState state, ...)`. Both were renamed to `routeState`; both `routePosition` calls now use that renamed local. The reviewed source diff is limited to those four identifier/reference changes in `NavPlanner.java`. No search behavior, expansion limits, budgets, route policy, or tests changed.
 
-**Status: FIX PUBLISHED — PENDING HARNESS STATIC REVALIDATION.** ChatGPT did not execute compile, tests, lint, diff-check, or runtime. Harness must validate the exact corrected SHA above. Static only; no Minecraft/A2/C4 runtime authorization.
+**Status: STATIC VALIDATION PASS (Harness Phase55-R2).** Exact corrected production SHA `11ff43cd338d7a6222a146a2ed642a5546fb2910` passed diagnostics compile, full Gradle tests, strict lint and diff-check. `NAV_PLANNER_STATE_TEST` executed 54 assertions and ended `OK`. See `2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`. ChatGPT did not execute these commands. No Minecraft/A2/C4 runtime has been executed; a separate explicit authorization is required for exactly one A2 Run1.
 
 ---
 
 # A2 Phase55 — incremental global A* implementation
 
-**Status: IMPLEMENTED — PENDING HARNESS STATIC VALIDATION. No runtime authorized or executed.**
+**Status: IMPLEMENTED — STATIC VALIDATION PASS; RUNTIME NOT VALIDATED.** Harness Phase55-R2 passed compile/test/lint/diff on exact corrected production SHA `11ff43cd338d7a6222a146a2ed642a5546fb2910`; `NAV_PLANNER_STATE_TEST` executed 54 assertions. No runtime authorized or executed.
 
 ## Baseline and ownership
 
@@ -64,7 +64,7 @@ Extended the already-registered `NavPlannerStateTest` with checks for:
 - route and predecessor reconstruction equivalence with synchronous A*;
 - preservation of the hard total expansion budget.
 
-These assertions are authored but **not yet executed**.
+These assertions were executed by Harness Phase55-R2: **54 assertions, OK** (51 source call sites; one looped assertion runs four times).
 
 ## Files changed
 
