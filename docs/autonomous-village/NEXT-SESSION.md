@@ -1,10 +1,10 @@
 # CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness build routing (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**Implementation HEAD:** `8441818102f59c030f9a39ff2e3f6d13527bf95d`
+**Verified branch HEAD before this checkpoint refresh:** `84ae9ef341261ea8b97b90ee27af927aac769693`
 **Parent checkpoint:** `62cb5be88fcb5df9aa3c3e3bac8e6899f35d8f52`
 **Previous Harness result:** `phase55-population-static-20261119-1215` — BLOCKED before compile/test
-**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md` (report blob SHA `7e6b02b3f72a339ee98d27f797aa5d3a88cffb25`)
 
 ## Reconciliation
 
@@ -37,7 +37,7 @@ executed by ChatGPT.
 
 ## Next action — Harness STATIC ONLY on exact HEAD
 
-1. Fast-forward-only sync to `8441818102f59c030f9a39ff2e3f6d13527bf95d`; preserve all local/untracked
+1. Fast-forward-only sync to the current `feature/autonomous-village` tip (which must contain checkpoint base `84ae9ef341261ea8b97b90ee27af927aac769693`); preserve all local/untracked
    work and worlds. Stop on divergence or risk.
 2. Verify the legacy tracked file still exists unchanged, canonical source blob remains
    `3205305a10a21ded066c03cb746908e94632e08d`, and `NavPlanner.java` remains
