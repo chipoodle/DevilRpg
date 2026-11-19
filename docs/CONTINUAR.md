@@ -1,13 +1,14 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55-R2 STATIC PASS
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 fixture population forensics
 
 La continuación vigente está en `docs/autonomous-village/NEXT-SESSION.md`.
 
-- Production SHA validado: `11ff43cd338d7a6222a146a2ed642a5546fb2910`.
-- La corrección de compilación renombró los dos locales y sus referencias a `routeState` (cuatro líneas en `NavPlanner.java`).
-- Harness R2: diagnostics compile, `gradlew test`, lint estricto y diff-check PASS; `NAV_PLANNER_STATE_TEST` ejecutó 54 aserciones y terminó OK.
-- Reporte: `docs/autonomous-village/2026-11-19-A2-PHASE55-R2-STATIC-VALIDATION.md`.
-- No runtime ejecutado. A2 OPEN. La efectividad del A* incremental contra el watchdog sigue pendiente de evidencia runtime.
-- Se requiere autorización explícita nueva para exactamente un A2 Run1. No C4 standalone, Run2 ni Full12K.
+- Run `a2n-20261119-031255`: BLOCKED antes del spawn de atacantes; 289/289 chunks READY en 1 tick.
+- Población: 14 entidades = 4 guardias fundadores esperados + 10 profesionales; faltan SHEPHERD (slot 5) y MASON (slot 11).
+- Corrección de interpretación: los cuatro aldeanos con profesión NONE son los cuatro fundadores intencionales; no son cuatro trabajadores con profesión perdida.
+- Fuente revisada: el generador intenta 12 slots, pero la ruta de spawn no devuelve/expone resultados por slot; aún no se sabe si los dos trabajadores faltaron al crear, murieron, fueron removidos o cambiaron de profesión.
+- Forensics: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-FORENSICS.md`.
+- Siguiente: Harness inspecciona logs y NBT existente en modo estrictamente read-only; sin runtime, regeneración ni edición de mundos.
+- Autorización Run1 consumida. No retry, Run2, C4 standalone ni Full12K. A2 OPEN; Phase55 runtime no medido.
 
 ---
 
