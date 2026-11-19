@@ -1271,3 +1271,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Canonical source selected; missing NavFeature blocks compile/tests.
 - Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 NavFeature removal static PASS
+
+- `b96f79f2` static PASS; canonical selected; no runtime.
+- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`. A2 OPEN.

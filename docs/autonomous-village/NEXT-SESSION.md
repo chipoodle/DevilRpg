@@ -1,8 +1,17 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 NavFeature removal static PASS
 
 **Branch:** `feature/autonomous-village`
-**Harness failure tested HEAD:** `c2e44f78c09c2a4819860a75e5db171140e54b52`
-**Source correction commit:** `a029e4eb790109df94acb1e07f8cac52f8b88ff8`
+**Tested HEAD:** `b96f79f2edde53ea1049ef3ae0fd9f9ea9d84fdd`
+**Validation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`
+
+- Canonical harness selected; legacy untouched.
+- NavFeature references eliminated (only a comment remains).
+- Compile/test/lint/diff PASS; `NAV_PLANNER_STATE_TEST` 54 assertions.
+- No runtime executed. A2 OPEN; any diagnostic run needs new explicit authorization.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 canonical harness (STATIC PENDING)
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-REMOVE-OBSOLETE-NAVFEATURE-HARNESS-DEPENDENCY.md`
 **Implementation report commit:** `20991bfaa05683de8c458035127e7edce7f12c0d`
 
@@ -976,6 +985,7 @@ Read first, in order:
 94. `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTIC-RUNTIME.md`
 95. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md`
 96. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`
+97. `docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1103,10 +1113,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT must publish or replace `NavFeature` (`PROPERTY`, `ENV`, `customNavigation()`) used by the
-   canonical harness, then publish a new HEAD.
-2. Re-run the exact static gate; routing itself is correct.
-3. A2 OPEN; no runtime. No retry/Run2/Full12K.
+1. Static gate is PASS on `b96f79f2`; request new explicit authorization for an A2 diagnostic Run1 with
+   both trace properties to exercise the new population census and `GLOBAL_*` telemetry.
+2. Do not change navigation/A2 criteria. Preserve fixture and worlds.
+3. A2 OPEN; no retry/Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 

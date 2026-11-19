@@ -5409,3 +5409,9 @@ run/saves; hashes match; structural verification only.
 - Routing selected tools/a2n/A2NavHarness.java (error paths prove it); legacy untouched.
 - Compile/test FAIL: 7 × cannot find symbol NavFeature (1323-1328,1737); NAV test NOT RUN; lint/diff PASS.
 - No runtime. Report: docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 NavFeature removal static PASS
+
+- Canonical tools harness selected; legacy untouched; NavFeature only comment.
+- compile/test/lint/diff PASS; NAV_PLANNER_STATE_TEST 54 assertions; no runtime.
+- Report: docs/autonomous-village/2026-11-19-A2-PHASE55-NAVFEATURE-REMOVAL-STATIC-VALIDATION.md. A2 OPEN.
