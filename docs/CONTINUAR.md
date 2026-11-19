@@ -1,11 +1,39 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 global A* diagnostics (PENDING HARNESS)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 population census fix (STATIC PENDING)
 
-- Implementation: `10719ff82465a0d8997cb2af3af23c9f71292b19`.
-- Report: `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS.md`.
-- Opt-in properties: `-Ddevilrpg.a2n.traceNav=true -Ddevilrpg.a2n.traceGlobalSearch=true`.
-- First-expansion candidate reasons and geometry are captured, plus START/COMPLETE/CANCEL/RESTART lifecycle events. No behavior, graph, budget, safety predicate or acceptance change.
-- Harness next: STATIC ONLY on exact implementation SHA — compile, `gradlew test`, strict lint, diff-check; no production edits by Harness.
-- Runtime authorization consumed; no retry, Run2, standalone C4 or Full12K. A2 OPEN.
+**Branch:** `feature/autonomous-village`
+**Previous blocked runtime:** `a2n-20261119-114535` — authorization consumed; no retry.
+**Previous production SHA:** `10719ff82465a0d8997cb2af3af23c9f71292b19`
+**Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-FIX.md`
+
+## Implemented by ChatGPT
+
+- `cdfcd638963a35045ab468250c1519673eb482f7`: A2 fixture captures exact Villager references from NeoForge `EntityJoinLevelEvent` during preGenerate/maintenance. The roster no longer relies on `getEntitiesOfClass(AABB)`; the AABB query remains as a diagnostic comparison.
+- `4343753cfb829e1ff5b4585e6ef33dc9f8761ff2`: retained references are used for raid defense/job-site and worker audits; UUID lookup has a captured-reference fallback.
+- `87f6e0875149bf6492b2a2349eca2513dce6d0b3`: census requires captured villagers to be alive, not removed, and added to the level; per-UUID state is logged.
+- `d11cae8c53ec60f94ac5d6e3b5cf86318ea59e5e`: `build.gradle` forwards `-Pa2nTraceGlobalSearch=true` to the actual runServer JVM.
+- The harness logs effective `traceNav` / `traceGlobalSearch` at server startup and aborts raid mode before fixture setup if either is false.
+
+No production navigation source, world, fixture geometry, acceptance criteria, budgets, OFFSETS, collision/support/protection rules or A2/C4 logic changed.
+
+## Evidence boundary
+
+The previous run proved that the AABB query omitted a Shepherd that was present alive in the saved disposable-world NBT. It did **not** establish why. The new event-based census bypasses the AABB index for fixture roster creation and emits diagnostics to compare the sources; it does not claim the underlying engine visibility anomaly is explained.
+
+## Next action — Harness STATIC ONLY
+
+Validate the exact current branch HEAD:
+
+- `gradlew.bat compileJava` with the diagnostic source inclusion required by the workflow.
+- `gradlew.bat test`.
+- `python tools/lint_aldea.py --strict`.
+- `git diff --check`.
+- Confirm NeoForge 21.1.249 APIs compile: `EntityJoinLevelEvent`, `isAddedToLevel`, `areEntitiesLoaded`.
+- Verify Gradle property mapping `-Pa2nTraceGlobalSearch=true` is passed to the server run config.
+- Preserve all local/untracked files and worlds. Harness must not modify production source.
+
+**STATIC ONLY. Do not launch Minecraft or run A2/C4/Full12K.** The previous runtime authorization is consumed. If static PASS, stop and return the report; another runtime requires fresh explicit user authorization. A2 remains OPEN.
+
+---
 
 ---
 
