@@ -5399,3 +5399,9 @@ run/saves; hashes match; structural verification only.
 - `debug/A2NavHarness.java` tracked exists and differs 1102 lines from canonical tools source; overwrite/delete prohibited.
 - New harness not compiled/tested; gradle/wrapper source review PASS; lint/diff PASS; no runtime.
 - Report: docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-19 — A2 Phase55 routing static FAIL
+
+- Routing selected tools/a2n/A2NavHarness.java (error paths prove it); legacy untouched.
+- Compile/test FAIL: 7 × cannot find symbol NavFeature (1323-1328,1737); NAV test NOT RUN; lint/diff PASS.
+- No runtime. Report: docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md. A2 OPEN.

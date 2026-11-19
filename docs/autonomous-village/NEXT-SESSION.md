@@ -1,8 +1,17 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness build routing (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 routing static FAIL
 
 **Branch:** `feature/autonomous-village`
-**Verified branch HEAD before this checkpoint refresh:** `84ae9ef341261ea8b97b90ee27af927aac769693`
-**Parent checkpoint:** `62cb5be88fcb5df9aa3c3e3bac8e6899f35d8f52`
+**Tested HEAD:** `c2e44f78c09c2a4819860a75e5db171140e54b52`
+**Validation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`
+
+- Routing PASS: compile selected `tools/a2n/A2NavHarness.java`, legacy untouched.
+- Compile FAIL: 7 × `cannot find symbol: class NavFeature` at lines 1323-1328 and 1737.
+- Tests FAIL with same compile errors; NAV test NOT RUN. Lint/diff PASS.
+- No runtime. A2 OPEN; no retry/Run2/Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 A2 Phase55 canonical harness build routing (PENDING)
 **Previous Harness result:** `phase55-population-static-20261119-1215` — BLOCKED before compile/test
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md` (report blob SHA `7e6b02b3f72a339ee98d27f797aa5d3a88cffb25`)
 
@@ -916,6 +925,7 @@ Read first, in order:
 93. `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTICS-STATIC-VALIDATION.md`
 94. `docs/autonomous-village/2026-11-19-A2-PHASE55-GLOBAL-ASTAR-DIAGNOSTIC-RUNTIME.md`
 95. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-STATIC-VALIDATION.md`
+96. `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1043,10 +1053,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT must reconcile the tracked `debug/A2NavHarness.java` with canonical `tools/a2n/A2NavHarness.java`
-   or define a supported compile path, then publish a new HEAD.
-2. Re-run static validation only; no runtime authorization exists.
-3. A2 OPEN; no retry/Run2/Full12K.
+1. ChatGPT must publish or replace `NavFeature` (`PROPERTY`, `ENV`, `customNavigation()`) used by the
+   canonical harness, then publish a new HEAD.
+2. Re-run the exact static gate; routing itself is correct.
+3. A2 OPEN; no runtime. No retry/Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 

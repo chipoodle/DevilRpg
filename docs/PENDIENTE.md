@@ -1,8 +1,10 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 canonical harness routing (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 A2 Phase55 routing static FAIL
 
 **Branch:** `feature/autonomous-village`
 **HEAD:** `(ver HEAD exacto en docs/autonomous-village/NEXT-SESSION.md)`
 **Implementation report:** `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING.md`
+
+- **Harness FAIL:** routing selecciona `tools/a2n/A2NavHarness.java` (probado por rutas de error), pero compilación falla con 7 × `cannot find symbol: class NavFeature` (líneas1323-1328,1737). Tests fallan igual; NAV test NOT RUN. Detalle: `docs/autonomous-village/2026-11-19-A2-PHASE55-POPULATION-QUERY-BUILD-ROUTING-STATIC-VALIDATION.md`.
 
 - Harness anterior BLOCKED correctamente: el destino `src/main/.../debug/A2NavHarness.java` existía y estaba
   trackeado; no se sobrescribió ni eliminó.
