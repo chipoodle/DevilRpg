@@ -65,7 +65,7 @@ The existing `a2nTraceNav` mapping remains available for `devilrpg.a2n.traceNav`
 Future authorized invocation:
 
 ```powershell
-.\\tools\\a2n\\lanzar-phase55-diagnostico.ps1 -Modo raid -LimiteMinutos 18
+.\tools\a2n\lanzar-phase55-diagnostico.ps1 -Modo raid -LimiteMinutos 18
 ```
 
 At `ServerStartedEvent`, A2NavHarness logs the effective values from the actual server process:
