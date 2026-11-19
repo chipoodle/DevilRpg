@@ -12,8 +12,6 @@
 
 ---
 
----
-
 # HISTORICAL CHECKPOINT — 2026-11-18 A2 Phase 52 forensics
 
 - Production implementation SHA: `ea21466a0cc7cc2671f5439cd5ff7bbaeecd6d9e`.
