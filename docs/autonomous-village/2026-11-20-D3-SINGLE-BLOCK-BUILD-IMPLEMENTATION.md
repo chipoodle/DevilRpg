@@ -75,6 +75,7 @@ These blob SHAs were fetched from the documentation-updated branch tip after con
 | `NavVerticalBuildPolicyTest.java` | `23fa8566fdc8359291c5cb933f9348a794b79896` |
 | `NavPlannerStateTest.java` | `dcd963ccf80b8a4ff11d05a70f8144bfa98aae7c` |
 | `NavRouteNodePolicyTest.java` | `8ad85d6fa345ae12d3c18ac9bdae04546358fac7` |
+| `NavArrivalPolicyTest.java` | `8dcd33b7bc9e9d0e3dafd0c98ec2f0cba63065ab` |
 | `build.gradle` | `352dc1319f0863105f0c2347df2ab857f5f1323c` |
 
 ## Policy tests authored — NOT RUN
@@ -99,7 +100,7 @@ These blob SHAs were fetched from the documentation-updated branch tip after con
 
 Harness must first follow the collaboration policy and preserve local-only changes, untracked files, backups, logs, partial files, artifacts and both diagnostic worlds. Safe fast-forward only; stop on divergence or overwrite risk. Harness must not modify production.
 
-Validate the exact source implementation commit `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7` (or the later documentation-only branch tip after proving all production/test blobs match that source commit).
+Sync the current remote branch tip after recording local/remote state. The source implementation is commit `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`, followed by test-only commit `63276177583dd3f43f93a06700e4b3e52a6e3be6` and documentation commits. Verify every production/test blob in the table above (plus the affected climb/DROP policy files) before running checks on the exact synced tip.
 
 Run the established static gate, with canonical diagnostic source selection:
 
