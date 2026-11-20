@@ -598,21 +598,20 @@ public class AggressiveZombieEntity extends Zombie {
         super(type, world);
         this.navPolicies = buildNavPolicies();
         this.navExecutor = new com.chipoodle.devilrpg.entity.nav.NavExecutor(this, this.navPolicies);
-        // La recuperación del ejecutor propio REUTILIZA la que ya existe (romper/puentear/apilar/cavar), para no
-        // duplicar lógica ni reglas de protección.
-        // A2 Stage 6E · FIX B · si la ruta actual pide ROMPER/PUENTEAR una celda CONCRETA, se actúa sobre ESA celda
-        // (el nodo llega en `nodoDeRuta`); en cualquier otro caso se sigue trabajando hacia la misión.
+        // Solo las transiciones explícitas de NavExecutor pueden modificar terreno.
+        // Sin nodo/acción de ruta no existe fallback al objetivo estratégico: se falla cerrado.
         this.navExecutor.setRecoveryAction((towards, nodoDeRuta, transicionDeRuta) -> {
             navRecoveryRequests++;
-            if (nodoDeRuta != null
-                    && transicionDeRuta == com.chipoodle.devilrpg.entity.nav.NavRoute.Transition.BREAK) {
+            if (nodoDeRuta == null || transicionDeRuta == null) {
+                return false;
+            }
+            if (transicionDeRuta == com.chipoodle.devilrpg.entity.nav.NavRoute.Transition.BREAK) {
                 return romperNodoDeRuta(nodoDeRuta);
             }
-            if (nodoDeRuta != null
-                    && transicionDeRuta == com.chipoodle.devilrpg.entity.nav.NavRoute.Transition.BRIDGE) {
+            if (transicionDeRuta == com.chipoodle.devilrpg.entity.nav.NavRoute.Transition.BRIDGE) {
                 return ponerEscalonConSoporteLateral(nodoDeRuta, towards);
             }
-            return recoverNavigation(towards);
+            return false;
         });
         // A2 Stage 4Q · primitiva de COLOCACION para la transicion BUILD de la ruta. Reutiliza el camino de la casa
         // (`ponerEscalon`), que ya valida celda vacia, dos huecos, soporte con colision y proteccion. No se relaja.
@@ -1839,7 +1838,6 @@ public class AggressiveZombieEntity extends Zombie {
             tunelEspera = TUNEL_ENTRE_BLOQUES;
             // Route-break mutates terrain outside normal tunnel/bridge goals: invalidate both planners.
             navExecutor.terrainChanged();
-            navExecutor.terrainChanged();
             if (Boolean.getBoolean("n4.trace")) {
                 DevilRpg.LOGGER.info("[NAV] TERRAIN_CHANGED_BY_ROUTE_BREAK uuid={} block={} executorState={}",
                         getUUID(), nodo.toShortString(), navExecutor.describe());
@@ -2597,13 +2595,9 @@ public class AggressiveZombieEntity extends Zombie {
         // arriba porque PursueTargetGoal controla ahora el combate; mantener prioridad 1 permite que salir del agua
         // siga teniendo precedencia sobre la persecución cuando el atasco ya está confirmado. FloatGoal solo pide JUMP.
         this.goalSelector.addGoal(1, new EscapeWaterGoal(this));
-        // Romper el bloque que le estorba cuando está atascado (pero no atacar casas si puede pasar).
-        this.goalSelector.addGoal(3, new BreakBlockGoal(this));
-        // Y LOS TRES ATRAVESADORES (I212): puente, escalera de bloques y túnel, a velocidad normal. Va justo DESPUES
-        // del romper y con la MISMA prioridad (3), sin flags: el romper mira "¿estorba un bloque?" y este mira "¿el
-        // objetivo está arriba, abajo, o hay un hueco delante?", y los dos son pasivos (no navegan), asi que no se
-        // pisan el camino a nadie (I205).
-        this.goalSelector.addGoal(3, new TraverseGoal(this));
+        // BreakBlockGoal y TraverseGoal ya no se registran: ambos elegían herramientas de terreno
+        // por el objetivo global y podían actuar fuera de la transición activa. NavExecutor es el único
+        // propietario de BREAK/BUILD/BRIDGE y concede un solo lease de herramienta por tick.
         // Combate y flanqueo comparten un solo goal MOVE: la selección de presa tiene prioridad sobre la marcha a la
         // aldea, y no hay un segundo goal que reemplace su ruta por un punto de rodeo no validado.
         this.pursueTargetGoal = new PursueTargetGoal(this);
