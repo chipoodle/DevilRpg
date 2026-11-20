@@ -5473,3 +5473,9 @@ run/saves; hashes match; structural verification only.
 - Static gate PASS; new lease test 13 assertions, NAV plan 54, local 5, stair 12.
 - Behavioral FAIL: normal BREAK bypasses tryAcquire at NavExecutor:2363; DROP invokes BREAK at5061.
 - No runtime. Report: docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-19 — Traversal lease fix STATIC PASS
+
+- Single recoveryAction.run behind invokeTerrainAction; BREAK/BRIDGE leased; DROP no break.
+- compile/test/lint/diff PASS; 13+6+54+5+12 assertions; 56 test groups. No runtime.
+- Report: docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md. A2 OPEN.

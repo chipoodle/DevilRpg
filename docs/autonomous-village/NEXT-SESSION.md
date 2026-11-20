@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal lease bypass correction (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 traversal lease fix STATIC PASS
 
 **Branch:** `feature/autonomous-village`
-**Base validation-failure HEAD:** `4727d86a03c8d6100c489145712f06a8c1890ec7`
-**Source implementation HEAD:** `9f00cb5ecec462df91f9905072988db90bec08b2`
+**Implementation SHA:** `9f00cb5ecec462df91f9905072988db90bec08b2`
+**Tested HEAD:** `ab75af8fc27302fa3c5c157b8d72562d9e3e2cd5`
+**Validation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`
+
+- Exactly one `recoveryAction.run(` remains, inside `invokeTerrainAction` behind the lease.
+- Normal BREAK/recovery BREAK/BRIDGE pass through the lease; DROP no longer invokes BREAK.
+- Compile/test/lint/diff PASS; lease 13, dispatch 6, NAV planner 54, local 5, stair 12 assertions.
+- No runtime. A2 OPEN; C4 not revalidated.
+
+---
+
+# HISTORICAL — 2026-11-19 traversal lease bypass correction (STATIC PENDING)
 **Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-FIX.md`
 **Continuation indexes:** `docs/autonomous-village/CONTINUAR.md` blob `ded6d68272eb69b52e80ee63582e1da96508f53d`; `docs/CONTINUAR.md` blob `03b52e6e29d8bd001298d162595e43614bfcfa5c`; `docs/PENDIENTE.md` blob `180ddfe367dfb6df3067f39c0a5ccad5fd7613da`.
 **Prior FAIL report (preserved):** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`
@@ -1180,6 +1190,7 @@ Read first, in order:
 101. `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`
 102. `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
 103. `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`
+104. `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1307,10 +1318,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT must add lease acquisition before normal BREAK (line2363) and reconcile the DROP-obstruction
-   BREAK (line5061) with the contract.
-2. Add integration tests beyond the pure policy; then re-run static gate.
-3. No runtime without new explicit authorization. A2 OPEN; no Run2/Full12K.
+1. Traversal lease fix is statically PASS; next is ChatGPT review and any atomic-gate implementation.
+2. No runtime authorization exists. C4 not revalidated.
+3. A2 OPEN; no Run2/Full12K without explicit new authorization.
 
 ## Worlds (preserve; do not overwrite)
 

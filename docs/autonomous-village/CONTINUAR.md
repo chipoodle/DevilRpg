@@ -1348,3 +1348,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Gate green; lease bypass on BREAK/DROP found in source audit.
 - Report: `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-19 — Traversal lease fix STATIC PASS
+
+- Lease is single gateway; DROP no longer breaks. No runtime.
+- Report: `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`. A2 OPEN.
