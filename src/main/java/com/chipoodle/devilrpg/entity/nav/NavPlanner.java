@@ -808,15 +808,15 @@ public final class NavPlanner {
     }
 
     /**
-     * Sucesor canonico de una arista: si la clasificacion es de escalada, el estado es la celda de pie
-     * validada (piesHasta), aunque la etiqueta se haya normalizado a WALK por un delta 0.
+     * Sucesor canonico de una arista: STEP_UP y BUILD almacenan el estado de pies validado (piesHasta),
+     * separado de la celda de accion cuando la transicion coloca terreno.
      */
     static BlockPos sucesorCanonico(BlockPos candidate, NavObstruction.Kind kind,
                                     NavRoute.Transition transicion, int piesHasta) {
         boolean escalada = kind == NavObstruction.Kind.STEP_UP || kind == NavObstruction.Kind.JUMP_UP
                 || transicion == NavRoute.Transition.BUILD;
         int[] s = NavSuccessorPolicy.sucesor(candidate.getX(), candidate.getY(), candidate.getZ(),
-                escalada, transicion == NavRoute.Transition.BUILD ? candidate.getY() + 1 : piesHasta);
+                escalada, piesHasta);
         return new BlockPos(s[0], s[1], s[2]);
     }
 
