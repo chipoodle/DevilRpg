@@ -1,42 +1,42 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal coordination implementation (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 traversal lease bypass correction (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**Base HEAD:** `e4692eeb0df6e9f1e83e25a0c6991004360771c8`
-**Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`
-**Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
-**Current checkpoint:** `docs/autonomous-village/NEXT-SESSION.md`
+**Base HEAD:** `4727d86a03c8d6100c489145712f06a8c1890ec7`
+**Source implementation HEAD:** `9f00cb5ecec462df91f9905072988db90bec08b2`
+**Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-FIX.md`
+**Current session index:** `docs/autonomous-village/NEXT-SESSION.md`
 
-## Implemented
+## Correction
 
-- `NavExecutor.activeNode()`, `activeTransition()`, and `activeActionTarget()` derive their values from the existing route cursor. They expose no duplicate route state and return no active action outside TRAVERSING/RECOVERING.
-- `TraversalActionLeasePolicy` authorizes only an exact active BREAK/BUILD/BRIDGE transition and exact target.
-- `NavExecutor.tryAcquireTraversalAction` enforces one consumed lease per entity instance and world tick. Failed attempts still consume that tick's lease.
-- BUILD acquires the lease before placement. BREAK/BRIDGE acquire it before the injected recovery action.
-- Generic terrain recovery using only the strategic/global objective is disabled. The injected recovery callback rejects missing node/transition and has no `recoverNavigation(towards)` fallback.
-- `BreakBlockGoal` and `TraverseGoal` are no longer registered. Their independent target-Y-based digging/building/breach choices cannot execute.
-- Removed duplicate `terrainChanged()` after route BREAK.
-- New pure test `TRAVERSAL_ACTION_LEASE_POLICY_TEST`: 13 assertions authored and registered in `policyTest`, not yet executed.
+Harness's prior static gate passed but behavioral audit found that normal BREAK and DROP-obstruction BREAK bypassed the lease. Both paths are corrected:
 
-## Source commits
+- Normal BREAK calls `invokeTerrainAction(BREAK, target, objective)`.
+- Recovery BREAK/BRIDGE also calls the same gateway.
+- The gateway rejects a missing callback, acquires `tryAcquireTraversalAction(transition,target)`, and invokes the callback only through `TraversalActionDispatchPolicy.dispatch`.
+- The only direct `recoveryAction.run(` call in NavExecutor is inside this gateway.
+- DROP-obstruction BREAK was removed. A rejected DROP keeps the existing landing/edge exclusions; the planner must route around it or emit an explicit BREAK transition.
 
-- `ff0a06727d78894fd1a502aac7b830438536193a` NavExecutor lease and route-only recovery.
-- `83ba75be5a78958d5784a577acff485276e7bf7a` pure lease policy.
-- `09d2710ed437f25b26efd3153af35ec7c8846fb1` policy test.
-- `7a49c43dc8980d61423b8b655ad6b826b77be8f7` disable independent goals and generic fallback.
-- `9200bfffa70b85719d586ebbd32c0213dea7292b` register policy test.
-- `7aaea19364d958ee0e16f9ea89b3b1be9168e878` clarify route-only recovery contract.
+New files:
+- `src/main/java/com/chipoodle/devilrpg/entity/nav/TraversalActionDispatchPolicy.java`
+- `src/test/java/com/chipoodle/devilrpg/entity/nav/TraversalActionDispatchPolicyTest.java`
 
-## Validation status
+New test: `TRAVERSAL_ACTION_DISPATCH_POLICY_TEST` — 6 assertions, authored but NOT RUN. Existing `TRAVERSAL_ACTION_LEASE_POLICY_TEST` remains 13 assertions. Test registered in `policyTest`.
 
-ChatGPT did not execute compile, tests, lint, diff-check, Minecraft, or runtime. Harness must validate the exact implementation HEAD `7aaea19364d958ee0e16f9ea89b3b1be9168e878` with the documented static gate only. Preserve local/untracked work, backups, logs, partial files, fixtures and worlds. Harness must not modify production. Stop after static validation.
+## Commits
 
-**No runtime authorization:** do not launch Minecraft, runServer, wrapper, A2, C4, Run2 or Full12K. A2 remains OPEN; C4 is not revalidated.
+- `c2a363448d9d91d8919ad42c8268dc8715ca2f71` — route normal BREAK and recovery through shared lease gateway; remove DROP fallback.
+- `5cd6428d7ecce82262fcce81f2ec5da2c9df4fb7` — dispatch gate.
+- `a0b2c3cce35efdb06b97765c306a6960411360c1` — integration-seam policy test.
+- `4ccc694077ad9315a1d13eeb04c5ff6623209c68` — register test.
+- `9f00cb5ecec462df91f9905072988db90bec08b2` — assert denied same-tick callback remains closed.
 
-## Remaining
+## Validation / restrictions
 
-- Explicit existing-gap-first check/test is not yet implemented.
-- Atomic 3×3 custom gate destruction and wave-aware wall restoration are not implemented.
-- DROP remains a validated movement transition; it does not authorize digging as a substitute.
+ChatGPT did not execute compile, tests, lint, diff-check or runtime. Harness must validate exact source implementation SHA `9f00cb5ecec462df91f9905072988db90bec08b2` with the static gate only. Verify source blobs and all test counts. Harness must not modify production.
+
+**No runtime authorization:** do not launch Minecraft, runServer, wrapper, A2, C4, Run2 or Full12K. Preserve local/untracked work, backups, logs, partial files, fixtures and worlds. Stop after static validation.
+
+A2 remains OPEN; C4 not revalidated.
 
 ---
 
