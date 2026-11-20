@@ -1,14 +1,30 @@
-# CURRENT CHECKPOINT — 2026-11-20 D2 single-block ascent forensics
+# CURRENT CHECKPOINT — 2026-11-20 D3 single-block ascent and BUILD feet/action implementation
 
 **Branch:** `feature/autonomous-village`
-**Investigating HEAD:** `7cc2c8d9a2c3092bc76d69137310373170b9929e`
-**Report:** `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`
+**Source implementation commit:** `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`
+**Implementation report:** `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-IMPLEMENTATION.md`
+**Prior forensic report:** `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`
 
-- Current code produces/executes +2 `JUMP_UP` with a 0.62 actuator; `SUBIDA_MAXIMA=2`.
-- BUILD graph state is the placement cell, not the resulting feet cell; cannot cleanly express
-  sequential +1 construction.
-- Proposed: ordinary ascent max +1; +2/+3 via sequential BUILD; BUILD node pos=feet, actionPos=placement.
-- No production/tests/runtime. A2 OPEN.
+- Ordinary ascent is now capped at +1. The planner's `SUBIDA_MAXIMA` uses `MAX_ORDINARY_ASCENT=1`; +2/+3 are not ordinary movement edges.
+- `NavObstruction.classify` no longer produces JUMP_UP; the planner's legacy JUMP_UP result is fail-closed. The +2 0.62 actuator was removed from NavExecutor; legacy JUMP_UP nodes cannot advance by proximity or execute.
+- BUILD graph successor / `NavRoute.Node.pos` now represent resulting feet cell; `actionPos` carries the exact placement cell below it.
+- Planner admits each BUILD edge only when placement preconditions pass and its feet delta is at most +1 (and within the existing safe-drop bound). Multi-block ascent is a chain of individually placeable BUILD edges.
+- Executor acquires the exact BUILD action lease, places and verifies actionPos once, then moves to feet pos. Route cursor waits for exact grounded occupancy, support, valid feet and real-AABB fit.
+- Existing support/headroom/protection/placement/budget/cooldown/lease rules remain in place. No removed goals re-enabled.
+- Added `NAV_VERTICAL_BUILD_POLICY_TEST` (32 assertions) and updated affected planner, route-node, climb and DROP recovery tests; registered in `policyTest`.
+- **ChatGPT did not run compile, tests, lint or diff-check.** Static validation is PENDING Harness.
+- **No runtime:** Minecraft not launched; no worlds changed. Runtime traversal remains UNKNOWN.
+- A2 OPEN; C4 not revalidated.
+
+## Immediate next action — Harness STATIC ONLY
+
+1. Read the permanent policy, this checkpoint, workflow contract, continuation indexes and D3 implementation report.
+2. Inspect local/remote HEAD, divergence, dirty/untracked files; preserve all local-only files, backups, logs, partial files, artifacts and worlds. Safe fast-forward only; stop on any conflict/overwrite risk.
+3. Validate source implementation SHA `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7` (or a later documentation-only descendant only after verifying every production/test blob matches).
+4. Run compileJava, Gradle test/policyTest, strict lint and diff-check exactly as specified in the D3 report.
+5. Audit +1 ceiling, absence of JUMP_UP producer/actuator, BUILD feet/action split, exact lease target, single placement, physical arrival, non-buildable intermediate rejection and unchanged invariants.
+6. Report exact SHA, source blobs, commands, exit codes, assertion counts and preservation status. Harness must not modify production.
+7. Stop after static validation. No Minecraft, runServer, A2, C4, Run2 or Full12K. Runtime requires a separate explicit authorization.
 
 ---
 
