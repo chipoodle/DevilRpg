@@ -26,7 +26,7 @@ public final class NavObstruction {
         PASSABLE,
         /** Bloque a la altura de los pies con hueco encima: se sube (1 bloque). */
         STEP_UP,
-        /** Legacy compatibility only; ordinary navigation must never produce this transition. */
+        /** Dos bloques de alto con hueco encima: requiere salto. */
         JUMP_UP,
         /** No hay suelo debajo: caída. Solo aceptable si es poco profunda o hay agua. */
         DROP,
@@ -226,6 +226,10 @@ public final class NavObstruction {
         if (blockedAtFeet(level, mob, pos) && headClearOneUp(level, mob, pos)
                 && fits(level, mob, pos.above()) && hasSupport(level, pos.above())) {
             return Kind.STEP_UP;
+        }
+        // ¿Un salto de 2?
+        if (fits(level, mob, pos.above(2)) && hasSupport(level, pos.above(2))) {
+            return Kind.JUMP_UP;
         }
         // ¿Romper?
         if (policies.canBreak(pos)) {
