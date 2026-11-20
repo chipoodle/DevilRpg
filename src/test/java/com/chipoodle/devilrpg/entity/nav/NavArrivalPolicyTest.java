@@ -74,7 +74,7 @@ public final class NavArrivalPolicyTest {
                 !NavArrivalPolicy.waypointReached(false, true, false, true, false, false));
         comprobar("DROP con aterrizaje valido se alcanza",
                 NavArrivalPolicy.waypointReached(false, true, false, true, false, true));
-        comprobar("JUMP_UP sigue esperando confirmacion del controlador",
+        comprobar("legacy JUMP_UP nunca se acepta como llegada por proximidad",
                 !NavArrivalPolicy.waypointReached(true, false, false, true, true, true));
 
         if (fallos > 0) {
