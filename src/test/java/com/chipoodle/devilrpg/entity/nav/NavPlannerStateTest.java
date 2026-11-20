@@ -10,13 +10,13 @@ public final class NavPlannerStateTest {
         comprobar("BUILD no es waypoint", !NavClimbPolicy.esWaypointDePie(NavRoute.Transition.BUILD));
         comprobar("WALK es waypoint", NavClimbPolicy.esWaypointDePie(NavRoute.Transition.WALK));
         comprobar("STEP_UP es waypoint", NavClimbPolicy.esWaypointDePie(NavRoute.Transition.STEP_UP));
-        comprobar("JUMP_UP es waypoint", NavClimbPolicy.esWaypointDePie(NavRoute.Transition.JUMP_UP));
-        comprobar("sucesor canonico JUMP_UP delta0 usa pies validados",
-                java.util.Arrays.equals(NavSuccessorPolicy.sucesor(301, 118, 300, true, 120),
+        comprobar("JUMP_UP legacy no es waypoint ordinario", !NavClimbPolicy.esWaypointDePie(NavRoute.Transition.JUMP_UP));
+        comprobar("sucesor canonico BUILD usa la celda de pies resultante",
+                java.util.Arrays.equals(NavSuccessorPolicy.sucesor(301, 119, 300, true, 120),
                         new int[]{301, 120, 300}));
-        comprobar("sucesor canonico JUMP_UP normal usa pies",
-                java.util.Arrays.equals(NavSuccessorPolicy.sucesor(301, 118, 300, true, 120),
-                        new int[]{301, 120, 300}));
+        comprobar("BUILD coloca debajo de la celda de pies",
+                NavBuildTransitionPolicy.successorFeet(new net.minecraft.core.BlockPos(301, 119, 300))
+                        .equals(new net.minecraft.core.BlockPos(301, 120, 300)));
         comprobar("sucesor canonico STEP_UP usa pies",
                 java.util.Arrays.equals(NavSuccessorPolicy.sucesor(301, 119, 300, true, 120),
                         new int[]{301, 120, 300}));
