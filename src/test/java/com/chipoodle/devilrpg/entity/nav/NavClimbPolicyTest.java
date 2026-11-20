@@ -5,6 +5,7 @@ public final class NavClimbPolicyTest {
 
     public static void main(String[] args) {
         comprobar("BUILD no es waypoint de pie", !NavClimbPolicy.esWaypointDePie(NavRoute.Transition.BUILD));
+        comprobar("JUMP_UP legacy no es waypoint de pie", !NavClimbPolicy.esWaypointDePie(NavRoute.Transition.JUMP_UP));
         comprobar("BUILD sí es waypoint seleccionable", NavClimbPolicy.esWaypointSeleccionable(NavRoute.Transition.BUILD));
         comprobar("BUILD exige construcción", NavClimbPolicy.requiereConstruccion(NavRoute.Transition.BUILD));
 
