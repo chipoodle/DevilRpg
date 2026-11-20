@@ -121,7 +121,7 @@ public final class NavGraphSearch {
             int poppedThisSlice = 0;
             int staleThisSlice = 0;
             int closedSkipsThisSlice = 0;
-            int reopensThisSlice = 0;
+            final int[] reopensThisSlice = {0};
             int maxPopsThisSlice = expansionSlice > Integer.MAX_VALUE / 2
                     ? Integer.MAX_VALUE : expansionSlice * 2;
             while (!open.isEmpty() && expandedThisSlice < expansionSlice
@@ -173,7 +173,7 @@ public final class NavGraphSearch {
                     if (known != null && known <= tentative) return;
                     if (closed.remove(edge.to())) {
                         totalReopens++;
-                        reopensThisSlice++;
+                        reopensThisSlice[0]++;
                     }
                     bestG.put(edge.to(), tentative);
                     feetTo.put(edge.to(), edge.feet());
@@ -188,7 +188,7 @@ public final class NavGraphSearch {
             lastPops = poppedThisSlice;
             lastStalePops = staleThisSlice;
             lastClosedSkips = closedSkipsThisSlice;
-            lastReopens = reopensThisSlice;
+            lastReopens = reopensThisSlice[0];
             lastExpansions = expandedThisSlice;
             if (!complete && open.isEmpty()) {
                 complete = true;
