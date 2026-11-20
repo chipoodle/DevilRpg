@@ -762,10 +762,7 @@ public final class NavPlanner {
             {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
     };
 
-    /**
-     * A2 Stage 6D · FIX 2 · SUBIDA MAXIMA de una arista (1 = escalon, 2 = salto). Es la capacidad real del ente:
-     * no se admite un desplazamiento vertical mayor por el hecho de que los dos extremos sean transitables.
-     */
+    /** Ordinary movement may rise at most one block per edge; higher ascent requires sequential BUILD nodes. */
     private static final int SUBIDA_MAXIMA = NavVerticalTransitionPolicy.MAX_ORDINARY_ASCENT;
 
     /** Valle de "no es un movimiento ejecutable" para {@link #piesResultantes}. */
@@ -1098,9 +1095,8 @@ public final class NavPlanner {
     }
 
     /**
-     * A2 Stage 6D · FIX 2 · Etiqueta COHERENTE con el desplazamiento vertical REAL de la arista.
-     * Del nivel de pies resultante sale la accion fisica: bajar es {@code DROP}, +1 es {@code STEP_UP}, +2 es
-     * {@code JUMP_UP} y 0 es {@code WALK}. Sin esto, una caida de 3 bloques podia viajar como `WALK`.
+     * Labels a validated vertical edge: descending is {@code DROP}, +1 is {@code STEP_UP}, and level
+     * movement is {@code WALK}. A positive delta above one is rejected before this normalization.
      */
     private static NavRoute.Transition etiquetaDeMovimiento(NavObstruction.Kind kind, int delta) {
         if (kind == NavObstruction.Kind.BREAKABLE) {
@@ -1115,8 +1111,7 @@ public final class NavPlanner {
         if (delta == 1) {
             return NavRoute.Transition.STEP_UP;
         }
-        NavRoute.Transition ordinary = NavVerticalTransitionPolicy.ordinaryTransition(delta);
-        return ordinary == null ? NavRoute.Transition.WALK : ordinary;
+        return NavVerticalTransitionPolicy.ordinaryTransition(delta);
     }
 
     /** A2 Stage 6D · FIX 2 · Coste de la accion EFECTIVA (coherente con la etiqueta ya corregida). */
