@@ -169,6 +169,12 @@ public final class NavExecutor {
     private NavState state = NavState.IDLE;
     private NavRoute route;
     private int routeIndex;
+    /**
+     * Exclusión de acciones de terreno: una única herramienta por entidad y tick.
+     * El lease se consume al autorizar el intento, incluso si la primitiva no logra modificar el mundo.
+     */
+    private long traversalActionLeaseTick = Long.MIN_VALUE;
+    private boolean traversalActionLeaseUsed;
     private BlockPos objective;
     /** El objetivo local procede de una transición BUILD y puede no tener soporte hasta ejecutar esa transición. */
     private boolean objetivoPermiteConstruccion;
@@ -5265,6 +5271,12 @@ public final class NavExecutor {
                 trazarComandoMovimiento(node, "DROP", aim.x, aim.y, aim.z, 0.9D);
             }
             case BUILD -> {
+                // Toda modificación de terreno requiere la autorización de la transición activa.
+                if (!tryAcquireTraversalAction(NavRoute.Transition.BUILD, node.pos())) {
+                    state = NavState.OBSTRUCTED;
+                    lastMoveTarget = node.pos().toShortString() + ":BUILD-LEASE-RECHAZADO";
+                    return;
+                }
                 // A2 Stage 4Q · CONSTRUIR DESDE LA RUTA. El nodo es la celda donde se coloca el bloque; la posicion
                 // transitable resultante es su celda SUPERIOR. Se coloca con la primitiva de la casa, se VERIFICA
                 // releyendo el estado, y la celda pasa a la geometria construida para que siga en la ruta aceptada.
@@ -5847,6 +5859,11 @@ public final class NavExecutor {
                     ? actual.actionTarget().immutable() : actual.pos().immutable();
             transicion = actual.transition();
         }
+        // La recuperación genérica basada en el objetivo global ya no puede modificar terreno.
+        // Solo BREAK/BRIDGE explícitos del nodo activo pueden adquirir el actuador.
+        if (nodo == null || transicion == null || !tryAcquireTraversalAction(transicion, nodo)) {
+            return false;
+        }
         boolean acted = recoveryAction.run(towards, nodo, transicion);
         if (nodo != null) {
             // VERIFICACION REAL: la accion no se da por buena por haber sido invocada. Se relee el mundo.
@@ -5924,6 +5941,60 @@ public final class NavExecutor {
     /** A2 Stage 6F · nodo de ruta en curso, o {@code null}. */
     public NavRoute.Node nodoDeRutaActual() {
         return route == null ? null : route.currentNode(routeIndex);
+    }
+
+    /**
+     * Nodo cuya transición está siendo ejecutada ahora. No expone nodos de rutas en planificación,
+     * terminales o invalidadas.
+     */
+    public NavRoute.Node activeNode() {
+        if (state != NavState.TRAVERSING && state != NavState.RECOVERING) {
+            return null;
+        }
+        return route == null ? null : route.currentNode(routeIndex);
+    }
+
+    public NavRoute.Transition activeTransition() {
+        NavRoute.Node node = activeNode();
+        return node == null ? null : node.transition();
+    }
+
+    /** Objetivo exacto de una acción de terreno; null para transiciones que solo mueven. */
+    public BlockPos activeActionTarget() {
+        NavRoute.Node node = activeNode();
+        if (node == null) {
+            return null;
+        }
+        return switch (node.transition()) {
+            case BREAK -> node.actionTarget();
+            case BUILD, BRIDGE -> node.pos();
+            default -> null;
+        };
+    }
+
+    /**
+     * Adquiere el actuador de terreno para la transición activa. El lease es por entidad (esta instancia)
+     * y por tick de mundo; una segunda solicitud en el mismo tick se rechaza, aunque la primera haya fallado.
+     */
+    public boolean tryAcquireTraversalAction(NavRoute.Transition requestedTransition, BlockPos requestedTarget) {
+        long now = mob.level().getGameTime();
+        NavRoute.Node node = activeNode();
+        BlockPos activeTarget = activeActionTarget();
+        boolean allowed = TraversalActionLeasePolicy.canAcquire(
+                now, traversalActionLeaseTick, traversalActionLeaseUsed,
+                node != null, node == null ? null : node.transition(), activeTarget,
+                requestedTransition, requestedTarget);
+        if (allowed) {
+            traversalActionLeaseTick = now;
+            traversalActionLeaseUsed = true;
+        }
+        return allowed;
+    }
+
+    public String traversalLeaseDiag() {
+        return "tick=" + traversalActionLeaseTick + " used=" + traversalActionLeaseUsed
+                + " active=" + activeTransition()
+                + " target=" + (activeActionTarget() == null ? "-" : activeActionTarget().toShortString());
     }
 
     public void setRecoveryAction(RecoveryAction action) {
