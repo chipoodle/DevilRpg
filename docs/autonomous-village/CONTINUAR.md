@@ -1,16 +1,22 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 global A* compile correction; STATIC PENDING
+# CURRENT CHECKPOINT — A2 última ejecución diagnóstica autorizada (2026-11-20)
 
-La continuación operativa está en `docs/autonomous-village/NEXT-SESSION.md`.
-Informe de implementación/corrección: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-IMPLEMENTATION.md`.
-Último commit de corrección fuente: `ab9d4f0c84a56b67d4efb3e4ff2468ac54e2415f`.
-Primera validación estática: FAIL al compilar; `reopensThisSlice` mutable se capturó dentro del lambda de `graph.expand`. Ninguna prueba se ejecutó; lint y diff-check PASS.
+**Branch:** `feature/autonomous-village`  
+**Remote HEAD de handoff:** `1c9ff7422ec3e4dddd28ad094e33d5c3cb6d49ce`  
+**R2 static PASS:** `dbff54480d9e564531b268e3bfe01347a464f32c` (el tip actual es un descendiente de documentación únicamente; source/test blobs sin cambios).  
+**Handoff obligatorio de Harness:** `docs/autonomous-village/2026-11-20-A2-LAST-RUN-HARNESS-HANDOFF.md`
 
-ChatGPT corrigió únicamente la captura usando un holder `final int[]`, preservando la condición, momento de incremento y semántica de métricas. Nuevo blob `NavGraphSearch.java`: `906b480afff84780d66b4378b447e7b1e4a5a3f0`.
+- El dueño autorizó **exactamente una ejecución runtime A2 Run1**. Harness la ejecuta; ChatGPT NO ejecuta comandos locales, Gradle, Minecraft ni runtime.
+- División permanente: ChatGPT implementa código/tests en GitHub; Harness sincroniza, compila, prueba, ejecuta escenarios, mide y documenta. Harness nunca modifica producción ni tests.
+- Antes de runtime, Harness debe leer el handoff, inspeccionar estado/divergencia/worktree/untracked, preservar todos los archivos y mundos protegidos, verificar hashes y ejecutar el static gate en el SHA sincronizado. Safe fast-forward only; detenerse ante conflicto o riesgo.
+- Si el static gate falla, no lanzar Minecraft; reportar BLOCKED/FAIL. Si pasa, ejecutar una sola vez el comando canónico documentado en el handoff, en un mundo runtime único nuevo.
+- Recolectar específicamente las causas de rechazo BREAK (`BREAK_STAND_CANDIDATE`, `BREAK_LOS_DIAG`), cada candidato del primer expansion, eventos de búsqueda por UUID, BUILD/DROP y métricas de entrada estricta. Inspeccionar también los logs previos en modo read-only.
+- No C4 standalone, Run2, retry ni Full12K. No tocar los mundos protegidos, paredes, criterios, budgets ni predicados de seguridad.
+- Después del reporte, ChatGPT hará el análisis y la corrección final basada en evidencia, directamente en GitHub; añadirá regresiones y pedirá a Harness solo validación estática de ese commit. Esa validación no autoriza otra ejecución runtime.
+- D* Lite no está implementado: el planner actual es A* incremental reanudable. D* Lite se difirió porque el defecto de mayor prioridad es que el grafo produce cero sucesores legales en geometrías específicas; D* Lite no puede inventar aristas válidas. No sustituir el arreglo del grafo por D* Lite.
 
-**Siguiente:** Harness STATIC ONLY sobre el nuevo HEAD. Verificar los seis blobs, ejecutar compileJava, Gradle test/policyTest, strict lint y diff-check; documentar pruebas/assertions realmente ejecutadas. Harness no modifica producción/tests. Preservar trabajo local y mundos. Detenerse tras PASS/FAIL.
-
-**Sin runtime:** no Minecraft, runServer, A2, C4, Run2 ni Full12K. La autorización Run1 anterior está consumida. A2 OPEN; C4 no revalidado; D3 BUILD runtime-unmeasured.
-
+**Última evidencia estática:** R2 PASS: compile/test/strict lint/diff-check PASS; 55 policy tests, BREAK 8, planner 53 assertions.  
+**Estado:** A2 OPEN; C4 no revalidado; D3 BUILD runtime no medido.  
+**Siguiente acción:** Harness sigue exactamente el handoff `docs/autonomous-village/2026-11-20-A2-LAST-RUN-HARNESS-HANDOFF.md`; no pedir al dueño que active conectores locales.
 
 ---
 
