@@ -1,4 +1,23 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal lease bypass correction (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-20 D3 single-block ascent and BUILD feet/action implementation
+
+**Branch:** `feature/autonomous-village`
+**Source implementation commit:** `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`
+**Detailed report:** `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-IMPLEMENTATION.md`
+**Session index:** `docs/autonomous-village/NEXT-SESSION.md`
+
+- Ordinary ascent is capped at +1; +2/+3 cannot be emitted as ordinary transitions. `JUMP_UP` remains compatibility-only and fails closed; the old 0.62 actuator and private jump methods were removed.
+- BUILD graph successor and route `pos` are the resulting feet cell; `actionPos` is the placement cell below.
+- Every BUILD edge passes the unchanged placement safety preconditions plus a +1 ascent / existing safe-drop envelope.
+- Executor leases the exact actionPos, places and verifies once, then moves to feet pos. Cursor advances only after exact grounded occupancy, support, valid feet and real-AABB fit.
+- Added and registered `NAV_VERTICAL_BUILD_POLICY_TEST` (32 assertions); updated affected planner, route-node, climb and DROP recovery tests.
+- Tests are authored, **NOT RUN by ChatGPT**. Harness STATIC ONLY is next. No runtime authorization; no Minecraft/world changes.
+- A2 OPEN; C4 not revalidated.
+
+**Harness next:** preserve all local/untracked artifacts and worlds; safe fast-forward only. Validate exact source SHA `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7` (or docs-only descendant after source-blob verification), run compileJava, test/policyTest, strict lint and diff-check; audit all D3 invariants and test counts. Harness must not modify production. Stop after static checks. No Minecraft, runServer, A2, C4, Run2 or Full12K.
+
+---
+
+# HISTORICAL — 2026-11-19 traversal lease bypass correction (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
 **Base HEAD:** `4727d86a03c8d6100c489145712f06a8c1890ec7`
