@@ -1,15 +1,27 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 global A* log forensics
-**Initial source review:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-INITIAL-SOURCE-REVIEW.md`
+# CURRENT CHECKPOINT — 2026-11-20 A2 global navigation corrections implemented; STATIC PENDING
 
 **Branch:** `feature/autonomous-village`
-**RUN_ID:** `a2n-20261120-140611`
+**Implementation HEAD:** `c663f5d06618d12cd8150e238308fe3e9d7652db`
+**Implementation report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-IMPLEMENTATION.md`
 **Forensic report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`
+**Run1:** `a2n-20261120-140611` — FAIL, 0/8 strict, 2/8 perimeter.
 
-- IDX3/4/5 exp=1: 56 candidates, zero valid edges; dominated by BREAKABLE/NODO_NO_PISABLE and DESNIVEL.
-- IDX3/4/5 repeat same geometry as the mob descends; no A* budget/algorithm failure at first expansion.
-- IDX1/6/7/8: repeated cancel/restart and multiple 8000-budget exhaustions; last searches still open.
-- DROP state/feet mismatch confirmed in code; OPEN stale-pop risk unmeasured.
-- No runtime. A2 OPEN; C4 unvalidated.
+- BREAK stand candidates now use actual feet Y and include the current supported cell as a zero-movement action stand.
+- DROP graph states now use validated landing feet Y in local and global A*.
+- A* discards stale OPEN records; pop/stale/closed-skip/reopen metrics are exposed per slice and in search summaries.
+- Global cancellation logs include caller class/method/line and world tick.
+- Regression tests authored; **STATIC VALIDATION PENDING**. ChatGPT did not run build/tests/lint.
+- No runtime or world changes. A2 OPEN; C4 not revalidated; D3 BUILD runtime-unmeasured.
+
+## Immediate next action — Harness STATIC ONLY
+
+Validate exact implementation HEAD `c663f5d06618d12cd8150e238308fe3e9d7652db`:
+- Preserve local/untracked work, backups, partial files, logs, artifacts and all protected worlds. Safe fast-forward only; stop on divergence or overwrite risk.
+- Verify all source/test blob SHAs in the implementation report.
+- Run compileJava, Gradle test/policyTest, strict lint and diff-check.
+- Audit BREAK stand generation, DROP state/feet coherence, stale OPEN skipping, pop/reopen metrics and cancellation caller.
+- Harness must not modify production or tests. Persist its report and update this checkpoint.
+- Stop after STATIC PASS/FAIL. **No Minecraft, runServer, A2, C4, Run2 or Full12K.** Runtime requires separate explicit authorization.
 
 ---
 

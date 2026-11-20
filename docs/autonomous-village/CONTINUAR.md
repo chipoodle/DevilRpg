@@ -1,4 +1,20 @@
-# CURRENT CHECKPOINT — 2026-11-20 D3 single-block ascent and BUILD feet/action implementation
+# CURRENT CHECKPOINT — 2026-11-20 A2 global navigation corrections implemented; STATIC PENDING
+
+La continuación operativa y las instrucciones exactas de Harness están en `docs/autonomous-village/NEXT-SESSION.md`.
+Informe de implementación: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-IMPLEMENTATION.md`.
+Implementation HEAD: `c663f5d06618d12cd8150e238308fe3e9d7652db`.
+
+- BREAK: stand candidates at validated feet Y; current supported stand may perform a zero-movement BREAK.
+- DROP: canonical A* successor is the physical landing feet cell.
+- A*: stale OPEN records are skipped; pop/stale/reopen metrics and exact cancellation caller are logged.
+- Regression tests authored; STATIC validation pending; no runtime or world changes.
+- A2 OPEN; C4 not revalidated; D3 BUILD runtime-unmeasured.
+
+**Next:** Harness STATIC ONLY on the exact HEAD above; preserve local work/worlds; stop after static PASS/FAIL. No Minecraft, A2, C4, Run2 or Full12K without separate explicit authorization.
+
+---
+
+# HISTORICAL — 2026-11-20 D3 single-block ascent and BUILD feet/action implementation
 
 **Branch:** `feature/autonomous-village`
 **Source implementation commit:** `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`
