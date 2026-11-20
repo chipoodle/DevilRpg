@@ -1428,3 +1428,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - First expansions zero valid; pending searches churn. No runtime.
 - Report: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`. A2 OPEN.
+
+## 2026-11-20 — A2 global A* corrections STATIC FAIL
+
+- Compile blocker in reopensThisSlice lambda capture; tests not run. No runtime.
+- Report: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`. A2 OPEN.

@@ -1,8 +1,17 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 global navigation corrections implemented; STATIC PENDING
+# CURRENT CHECKPOINT — 2026-11-20 A2 global A* corrections STATIC FAIL
 
 **Branch:** `feature/autonomous-village`
-**Implementation HEAD:** `c663f5d06618d12cd8150e238308fe3e9d7652db`
-**Implementation report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-IMPLEMENTATION.md`
+**Tested HEAD:** `bfaebd0661a39b3031de3f59efe6fdcef6a3c889`
+**Validation report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`
+
+- Six correction blobs match, but compile fails at `NavGraphSearch.java:176`.
+- `reopensThisSlice` is mutated inside the `graph.expand` lambda (not effectively final).
+- Tests did not run; lint/diff PASS. Source intent for BREAK/DROP/OPEN/cancel is present but unverified.
+- ChatGPT must fix the capture, publish a new HEAD and request a fresh static gate. No runtime.
+
+---
+
+# HISTORICAL — 2026-11-20 A2 global navigation corrections implemented
 **Forensic report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`
 **Run1:** `a2n-20261120-140611` — FAIL, 0/8 strict, 2/8 perimeter.
 
@@ -1316,6 +1325,7 @@ Read first, in order:
 110. `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`
 111. `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`
 112. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`
+113. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1443,9 +1453,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT to fix candidate generation at the shaft/slope and DROP state/feet semantics.
-2. Add cancel caller/tick and OPEN pop/reopen telemetry before another runtime.
-3. No retry/Run2/Full12K without new authorization. A2 OPEN; C4 not revalidated.
+1. ChatGPT to fix the `reopensThisSlice` lambda capture without changing the metric semantics.
+2. Re-run compileJava/test/lint/diff on the new HEAD.
+3. No runtime/Run2/Full12K until static PASS and new authorization. A2 OPEN; C4 not revalidated.
 
 ## Worlds (preserve; do not overwrite)
 

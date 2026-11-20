@@ -5562,3 +5562,9 @@ run/saves; hashes match; structural verification only.
 - IDX3/4/5 exp1: 56 candidates, 0 valid; 40 BREAKABLE NODO_NO_PISABLE each.
 - IDX1/6/7/8 repeated restart/cancel and 8000-budget exhaustion. DROP state/feet mismatch; OPEN stale unmeasured.
 - No runtime. Report: docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md. A2 OPEN.
+
+## 2026-11-20 — A2 global A* corrections STATIC FAIL
+
+- Six blobs match, but compile fails at NavGraphSearch.java:176 (reopensThisSlice lambda capture).
+- Tests not run; lint/diff PASS. No runtime.
+- Report: docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md. A2 OPEN.

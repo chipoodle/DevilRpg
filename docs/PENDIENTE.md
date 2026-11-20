@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 global A* log forensics
+# CURRENT CHECKPOINT — 2026-11-20 A2 global A* corrections STATIC FAIL
 
 **Branch:** `feature/autonomous-village`
 **Source implementation commit:** `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`
@@ -9,6 +9,7 @@
 - **Prep:** workflow generado, no clonado. Target reservado `build/a2n/a2n-20261120-135343-prep/` (solo manifest); mundo real se genera al runtime. Protegidos intactos. Sin runtime. Detalle: `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`.
 - **Run1 D3 `a2n-20261120-140611` FAIL:** 0/8 estricto, 2/8 perímetro (IDX1/6), 0 muertes; C4 FAIL. BUILD no ejercitado (0 eventos); IDX3/4/5 exp1/0, IDX1/6/7/8 global pendiente. Sin reintento. Detalle: `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`.
 - **A* forense:** IDX3/4/5 exp1 con 56 candidatos/0 válidos (40 BREAKABLE NODO_NO_PISABLE); IDX1/6/7/8 cancel/restart y varios 8000. DROP state/feet mismatch confirmado; OPEN stale no medido. Detalle: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`.
+- **Correcciones `bfaebd06` STATIC FAIL:** blobs OK, pero compile falla en `NavGraphSearch.java:176` por `reopensThisSlice` capturado en lambda; tests no corren. Lint/diff OK. Detalle: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`.
 **Session index:** `docs/autonomous-village/NEXT-SESSION.md`
 
 - Ordinary ascent is capped at +1; +2/+3 cannot be emitted as ordinary transitions. `JUMP_UP` remains compatibility-only and fails closed; the old 0.62 actuator and private jump methods were removed.
