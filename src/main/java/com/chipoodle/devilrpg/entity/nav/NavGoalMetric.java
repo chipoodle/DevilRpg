@@ -11,8 +11,8 @@ public final class NavGoalMetric {
 
     /**
      * Cota inferior admisible del coste restante hasta la region de meta.
-     * Cada arista validada desplaza al menos un bloque horizontal y cuesta al menos 1.
-     * En vertical, una arista puede subir como maximo {@code maxStepUp} o caer como maximo
+     * Cada arista desplaza como maximo un bloque horizontal y cuesta al menos 1; por tanto, la distancia horizontal restante es una cota inferior del coste. En vertical, una arista puede subir como maximo
+     * Una arista puede subir como maximo {@code maxStepUp} o caer como maximo
      * {@code maxSafeDrop}; por ello la distancia vertical restante dividida por ese maximo
      * tambien es una cota inferior. El maximo de ambas cotas sigue siendo admisible.
      */
