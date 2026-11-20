@@ -60,6 +60,23 @@
 - `src/test/java/com/chipoodle/devilrpg/entity/nav/NavDropTakeoffPolicyTest.java`
 - `build.gradle` (registers the new policy test)
 
+## Source blob verification references
+
+These blob SHAs were fetched from the documentation-updated branch tip after confirming it is a documentation-only descendant of the source implementation commit:
+
+| File | Blob SHA |
+|---|---|
+| `NavVerticalTransitionPolicy.java` | `682573c6caf4b6f43d49df0404170f69b0408784` |
+| `NavBuildTransitionPolicy.java` | `328d7217f387337b6d4296e2a8a33c1f388476a9` |
+| `NavObstruction.java` | `821c393fcc2c8a4f6d2b505bf578a7a3d3366f8e` |
+| `NavPlanner.java` | `27f8387d6fe52f0ff18aa46e9bef75f8a22b0f4f` |
+| `NavRouteNodePolicy.java` | `f13243d1032e35b4fdf9b27f43a75247e6d337db` |
+| `NavExecutor.java` | `4e73cd3b9bf82dfe449fd0731b126eda32eaf819` |
+| `NavVerticalBuildPolicyTest.java` | `23fa8566fdc8359291c5cb933f9348a794b79896` |
+| `NavPlannerStateTest.java` | `dcd963ccf80b8a4ff11d05a70f8144bfa98aae7c` |
+| `NavRouteNodePolicyTest.java` | `8ad85d6fa345ae12d3c18ac9bdae04546358fac7` |
+| `build.gradle` | `352dc1319f0863105f0c2347df2ab857f5f1323c` |
+
 ## Policy tests authored — NOT RUN
 
 - `NAV_VERTICAL_BUILD_POLICY_TEST`: 32 assertions, including +0/+1/+2/+3 vertical policy, a three-edge A* BUILD chain, feet/actionPos split, non-buildable intermediate rejection, no repeated placement, and physical-arrival gates.
