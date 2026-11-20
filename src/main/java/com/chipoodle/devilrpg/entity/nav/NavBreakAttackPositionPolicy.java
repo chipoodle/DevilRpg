@@ -26,10 +26,7 @@ public final class NavBreakAttackPositionPolicy {
     public static List<BlockPos> candidates(final BlockPos actionPos, final BlockPos from) {
         List<BlockPos> out = new ArrayList<>(OFFSETS.length);
         for (int[] off : OFFSETS) {
-            BlockPos p = actionPos.offset(off[0], 0, off[1]);
-            if (!p.equals(from)) {
-                out.add(p);
-            }
+            out.add(actionPos.offset(off[0], 0, off[1]));
         }
         out.sort(Comparator
                 .comparingDouble((BlockPos p) -> from == null ? 0.0D : p.distSqr(from))
@@ -51,7 +48,10 @@ public final class NavBreakAttackPositionPolicy {
         }
         int dx = Math.abs(standPos.getX() - from.getX());
         int dz = Math.abs(standPos.getZ() - from.getZ());
-        return Math.max(dx, dz) == 1;
+        // The current cell is already a valid approach stand: BREAK may be a zero-movement
+        // terrain action. Requiring a different cell made adjacent obstructions unreachable
+        // when a shaft or slope left no second supported stand position.
+        return dx == 0 && dz == 0 || Math.max(dx, dz) == 1;
     }
 
     /** Pure coordinate form used by deterministic tests without a Minecraft classpath. */

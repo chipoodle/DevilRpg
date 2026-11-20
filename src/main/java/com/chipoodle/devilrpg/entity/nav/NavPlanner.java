@@ -387,15 +387,32 @@ public final class NavPlanner {
                 policies, construidas, exclusiones, exclusionesBreak, false, null);
     }
 
+    private static String cancellationCaller() {
+        for (StackTraceElement frame : Thread.currentThread().getStackTrace()) {
+            if (!frame.getClassName().equals(NavPlanner.class.getName())
+                    && !frame.getClassName().equals(Thread.class.getName())) {
+                return frame.getClassName() + "#" + frame.getMethodName() + ":" + frame.getLineNumber();
+            }
+        }
+        return "unknown";
+    }
+
     /** Cancels a pending search when its owning mission is replaced or invalidated. */
     public static void cancelGlobalSearch(GlobalSearchHandle handle) {
         if (handle != null && handle.state != null) {
             GlobalSearchState state = handle.state;
             traceGlobalSearch("GLOBAL_SEARCH_CANCEL", "uuid=" + state.entityUuid
+                    + " tick=" + (state.level instanceof net.minecraft.world.level.Level world
+                            ? world.getGameTime() : -1L)
                     + " start=" + state.start.toShortString()
                     + " goal=" + state.objective.toShortString()
                     + " exp=" + state.search.expansions()
                     + " frontier=" + state.search.frontierSize()
+                    + " pops=" + state.search.totalPops()
+                    + " stalePops=" + state.search.totalStalePops()
+                    + " closedSkips=" + state.search.totalClosedSkips()
+                    + " reopens=" + state.search.totalReopens()
+                    + " caller=" + cancellationCaller()
                     + " reason=owner_cancelled");
             handle.state = null;
         }
@@ -663,7 +680,16 @@ public final class NavPlanner {
                     + " meta=" + state.objective.toShortString()
                     + " exp=" + state.search.expansions() + "/" + state.maxExpansions
                     + " slice=" + GLOBAL_EXPANSIONS_PER_TICK
-                    + " frontera=" + state.search.frontierSize();
+                    + " frontera=" + state.search.frontierSize()
+                    + " pops=" + state.search.totalPops()
+                    + " stalePops=" + state.search.totalStalePops()
+                    + " closedSkips=" + state.search.totalClosedSkips()
+                    + " reopens=" + state.search.totalReopens()
+                    + " lastSlice={exp=" + state.search.lastExpansions()
+                    + ",pops=" + state.search.lastPops()
+                    + ",stale=" + state.search.lastStalePops()
+                    + ",closed=" + state.search.lastClosedSkips()
+                    + ",reopens=" + state.search.lastReopens() + "}";
             return new GlobalResult(new NavRoute(List.of(), state.start), state.start, false,
                     state.search.expansions(), false, "planificación global pendiente", summary, true);
         }
@@ -683,6 +709,10 @@ public final class NavPlanner {
                 + " frontier=" + state.search.frontierSize()
                 + " found=" + resultado.found()
                 + " hitBudget=" + resultado.hitBudget()
+                + " pops=" + state.search.totalPops()
+                + " stalePops=" + state.search.totalStalePops()
+                + " closedSkips=" + state.search.totalClosedSkips()
+                + " reopens=" + state.search.totalReopens()
                 + " reason=" + resultado.reason().replace(' ', '_')
                 + " routeNodes=" + resultado.route().size());
         int expansions = resultado.expansions();
@@ -801,20 +831,25 @@ public final class NavPlanner {
     }
 
     static BlockPos estadoSucesor(BlockPos candidate, NavRoute.Transition transicion, int piesHasta) {
-        return (transicion == NavRoute.Transition.STEP_UP || transicion == NavRoute.Transition.JUMP_UP)
+        // Every state key identifies the entity's validated feet cell. DROP used to retain the
+        // raw unsupported candidate Y while carrying the landing Y separately in feetTo.
+        return (transicion == NavRoute.Transition.STEP_UP
+                || transicion == NavRoute.Transition.JUMP_UP
+                || transicion == NavRoute.Transition.DROP)
                 ? new BlockPos(candidate.getX(), piesHasta, candidate.getZ())
                 : transicion == NavRoute.Transition.BUILD
                 ? NavBuildTransitionPolicy.successorFeet(candidate) : candidate;
     }
 
     /**
-     * Sucesor canonico de una arista: STEP_UP y BUILD almacenan el estado de pies validado (piesHasta),
-     * separado de la celda de accion cuando la transicion coloca terreno.
+     * Canonical successor: the A* state is always the resulting physical feet cell.
+     * DROP, STEP_UP and BUILD must not retain a raw candidate Y that differs from validated feet.
+     * Terrain action cells remain separate route metadata.
      */
     static BlockPos sucesorCanonico(BlockPos candidate, NavObstruction.Kind kind,
                                     NavRoute.Transition transicion, int piesHasta) {
         boolean escalada = kind == NavObstruction.Kind.STEP_UP || kind == NavObstruction.Kind.JUMP_UP
-                || transicion == NavRoute.Transition.BUILD;
+                || transicion == NavRoute.Transition.DROP || transicion == NavRoute.Transition.BUILD;
         int[] s = NavSuccessorPolicy.sucesor(candidate.getX(), candidate.getY(), candidate.getZ(),
                 escalada, piesHasta);
         return new BlockPos(s[0], s[1], s[2]);

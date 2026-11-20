@@ -31,9 +31,14 @@ public final class NavPlannerStateTest {
         comprobar("sucesor canonico WALK conserva candidato",
                 java.util.Arrays.equals(NavSuccessorPolicy.sucesor(301, 120, 300, false, 120),
                         new int[]{301, 120, 300}));
-        comprobar("sucesor canonico DROP conserva candidato",
-                java.util.Arrays.equals(NavSuccessorPolicy.sucesor(305, 117, 300, false, 117),
-                        new int[]{305, 117, 300}));
+        comprobar("sucesor canonico DROP usa la altura real de aterrizaje",
+                NavPlanner.sucesorCanonico(new net.minecraft.core.BlockPos(305, 117, 300),
+                        NavObstruction.Kind.DROP, NavRoute.Transition.DROP, 114)
+                        .equals(new net.minecraft.core.BlockPos(305, 114, 300)));
+        comprobar("estadoSucesor DROP usa la altura real de aterrizaje",
+                NavPlanner.estadoSucesor(new net.minecraft.core.BlockPos(305, 117, 300),
+                        NavRoute.Transition.DROP, 114)
+                        .equals(new net.minecraft.core.BlockPos(305, 114, 300)));
         comprobar("sucesor canonico BREAK conserva candidato",
                 java.util.Arrays.equals(NavSuccessorPolicy.sucesor(305, 120, 300, false, 120),
                         new int[]{305, 120, 300}));
@@ -124,6 +129,82 @@ public final class NavPlannerStateTest {
                 !NavWaypointWindowPolicy.aceptable(1, 0, -13, true, 44, 6, 12));
         comprobar("waypoint fuera de horizontal rechazado",
                 !NavWaypointWindowPolicy.aceptable(45, 0, 0, false, 44, 6, 12));
+
+        // DROP graph identity, feet metadata, goal and subsequent expansion must all use the
+        // same physical landing cell rather than the raw unsupported candidate.
+        net.minecraft.core.BlockPos dropCandidate = new net.minecraft.core.BlockPos(1, 68, 0);
+        net.minecraft.core.BlockPos dropState = NavPlanner.sucesorCanonico(dropCandidate,
+                NavObstruction.Kind.DROP, NavRoute.Transition.DROP, 67);
+        net.minecraft.core.BlockPos dropGoal = new net.minecraft.core.BlockPos(2, 67, 0);
+        final boolean[] coherentDrop = {true};
+        final boolean[] expandedLanding = {false};
+        NavGraphSearch.Graph dropGraph = new NavGraphSearch.Graph() {
+            public void expand(long state, int feet, java.util.function.Consumer<NavGraphSearch.Edge> out) {
+                net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.of(state);
+                coherentDrop[0] &= pos.getY() == feet;
+                if (pos.getX() == 0) {
+                    out.accept(new NavGraphSearch.Edge(dropState.asLong(), 1.0D,
+                            NavRoute.Transition.DROP, 67));
+                } else if (pos.equals(dropState)) {
+                    expandedLanding[0] = true;
+                    out.accept(new NavGraphSearch.Edge(dropGoal.asLong(), 1.0D,
+                            NavRoute.Transition.WALK, 67));
+                }
+            }
+            public boolean goal(long state, int feet) {
+                net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.of(state);
+                coherentDrop[0] &= pos.getY() == feet;
+                return pos.equals(dropGoal) && feet == dropGoal.getY();
+            }
+            public double heuristic(long state) {
+                return dropGoal.distSqr(net.minecraft.core.BlockPos.of(state));
+            }
+            public double distance(long state) {
+                return dropGoal.distSqr(net.minecraft.core.BlockPos.of(state));
+            }
+        };
+        NavGraphSearch.Result dropSearch = NavGraphSearch.search(
+                new net.minecraft.core.BlockPos(0, 70, 0).asLong(), 70, dropGraph, 16);
+        comprobar("DROP A* state is the physical landing feet cell",
+                dropSearch.found() && dropSearch.route().get(0).state() == dropState.asLong());
+        comprobar("DROP successor expansion receives matching feet height",
+                expandedLanding[0] && coherentDrop[0]);
+
+        NavGraphSearch.Session staleSearch = NavGraphSearch.begin(0L, 64, new NavGraphSearch.Graph() {
+            public void expand(long state, int feet, java.util.function.Consumer<NavGraphSearch.Edge> out) {
+                if (state == 0L) {
+                    out.accept(new NavGraphSearch.Edge(1L, 10.0D, NavRoute.Transition.WALK, feet));
+                    out.accept(new NavGraphSearch.Edge(2L, 1.0D, NavRoute.Transition.WALK, feet));
+                } else if (state == 2L) {
+                    out.accept(new NavGraphSearch.Edge(1L, 1.0D, NavRoute.Transition.WALK, feet));
+                }
+            }
+            public boolean goal(long state, int feet) { return false; }
+            public double heuristic(long state) { return 0.0D; }
+            public double distance(long state) { return 1.0D; }
+        }, 16);
+        while (!staleSearch.advance(16)) { /* drain deterministic fixture */ }
+        comprobar("A* skips obsolete OPEN record after a better g-score",
+                staleSearch.totalStalePops() == 1 && staleSearch.expansions() == 3);
+        comprobar("A* exposes bounded pop and useful-expansion metrics",
+                staleSearch.totalPops() == 4 && staleSearch.lastExpansions() == 3);
+
+        NavGraphSearch.Session reopenedSearch = NavGraphSearch.begin(0L, 64, new NavGraphSearch.Graph() {
+            public void expand(long state, int feet, java.util.function.Consumer<NavGraphSearch.Edge> out) {
+                if (state == 0L) {
+                    out.accept(new NavGraphSearch.Edge(1L, 5.0D, NavRoute.Transition.WALK, feet));
+                    out.accept(new NavGraphSearch.Edge(2L, 1.0D, NavRoute.Transition.WALK, feet));
+                } else if (state == 2L) {
+                    out.accept(new NavGraphSearch.Edge(1L, 1.0D, NavRoute.Transition.WALK, feet));
+                }
+            }
+            public boolean goal(long state, int feet) { return false; }
+            public double heuristic(long state) { return state == 2L ? 5.0D : 0.0D; }
+            public double distance(long state) { return 1.0D; }
+        }, 16);
+        while (!reopenedSearch.advance(16)) { /* drain deterministic fixture */ }
+        comprobar("A* records a real closed-state reopen",
+                reopenedSearch.totalReopens() == 1 && reopenedSearch.expansions() == 4);
         NavGraphSearch.Result subida = NavGraphSearch.search(20L, 64, new NavGraphSearch.Graph() {
             public void expand(long s, int f, java.util.function.Consumer<NavGraphSearch.Edge> out) {
                 if (s == 20L) out.accept(new NavGraphSearch.Edge(21L, 1.0D, NavRoute.Transition.STEP_UP, 65));

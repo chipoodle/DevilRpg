@@ -86,6 +86,15 @@ public final class NavGraphSearch {
         private double bestDist;
         private long found = Long.MIN_VALUE;
         private int expansions;
+        private int totalPops;
+        private int totalStalePops;
+        private int totalClosedSkips;
+        private int totalReopens;
+        private int lastPops;
+        private int lastStalePops;
+        private int lastClosedSkips;
+        private int lastReopens;
+        private int lastExpansions;
         private boolean complete;
         private boolean hitBudget;
         private String reason = "pendiente";
@@ -110,13 +119,29 @@ public final class NavGraphSearch {
             if (complete) return true;
             int expandedThisSlice = 0;
             int poppedThisSlice = 0;
+            int staleThisSlice = 0;
+            int closedSkipsThisSlice = 0;
+            int reopensThisSlice = 0;
             int maxPopsThisSlice = expansionSlice > Integer.MAX_VALUE / 2
                     ? Integer.MAX_VALUE : expansionSlice * 2;
             while (!open.isEmpty() && expandedThisSlice < expansionSlice
                     && poppedThisSlice < maxPopsThisSlice) {
                 Node current = open.poll();
                 poppedThisSlice++;
-                if (closed.contains(current.state())) continue;
+                totalPops++;
+                // A better path may have inserted a replacement OPEN record for this state.
+                // Never expand an older record using its obsolete g-score.
+                Double best = bestG.get(current.state());
+                if (best == null || Double.compare(current.g(), best) != 0) {
+                    totalStalePops++;
+                    staleThisSlice++;
+                    continue;
+                }
+                if (closed.contains(current.state())) {
+                    totalClosedSkips++;
+                    closedSkipsThisSlice++;
+                    continue;
+                }
                 if (expansions >= maxExpansions) {
                     hitBudget = true;
                     complete = true;
@@ -146,7 +171,10 @@ public final class NavGraphSearch {
                     double tentative = current.g() + edge.cost();
                     Double known = bestG.get(edge.to());
                     if (known != null && known <= tentative) return;
-                    closed.remove(edge.to());
+                    if (closed.remove(edge.to())) {
+                        totalReopens++;
+                        reopensThisSlice++;
+                    }
                     bestG.put(edge.to(), tentative);
                     feetTo.put(edge.to(), edge.feet());
                     cameFrom.put(edge.to(), from);
@@ -157,6 +185,11 @@ public final class NavGraphSearch {
                     open.add(new Node(edge.to(), tentative, tentative + h, h));
                 });
             }
+            lastPops = poppedThisSlice;
+            lastStalePops = staleThisSlice;
+            lastClosedSkips = closedSkipsThisSlice;
+            lastReopens = reopensThisSlice;
+            lastExpansions = expandedThisSlice;
             if (!complete && open.isEmpty()) {
                 complete = true;
                 reason = "frente alcanzable agotado";
@@ -167,6 +200,15 @@ public final class NavGraphSearch {
         public boolean complete() { return complete; }
         public int expansions() { return expansions; }
         public int frontierSize() { return open.size(); }
+        public int totalPops() { return totalPops; }
+        public int totalStalePops() { return totalStalePops; }
+        public int totalClosedSkips() { return totalClosedSkips; }
+        public int totalReopens() { return totalReopens; }
+        public int lastPops() { return lastPops; }
+        public int lastStalePops() { return lastStalePops; }
+        public int lastClosedSkips() { return lastClosedSkips; }
+        public int lastReopens() { return lastReopens; }
+        public int lastExpansions() { return lastExpansions; }
 
         public Result result() {
             if (!complete) throw new IllegalStateException("search is still pending");
