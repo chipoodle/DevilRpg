@@ -30,7 +30,7 @@ Harness must execute it once, only after the static gate passes. This does not a
 3. Sync the latest documentation descendant of implementation HEAD `3a4767327ef9697650f8ba43dedf90c2dcfeeba4`. Verify exact source/test blobs:
    - `NavNeighborPolicy.java`: `e0378421c0ea024b34b4f95354e5780db78202d9`
    - `NavPlanner.java`: `274af17a32a7aa435a26457f883438513ce207dc`
-   - `NavGoalMetric.java`: `7d5b2c6e91555965caa592b7c328bee056186f0f`
+   - `NavGoalMetric.java`: `4f79500a06eadf264cd86115524285cfaf3c8518`
    - `NavNeighborPolicyTest.java`: `0ffd6323dc21a3f9c1dd52f23c71570d6d475625`
    - `build.gradle`: `ab8e949c055676df0f4cd0e4069c9839f80f1382`
 4. Confirm both local and global expansion loops use the shared `NavNeighborPolicy.offsets()` (eight horizontal directions plus same-column `(0,0))). Confirm every candidate still goes through `validarArista`.
