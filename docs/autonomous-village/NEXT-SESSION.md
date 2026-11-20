@@ -1,4 +1,5 @@
 # CURRENT CHECKPOINT — 2026-11-20 A2 global A* log forensics
+**Initial source review:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-INITIAL-SOURCE-REVIEW.md`
 
 **Branch:** `feature/autonomous-village`
 **RUN_ID:** `a2n-20261120-140611`
