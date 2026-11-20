@@ -227,10 +227,7 @@ public final class NavObstruction {
                 && fits(level, mob, pos.above()) && hasSupport(level, pos.above())) {
             return Kind.STEP_UP;
         }
-        // ¿Un salto de 2?
-        if (fits(level, mob, pos.above(2)) && hasSupport(level, pos.above(2))) {
-            return Kind.JUMP_UP;
-        }
+        // Ordinary navigation never classifies a two-block jump; higher rises require BUILD steps.
         // ¿Romper?
         if (policies.canBreak(pos)) {
             return Kind.BREAKABLE;
