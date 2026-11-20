@@ -1,21 +1,22 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 P0 fixes (STATIC VALIDATION PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 traversal coordination (STATIC PENDING)
 
 La continuación vigente es `docs/autonomous-village/NEXT-SESSION.md`.
-**Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`.
-**Informe:** `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`.
+**Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`.
+**Informe:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`.
 
-ChatGPT implementó dos correcciones P0 basadas en el forense de Run1:
+ChatGPT implementó la primera etapa de coordinación:
 
-- IDX3/IDX5: repetir el mismo objetivo local inutilizable ya no consume otro escalón; se contabiliza como fallo acotado.
-- IDX4: la ausencia de candidatos ya no reinicia el cooldown entre bloques; `CADENCE_WAIT` queda reservado al decremento real del cooldown.
+- NavExecutor deriva la transición/objetivo de acción del nodo activo y aplica un lease de herramienta único por entidad y tick.
+- Solo BREAK/BUILD/BRIDGE exactos pueden adquirir el lease. BUILD, BREAK y BRIDGE se autorizan desde la transición activa; no desde la altura del objetivo global.
+- La recuperación genérica basada solo en el objetivo estratégico ya no puede modificar terreno.
+- BreakBlockGoal y TraverseGoal dejaron de registrarse porque actuaban como autoridades independientes.
+- Añadida política pura y prueba `TRAVERSAL_ACTION_LEASE_POLICY_TEST` (13 assertions), registrada en `policyTest`.
 
-Se añadieron políticas puras y pruebas: `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST` (5 assertions) y `STAIR_BUILD_RESULT_TEST` (12 assertions). La nueva prueba está registrada en `policyTest`.
+**Pendiente:** Harness debe validar exactamente `7aaea19364d958ee0e16f9ea89b3b1be9168e878` con compileJava, test/policyTest, lint estricto y diff-check. ChatGPT no ha ejecutado esas pruebas. Preservar local/untracked, backups, logs, parciales y mundos. Harness no modifica producción.
 
-**Pendiente:** Harness debe sincronizar el tip actual de la rama (descendiente de `b41e9687a4be74d24a671340ac41b7e3f1817045`), registrar el HEAD real probado y verificar los blobs de producción del informe; ejecutar compileJava, test, lint estricto y diff-check. ChatGPT no ha ejecutado esas pruebas. No declarar PASS antes del reporte Harness.
+**STATIC ONLY:** no Minecraft, wrapper, runServer, A2, C4, Run2 ni Full12K. No se autorizó runtime. A2 permanece OPEN; C4 no se revalidó.
 
-IDX7, IDX8 y el wrapper siguen pendientes. No se modificaron presupuestos, cooldowns, anclas, geometría, criterios ni mundos.
-
-**Prohibido:** Minecraft, wrapper, runServer, A2, C4, Run2 y Full12K. La autorización runtime está consumida. A2 OPEN.
+Pendiente posterior: revisión explícita de brecha existente antes de una acción, destrucción atómica del portón 3×3 y restauración basada en miembros reales de oleada. No implementados.
 
 ---
 
