@@ -26,7 +26,7 @@ public final class NavObstruction {
         PASSABLE,
         /** Bloque a la altura de los pies con hueco encima: se sube (1 bloque). */
         STEP_UP,
-        /** Dos bloques de alto con hueco encima: requiere salto. */
+        /** Legacy compatibility only; classify never emits a two-block jump. */
         JUMP_UP,
         /** No hay suelo debajo: caída. Solo aceptable si es poco profunda o hay agua. */
         DROP,
