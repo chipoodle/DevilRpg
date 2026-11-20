@@ -1,3 +1,27 @@
+# CURRENT CHECKPOINT — A2 same-column vertical-edge correction (2026-11-20)
+
+**Branch:** `feature/autonomous-village`  
+**Production implementation:** `7e78c9360c7960f13da6062f38196e8b1627b93a`  
+**Implementation + report baseline:** `3a4767327ef9697650f8ba43dedf90c2dcfeeba4`  
+**Harness handoff:** `docs/autonomous-village/2026-11-20-A2-LAST-RUN-HARNESS-HANDOFF.md`  
+**Detailed implementation report:** `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-EDGE-IMPLEMENTATION.md`
+
+- Evidencia raíz: el forense del 19-nov demostró que IDX3/IDX5 estaban en pozos 1×1; los ocho vecinos horizontales estaban bloqueados y el grafo no representaba el movimiento vertical en la misma columna `(0,0)`. A* agotaba la primera expansión con 56 candidatos y cero sucesores.
+- Corrección implementada: `NavNeighborPolicy` añade una novena dirección `(0,0)` a los ocho vecinos horizontales. Los planificadores local y global usan esa política.
+- La nueva dirección solo genera candidatos: todos pasan por `validarArista`. No se relajaron caídas seguras, soporte, colisión, headroom, AABB, protección, permisos BREAK/BUILD, leases, budgets, radios ni criterios.
+- Regresión añadida y registrada: `NAV_NEIGHBOR_POLICY_TEST` — 16 assertions. **Authored, NOT RUN.**
+- Blobs esperados: NavNeighborPolicy `e0378421c0ea024b34b4f95354e5780db78202d9`; NavPlanner `274af17a32a7aa435a26457f883438513ce207dc`; NavGoalMetric `7d5b2c6e91555965caa592b7c328bee056186f0f`; NavNeighborPolicyTest `0ffd6323dc21a3f9c1dd52f23c71570d6d475625`; build.gradle `ab8e949c055676df0f4cd0e4069c9839f80f1382`.
+- El dueño autorizó exactamente **una ejecución runtime A2 Run1**. Harness la realiza; ChatGPT no ejecuta comandos locales, Gradle ni Minecraft.
+- **Siguiente:** Harness sincroniza de forma segura, preserva worktree/untracked/backups/artefactos/mundos, verifica blobs e hashes protegidos, ejecuta compileJava + test/policyTest + lint estricto + diff-check. Si cualquier gate falla, no lanza Minecraft. Si todos pasan, ejecuta una sola vez el A2 Run1 canónico en mundo nuevo con la instrumentación detallada del handoff.
+- Capturar por UUID los 63 candidatos teóricos por primera expansión (9×7, sujetos al radio), causas BREAK stand/LOS, eventos START/PENDING/COMPLETE/CANCEL/RESTART, BUILD/DROP y entrada estricta.
+- Sin retry, C4 standalone, Run2 ni Full12K. Harness no modifica producción ni tests.
+- D* Lite sigue sin implementarse. El planner actual es A* incremental reanudable. D* Lite no corrige la ausencia de aristas legales; se reconsiderará solo si el runtime demuestra que el coste de replanning es un problema independiente.
+
+**Última validación:** R2 estática PASS sobre el código anterior; la nueva corrección requiere validación estática fresca.  
+**Estado:** A2 OPEN; C4 no revalidado; BUILD runtime no medido.
+
+---
+
 # CURRENT CHECKPOINT — A2 última ejecución diagnóstica autorizada (2026-11-20)
 
 **Branch:** `feature/autonomous-village`  
