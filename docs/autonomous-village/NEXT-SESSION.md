@@ -1,8 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal lease fix STATIC PASS
+# CURRENT CHECKPOINT — 2026-11-20 A2 next-defect forensics
 
 **Branch:** `feature/autonomous-village`
-**Implementation SHA:** `9f00cb5ecec462df91f9905072988db90bec08b2`
-**Tested HEAD:** `ab75af8fc27302fa3c5c157b8d72562d9e3e2cd5`
+**Investigating HEAD:** `1b2e654205dfc91aa6e50248790e62436e960835`
+**Report:** `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`
+
+- A2 target is 8/8 strict `DENTRO-PARED` in two consecutive runs + hunting regression.
+- Last runtime 151818: 3/8 strict, 3/8 perimeter, C4 PASS, no watchdog; pre-P0/pre-lease.
+- Priority unfixed defect: IDX7 ascent/BUILD gate (`descensoExigeConstruir` applies descent logic to
+  `dy=+3`).
+- IDX3/4/5 P0 fixes and lease changes remain runtime-unmeasured; IDX8 cancellation and atomic gate separate.
+- No runtime. A2 OPEN; C4 not revalidated.
+
+---
+
+# HISTORICAL — 2026-11-19 traversal lease fix STATIC PASS
 **Validation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`
 
 - Exactly one `recoveryAction.run(` remains, inside `invokeTerrainAction` behind the lease.
@@ -1191,6 +1202,7 @@ Read first, in order:
 102. `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
 103. `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`
 104. `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`
+105. `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1318,9 +1330,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Traversal lease fix is statically PASS; next is ChatGPT review and any atomic-gate implementation.
-2. No runtime authorization exists. C4 not revalidated.
-3. A2 OPEN; no Run2/Full12K without explicit new authorization.
+1. ChatGPT to implement the signed vertical build-need policy for IDX7 ascent, with pure and integration tests.
+2. Then address IDX8 cancellation telemetry/lifecycle and atomic gate as separate changes.
+3. No runtime until static PASS and new explicit authorization. A2 OPEN; C4 not revalidated.
 
 ## Worlds (preserve; do not overwrite)
 

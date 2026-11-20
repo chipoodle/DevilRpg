@@ -5479,3 +5479,9 @@ run/saves; hashes match; structural verification only.
 - Single recoveryAction.run behind invokeTerrainAction; BREAK/BRIDGE leased; DROP no break.
 - compile/test/lint/diff PASS; 13+6+54+5+12 assertions; 56 test groups. No runtime.
 - Report: docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-20 — A2 next-defect forensics
+
+- A2 criterion 8/8 strict two consecutive runs; last 151818 = 3/8 pre-P0/pre-lease, C4 PASS.
+- Priority defect: IDX7 ascent +3 rejected by descensoExigeConstruir; IDX8 cancellation and gate separate.
+- No runtime. Report: docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md. A2 OPEN.

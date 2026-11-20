@@ -1353,3 +1353,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Lease is single gateway; DROP no longer breaks. No runtime.
 - Report: `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-20 — A2 next-defect forensics
+
+- Priority IDX7 ascent build gate; P0/lease runtime-unmeasured; A2 OPEN.
+- Report: `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`.
