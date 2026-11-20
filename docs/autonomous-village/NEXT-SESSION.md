@@ -1,3 +1,25 @@
+# CURRENT CHECKPOINT — 2026-11-20 A2 Run1 FAIL; global A* forensic review pending
+
+**Branch:** `feature/autonomous-village`
+**Latest report:** `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`
+**Initial source review:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-INITIAL-SOURCE-REVIEW.md`
+**Runtime RUN_ID:** `a2n-20261120-140611`
+**Runtime tested HEAD:** `3d7e6bf4d44f07b3f91068a493bb9cb1ace7fc58`
+**Current documentation HEAD before this checkpoint update:** `23aed89a57c8c5245f265bc30b8b9cfb58a9b756`
+
+- A2 Run1 FAIL: 0/8 strict, 2/8 perimeter; fixture 16/16, professionals 12/12, spawn 8/8.
+- IDX3/4/5: first global expansion examined 56 edges, accepted 0, then frontier exhausted at exp=1.
+- IDX1/6/7/8: searches pending at 5263/5218/6890/6542 expansions.
+- D3 BUILD runtime-unmeasured: zero BUILD nodes, placement or feet approaches.
+- Protected world integrity PASS; Harness did not modify production/tests; no second run.
+- A2 OPEN; C4 not revalidated. No Run2, C4, Full12K or runtime without new explicit authorization.
+
+## Immediate next action — read-only extraction from existing Run1 artifacts
+
+Harness must inspect the existing `build/a2n/a2n-20261120-140611/nav-trace.log` and `srv.log` only. Extract full first-expansion candidate events for IDX3/4/5, and reconstruct START/PENDING/CANCEL/RESTART/COMPLETE lifecycle per UUID for IDX1/6/7/8. No Minecraft launch, no world writes, no build/test unless separately requested, and absolutely no runtime retry.
+
+ChatGPT's source review identifies two independent audit targets: (1) first-expansion zero-successor is caused before A* queue insertion and needs candidate rejection evidence; (2) DROP graph state stores candidate Y while feet stores landing Y, so heuristic/distance/next expansion may use a non-physical state. A further possible efficiency issue is stale OPEN entries consuming bounded queue pops. These are investigation targets, not yet accepted root causes. See the initial source-review report.
+
 # CURRENT CHECKPOINT — 2026-11-20 A2 Run1 D3 runtime FAIL
 
 **Branch:** `feature/autonomous-village`
