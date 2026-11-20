@@ -3776,7 +3776,7 @@ public final class NavExecutor {
             }
         }
         boolean alcanzadoPorRuta = NavArrivalPolicy.waypointReached(
-                node.transition() == NavRoute.Transition.JUMP_UP,
+                false,
                 node.transition() == NavRoute.Transition.DROP,
                 escalonPendiente,
                 dentroTolerancia,
