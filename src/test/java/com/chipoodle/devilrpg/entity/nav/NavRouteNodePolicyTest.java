@@ -23,7 +23,7 @@ public final class NavRouteNodePolicyTest {
         BlockPos buildFeet = new BlockPos(13, 66, -8);
         BlockPos buildPlacement = buildFeet.below();
         check("BUILD route position is the resulting feet cell",
-                NavRouteNodePolicy.routePosition(buildFeet, NavRoute.Transition.BUILD, 66, buildPlacement)
+                NavRouteNodePolicy.routePosition(buildFeet, NavRoute.Transition.BUILD, 66, null)
                         .equals(buildFeet));
         NavRoute.Node buildNode = new NavRoute.Node(buildFeet, NavRoute.Transition.BUILD, buildPlacement);
         check("BUILD action target remains the placement cell below feet",
