@@ -14,9 +14,11 @@ public final class NavRouteNodePolicy {
     }
 
     public static BlockPos routePosition(BlockPos state, NavRoute.Transition transition,
-                                         int feet, BlockPos breakStand) {
-        if (transition == NavRoute.Transition.BREAK && breakStand != null) {
-            return breakStand;
+                                         int feet, BlockPos actionPos) {
+        if ((transition == NavRoute.Transition.BREAK || transition == NavRoute.Transition.BUILD)
+                && actionPos != null) {
+            // BUILD state is already the resulting feet cell; actionPos is the block to place below it.
+            return transition == NavRoute.Transition.BREAK ? actionPos : state;
         }
         if (transition == NavRoute.Transition.DROP) {
             return new BlockPos(state.getX(), feet, state.getZ());
