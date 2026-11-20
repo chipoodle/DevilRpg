@@ -1,14 +1,32 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal coordination design
+# CURRENT CHECKPOINT — 2026-11-19 traversal coordination implemented (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**HEAD analyzed:** `2bb7c517048b09788aee3a9a8447656b8a4e4330`
+**Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`
+**Base HEAD:** `e4692eeb0df6e9f1e83e25a0c6991004360771c8`
+**Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
 **Design report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
 
-- Current `NavExecutor` owns movement, but BreakBlockGoal/TraverseGoal independently choose terrain tools.
-- Proposed: active transition/actionTarget as sole intent + single-use per-tick actuator lease.
-- Separate design: atomic 3×3 custom gate breach + repair gating.
-- No code/test/runtime executed. A2 OPEN.
+- NavExecutor now derives active node/transition/action target from its existing route cursor and owns a per-entity, per-world-tick single-use terrain-action lease.
+- Only exact active BREAK/BUILD/BRIDGE targets can acquire the lease. WALK/STEP_UP/JUMP_UP/DROP/DOOR and absent/terminal nodes cannot authorize terrain tools.
+- BUILD acquires the lease before placement. BREAK/BRIDGE recovery requires an explicit active route node. Generic recovery based on the global objective no longer modifies terrain.
+- BreakBlockGoal and TraverseGoal are no longer registered; their target-Y-driven independent tool decisions cannot run.
+- Added `TraversalActionLeasePolicy` and `TraversalActionLeasePolicyTest` (13 assertions), registered in `policyTest`.
+- Existing helper protection/budgets remain; no gate changes. Duplicate route-break `terrainChanged()` call removed.
+- Source commits: `ff0a0672`, `83ba75be`, `09d2710e`, `7a49c43d`, `9200bfff`, `7aaea193`.
+- **STATIC VALIDATION PENDING.** ChatGPT did not run compile/tests/lint/diff. Harness must validate exact implementation SHA and report all results.
+- **STATIC ONLY:** no Minecraft, runServer, wrapper, A2, C4, Run2 or Full12K. Runtime was not authorized.
+- Existing-gap-first explicit handling remains a follow-up review; atomic custom gate and wave-aware repair are not implemented.
+- A2 remains OPEN. This work does not revalidate A2 or C4.
 
+## Immediate next action — Harness STATIC ONLY
+
+1. Read the permanent collaboration policy, this checkpoint, `CHATGPT-HARNESS-WORKFLOW.md`, both continuation indexes, and the implementation report.
+2. Inspect local/remote HEAD, divergence, dirty/untracked files and local-only artifacts. Safe fast-forward only; preserve all work, backups, logs, partial files and worlds; stop on conflicts.
+3. Validate exact SHA `7aaea19364d958ee0e16f9ea89b3b1be9168e878`.
+4. Run documented `compileJava`, `test` (including `policyTest`), strict lint and `git diff --check`.
+5. Confirm `TRAVERSAL_ACTION_LEASE_POLICY_TEST` (13 assertions), full existing policy suite, and no active registration of `BreakBlockGoal`/`TraverseGoal`.
+6. Harness must not modify production. Persist report and update this checkpoint with exact tested SHA and evidence.
+7. Stop after STATIC validation regardless of PASS/FAIL. Do not launch Minecraft or any runtime scenario.
 ---
 
 # HISTORICAL — 2026-11-19 P0 enum fix STATIC PASS
