@@ -20,7 +20,7 @@
 
 1. Read the permanent policy, this checkpoint, workflow contract, continuation indexes and D3 implementation report.
 2. Inspect local/remote HEAD, divergence, dirty/untracked files; preserve all local-only files, backups, logs, partial files, artifacts and worlds. Safe fast-forward only; stop on any conflict/overwrite risk.
-3. Validate source implementation SHA `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7` (or a later documentation-only descendant only after verifying every production/test blob matches).
+3. Sync the current remote branch tip and verify the D3 report's production/test blob SHAs. Source implementation is `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`; test-only follow-up `63276177583dd3f43f93a06700e4b3e52a6e3be6` only clarifies the legacy JUMP_UP arrival assertion. The later commits are documentation updates.
 4. Run compileJava, Gradle test/policyTest, strict lint and diff-check exactly as specified in the D3 report.
 5. Audit +1 ceiling, absence of JUMP_UP producer/actuator, BUILD feet/action split, exact lease target, single placement, physical arrival, non-buildable intermediate rejection and unchanged invariants.
 6. Report exact SHA, source blobs, commands, exit codes, assertion counts and preservation status. Harness must not modify production.
