@@ -5832,10 +5832,8 @@ public final class NavExecutor {
      * Una acción de recuperación concreta. Devuelve {@code true} si hizo algo. La implementación concreta (romper,
      * puentear, apilar) la inyecta quien construye el ejecutor, para que las reglas de la aldea sigan en su sitio.
      * <p>
-     * A2 Stage 6E · FIX B · cuando la ruta actual pide {@code BREAK} o {@code BRIDGE}, se pasa además
-     * <b>el nodo concreto</b> de la ruta y su transición, para que la acción actúe sobre ESA celda y no solo sobre
-     * la misión lejana. En cualquier otro caso el nodo va a {@code null} y la recuperación sigue trabajando hacia el
-     * objetivo (el comportamiento ya medido en Stage 6D).
+     * Solo se delegan acciones {@code BREAK}/{@code BRIDGE} asociadas al nodo activo. La recuperación
+     * genérica basada en el objetivo estratégico no tiene permiso para modificar terreno.
      */
     private boolean attemptOneRecovery() {
         if (recoveryAction == null) {
@@ -5878,7 +5876,7 @@ public final class NavExecutor {
         return acted;
     }
 
-    /** Acción de recuperación inyectable (una llamada = como mucho un paso de trabajo). */
+    /** Acción inyectable para una transición explícita (una llamada = como mucho un paso de trabajo). */
     public interface RecoveryAction {
         boolean run(BlockPos towards, BlockPos nodoDeRuta, NavRoute.Transition transicionDeRuta);
     }
