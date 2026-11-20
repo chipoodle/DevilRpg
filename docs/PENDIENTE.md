@@ -1,24 +1,20 @@
-# CURRENT CHECKPOINT — 2026-11-20 D2 single-block ascent forensics
+# CURRENT CHECKPOINT — 2026-11-20 D3 single-block ascent and BUILD feet/action implementation
 
 **Branch:** `feature/autonomous-village`
-**Source implementation HEAD:** `9f00cb5ecec462df91f9905072988db90bec08b2`
-**Report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-FIX.md`
+**Source implementation commit:** `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`
+**Detailed report:** `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-IMPLEMENTATION.md`
+**Session index:** `docs/autonomous-village/NEXT-SESSION.md`
 
-- **Harness PASS:** una sola `recoveryAction.run` dentro de `invokeTerrainAction`; BREAK/BRIDGE por lease; DROP ya no rompe. compile/test/lint/diff OK; 13+6+54+5+12 aserciones. Sin runtime. Detalle: `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`.
-- **A2 sigue OPEN:** criterio 8/8 estricto en dos corridas; último runtime 3/8 (pre-P0/pre-lease). Defecto prioritario: IDX7 ascenso +3 rechazado por `descensoExigeConstruir`. IDX3/4/5 y lease sin runtime. Detalle: `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`.
-- **D1 forense:** IDX7 nunca emitió nodo BUILD ni placement; se quedó en PLANNING y agotó presupuesto. Un edge BUILD +3 se rechaza correctamente (>SUBIDA_MAXIMA2), pero no existe cadena de BUILD intermedios; `apilarBloqueParaSubir` no tiene caller con lease. Detalle: `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`.
-- **D2 forense:** el código produce/ejecuta JUMP_UP +2 (impulso0.62, SUBIDA_MAXIMA2); el grafo BUILD usa la celda de colocación como sucesor, no la celda de pies resultante. Propuesta: ascenso ordinario máx+1, +2/+3 por BUILD secuencial, BUILD pos=pies y actionPos=colocación. Detalle: `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`.
+- Ordinary ascent is capped at +1; +2/+3 cannot be emitted as ordinary transitions. `JUMP_UP` remains compatibility-only and fails closed; the old 0.62 actuator and private jump methods were removed.
+- BUILD graph successor and route `pos` are the resulting feet cell; `actionPos` is the placement cell below.
+- Every BUILD edge passes the unchanged placement safety preconditions plus a +1 ascent / existing safe-drop envelope.
+- Executor leases the exact actionPos, places and verifies once, then moves to feet pos. Cursor advances only after exact grounded occupancy, support, valid feet and real-AABB fit.
+- Added and registered `NAV_VERTICAL_BUILD_POLICY_TEST` (32 assertions); updated affected planner, route-node, climb and DROP recovery tests.
+- Tests are authored, **NOT RUN by ChatGPT**. Harness STATIC ONLY is next. No runtime authorization; no Minecraft/world changes.
+- A2 OPEN; C4 not revalidated.
 
-- Corregido BREAK normal: ahora adquiere lease antes del callback mediante `invokeTerrainAction`.
-- Corregida recuperación BREAK/BRIDGE: utiliza la misma puerta.
-- Solo queda una llamada directa `recoveryAction.run(` en NavExecutor, dentro del gateway.
-- Eliminado BREAK oportunista desde DROP; se conservan exclusiones del aterrizaje y replanning.
-- Añadida prueba de dispatch de 6 assertions, junto a la política de lease de 13 assertions; ambas registradas en `policyTest`, NOT RUN por ChatGPT.
-- **Siguiente:** Harness STATIC ONLY en el SHA exacto: compileJava, Gradle test/policyTest, strict lint y diff-check. Auditar llamadas y DROP. No modificar producción.
-- Sin runtime; no Minecraft, runServer, wrapper, A2, C4, Run2 ni Full12K. Preservar todo trabajo local y mundos.
-- A2 OPEN; C4 no revalidado.
+**Harness next:** preserve all local/untracked artifacts and worlds; safe fast-forward only. Validate exact source SHA `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7` (or docs-only descendant after source-blob verification), run compileJava, test/policyTest, strict lint and diff-check; audit all D3 invariants and test counts. Harness must not modify production. Stop after static checks. No Minecraft, runServer, A2, C4, Run2 or Full12K.
 
----
 ---
 
 # HISTORICAL — 2026-11-19 A2 post-Phase55 forensic analysis
