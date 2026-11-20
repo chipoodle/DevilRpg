@@ -5,6 +5,7 @@
 **Base HEAD:** `e4692eeb0df6e9f1e83e25a0c6991004360771c8`
 **Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
 **Design report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
+**Continuation indexes updated:** `docs/autonomous-village/CONTINUAR.md` commit `01b210c927ebace2b496b9889bf6c8cd5b0c08b2`; `docs/CONTINUAR.md` commit `a02953c7c426286b12a1100aae1c3bf1990506c5`; `docs/PENDIENTE.md` commit `6106802b3f5d5de87cd9d9646243c620aebd26d3`.
 
 - NavExecutor now derives active node/transition/action target from its existing route cursor and owns a per-entity, per-world-tick single-use terrain-action lease.
 - Only exact active BREAK/BUILD/BRIDGE targets can acquire the lease. WALK/STEP_UP/JUMP_UP/DROP/DOOR and absent/terminal nodes cannot authorize terrain tools.
