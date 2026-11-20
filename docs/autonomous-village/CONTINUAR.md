@@ -1,17 +1,42 @@
-# CURRENT CHECKPOINT — 2026-11-19 A2 P0 fixes (STATIC VALIDATION PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 traversal coordination implementation (STATIC PENDING)
 
-**Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
-**Implementation report:** `2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
+**Branch:** `feature/autonomous-village`
+**Base HEAD:** `e4692eeb0df6e9f1e83e25a0c6991004360771c8`
+**Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`
+**Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
+**Current checkpoint:** `docs/autonomous-village/NEXT-SESSION.md`
 
-- IDX3/5: repeated same unusable objective no longer increments the local-step counter; bounded failure accounting is preserved.
-- IDX4: no-candidate stair attempts no longer reset the inter-block cooldown or become endless CADENCE_WAIT.
-- Added `NavLocalObjectiveStepPolicyTest` (5 assertions) and extended `StairBuildResultTest` to 12 assertions; registered the new test in `policyTest`.
-- Static validation is pending exact SHA. ChatGPT has not run build/tests/lint.
-- IDX7, IDX8 and wrapper remain open; no runtime authorized. A2 OPEN.
+## Implemented
 
-**Next:** Harness syncs fast-forward-only to the current branch tip descending from implementation SHA, records the actual tested HEAD, verifies the source blob SHAs in the implementation report, and runs compileJava, test, strict lint and diff-check. Preserve local/untracked work and worlds. Confirm both new/extended test counts and all existing policy tests. Stop after static validation.
+- `NavExecutor.activeNode()`, `activeTransition()`, and `activeActionTarget()` derive their values from the existing route cursor. They expose no duplicate route state and return no active action outside TRAVERSING/RECOVERING.
+- `TraversalActionLeasePolicy` authorizes only an exact active BREAK/BUILD/BRIDGE transition and exact target.
+- `NavExecutor.tryAcquireTraversalAction` enforces one consumed lease per entity instance and world tick. Failed attempts still consume that tick's lease.
+- BUILD acquires the lease before placement. BREAK/BRIDGE acquire it before the injected recovery action.
+- Generic terrain recovery using only the strategic/global objective is disabled. The injected recovery callback rejects missing node/transition and has no `recoverNavigation(towards)` fallback.
+- `BreakBlockGoal` and `TraverseGoal` are no longer registered. Their independent target-Y-based digging/building/breach choices cannot execute.
+- Removed duplicate `terrainChanged()` after route BREAK.
+- New pure test `TRAVERSAL_ACTION_LEASE_POLICY_TEST`: 13 assertions authored and registered in `policyTest`, not yet executed.
 
-**Prohibited:** Minecraft, wrapper, runServer, A2, C4, Run2 and Full12K. No new runtime without explicit user authorization.
+## Source commits
+
+- `ff0a06727d78894fd1a502aac7b830438536193a` NavExecutor lease and route-only recovery.
+- `83ba75be5a78958d5784a577acff485276e7bf7a` pure lease policy.
+- `09d2710ed437f25b26efd3153af35ec7c8846fb1` policy test.
+- `7a49c43dc8980d61423b8b655ad6b826b77be8f7` disable independent goals and generic fallback.
+- `9200bfffa70b85719d586ebbd32c0213dea7292b` register policy test.
+- `7aaea19364d958ee0e16f9ea89b3b1be9168e878` clarify route-only recovery contract.
+
+## Validation status
+
+ChatGPT did not execute compile, tests, lint, diff-check, Minecraft, or runtime. Harness must validate the exact implementation HEAD `7aaea19364d958ee0e16f9ea89b3b1be9168e878` with the documented static gate only. Preserve local/untracked work, backups, logs, partial files, fixtures and worlds. Harness must not modify production. Stop after static validation.
+
+**No runtime authorization:** do not launch Minecraft, runServer, wrapper, A2, C4, Run2 or Full12K. A2 remains OPEN; C4 is not revalidated.
+
+## Remaining
+
+- Explicit existing-gap-first check/test is not yet implemented.
+- Atomic 3×3 custom gate destruction and wave-aware wall restoration are not implemented.
+- DROP remains a validated movement transition; it does not authorize digging as a substitute.
 
 ---
 
