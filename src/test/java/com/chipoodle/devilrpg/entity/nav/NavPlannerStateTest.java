@@ -17,6 +17,14 @@ public final class NavPlannerStateTest {
         comprobar("BUILD coloca debajo de la celda de pies",
                 NavBuildTransitionPolicy.successorFeet(new net.minecraft.core.BlockPos(301, 119, 300))
                         .equals(new net.minecraft.core.BlockPos(301, 120, 300)));
+        comprobar("NavPlanner BUILD canonical successor is the resulting feet cell",
+                NavPlanner.sucesorCanonico(new net.minecraft.core.BlockPos(305, 119, 300),
+                        NavObstruction.Kind.BLOCKED, NavRoute.Transition.BUILD, 120)
+                        .equals(new net.minecraft.core.BlockPos(305, 120, 300)));
+        comprobar("NavPlanner BUILD state successor is the resulting feet cell",
+                NavPlanner.estadoSucesor(new net.minecraft.core.BlockPos(305, 119, 300),
+                        NavRoute.Transition.BUILD, 120)
+                        .equals(new net.minecraft.core.BlockPos(305, 120, 300)));
         comprobar("sucesor canonico STEP_UP usa pies",
                 java.util.Arrays.equals(NavSuccessorPolicy.sucesor(301, 119, 300, true, 120),
                         new int[]{301, 120, 300}));
