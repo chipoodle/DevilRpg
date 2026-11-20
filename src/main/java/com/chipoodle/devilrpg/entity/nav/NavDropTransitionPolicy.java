@@ -83,7 +83,8 @@ public final class NavDropTransitionPolicy {
                     if (deltaY != 1) return false;
                 }
                 case JUMP_UP -> {
-                    if (deltaY != 2) return false;
+                    // Legacy +2 transitions are no longer valid movement edges.
+                    return false;
                 }
                 case DROP -> {
                     if (++drops > 1 || deltaY != -1) return false;
