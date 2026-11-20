@@ -1,14 +1,22 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 disposable world PREPARED
+# CURRENT CHECKPOINT — 2026-11-20 A2 disposable target RESERVED; runtime pending
 
 **Branch:** `feature/autonomous-village`
-**HEAD:** `4b67659b8ba1ef459c4f9b9391868b8da5af28ab`
+**Current HEAD before this checkpoint correction:** `130d5e1c5929c258e147ae431cf1448fba554c00`
 **Preparation report:** `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`
+**Preparation report SHA-256:** `6D7A0B2E7C82FD018EB7DEBD254FF6C9483B281609F21E35DD93A16EF4949B12`
 
-- Generated-world workflow chosen; no clone of the protected APPDATA snapshot.
-- Reserved target: `build/a2n/a2n-20261120-135343-prep/` (manifest only; no level.dat yet).
-- Protected A2/C4 hashes unchanged; no runtime, no production/test changes.
-- Prepared runtime command documented; actual unique `a2n-<timestamp>` world is created only at runtime.
-- Run1 requires new explicit authorization.
+- Preparation started from local `dc8ef0a9f1300ac420f0efc29535f1968c5dbff1`, fast-forwarded to `4b67659b8ba1ef459c4f9b9391868b8da5af28ab`, then committed documentation at `130d5e1c5929c258e147ae431cf1448fba554c00`.
+- Established A2 workflow generates a fresh world at runtime from seed/config; APPDATA snapshot is observational reference only, not a clone source.
+- Reservation only: `build/a2n/a2n-20261120-135343-prep/` contains `PREP-MANIFEST.txt`; no `game/a2n`, `level.dat`, or region data. The launcher will create a distinct unique `build/a2n/a2n-<timestamp>/game/a2n` when authorized.
+- Manifest SHA-256: `DD66E458EFC7BE980DCA896BCA6D6AD639423F270974A8726B77311A3BFCE677`.
+- Protected A2 hashes unchanged: APPDATA `BA00A1C4…`; run/saves derivative `F4EEAA13…`. Protected C4 copies both `11D064E2…`.
+- Production/tests unchanged; preserved local-only files and artifacts. No runtime or Minecraft launch.
+- Prepared command and settings are recorded in the report. Do not execute until separate explicit user authorization.
+- A2 remains OPEN; D3 is static PASS only; gameplay traversal UNKNOWN; C4 not revalidated. No Run2 or Full12K.
+
+## Immediate next action
+
+Await explicit user authorization for **one A2 diagnostic Run1 only**, using the documented direct launcher invocation and a newly generated unique runtime world. Before execution, Harness must re-check branch/worktree and protected-world hashes, preserve all artifacts, and report the actual run directory. Do not run C4, Run2, or Full12K under this authorization.
 
 ---
 
