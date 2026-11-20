@@ -5528,3 +5528,9 @@ run/saves; hashes match; structural verification only.
 - APPDATA A2 BA00 intact; run/saves A2 F4EE changed by manual client session Dev 19nov 15:58-16:09.
 - B is played derivative; preserve both; owner decision required. No runtime.
 - Report: docs/autonomous-village/2026-11-20-A2-WORLD-INTEGRITY-FORENSICS.md. A2 OPEN.
+
+## 2026-11-20 — A2 disposable world PREPARED
+
+- Generated-world workflow; reserved build/a2n/a2n-20261120-135343-prep manifest only.
+- Protected worlds unchanged; no runtime/production changes. Actual world generated at authorized runtime.
+- Report: docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md. A2 OPEN.

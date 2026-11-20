@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 world integrity BLOCKED
+# CURRENT CHECKPOINT — 2026-11-20 A2 disposable world PREPARED
 
 **Branch:** `feature/autonomous-village`
-**HEAD:** `fb29d7f29c9d3f5bba59555df0a042aba5344bea`
-**Report:** `docs/autonomous-village/2026-11-20-A2-WORLD-INTEGRITY-FORENSICS.md`
+**HEAD:** `4b67659b8ba1ef459c4f9b9391868b8da5af28ab`
+**Preparation report:** `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`
+
+- Generated-world workflow chosen; no clone of the protected APPDATA snapshot.
+- Reserved target: `build/a2n/a2n-20261120-135343-prep/` (manifest only; no level.dat yet).
+- Protected A2/C4 hashes unchanged; no runtime, no production/test changes.
+- Prepared runtime command documented; actual unique `a2n-<timestamp>` world is created only at runtime.
+- Run1 requires new explicit authorization.
+
+---
+
+# HISTORICAL — 2026-11-20 A2 world integrity BLOCKED
 
 - APPDATA A2 intact at `BA00A1C4…`.
 - run/saves A2 changed to `F4EEAA13…`: manual client session by `Dev` on 19 Nov 15:58-16:09,
@@ -1262,6 +1272,7 @@ Read first, in order:
 107. `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`
 108. `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md`
 109. `docs/autonomous-village/2026-11-20-A2-WORLD-INTEGRITY-FORENSICS.md`
+110. `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1389,9 +1400,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. Owner/ChatGPT must decide whether the played run/saves A2 copy is disposable; preserve both meanwhile.
-2. No A2 runtime until that decision and a new explicit runtime authorization.
-3. A2 OPEN; C4 not revalidated.
+1. Await new explicit runtime authorization for a single A2 diagnostic Run1.
+2. At runtime the launcher will generate a fresh unique `build/a2n/a2n-<timestamp>/game/a2n`.
+3. A2 OPEN; C4 not revalidated. Do not touch either protected A2 copy.
 
 ## Worlds (preserve; do not overwrite)
 
