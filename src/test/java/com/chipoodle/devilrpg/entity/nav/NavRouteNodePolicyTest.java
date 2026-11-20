@@ -20,6 +20,15 @@ public final class NavRouteNodePolicyTest {
                 NavRouteNodePolicy.routePosition(walkState, NavRoute.Transition.STEP_UP, 65, null)
                         .equals(walkState));
 
+        BlockPos buildFeet = new BlockPos(13, 66, -8);
+        BlockPos buildPlacement = buildFeet.below();
+        check("BUILD route position is the resulting feet cell",
+                NavRouteNodePolicy.routePosition(buildFeet, NavRoute.Transition.BUILD, 66, buildPlacement)
+                        .equals(buildFeet));
+        NavRoute.Node buildNode = new NavRoute.Node(buildFeet, NavRoute.Transition.BUILD, buildPlacement);
+        check("BUILD action target remains the placement cell below feet",
+                buildNode.actionTarget().equals(buildPlacement) && buildNode.standPos().equals(buildFeet));
+
         BlockPos breakState = new BlockPos(20, 70, 20);
         BlockPos breakStand = new BlockPos(19, 70, 20);
         check("BREAK keeps physical attack stand separate from graph state",
