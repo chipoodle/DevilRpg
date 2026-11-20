@@ -102,8 +102,8 @@ public final class NavDropTakeoffPolicyTest {
         NavRoute exactJumpRecovery = new NavRoute(java.util.List.of(
                 new NavRoute.Node(new BlockPos(593, 89, 507), NavRoute.Transition.JUMP_UP)),
                 new BlockPos(593, 89, 507));
-        comprobar("source recovery accepts an exact final JUMP_UP take-off waypoint",
-                NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
+        comprobar("source recovery rejects legacy JUMP_UP as an ordinary movement transition",
+                !NavDropTransitionPolicy.rutaRecuperacionOrigenSegura(
                         exactJumpRecovery, resolvedSource, new BlockPos(593, 89, 507)));
         NavRoute mislabeledVerticalWalk = new NavRoute(java.util.List.of(
                 new NavRoute.Node(new BlockPos(593, 88, 507), NavRoute.Transition.WALK)),
