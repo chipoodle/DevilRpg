@@ -42,7 +42,7 @@ public final class NavVerticalBuildPolicyTest {
         check("real AABB collision is rejected",
                 !NavBuildTransitionPolicy.physicallyArrived(true, true, true, true, false));
 
-        System.out.println("NAV_VERTICAL_BUILD_POLICY_TEST: OK (21 assertions)");
+        System.out.println("NAV_VERTICAL_BUILD_POLICY_TEST: OK (24 assertions)");
     }
 
     private static void check(String name, boolean value) {
