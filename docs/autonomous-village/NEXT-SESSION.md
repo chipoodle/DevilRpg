@@ -1,13 +1,32 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 global A* corrections STATIC FAIL
+# CURRENT CHECKPOINT — 2026-11-20 A2 global A* compile correction; STATIC PENDING
 
 **Branch:** `feature/autonomous-village`
-**Tested HEAD:** `bfaebd0661a39b3031de3f59efe6fdcef6a3c889`
-**Validation report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`
+**Current source correction commit:** `ab9d4f0c84a56b67d4efb3e4ff2468ac54e2415f`
+**Previous static-tested HEAD:** `bfaebd0661a39b3031de3f59efe6fdcef6a3c889` — FAIL
+**Static failure report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`
+**Implementation record:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-IMPLEMENTATION.md`
 
-- Six correction blobs match, but compile fails at `NavGraphSearch.java:176`.
-- `reopensThisSlice` is mutated inside the `graph.expand` lambda (not effectively final).
-- Tests did not run; lint/diff PASS. Source intent for BREAK/DROP/OPEN/cancel is present but unverified.
-- ChatGPT must fix the capture, publish a new HEAD and request a fresh static gate. No runtime.
+## First static gate result
+
+Harness verified all six original implementation/test blobs, then compile failed at `NavGraphSearch.java:176`: mutable local `reopensThisSlice` was captured by the `graph.expand` lambda. `compileJava` and `test` failed with the same compile error; no tests executed. Strict lint and `git diff --check` passed. Harness did not modify production/tests and did not launch Minecraft or runtime.
+
+## ChatGPT correction published
+
+Commit `ab9d4f0c84a56b67d4efb3e4ff2468ac54e2415f` changes the slice counter to a final one-element `int[]` holder. The lambda increments element 0, and `lastReopens` snapshots element 0 after `graph.expand`. This preserves the existing reopen condition, cumulative counter, increment timing and per-slice metric meaning. No navigation behavior, budgets, tests or safety rules changed.
+
+New `NavGraphSearch.java` blob: `906b480afff84780d66b4378b447e7b1e4a5a3f0`.
+
+## Immediate next action — Harness STATIC ONLY
+
+- Safe fast-forward only to the current branch tip; inspect divergence/worktree first and preserve all local/untracked work, backups, partial files, logs, artifacts and protected worlds. Stop on conflict or overwrite risk.
+- Verify the six implementation/test blobs; five retain their previous SHAs and `NavGraphSearch.java` must equal `906b480afff84780d66b4378b447e7b1e4a5a3f0`.
+- Run the same complete static gate: diagnostic `compileJava`, Gradle `test` (including `policyTest`), strict `lint_aldea.py`, and `git diff --check`.
+- Explicitly report whether `NAV_BREAK_ATTACK_POSITION_POLICY_TEST` (8 assertions), `NAV_PLANNER_STATE_TEST`, and every policy test actually executed.
+- Audit that only the lambda-capture representation changed; verify stale OPEN, reopen counters, BREAK, DROP, cancellation telemetry and unchanged budgets/invariants.
+- Harness must not modify production or tests. Persist a new report and update this checkpoint with exact tested HEAD, blob SHAs, commands, exit codes, test counts and preservation status.
+- Stop after STATIC PASS/FAIL. **No Minecraft, runServer, A2, C4, Run2 or Full12K.** No runtime is authorized.
+
+**Current acceptance:** A2 OPEN; C4 not revalidated; D3 BUILD runtime-unmeasured. The prior A2 Run1 authorization is consumed. A static PASS does not authorize runtime.
 
 ---
 
