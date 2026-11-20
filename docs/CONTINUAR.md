@@ -5461,3 +5461,9 @@ run/saves; hashes match; structural verification only.
 - `ab470cb7`: ACEPTAR_NUEVO corregido; compile/test/lint/diff PASS.
 - 5 NAV_LOCAL_OBJECTIVE_STEP_POLICY, 12 STAIR_BUILD_RESULT, 54 NAV_PLANNER_STATE assertions.
 - No runtime. Report: docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-19 — Traversal coordination design
+
+- Current goals independently choose terrain tools; NavExecutor not sole terrain authority.
+- Proposed active transition/actionTarget + single-use per-tick lease; atomic 3x3 gate design and repair gating.
+- No code/tests/runtime. Report: docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md. A2 OPEN.

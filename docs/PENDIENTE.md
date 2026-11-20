@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-19 P0 enum fix STATIC PASS
+# CURRENT CHECKPOINT — 2026-11-19 traversal coordination design
 
 **Branch:** `feature/autonomous-village`
 **Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
@@ -6,6 +6,7 @@
 
 - **Harness STATIC FAIL:** `NavLocalObjectiveStepPolicy.java:20` no resuelve `Decision.ACEPTAR_NUEVO`; tests NOT RUN; lint/diff PASS. Traversal: goals sin coordinación por transición activa. Detalle: `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`.
 - **Harness STATIC PASS:** `ab470cb7` corrige `ACCEPTAR_NUEVO`→`ACEPTAR_NUEVO`; compile/test/lint/diff OK; 5+12+54 aserciones. Sin runtime. Detalle: `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`.
+- **Diseño traversal:** `NavExecutor` debe ser fuente única de intención; transición activa + actionTarget + lease único por tick. Goals actuales eligen herramientas por Y del target, sin coordinación. Portón 3×3: diseño atómico y restauración por wave. Sin código/runtime. Detalle: `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`.
 
 - Implemented IDX3/IDX5 repeated-unusable-objective counter fix.
 - Implemented IDX4 no-candidate cooldown-loop fix.

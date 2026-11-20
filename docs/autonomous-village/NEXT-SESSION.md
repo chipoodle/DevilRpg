@@ -1,8 +1,17 @@
-# CURRENT CHECKPOINT — 2026-11-19 P0 enum fix STATIC PASS
+# CURRENT CHECKPOINT — 2026-11-19 traversal coordination design
 
 **Branch:** `feature/autonomous-village`
-**Tested HEAD:** `ab470cb700218fdc9d92018dedded87dec5f7948`
-**Validation report:** `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`
+**HEAD analyzed:** `2bb7c517048b09788aee3a9a8447656b8a4e4330`
+**Design report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
+
+- Current `NavExecutor` owns movement, but BreakBlockGoal/TraverseGoal independently choose terrain tools.
+- Proposed: active transition/actionTarget as sole intent + single-use per-tick actuator lease.
+- Separate design: atomic 3×3 custom gate breach + repair gating.
+- No code/test/runtime executed. A2 OPEN.
+
+---
+
+# HISTORICAL — 2026-11-19 P0 enum fix STATIC PASS
 
 - Enum spelling fixed (`ACCEPTAR_NUEVO` → `ACEPTAR_NUEVO`), one-character diff.
 - compile/test/lint/diff PASS.
@@ -1109,6 +1118,7 @@ Read first, in order:
 99. `docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md`
 100. `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`
 101. `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`
+102. `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1236,9 +1246,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. P0 static gate is PASS on `ab470cb7`; no runtime authorization exists.
-2. Next is ChatGPT review of the traversal design; no implementation by Harness.
-3. A2 OPEN; no Run2/Full12K. New runtime requires explicit user authorization.
+1. ChatGPT to review/approve the transition intent + single-use lease design.
+2. Implement traversal lease and atomic gate breach as separate production changes with pure policy tests.
+3. No runtime until static PASS and new explicit authorization. A2 OPEN; no Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 

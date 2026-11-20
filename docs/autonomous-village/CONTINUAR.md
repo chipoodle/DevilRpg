@@ -1313,3 +1313,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Enum corrected; full static gate green; no runtime.
 - Report: `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-19 — Traversal coordination design
+
+- Transition intent + per-tick lease design; atomic gate analysis. No implementation/runtime.
+- Report: `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`. A2 OPEN.
