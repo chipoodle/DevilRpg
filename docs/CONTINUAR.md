@@ -13,7 +13,7 @@
 - Tests are authored, **NOT RUN by ChatGPT**. Harness STATIC ONLY is next. No runtime authorization; no Minecraft/world changes.
 - A2 OPEN; C4 not revalidated.
 
-**Harness next:** preserve all local/untracked artifacts and worlds; safe fast-forward only. Validate exact source SHA `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7` (or docs-only descendant after source-blob verification), run compileJava, test/policyTest, strict lint and diff-check; audit all D3 invariants and test counts. Harness must not modify production. Stop after static checks. No Minecraft, runServer, A2, C4, Run2 or Full12K.
+**Harness next:** preserve all local/untracked artifacts and worlds; safe fast-forward only. Sync the current branch tip, verify all production/test blob SHAs in the D3 report (including test-only follow-up `63276177583dd3f43f93a06700e4b3e52a6e3be6`), then run compileJava, test/policyTest, strict lint and diff-check; audit all D3 invariants and test counts. Harness must not modify production. Stop after static checks. No Minecraft, runServer, A2, C4, Run2 or Full12K.
 
 ---
 
