@@ -1,14 +1,39 @@
-# CURRENT CHECKPOINT — 2026-11-19 P0 static FAIL + traversal forensics
+# CURRENT CHECKPOINT — 2026-11-19 P0 enum spelling corrected; STATIC PENDING
 
 **Branch:** `feature/autonomous-village`
-**Tested HEAD:** `b35c6cb3789ee7a267572521ef39ec3394e1750f`
-**P0 commit:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
-**Report:** `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`
+**Previous Harness tested HEAD:** `b35c6cb3789ee7a267572521ef39ec3394e1750f`
+**Harness documentation HEAD before correction:** `bdf6575c2d8c4f6640a97cada15194f35b7440d5`
+**P0 implementation base:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
+**Correction source commit:** `e0dc0d784a77ce062eae586b25453c8c05c0b5ff`
+**Correction + test commit (current production HEAD):** `a0251add7dc7661ee2fb7ee6a85a73d0b085acca`
 
-- compileJava FAIL: `NavLocalObjectiveStepPolicy.java:20` cannot resolve `Decision.ACEPTAR_NUEVO`.
-- Tests NOT RUN; lint/diff PASS. Direct javac reproduces; minimal equivalent compiles.
-- Traversal: goals lack active-transition coordination; both passive at priority3 with no lease.
-- No runtime. A2 OPEN.
+## Harness failure and correction
+
+Harness run `harness-p0-static-20261119-1640` reported STATIC FAIL: the enum declared
+`ACCEPTAR_NUEVO` (double C) while implementation and test referenced `ACEPTAR_NUEVO` (single C).
+This was a spelling mismatch, not a missing decision or behavior defect.
+
+ChatGPT corrected the enum constant to `ACEPTAR_NUEVO` and kept the implementation return and
+five-assertion test aligned. No decision branches, budgets, counters, retry semantics, or gameplay
+behavior were changed. GitHub source commit: `e0dc0d784a77ce062eae586b25453c8c05c0b5ff`;
+test alignment commit: `a0251add7dc7661ee2fb7ee6a85a73d0b085acca`.
+
+**Validation status:** ChatGPT did not run compile, tests, lint, diff-check, or runtime. The fix is
+PENDING Harness STATIC ONLY on the current branch tip. Harness must verify the exact tested SHA,
+then run the complete prior static gate (compileJava, test, strict lint, diff-check) and explicitly
+report `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST` (5 assertions), `STAIR_BUILD_RESULT_TEST`
+(12 assertions), `NAV_PLANNER_STATE_TEST` (54 assertions), and all policy tests. No assertions
+are presumed executed until Harness reports them.
+
+## Traversal investigation remains read-only
+
+Do not implement the proposed active-transition/one-lease traversal redesign in this checkpoint.
+Review its contract first. The existing findings remain: NavExecutor owns route execution; passive
+BreakBlockGoal and TraverseGoal independently decide terrain actions; target/center Y is not a valid
+substitute for the active route transition. No runtime is authorized. A2 remains OPEN.
+
+**Next action:** Harness STATIC ONLY on the current branch HEAD. Stop after PASS/FAIL. Do not launch
+Minecraft or run A2, C4, Run2, or Full12K.
 
 ---
 
