@@ -5540,3 +5540,9 @@ run/saves; hashes match; structural verification only.
 - a2n-20261120-140611: fixture PASS 16/16,8 spawn; 0/8 strict,2/8 perimeter,0 deaths; C4 FAIL.
 - D3 BUILD not exercised (0 BUILD nodes/placements/feet approaches); IDX3/4/5 exp1/0. No retry.
 - Report: docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md. A2 OPEN.
+
+## 2026-11-20 — A2 global A* log forensics
+
+- IDX3/4/5 exp1: 56 candidates, 0 valid; 40 BREAKABLE NODO_NO_PISABLE each.
+- IDX1/6/7/8 repeated restart/cancel and 8000-budget exhaustion. DROP state/feet mismatch; OPEN stale unmeasured.
+- No runtime. Report: docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md. A2 OPEN.

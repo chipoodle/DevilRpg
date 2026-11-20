@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 Run1 D3 runtime FAIL
+# CURRENT CHECKPOINT — 2026-11-20 A2 global A* log forensics
 
 **Branch:** `feature/autonomous-village`
 **RUN_ID:** `a2n-20261120-140611`
-**Runtime report:** `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`
+**Forensic report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`
+
+- IDX3/4/5 exp=1: 56 candidates, zero valid edges; dominated by BREAKABLE/NODO_NO_PISABLE and DESNIVEL.
+- IDX3/4/5 repeat same geometry as the mob descends; no A* budget/algorithm failure at first expansion.
+- IDX1/6/7/8: repeated cancel/restart and multiple 8000-budget exhaustions; last searches still open.
+- DROP state/feet mismatch confirmed in code; OPEN stale-pop risk unmeasured.
+- No runtime. A2 OPEN; C4 unvalidated.
+
+---
+
+# HISTORICAL — 2026-11-20 A2 Run1 D3 runtime FAIL
 
 - Fixture PASS (16/16, 12 professionals, 8/8 spawn); C4 FAIL.
 - A2 FAIL: 0/8 strict, 2/8 perimeter (IDX1 t509, IDX6 t280), 0 deaths.
@@ -1292,6 +1302,7 @@ Read first, in order:
 109. `docs/autonomous-village/2026-11-20-A2-WORLD-INTEGRITY-FORENSICS.md`
 110. `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`
 111. `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`
+112. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1419,10 +1430,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT to investigate global search first-expansion trapping (IDX3/4/5) and pending convergence
-   (IDX1/6/7/8); D3 BUILD remains runtime-unmeasured.
-2. No retry/Run2/Full12K without new explicit authorization.
-3. A2 OPEN; C4 not revalidated.
+1. ChatGPT to fix candidate generation at the shaft/slope and DROP state/feet semantics.
+2. Add cancel caller/tick and OPEN pop/reopen telemetry before another runtime.
+3. No retry/Run2/Full12K without new authorization. A2 OPEN; C4 not revalidated.
 
 ## Worlds (preserve; do not overwrite)
 

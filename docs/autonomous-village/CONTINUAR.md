@@ -1407,3 +1407,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - 0/8 strict; D3 BUILD unmeasured; no runtime retry.
 - Report: `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`. A2 OPEN.
+
+## 2026-11-20 — A2 global A* log forensics
+
+- First expansions zero valid; pending searches churn. No runtime.
+- Report: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`. A2 OPEN.
