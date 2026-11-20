@@ -12,7 +12,7 @@ public final class NavClimbPolicy {
     public static boolean esWaypointDePie(NavRoute.Transition t) {
         // DROP guarda el ATERRIZAJE (celda de pie valida); BUILD, BREAK y BRIDGE son nodos de accion,
         // no celdas donde el mob deba poder permanecer de pie.
-        return t != null && t != NavRoute.Transition.BUILD
+        return t != null && t != NavRoute.Transition.BUILD && t != NavRoute.Transition.JUMP_UP
                 && t != NavRoute.Transition.BREAK && t != NavRoute.Transition.BRIDGE;
     }
 
