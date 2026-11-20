@@ -848,10 +848,10 @@ public final class NavPlanner {
      */
     static BlockPos sucesorCanonico(BlockPos candidate, NavObstruction.Kind kind,
                                     NavRoute.Transition transicion, int piesHasta) {
-        boolean escalada = kind == NavObstruction.Kind.STEP_UP || kind == NavObstruction.Kind.JUMP_UP
+        boolean usarPiesValidados = kind == NavObstruction.Kind.STEP_UP || kind == NavObstruction.Kind.JUMP_UP
                 || transicion == NavRoute.Transition.DROP || transicion == NavRoute.Transition.BUILD;
         int[] s = NavSuccessorPolicy.sucesor(candidate.getX(), candidate.getY(), candidate.getZ(),
-                escalada, piesHasta);
+                usarPiesValidados, piesHasta);
         return new BlockPos(s[0], s[1], s[2]);
     }
 

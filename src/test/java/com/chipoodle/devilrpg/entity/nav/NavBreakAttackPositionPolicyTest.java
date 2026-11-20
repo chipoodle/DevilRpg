@@ -24,7 +24,7 @@ public final class NavBreakAttackPositionPolicyTest {
                 NavBreakAttackPositionPolicy.candidates(new BlockPos(11, 65, 10), from, 64).contains(from)
                         && NavBreakAttackPositionPolicy.candidates(new BlockPos(11, 65, 10), from, 64)
                                 .stream().allMatch(p -> p.getY() == 64));
-        System.out.println("NAV_BREAK_ATTACK_POSITION_POLICY_TEST: OK (7 assertions)");
+        System.out.println("NAV_BREAK_ATTACK_POSITION_POLICY_TEST: OK (8 assertions)");
     }
 
     private static void check(String name, boolean value) {
