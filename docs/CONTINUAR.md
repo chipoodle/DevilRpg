@@ -5491,3 +5491,9 @@ run/saves; hashes match; structural verification only.
 - IDX7 never emitted BUILD/placement; stayed PLANNING and exhausted local budget.
 - Single +3 BUILD edge correctly rejected by SUBIDA_MAXIMA=2; no multi-step ascent path; ascending helper has no live lease-gated caller.
 - No runtime. Report: docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md. A2 OPEN.
+
+## 2026-11-20 — D2 single-block ascent forensics
+
+- Current JUMP_UP +2 producer/executor confirmed; SUBIDA_MAXIMA=2.
+- BUILD successor uses placement cell, not resulting feet; sequential BUILD chain not representable cleanly.
+- No production/tests/runtime. Report: docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md. A2 OPEN.

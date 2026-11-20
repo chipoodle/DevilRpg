@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-20 D1 IDX7 ascent forensics
+# CURRENT CHECKPOINT — 2026-11-20 D2 single-block ascent forensics
 
 **Branch:** `feature/autonomous-village`
-**Investigating HEAD:** `24210f1b0a652211dddbbcb8785fe24007ee41d7`
-**Report:** `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`
+**Investigating HEAD:** `7cc2c8d9a2c3092bc76d69137310373170b9929e`
+**Report:** `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`
+
+- Current code produces/executes +2 `JUMP_UP` with a 0.62 actuator; `SUBIDA_MAXIMA=2`.
+- BUILD graph state is the placement cell, not the resulting feet cell; cannot cleanly express
+  sequential +1 construction.
+- Proposed: ordinary ascent max +1; +2/+3 via sequential BUILD; BUILD node pos=feet, actionPos=placement.
+- No production/tests/runtime. A2 OPEN.
+
+---
+
+# HISTORICAL — 2026-11-20 D1 IDX7 ascent forensics
 
 - IDX7 never emitted a BUILD node or placement; it stayed PLANNING and exhausted local budget.
 - A single +3 BUILD edge is correctly rejected by `SUBIDA_MAXIMA=2`; no multi-step ascent path exists.
@@ -1214,6 +1224,7 @@ Read first, in order:
 104. `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`
 105. `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`
 106. `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`
+107. `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1341,9 +1352,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT to implement a signed ascent BUILD policy with intermediate nodes and executor placement.
-2. Do not relax SUBIDA_MAXIMA or re-enable removed goals; use route-driven BUILD + lease.
-3. No runtime until static PASS and new explicit authorization. A2 OPEN; C4 not revalidated.
+1. ChatGPT to implement single-block ordinary ascent and sequential BUILD semantics, including the
+   BUILD graph position/action split.
+2. Update affected JUMP_UP tests and add vertical/build-chain tests; then static gate.
+3. No runtime without new explicit authorization. A2 OPEN; C4 not revalidated.
 
 ## Worlds (preserve; do not overwrite)
 

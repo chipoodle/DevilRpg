@@ -1363,3 +1363,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - No BUILD node/placement; missing signed ascent chain; no runtime.
 - Report: `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`. A2 OPEN.
+
+## 2026-11-20 — D2 single-block ascent forensics
+
+- +2 JUMP_UP and BUILD graph semantics documented; no runtime.
+- Report: `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`. A2 OPEN.
