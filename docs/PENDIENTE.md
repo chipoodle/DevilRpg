@@ -1,21 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal coordination design
+# CURRENT CHECKPOINT — 2026-11-19 traversal coordination implementation (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**Production implementation HEAD:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
-**Report:** `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
+**Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`
+**Report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
 
-- **Harness STATIC FAIL:** `NavLocalObjectiveStepPolicy.java:20` no resuelve `Decision.ACEPTAR_NUEVO`; tests NOT RUN; lint/diff PASS. Traversal: goals sin coordinación por transición activa. Detalle: `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`.
-- **Harness STATIC PASS:** `ab470cb7` corrige `ACCEPTAR_NUEVO`→`ACEPTAR_NUEVO`; compile/test/lint/diff OK; 5+12+54 aserciones. Sin runtime. Detalle: `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`.
-- **Diseño traversal:** `NavExecutor` debe ser fuente única de intención; transición activa + actionTarget + lease único por tick. Goals actuales eligen herramientas por Y del target, sin coordinación. Portón 3×3: diseño atómico y restauración por wave. Sin código/runtime. Detalle: `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`.
+- NavExecutor controla la intención de terreno desde la transición activa y concede un único lease de herramienta por entidad/tick.
+- Solo BREAK/BUILD/BRIDGE con target exacto pueden modificar terreno; WALK/STEP_UP/JUMP_UP/DROP/DOOR no autorizan herramientas.
+- Se desregistraron BreakBlockGoal y TraverseGoal; el fallback de recuperación por objetivo global fue deshabilitado.
+- Añadida `TraversalActionLeasePolicyTest` (13 assertions) y registrada en `policyTest`; test authored, NOT RUN.
+- **Siguiente:** Harness STATIC ONLY sobre el SHA exacto `7aaea19364d958ee0e16f9ea89b3b1be9168e878`: compileJava, test/policyTest, strict lint y diff-check. Preservar local/untracked, respaldos, logs, parciales y mundos. Harness no modifica producción.
+- No ejecutar Minecraft, wrapper, runServer, A2, C4, Run2 ni Full12K. Runtime no autorizado.
+- Brecha existente-first, portón atómico 3×3 y restauración por membership real de oleada siguen pendientes.
+- A2 OPEN; C4 no revalidado.
 
-- Implemented IDX3/IDX5 repeated-unusable-objective counter fix.
-- Implemented IDX4 no-candidate cooldown-loop fix.
-- Added `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST` (5 assertions).
-- Extended `STAIR_BUILD_RESULT_TEST` to 12 assertions and registered the new policy test in the normal gate.
-- Harness must sync the current branch tip descending from the implementation commit, record the actual tested HEAD, verify the source blob SHAs, and run compileJava, test, strict lint and diff-check. Tests have not been run by ChatGPT.
-- No runtime, worlds or fixtures modified. A2 remains OPEN; no Run2/Full12K.
-
-**Next:** Harness STATIC ONLY on exact implementation SHA. Preserve local/untracked files and worlds; report full logs and test counts. No Minecraft/runtime without new explicit user authorization.
 
 ---
 
