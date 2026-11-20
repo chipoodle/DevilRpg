@@ -1,21 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal validation FAIL (lease bypass)
+# CURRENT CHECKPOINT — 2026-11-19 traversal lease bypass correction (STATIC PENDING)
 
 **Branch:** `feature/autonomous-village`
-**Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`
-**Report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
+**Source implementation HEAD:** `9f00cb5ecec462df91f9905072988db90bec08b2`
+**Report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-FIX.md`
 
-- **Harness FAIL:** gate estático PASS (13/54/5/12 aserciones), pero BREAK normal llama `recoveryAction.run` sin `tryAcquireTraversalAction` (NavExecutor:2363) y DROP invoca BREAK (5061). Lease no es única puerta. Detalle: `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`.
-
-- NavExecutor controla la intención de terreno desde la transición activa y concede un único lease de herramienta por entidad/tick.
-- Solo BREAK/BUILD/BRIDGE con target exacto pueden modificar terreno; WALK/STEP_UP/JUMP_UP/DROP/DOOR no autorizan herramientas.
-- Se desregistraron BreakBlockGoal y TraverseGoal; el fallback de recuperación por objetivo global fue deshabilitado.
-- Añadida `TraversalActionLeasePolicyTest` (13 assertions) y registrada en `policyTest`; test authored, NOT RUN.
-- **Siguiente:** Harness STATIC ONLY sobre el SHA exacto `7aaea19364d958ee0e16f9ea89b3b1be9168e878`: compileJava, test/policyTest, strict lint y diff-check. Preservar local/untracked, respaldos, logs, parciales y mundos. Harness no modifica producción.
-- No ejecutar Minecraft, wrapper, runServer, A2, C4, Run2 ni Full12K. Runtime no autorizado.
-- Brecha existente-first, portón atómico 3×3 y restauración por membership real de oleada siguen pendientes.
+- Corregido BREAK normal: ahora adquiere lease antes del callback mediante `invokeTerrainAction`.
+- Corregida recuperación BREAK/BRIDGE: utiliza la misma puerta.
+- Solo queda una llamada directa `recoveryAction.run(` en NavExecutor, dentro del gateway.
+- Eliminado BREAK oportunista desde DROP; se conservan exclusiones del aterrizaje y replanning.
+- Añadida prueba de dispatch de 6 assertions, junto a la política de lease de 13 assertions; ambas registradas en `policyTest`, NOT RUN por ChatGPT.
+- **Siguiente:** Harness STATIC ONLY en el SHA exacto: compileJava, Gradle test/policyTest, strict lint y diff-check. Auditar llamadas y DROP. No modificar producción.
+- Sin runtime; no Minecraft, runServer, wrapper, A2, C4, Run2 ni Full12K. Preservar todo trabajo local y mundos.
 - A2 OPEN; C4 no revalidado.
 
-
+---
 ---
 
 # HISTORICAL — 2026-11-19 A2 post-Phase55 forensic analysis
