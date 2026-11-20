@@ -27,7 +27,7 @@ public final class TraversalActionDispatchPolicyTest {
 
         calls.set(0);
         boolean dropCannotAuthorizeBreak = TraversalActionLeasePolicy.canAcquire(
-                101L, -1L, false, true, NavRoute.Transition.DROP, null,
+                101L, -1L, false, true, NavRoute.Transition.DROP, breakTarget,
                 NavRoute.Transition.BREAK, breakTarget);
         boolean dropBreak = TraversalActionDispatchPolicy.dispatch(dropCannotAuthorizeBreak, () -> {
             calls.incrementAndGet();
@@ -59,8 +59,12 @@ public final class TraversalActionDispatchPolicyTest {
         boolean secondSameTickLease = TraversalActionLeasePolicy.canAcquire(
                 103L, 103L, true, true, NavRoute.Transition.BREAK, breakTarget,
                 NavRoute.Transition.BREAK, breakTarget);
+        boolean secondDispatch = TraversalActionDispatchPolicy.dispatch(secondSameTickLease, () -> {
+            calls.incrementAndGet();
+            return true;
+        });
         check("failed action still consumes lease and denies a second same-tick attempt",
-                !failedAction && calls.get() == 1 && !secondSameTickLease);
+                !failedAction && !secondDispatch && calls.get() == 1 && !secondSameTickLease);
 
         System.out.println("TRAVERSAL_ACTION_DISPATCH_POLICY_TEST: OK (6 assertions)");
     }
