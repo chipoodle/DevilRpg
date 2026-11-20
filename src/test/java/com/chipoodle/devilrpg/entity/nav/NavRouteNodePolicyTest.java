@@ -38,7 +38,7 @@ public final class NavRouteNodePolicyTest {
                 NavRouteNodePolicy.routePosition(breakState, NavRoute.Transition.BREAK, 70, null)
                         .equals(breakState));
 
-        System.out.println("NAV_ROUTE_NODE_POLICY_TEST: OK (6 assertions)");
+        System.out.println("NAV_ROUTE_NODE_POLICY_TEST: OK (8 assertions)");
     }
 
     private static void check(String name, boolean value) {
