@@ -58,6 +58,7 @@
 - `src/test/java/com/chipoodle/devilrpg/entity/nav/NavRouteNodePolicyTest.java`
 - `src/test/java/com/chipoodle/devilrpg/entity/nav/NavClimbPolicyTest.java`
 - `src/test/java/com/chipoodle/devilrpg/entity/nav/NavDropTakeoffPolicyTest.java`
+- `src/test/java/com/chipoodle/devilrpg/entity/nav/NavArrivalPolicyTest.java` (test-only follow-up commit)
 - `build.gradle` (registers the new policy test)
 
 ## Source blob verification references
