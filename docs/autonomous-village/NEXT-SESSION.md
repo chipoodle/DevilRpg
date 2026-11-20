@@ -4,6 +4,7 @@
 **Base validation-failure HEAD:** `4727d86a03c8d6100c489145712f06a8c1890ec7`
 **Source implementation HEAD:** `9f00cb5ecec462df91f9905072988db90bec08b2`
 **Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-FIX.md`
+**Continuation indexes:** `docs/autonomous-village/CONTINUAR.md` blob `ded6d68272eb69b52e80ee63582e1da96508f53d`; `docs/CONTINUAR.md` blob `03b52e6e29d8bd001298d162595e43614bfcfa5c`; `docs/PENDIENTE.md` blob `180ddfe367dfb6df3067f39c0a5ccad5fd7613da`.
 **Prior FAIL report (preserved):** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`
 
 - Harness found two genuine bypasses despite static gate PASS: normal BREAK called the callback directly, and DROP opportunistically invoked BREAK.
