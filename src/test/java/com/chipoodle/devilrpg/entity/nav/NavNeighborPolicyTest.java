@@ -36,7 +36,7 @@ public final class NavNeighborPolicyTest {
         check("returned offsets cannot mutate the canonical policy",
                 Arrays.stream(NavNeighborPolicy.offsets()).noneMatch(o -> o[0] == 99));
 
-        System.out.println("NAV_NEIGHBOR_POLICY_TEST: OK (8 assertions)");
+        System.out.println("NAV_NEIGHBOR_POLICY_TEST: OK (16 assertions)");
     }
 
     private static void check(String name, boolean value) {
