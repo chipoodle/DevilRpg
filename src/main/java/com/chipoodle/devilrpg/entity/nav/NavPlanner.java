@@ -173,19 +173,23 @@ public final class NavPlanner {
             transicion = NavRoute.Transition.WALK;
             piesHasta = candidate.getY();
         } else if (cost < 0) {
-            if (esConstruible(level, mob, candidate, policies)) {
+            int buildFeet = candidate.getY() + 1;
+            if (esConstruible(level, mob, candidate, policies)
+                    && NavBuildTransitionPolicy.allowsEdgeDelta(buildFeet - piesDesde, policies.maxSafeDrop())) {
                 cost = COST_BUILD;
                 transicion = NavRoute.Transition.BUILD;
-                piesHasta = candidate.getY() + 1;
+                piesHasta = buildFeet;
             }
         }
         if (cost > 0 && kind == NavObstruction.Kind.DROP) {
             int caida = NavObstruction.caidaReal(level, candidate, policies.maxSafeDrop() + 2);
             if (caida > policies.maxSafeDrop()) {
-                if (esConstruible(level, mob, candidate, policies)) {
+                int buildFeet = candidate.getY() + 1;
+                if (esConstruible(level, mob, candidate, policies)
+                        && NavBuildTransitionPolicy.allowsEdgeDelta(buildFeet - piesDesde, policies.maxSafeDrop())) {
                     cost = COST_BUILD;
                     transicion = NavRoute.Transition.BUILD;
-                    piesHasta = candidate.getY() + 1;
+                    piesHasta = buildFeet;
                 } else {
                     // Per-candidate rejection is extremely high-volume during global A*: keep it opt-in.
                     // Aggregate planner counters remain available in the route summary.
@@ -215,6 +219,8 @@ public final class NavPlanner {
         }
         if (piesHasta == PIES_NO_EJECUTABLE
                 || piesHasta - piesDesde > SUBIDA_MAXIMA
+                || (transicion == NavRoute.Transition.BUILD
+                    && !NavBuildTransitionPolicy.allowsEdgeDelta(piesHasta - piesDesde, policies.maxSafeDrop()))
                 || piesDesde - piesHasta > policies.maxSafeDrop()) {
             return new Arista(kind, cost, transicion, piesHasta, Rechazo.DESNIVEL);
         }
