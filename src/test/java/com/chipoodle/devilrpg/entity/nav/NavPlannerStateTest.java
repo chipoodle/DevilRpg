@@ -29,9 +29,9 @@ public final class NavPlannerStateTest {
         comprobar("sucesor canonico BREAK conserva candidato",
                 java.util.Arrays.equals(NavSuccessorPolicy.sucesor(305, 120, 300, false, 120),
                         new int[]{305, 120, 300}));
-        comprobar("sucesor canonico BUILD conserva candidato",
-                java.util.Arrays.equals(NavSuccessorPolicy.sucesor(305, 119, 300, false, 120),
-                        new int[]{305, 119, 300}));
+        comprobar("sucesor canonico BUILD usa pies sobre la celda colocada",
+                java.util.Arrays.equals(NavSuccessorPolicy.sucesor(305, 119, 300, true, 120),
+                        new int[]{305, 120, 300}));
         comprobar("dos candidatos al mismo sucesor canonico colisionan de forma estable",
                 java.util.Arrays.equals(NavSuccessorPolicy.sucesor(301, 118, 300, true, 120),
                         NavSuccessorPolicy.sucesor(301, 120, 300, false, 120)));
