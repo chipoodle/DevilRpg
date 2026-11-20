@@ -55,7 +55,7 @@ public final class NavVerticalBuildPolicyTest {
         check("real AABB collision is rejected",
                 !NavBuildTransitionPolicy.physicallyArrived(true, true, true, true, false));
 
-        System.out.println("NAV_VERTICAL_BUILD_POLICY_TEST: OK (33 assertions)");
+        System.out.println("NAV_VERTICAL_BUILD_POLICY_TEST: OK (32 assertions)");
     }
 
     private static NavGraphSearch.Result searchBuildChain(boolean secondStepPlaceable) {
