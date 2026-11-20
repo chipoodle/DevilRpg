@@ -2952,67 +2952,9 @@ public final class NavExecutor {
     }
 
     /** El salto recto de 2 solo se acepta si el corredor a la altura del apice y la cabeza esta libre. */
-    private boolean corredorRectoDeSalto(BlockPos origen, BlockPos destino) {
-        int sx = Integer.signum(destino.getX() - origen.getX());
-        int sz = Integer.signum(destino.getZ() - origen.getZ());
-        int pasos = Math.max(Math.abs(destino.getX() - origen.getX()), Math.abs(destino.getZ() - origen.getZ()));
-        for (int i = 1; i <= pasos; i++) {
-            for (int dy = 2; dy <= 3; dy++) {
-                BlockPos c = new BlockPos(origen.getX() + sx * i, origen.getY() + dy, origen.getZ() + sz * i);
-                if (!mob.level().getBlockState(c).getCollisionShape(mob.level(), c).isEmpty()) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
+    
 
-    private boolean iniciarSalto(NavRoute.Node node) {
-        if (mob == null || node == null || route == null) {
-            return false;
-        }
-        BlockPos destino = node.pos();
-        BlockPos pies = mob.blockPosition();
-        int dy = destino.getY() - pies.getY();
-        int dx = Math.abs(destino.getX() - pies.getX());
-        int dz = Math.abs(destino.getZ() - pies.getZ());
-        boolean recto2 = (dx == 2 && dz == 0) || (dx == 0 && dz == 2);
-        if (dy != 2 || (dx > 1 || dz > 1) && !recto2) {
-            com.chipoodle.devilrpg.DevilRpg.LOGGER.info(
-                    "[JUMPUP] REJECT pos={} target={} dx={} dy={} dz={} recto2={}", mob.blockPosition().toShortString(),
-                    destino.toShortString(), dx, dy, dz, recto2);
-            return false;
-        }
-        if (recto2 && !corredorRectoDeSalto(pies, destino)) {
-            com.chipoodle.devilrpg.DevilRpg.LOGGER.info(
-                    "[JUMPUP] REJECT_CORREDOR pos={} target={} dx={} dz={}", mob.blockPosition().toShortString(),
-                    destino.toShortString(), dx, dz);
-            return false;
-        }
-        if (!esPieValido(destino) || !NavObstruction.hasSupport(mob.level(), destino)
-                || !NavObstruction.fits(mob.level(), mob, destino)) {
-            return false;
-        }
-        saltoActivo = true;
-        saltosIniciados++;
-        saltoOrigen = pies.immutable();
-        saltoObjetivo = destino.immutable();
-        saltoFirmaRuta = route.signature();
-        saltoMision = misionFinal != null ? misionFinal : objective;
-        saltoTicks = 0;
-        saltoSinProgreso = 0;
-        saltoUltimaX = mob.getX();
-        estadoSalto = "INICIANDO";
-        mob.getNavigation().stop();
-        mob.setDeltaMovement(0.28D * Integer.signum(destino.getX() - pies.getX()), 0.62D, 0.0D);
-        if (destino.getX() == pies.getX()) {
-            mob.setDeltaMovement(0.0D, 0.62D, 0.0D);
-        }
-        com.chipoodle.devilrpg.DevilRpg.LOGGER.info(
-                "[JUMPUP] START uuid={} origen={} objetivo={} firma={}", mob.getUUID(),
-                pies.toShortString(), destino.toShortString(), saltoFirmaRuta);
-        return true;
-    }
+    
 
     private String estadoSalto = "-";
     private long saltosCompletados;
@@ -3042,88 +2984,9 @@ public final class NavExecutor {
         return ultimoMotivoSalto;
     }
 
-    private void tickSalto() {
-        saltoTicks++;
-        BlockPos misionActual = misionFinal != null ? misionFinal : objective;
-        if (mob.isRemoved() || route == null || route.signature() != saltoFirmaRuta
-                || misionActual == null || !misionActual.equals(saltoMision)) {
-            abortarSalto("ruta/mision cambio o entidad retirada");
-            return;
-        }
-        if (!NavObstruction.hasSupport(mob.level(), saltoObjetivo) || !esPieValido(saltoObjetivo)) {
-            abortarSalto("aterrizaje ya no valido");
-            return;
-        }
-        mob.getNavigation().stop();
-        if (saltoTicks == 1 && mob.onGround()) {
-            mob.setDeltaMovement(0.28D * Integer.signum(saltoObjetivo.getX() - saltoOrigen.getX()), 0.62D, 0.0D);
-            return;
-        }
-        if (mob.onGround()) {
-            double fy = mob.getY();
-            boolean piesOk = Math.abs(fy - saltoObjetivo.getY()) <= 0.1D;
-            boolean xzOk = Math.abs(mob.getX() - (saltoObjetivo.getX() + 0.5D)) <= 1.1D
-                    && Math.abs(mob.getZ() - (saltoObjetivo.getZ() + 0.5D)) <= 1.1D;
-            if (piesOk && xzOk && NavObstruction.hasSupport(mob.level(), saltoObjetivo)) {
-                saltoActivo = false;
-                routeIndex++;
-                saltosCompletados++;
-                estadoSalto = "OK";
-                state = NavState.TRAVERSING;
-                com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPUP] LANDED uuid={} pos={} routeIndex={}",
-                        mob.getUUID(), mob.blockPosition().toShortString(), routeIndex);
-                return;
-            }
-            abortarSalto("aterrizaje fuera del objetivo");
-            return;
-        }
-        double vx = Math.max(-0.28D, Math.min(0.28D, (saltoObjetivo.getX() + 0.5D) - mob.getX()));
-        mob.setDeltaMovement(vx, mob.getDeltaMovement().y, 0.0D);
-        if (Math.abs(mob.getX() - saltoUltimaX) < 0.005D) {
-            saltoSinProgreso++;
-        } else {
-            saltoSinProgreso = 0;
-            saltoUltimaX = mob.getX();
-        }
-        if (saltoSinProgreso > 5 || mob.horizontalCollision && saltoTicks > 10) {
-            abortarSalto("sin progreso horizontal");
-            return;
-        }
-        if (saltoTicks > 40) {
-            abortarSalto("timeout de salto");
-            return;
-        }
-        estadoSalto = "AIRE";
-    }
+    
 
-    private void abortarSalto(String motivo) {
-        if (!saltoActivo) {
-            return;
-        }
-        saltoActivo = false;
-        saltosAbortados++;
-        ultimoMotivoSalto = motivo;
-        if ("timeout de salto".equals(motivo)) {
-            saltosTimeout++;
-        }
-        estadoSalto = "ABORT:" + motivo;
-        int suspendedSignature = recuperacionOrigenDropActiva && rutaDropSuspendida != null
-                ? rutaDropSuspendida.signature() : (int) saltoFirmaRuta;
-        limpiarRecuperacionOrigenDrop();
-        route = null;
-        routeIndex = 0;
-        plannedFrom = null;
-        lastRouteSignature = suspendedSignature;
-        globalCache = null;
-        NavPlanner.cancelGlobalSearch(globalSearchHandle);
-        globalSearchStart = null;
-        globalSearchLastExpansions = 0;
-        globalDesde = null;
-        state = NavState.PLANNING;
-        mob.getNavigation().stop();
-        com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPUP] ABORT uuid={} motivo={} pos={} ticks={} mision={}",
-                mob.getUUID(), motivo, mob.blockPosition().toShortString(), saltoTicks, misionFinal);
-    }
+    
     public void tick() {
         if (meleeHoldDiagnostico) {
             mob.getNavigation().stop();
