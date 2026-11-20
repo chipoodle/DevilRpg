@@ -1,8 +1,19 @@
-# CURRENT CHECKPOINT — 2026-11-19 P0 enum spelling corrected; STATIC PENDING
+# CURRENT CHECKPOINT — 2026-11-19 P0 enum fix STATIC PASS
 
 **Branch:** `feature/autonomous-village`
-**Previous Harness tested HEAD:** `b35c6cb3789ee7a267572521ef39ec3394e1750f`
-**Harness documentation HEAD before correction:** `bdf6575c2d8c4f6640a97cada15194f35b7440d5`
+**Tested HEAD:** `ab470cb700218fdc9d92018dedded87dec5f7948`
+**Validation report:** `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`
+
+- Enum spelling fixed (`ACCEPTAR_NUEVO` → `ACEPTAR_NUEVO`), one-character diff.
+- compile/test/lint/diff PASS.
+- `NAV_LOCAL_OBJECTIVE_STEP_POLICY_TEST`: 5 assertions.
+- `STAIR_BUILD_RESULT_TEST`: 12 assertions.
+- `NAV_PLANNER_STATE_TEST`: 54 assertions.
+- No runtime. A2 OPEN; new runtime authorization required.
+
+---
+
+# HISTORICAL — 2026-11-19 P0 enum spelling corrected; STATIC PENDING
 **P0 implementation base:** `b41e9687a4be74d24a671340ac41b7e3f1817045`
 **Correction source commit:** `e0dc0d784a77ce062eae586b25453c8c05c0b5ff`
 **Correction + test commit (current production HEAD):** `a0251add7dc7661ee2fb7ee6a85a73d0b085acca`
@@ -1097,7 +1108,7 @@ Read first, in order:
 98. `docs/autonomous-village/2026-11-19-A2-DIAGNOSTIC-RUN1-POST-PHASE55.md`
 99. `docs/autonomous-village/2026-11-19-A2-POST-PHASE55-FORENSIC-ANALYSIS.md`
 100. `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`
-100. `docs/autonomous-village/2026-11-19-A2-P0-LOCAL-OBJECTIVE-STAIR-RETRY-FIX.md`
+101. `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1225,9 +1236,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT must correct `NavLocalObjectiveStepPolicy` so it compiles; publish a new HEAD.
-2. Re-run the exact static gate and report real assertions before any runtime.
-3. Do not implement traversal redesign yet; review the active-transition/lease proposal. A2 OPEN; no Run2/Full12K.
+1. P0 static gate is PASS on `ab470cb7`; no runtime authorization exists.
+2. Next is ChatGPT review of the traversal design; no implementation by Harness.
+3. A2 OPEN; no Run2/Full12K. New runtime requires explicit user authorization.
 
 ## Worlds (preserve; do not overwrite)
 

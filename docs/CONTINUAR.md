@@ -5455,3 +5455,9 @@ run/saves; hashes match; structural verification only.
 - compileJava FAIL: NavLocalObjectiveStepPolicy.java:20 cannot resolve Decision.ACEPTAR_NUEVO; tests NOT RUN.
 - Traversal: BreakBlockGoal/TraverseGoal lack active-transition coordination and shared lease; source review A-I in report.
 - Lint/diff PASS; no runtime. Report: docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md. A2 OPEN.
+
+## 2026-11-19 — P0 enum fix STATIC PASS
+
+- `ab470cb7`: ACEPTAR_NUEVO corregido; compile/test/lint/diff PASS.
+- 5 NAV_LOCAL_OBJECTIVE_STEP_POLICY, 12 STAIR_BUILD_RESULT, 54 NAV_PLANNER_STATE assertions.
+- No runtime. Report: docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md. A2 OPEN.

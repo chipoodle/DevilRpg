@@ -1308,3 +1308,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - New policy compile failure blocks tests; traversal goals lack transition lease.
 - Report: `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`. A2 OPEN.
+
+## 2026-11-19 — P0 enum fix STATIC PASS
+
+- Enum corrected; full static gate green; no runtime.
+- Report: `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`. A2 OPEN.
