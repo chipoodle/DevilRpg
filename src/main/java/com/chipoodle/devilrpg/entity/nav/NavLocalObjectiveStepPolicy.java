@@ -6,7 +6,7 @@ package com.chipoodle.devilrpg.entity.nav;
  */
 public final class NavLocalObjectiveStepPolicy {
     public enum Decision {
-        ACCEPTAR_NUEVO,
+        ACEPTAR_NUEVO,
         REUTILIZAR,
         RECHAZAR_REPETIDO_INUTILIZABLE
     }
