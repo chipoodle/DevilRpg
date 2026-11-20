@@ -20,6 +20,10 @@ public final class NavBreakAttackPositionPolicyTest {
         check("surrounding candidates include current predecessor as valid stand",
                 NavBreakAttackPositionPolicy.candidates(new BlockPos(11, 64, 10), from).contains(from)
                         && NavBreakAttackPositionPolicy.candidates(new BlockPos(11, 64, 10), from).size() == 8);
+        check("head-height BREAK target searches stands at actual feet height",
+                NavBreakAttackPositionPolicy.candidates(new BlockPos(11, 65, 10), from, 64).contains(from)
+                        && NavBreakAttackPositionPolicy.candidates(new BlockPos(11, 65, 10), from, 64)
+                                .stream().allMatch(p -> p.getY() == 64));
         System.out.println("NAV_BREAK_ATTACK_POSITION_POLICY_TEST: OK (7 assertions)");
     }
 

@@ -24,9 +24,18 @@ public final class NavBreakAttackPositionPolicy {
     }
 
     public static List<BlockPos> candidates(final BlockPos actionPos, final BlockPos from) {
+        return candidates(actionPos, from, actionPos.getY());
+    }
+
+    /**
+     * Candidate attack stands are at the mob's actual feet height, not at the target block's Y.
+     * A block one level above the feet is still a valid BREAK target; the adjacent supported
+     * standing cell remains at feetY.
+     */
+    public static List<BlockPos> candidates(final BlockPos actionPos, final BlockPos from, final int feetY) {
         List<BlockPos> out = new ArrayList<>(OFFSETS.length);
         for (int[] off : OFFSETS) {
-            out.add(actionPos.offset(off[0], 0, off[1]));
+            out.add(new BlockPos(actionPos.getX() + off[0], feetY, actionPos.getZ() + off[1]));
         }
         out.sort(Comparator
                 .comparingDouble((BlockPos p) -> from == null ? 0.0D : p.distSqr(from))

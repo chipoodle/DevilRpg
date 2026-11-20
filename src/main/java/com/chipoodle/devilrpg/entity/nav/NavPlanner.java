@@ -313,7 +313,7 @@ public final class NavPlanner {
     private static BlockPos buscarPosicionDeAtaque(CollisionGetter level, Mob mob, BlockPos actionPos,
                                                    BlockPos from, int piesDesde,
                                                    NavObstruction.Policies policies) {
-        for (BlockPos stand : NavBreakAttackPositionPolicy.candidates(actionPos, from)) {
+        for (BlockPos stand : NavBreakAttackPositionPolicy.candidates(actionPos, from, piesDesde)) {
             if (!NavBreakAttackPositionPolicy.withinActionReach(stand, actionPos)) {
                 traceBreakStandCandidate(from, actionPos, stand, "OUT_OF_ACTION_REACH");
                 continue;
