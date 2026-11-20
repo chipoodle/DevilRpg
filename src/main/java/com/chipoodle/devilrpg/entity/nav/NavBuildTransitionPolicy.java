@@ -6,6 +6,11 @@ import net.minecraft.core.BlockPos;
 public final class NavBuildTransitionPolicy {
     private NavBuildTransitionPolicy() { }
 
+    /** Placement feasibility and the existing vertical envelope must both admit this BUILD edge. */
+    public static boolean canBuildStep(boolean placementAllowed, int feetDelta, int maxSafeDrop) {
+        return placementAllowed && allowsEdgeDelta(feetDelta, maxSafeDrop);
+    }
+
     /** A BUILD edge may rise at most one block and may not exceed the existing safe-drop bound. */
     public static boolean allowsEdgeDelta(int feetDelta, int maxSafeDrop) {
         return feetDelta <= NavVerticalTransitionPolicy.MAX_ORDINARY_ASCENT
