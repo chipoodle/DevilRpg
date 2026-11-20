@@ -1433,3 +1433,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Compile blocker in reopensThisSlice lambda capture; tests not run. No runtime.
 - Report: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-20 — A2 global A* corrections STATIC PASS (R2)
+
+- Lambda fix verified; 55 policy tests pass. No runtime.
+- Report: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION-R2.md`. A2 OPEN.

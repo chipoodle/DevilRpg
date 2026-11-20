@@ -5568,3 +5568,9 @@ run/saves; hashes match; structural verification only.
 - Six blobs match, but compile fails at NavGraphSearch.java:176 (reopensThisSlice lambda capture).
 - Tests not run; lint/diff PASS. No runtime.
 - Report: docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-20 — A2 global A* corrections STATIC PASS (R2)
+
+- dbff5448: final int[] holder; compile/test/lint/diff PASS.
+- 55 policy tests; BREAK 8, planner 53. No runtime.
+- Report: docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION-R2.md. A2 OPEN.

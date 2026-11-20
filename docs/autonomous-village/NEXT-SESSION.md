@@ -1,9 +1,23 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 global A* compile correction; STATIC PENDING
+# CURRENT CHECKPOINT — 2026-11-20 A2 global A* corrections STATIC PASS
 
 **Branch:** `feature/autonomous-village`
-**Current source correction commit:** `ab9d4f0c84a56b67d4efb3e4ff2468ac54e2415f`
-**Previous static-tested HEAD:** `bfaebd0661a39b3031de3f59efe6fdcef6a3c889` — FAIL
-**Static failure report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`
+**Tested HEAD:** `dbff54480d9e564531b268e3bfe01347a464f32c`
+**R2 validation report:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION-R2.md`
+
+- Lambda-capture fix is minimal: `final int[]` holder, element 0, read after expand.
+- All six blobs match; compile/test/lint/diff PASS; 55 policy tests, no failures.
+- BREAK 8, planner 53 assertions; DROP/stale/reopen coverage passes.
+- Static only. A2 OPEN; C4 not revalidated; D3 BUILD runtime still unmeasured.
+
+## Next action
+
+1. Review R2 static PASS; decide whether to authorize a single controlled A2 runtime.
+2. Any runtime requires a new explicit authorization; prior Run1 authorization is consumed.
+3. No Run2/Full12K/C4 without separate authorization.
+
+---
+
+# HISTORICAL — 2026-11-20 A2 global A* compile correction
 **Implementation record:** `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-IMPLEMENTATION.md`
 
 ## First static gate result
@@ -1345,6 +1359,7 @@ Read first, in order:
 111. `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`
 112. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`
 113. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`
+114. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION-R2.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
