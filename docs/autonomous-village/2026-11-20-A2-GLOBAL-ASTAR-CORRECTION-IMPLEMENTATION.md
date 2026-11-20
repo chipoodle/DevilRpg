@@ -2,7 +2,7 @@
 
 ## Status
 
-**Implemented in production source; STATIC validation pending. Runtime not authorized.**
+**Implemented in production source; first STATIC gate failed to compile; lambda-capture correction published; fresh STATIC validation pending. Runtime not authorized.**
 
 - Branch: `feature/autonomous-village`
 - Forensic baseline: `eb92c817f2cbdbe1bfa708ad92cb4493c51d1d5c`
@@ -10,7 +10,9 @@
   - `2c47d5631ef3c70d7dc79663bdbbb92935b444db` — BREAK stand admission, canonical DROP state, stale OPEN handling, counters and cancellation caller.
   - `1c0ba5625e1ce665e8afd783393900a53ae14aca` — evaluate BREAK stands at the actual feet Y, including a target above/below the stand.
   - `c663f5d06618d12cd8150e238308fe3e9d7652db` — clarify canonical feet semantics and correct test assertion count.
-- No build, tests, lint or runtime have been executed by ChatGPT.
+  - `ab9d4f0c84a56b67d4efb3e4ff2468ac54e2415f` — fix Java lambda capture for the per-slice reopen metric using a final one-element `int[]` holder; increment remains inside `graph.expand`, and the slice snapshot reads the holder after expansion.
+- Harness static attempt on `bfaebd0661a39b3031de3f59efe6fdcef6a3c889` failed at compile: mutable `reopensThisSlice` was captured by the `graph.expand` lambda; no tests ran. Lint and diff-check passed.
+- ChatGPT made the minimal compile-only correction in `ab9d4f0c84a56b67d4efb3e4ff2468ac54e2415f`; no build/tests/lint/runtime have been executed by ChatGPT.
 - No Minecraft launch or world modification.
 
 ## 1. BREAK candidate generation in shafts/slopes
@@ -87,10 +89,16 @@ Harness must sync safely to the current branch tip and run the repository's comp
 | File | Blob SHA |
 |---|---|
 | `NavBreakAttackPositionPolicy.java` | `4e06c662da8ec4e457815d6be464e6e26bc2be01` |
-| `NavGraphSearch.java` | `0b306ea932be3acf2309887b265bb0e13753a8c5` |
+| `NavGraphSearch.java` | `906b480afff84780d66b4378b447e7b1e4a5a3f0` (after lambda-capture correction) |
 | `NavPlanner.java` | `b89de3c5e955f0bf94c939adbaeb76ca98159200` |
 | `NavSuccessorPolicy.java` | `c50bf342b96f26158b6946a31ac3fc1be93cadbc` |
 | `NavBreakAttackPositionPolicyTest.java` | `3e5acbf3eec3c371477e1f70a0f525642c7fd633` |
 | `NavPlannerStateTest.java` | `9d7c23fdc56e86783e255ac68efed14efa670a9c` |
 
 A2 remains OPEN. C4 is not revalidated. No runtime authorization is granted by this implementation record.
+
+## 7. Compile blocker correction — 2026-11-20
+
+Harness report `2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md` established the exact Java error: `reopensThisSlice` was not effectively final inside `graph.expand`. The correction changes only the local per-slice counter to `final int[] reopensThisSlice = {0}`, increments index `0` in the lambda, and copies index `0` into `lastReopens` after expansion. The cumulative `totalReopens`, condition for a real reopen, timing of increments, and per-slice metric semantics are unchanged. No budget, route, or navigation behavior was changed. New `NavGraphSearch.java` blob: `906b480afff84780d66b4378b447e7b1e4a5a3f0`.
+
+**Required:** Harness must run a fresh STATIC ONLY gate against the new branch tip, verify all source/test blobs (including the new NavGraphSearch blob), then persist a new validation result. No runtime authorization.
