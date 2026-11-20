@@ -1,22 +1,24 @@
-# CURRENT CHECKPOINT — A2 última ejecución diagnóstica autorizada (2026-11-20)
+# CURRENT CHECKPOINT — A2 same-column vertical-edge correction (2026-11-20)
 
 **Branch:** `feature/autonomous-village`  
-**Remote HEAD de handoff:** `1c9ff7422ec3e4dddd28ad094e33d5c3cb6d49ce`  
-**R2 static PASS:** `dbff54480d9e564531b268e3bfe01347a464f32c` (el tip actual es un descendiente de documentación únicamente; source/test blobs sin cambios).  
-**Handoff obligatorio de Harness:** `docs/autonomous-village/2026-11-20-A2-LAST-RUN-HARNESS-HANDOFF.md`
+**Production implementation:** `7e78c9360c7960f13da6062f38196e8b1627b93a`  
+**Implementation + report baseline:** `3a4767327ef9697650f8ba43dedf90c2dcfeeba4`  
+**Harness handoff:** `docs/autonomous-village/2026-11-20-A2-LAST-RUN-HARNESS-HANDOFF.md`  
+**Detailed implementation report:** `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-EDGE-IMPLEMENTATION.md`
 
-- El dueño autorizó **exactamente una ejecución runtime A2 Run1**. Harness la ejecuta; ChatGPT NO ejecuta comandos locales, Gradle, Minecraft ni runtime.
-- División permanente: ChatGPT implementa código/tests en GitHub; Harness sincroniza, compila, prueba, ejecuta escenarios, mide y documenta. Harness nunca modifica producción ni tests.
-- Antes de runtime, Harness debe leer el handoff, inspeccionar estado/divergencia/worktree/untracked, preservar todos los archivos y mundos protegidos, verificar hashes y ejecutar el static gate en el SHA sincronizado. Safe fast-forward only; detenerse ante conflicto o riesgo.
-- Si el static gate falla, no lanzar Minecraft; reportar BLOCKED/FAIL. Si pasa, ejecutar una sola vez el comando canónico documentado en el handoff, en un mundo runtime único nuevo.
-- Recolectar específicamente las causas de rechazo BREAK (`BREAK_STAND_CANDIDATE`, `BREAK_LOS_DIAG`), cada candidato del primer expansion, eventos de búsqueda por UUID, BUILD/DROP y métricas de entrada estricta. Inspeccionar también los logs previos en modo read-only.
-- No C4 standalone, Run2, retry ni Full12K. No tocar los mundos protegidos, paredes, criterios, budgets ni predicados de seguridad.
-- Después del reporte, ChatGPT hará el análisis y la corrección final basada en evidencia, directamente en GitHub; añadirá regresiones y pedirá a Harness solo validación estática de ese commit. Esa validación no autoriza otra ejecución runtime.
-- D* Lite no está implementado: el planner actual es A* incremental reanudable. D* Lite se difirió porque el defecto de mayor prioridad es que el grafo produce cero sucesores legales en geometrías específicas; D* Lite no puede inventar aristas válidas. No sustituir el arreglo del grafo por D* Lite.
+- Evidencia raíz: el forense del 19-nov demostró que IDX3/IDX5 estaban en pozos 1×1; los ocho vecinos horizontales estaban bloqueados y el grafo no representaba el movimiento vertical en la misma columna `(0,0)`. A* agotaba la primera expansión con 56 candidatos y cero sucesores.
+- Corrección implementada: `NavNeighborPolicy` añade una novena dirección `(0,0)` a los ocho vecinos horizontales. Los planificadores local y global usan esa política.
+- La nueva dirección solo genera candidatos: todos pasan por `validarArista`. No se relajaron caídas seguras, soporte, colisión, headroom, AABB, protección, permisos BREAK/BUILD, leases, budgets, radios ni criterios.
+- Regresión añadida y registrada: `NAV_NEIGHBOR_POLICY_TEST` — 16 assertions. **Authored, NOT RUN.**
+- Blobs esperados: NavNeighborPolicy `e0378421c0ea024b34b4f95354e5780db78202d9`; NavPlanner `274af17a32a7aa435a26457f883438513ce207dc`; NavGoalMetric `7d5b2c6e91555965caa592b7c328bee056186f0f`; NavNeighborPolicyTest `0ffd6323dc21a3f9c1dd52f23c71570d6d475625`; build.gradle `ab8e949c055676df0f4cd0e4069c9839f80f1382`.
+- El dueño autorizó exactamente **una ejecución runtime A2 Run1**. Harness la realiza; ChatGPT no ejecuta comandos locales, Gradle ni Minecraft.
+- **Siguiente:** Harness sincroniza de forma segura, preserva worktree/untracked/backups/artefactos/mundos, verifica blobs e hashes protegidos, ejecuta compileJava + test/policyTest + lint estricto + diff-check. Si cualquier gate falla, no lanza Minecraft. Si todos pasan, ejecuta una sola vez el A2 Run1 canónico en mundo nuevo con la instrumentación detallada del handoff.
+- Capturar por UUID los 63 candidatos teóricos por primera expansión (9×7, sujetos al radio), causas BREAK stand/LOS, eventos START/PENDING/COMPLETE/CANCEL/RESTART, BUILD/DROP y entrada estricta.
+- Sin retry, C4 standalone, Run2 ni Full12K. Harness no modifica producción ni tests.
+- D* Lite sigue sin implementarse. El planner actual es A* incremental reanudable. D* Lite no corrige la ausencia de aristas legales; se reconsiderará solo si el runtime demuestra que el coste de replanning es un problema independiente.
 
-**Última evidencia estática:** R2 PASS: compile/test/strict lint/diff-check PASS; 55 policy tests, BREAK 8, planner 53 assertions.  
-**Estado:** A2 OPEN; C4 no revalidado; D3 BUILD runtime no medido.  
-**Siguiente acción:** Harness sigue exactamente el handoff `docs/autonomous-village/2026-11-20-A2-LAST-RUN-HARNESS-HANDOFF.md`; no pedir al dueño que active conectores locales.
+**Última validación:** R2 estática PASS sobre el código anterior; la nueva corrección requiere validación estática fresca.  
+**Estado:** A2 OPEN; C4 no revalidado; BUILD runtime no medido.
 
 ---
 
