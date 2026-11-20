@@ -14,9 +14,9 @@ public final class NavRouteNodePolicy {
     }
 
     public static BlockPos routePosition(BlockPos state, NavRoute.Transition transition,
-                                         int feet, BlockPos actionPos) {
-        if (transition == NavRoute.Transition.BREAK && actionPos != null) {
-            return actionPos;
+                                         int feet, BlockPos breakStand) {
+        if (transition == NavRoute.Transition.BREAK && breakStand != null) {
+            return breakStand;
         }
         // BUILD graph state is already the resulting feet cell; its placement cell stays on Node.actionPos.
         if (transition == NavRoute.Transition.DROP) {
