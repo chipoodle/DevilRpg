@@ -1,23 +1,22 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal coordination (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 traversal lease bypass correction (STATIC PENDING)
 
-La continuación vigente es `docs/autonomous-village/NEXT-SESSION.md`.
-**Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`.
-**Informe:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`.
+La continuación vigente está en `docs/autonomous-village/NEXT-SESSION.md`.
+**Source implementation HEAD:** `9f00cb5ecec462df91f9905072988db90bec08b2`.
+**Informe:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-FIX.md`.
 
-ChatGPT implementó la primera etapa de coordinación:
+Harness detectó dos bypasses reales en la primera etapa: BREAK normal llamaba directamente al callback y DROP podía transformarse en BREAK. ChatGPT corrigió ambos:
 
-- NavExecutor deriva la transición/objetivo de acción del nodo activo y aplica un lease de herramienta único por entidad y tick.
-- Solo BREAK/BUILD/BRIDGE exactos pueden adquirir el lease. BUILD, BREAK y BRIDGE se autorizan desde la transición activa; no desde la altura del objetivo global.
-- La recuperación genérica basada solo en el objetivo estratégico ya no puede modificar terreno.
-- BreakBlockGoal y TraverseGoal dejaron de registrarse porque actuaban como autoridades independientes.
-- Añadida política pura y prueba `TRAVERSAL_ACTION_LEASE_POLICY_TEST` (13 assertions), registrada en `policyTest`.
+- BREAK normal y recuperación BREAK/BRIDGE pasan por `invokeTerrainAction`, que adquiere el lease exacto antes de despachar el callback.
+- La única llamada directa `recoveryAction.run(` restante está dentro de esa puerta.
+- Se eliminó BREAK oportunista en DROP. La columna de aterrizaje conserva sus exclusiones y el planificador debe rodearla o emitir una transición BREAK explícita.
+- Añadidas `TraversalActionDispatchPolicy` y `TraversalActionDispatchPolicyTest` (6 assertions), registrada en `policyTest`. La prueba está authored, NOT RUN.
+- `TRAVERSAL_ACTION_LEASE_POLICY_TEST` permanece en 13 assertions.
 
-**Pendiente:** Harness debe validar exactamente `7aaea19364d958ee0e16f9ea89b3b1be9168e878` con compileJava, test/policyTest, lint estricto y diff-check. ChatGPT no ha ejecutado esas pruebas. Preservar local/untracked, backups, logs, parciales y mundos. Harness no modifica producción.
+**Siguiente:** Harness valida exactamente `9f00cb5ecec462df91f9905072988db90bec08b2` con compileJava, test/policyTest, strict lint y diff-check. Confirmar 13+6 assertions, todos los grupos anteriores, una sola invocación directa del callback dentro del gateway y ausencia de BREAK en DROP.
 
-**STATIC ONLY:** no Minecraft, wrapper, runServer, A2, C4, Run2 ni Full12K. No se autorizó runtime. A2 permanece OPEN; C4 no se revalidó.
+**STATIC ONLY:** no Minecraft, runServer, wrapper, A2, C4, Run2 ni Full12K. Harness no modifica producción. Preservar local/untracked, backups, logs, parciales y mundos. A2 OPEN; C4 no revalidado.
 
-Pendiente posterior: revisión explícita de brecha existente antes de una acción, destrucción atómica del portón 3×3 y restauración basada en miembros reales de oleada. No implementados.
-
+---
 ---
 
 # HISTORICAL — 2026-11-19 A2 Phase55 obsolete NavFeature dependency removed
