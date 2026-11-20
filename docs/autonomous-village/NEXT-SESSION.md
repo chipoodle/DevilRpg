@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-20 D3 static PASS
+# CURRENT CHECKPOINT — 2026-11-20 A2 world integrity BLOCKED
 
 **Branch:** `feature/autonomous-village`
-**Tested HEAD:** `9009bb7b66d9ca1fa3f601a09d369465bc926edc`
-**Validation report:** `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md`
+**HEAD:** `fb29d7f29c9d3f5bba59555df0a042aba5344bea`
+**Report:** `docs/autonomous-village/2026-11-20-A2-WORLD-INTEGRITY-FORENSICS.md`
+
+- APPDATA A2 intact at `BA00A1C4…`.
+- run/saves A2 changed to `F4EEAA13…`: manual client session by `Dev` on 19 Nov 15:58-16:09,
+  time 6104, playerdata/advancements/stats/new regions.
+- B copy is a played derivative, not the pristine reference; deletion requires owner decision.
+- A2 runtime remains blocked pending owner decision and new authorization.
+
+---
+
+# HISTORICAL — 2026-11-20 D3 static PASS
 
 - All D3 blobs match; production logic unchanged after `c520198c`.
 - Compile/test/lint/diff PASS; vertical/build 32, route-node 8, climb/DROP/arrival PASS.
@@ -1251,6 +1261,7 @@ Read first, in order:
 106. `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`
 107. `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`
 108. `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md`
+109. `docs/autonomous-village/2026-11-20-A2-WORLD-INTEGRITY-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1378,9 +1389,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. D3 is statically PASS; runtime traversal remains UNKNOWN.
-2. Request new explicit authorization for a controlled A2 diagnostic runtime when ready.
-3. A2 OPEN; C4 not revalidated. No Run2/Full12K.
+1. Owner/ChatGPT must decide whether the played run/saves A2 copy is disposable; preserve both meanwhile.
+2. No A2 runtime until that decision and a new explicit runtime authorization.
+3. A2 OPEN; C4 not revalidated.
 
 ## Worlds (preserve; do not overwrite)
 

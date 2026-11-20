@@ -5522,3 +5522,9 @@ run/saves; hashes match; structural verification only.
 - All D3 blobs match; compile/test/lint/diff PASS; vertical/build 32 assertions.
 - JUMP_UP +2 producer/actuator removed; BUILD feet/action split and physical arrival confirmed.
 - No runtime. Report: docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-20 — A2 world integrity BLOCKED
+
+- APPDATA A2 BA00 intact; run/saves A2 F4EE changed by manual client session Dev 19nov 15:58-16:09.
+- B is played derivative; preserve both; owner decision required. No runtime.
+- Report: docs/autonomous-village/2026-11-20-A2-WORLD-INTEGRITY-FORENSICS.md. A2 OPEN.
