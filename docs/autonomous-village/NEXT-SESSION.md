@@ -1,4 +1,35 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal validation FAIL (lease bypass)
+# CURRENT CHECKPOINT — 2026-11-19 traversal lease bypass correction (STATIC PENDING)
+
+**Branch:** `feature/autonomous-village`
+**Base validation-failure HEAD:** `4727d86a03c8d6100c489145712f06a8c1890ec7`
+**Source implementation HEAD:** `9f00cb5ecec462df91f9905072988db90bec08b2`
+**Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-FIX.md`
+**Prior FAIL report (preserved):** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`
+
+- Harness found two genuine bypasses despite static gate PASS: normal BREAK called the callback directly, and DROP opportunistically invoked BREAK.
+- Both are corrected. Normal BREAK and recovery BREAK/BRIDGE now use one `invokeTerrainAction` gateway which acquires the exact active-transition lease before dispatch.
+- DROP-obstruction BREAK was removed. DROP retains landing/edge exclusions and replans; demolition requires an explicit BREAK route node.
+- Only one direct `recoveryAction.run(` remains in NavExecutor, inside the shared gateway (source inspection; Harness must independently verify).
+- Added `TraversalActionDispatchPolicy` and `TraversalActionDispatchPolicyTest` (6 assertions), registered in `policyTest`. Existing 13-assertion lease policy test remains.
+- No budgets, cooldowns, protections, support/headroom, collision, fixtures or worlds changed.
+- **STATIC VALIDATION PENDING.** ChatGPT has not run compile, Gradle tests, lint or diff-check.
+- No runtime. Do not launch Minecraft, runServer, wrapper, A2, C4, Run2 or Full12K.
+- A2 remains OPEN; C4 not revalidated.
+
+## Immediate next action — Harness STATIC ONLY
+
+1. Read collaboration policy, this checkpoint, workflow contract, continuation indexes, prior validation report and new implementation report.
+2. Inspect local/remote HEAD, divergence, dirty/untracked files and preserve all local-only work, backups, logs, partial files, fixtures and worlds. Safe fast-forward only; stop on conflict/overwrite risk.
+3. Validate exact source implementation SHA `9f00cb5ecec462df91f9905072988db90bec08b2` (or a later documentation-only descendant after verifying the source blobs).
+4. Run compileJava, Gradle test/policyTest, strict lint and `git diff --check`.
+5. Confirm lease policy (13 assertions), dispatch policy (6 assertions), all existing policy groups, exactly one direct `recoveryAction.run(` in NavExecutor inside `invokeTerrainAction`, and no DROP BREAK callback.
+6. Harness must not modify production. Publish a new dated static-validation report and update continuation indexes with exact tested SHA/evidence.
+7. Stop after static validation. Runtime requires a separate explicit authorization.
+
+---
+
+# HISTORICAL — 2026-11-19 traversal coordination validation FAIL (lease bypass)
+
 
 **Branch:** `feature/autonomous-village`
 **Tested HEAD:** `9a26bfbe5fa06475e611a256a26acfb3f9ac4ace`
@@ -10,9 +41,8 @@
 - NavExecutor blob handoff stale (actual differs only comments).
 - No runtime. A2 OPEN.
 
----
 
-# HISTORICAL — 2026-11-19 traversal coordination implemented (STATIC PENDING)
+ — 2026-11-19 traversal coordination implemented (STATIC PENDING)
 **Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
 **Design report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
 **Continuation indexes updated:** `docs/autonomous-village/CONTINUAR.md` commit `01b210c927ebace2b496b9889bf6c8cd5b0c08b2`; `docs/CONTINUAR.md` commit `a02953c7c426286b12a1100aae1c3bf1990506c5`; `docs/PENDIENTE.md` commit `6106802b3f5d5de87cd9d9646243c620aebd26d3`.
