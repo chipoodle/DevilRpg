@@ -1358,3 +1358,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Priority IDX7 ascent build gate; P0/lease runtime-unmeasured; A2 OPEN.
 - Report: `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`.
+
+## 2026-11-20 — D1 IDX7 ascent forensics
+
+- No BUILD node/placement; missing signed ascent chain; no runtime.
+- Report: `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`. A2 OPEN.

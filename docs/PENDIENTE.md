@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 next-defect forensics
+# CURRENT CHECKPOINT — 2026-11-20 D1 IDX7 ascent forensics
 
 **Branch:** `feature/autonomous-village`
 **Source implementation HEAD:** `9f00cb5ecec462df91f9905072988db90bec08b2`
@@ -6,6 +6,7 @@
 
 - **Harness PASS:** una sola `recoveryAction.run` dentro de `invokeTerrainAction`; BREAK/BRIDGE por lease; DROP ya no rompe. compile/test/lint/diff OK; 13+6+54+5+12 aserciones. Sin runtime. Detalle: `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`.
 - **A2 sigue OPEN:** criterio 8/8 estricto en dos corridas; último runtime 3/8 (pre-P0/pre-lease). Defecto prioritario: IDX7 ascenso +3 rechazado por `descensoExigeConstruir`. IDX3/4/5 y lease sin runtime. Detalle: `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`.
+- **D1 forense:** IDX7 nunca emitió nodo BUILD ni placement; SP quedó PLANNING y agotó presupuesto. Un edge BUILD +3 se rechaza correctamente (>SUBIDA_MAXIMA2), pero no existe cadena de BUILD intermedios; `apilarBloqueParaSubir` no tiene caller con lease. Detalle: `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`.
 
 - Corregido BREAK normal: ahora adquiere lease antes del callback mediante `invokeTerrainAction`.
 - Corregida recuperación BREAK/BRIDGE: utiliza la misma puerta.

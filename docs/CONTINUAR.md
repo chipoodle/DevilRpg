@@ -5485,3 +5485,9 @@ run/saves; hashes match; structural verification only.
 - A2 criterion 8/8 strict two consecutive runs; last 151818 = 3/8 pre-P0/pre-lease, C4 PASS.
 - Priority defect: IDX7 ascent +3 rejected by descensoExigeConstruir; IDX8 cancellation and gate separate.
 - No runtime. Report: docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md. A2 OPEN.
+
+## 2026-11-20 — D1 IDX7 ascent forensics
+
+- IDX7 never emitted BUILD/placement; stayed PLANNING and exhausted local budget.
+- Single +3 BUILD edge correctly rejected by SUBIDA_MAXIMA=2; no multi-step ascent path; ascending helper has no live lease-gated caller.
+- No runtime. Report: docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md. A2 OPEN.

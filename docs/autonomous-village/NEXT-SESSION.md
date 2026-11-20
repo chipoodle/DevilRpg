@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 next-defect forensics
+# CURRENT CHECKPOINT — 2026-11-20 D1 IDX7 ascent forensics
 
 **Branch:** `feature/autonomous-village`
-**Investigating HEAD:** `1b2e654205dfc91aa6e50248790e62436e960835`
-**Report:** `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`
+**Investigating HEAD:** `24210f1b0a652211dddbbcb8785fe24007ee41d7`
+**Report:** `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`
+
+- IDX7 never emitted a BUILD node or placement; it stayed PLANNING and exhausted local budget.
+- A single +3 BUILD edge is correctly rejected by `SUBIDA_MAXIMA=2`; no multi-step ascent path exists.
+- `descensoExigeConstruir` is descent-only; `apilarBloqueParaSubir` has no live lease-gated caller.
+- Required fix: signed ascent policy + intermediate BUILD chain, preserved budgets/protection.
+- No runtime. A2 OPEN.
+
+---
+
+# HISTORICAL — 2026-11-20 A2 next-defect forensics
 
 - A2 target is 8/8 strict `DENTRO-PARED` in two consecutive runs + hunting regression.
 - Last runtime 151818: 3/8 strict, 3/8 perimeter, C4 PASS, no watchdog; pre-P0/pre-lease.
@@ -1203,6 +1213,7 @@ Read first, in order:
 103. `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`
 104. `docs/autonomous-village/2026-11-19-TRAVERSAL-LEASE-BYPASS-STATIC-VALIDATION.md`
 105. `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`
+106. `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1330,8 +1341,8 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT to implement the signed vertical build-need policy for IDX7 ascent, with pure and integration tests.
-2. Then address IDX8 cancellation telemetry/lifecycle and atomic gate as separate changes.
+1. ChatGPT to implement a signed ascent BUILD policy with intermediate nodes and executor placement.
+2. Do not relax SUBIDA_MAXIMA or re-enable removed goals; use route-driven BUILD + lease.
 3. No runtime until static PASS and new explicit authorization. A2 OPEN; C4 not revalidated.
 
 ## Worlds (preserve; do not overwrite)
