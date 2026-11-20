@@ -2359,8 +2359,8 @@ public final class NavExecutor {
         if (now < nextBreakRetryAt) return;
 
         mob.getNavigation().stop();
-        boolean invoked = recoveryAction != null
-                && recoveryAction.run(objective, target, NavRoute.Transition.BREAK);
+        boolean invoked = invokeTerrainAction(
+                NavRoute.Transition.BREAK, target, objective);
         boolean verified = mob.level().getBlockState(target).isAir();
         if (verified) {
             limpiarEstadoBreak();
@@ -5051,38 +5051,10 @@ public final class NavExecutor {
                         NavTrace.ev("DROP_REJECTED", "uuid=" + mob.getUUID() + " idxRuta=" + routeIndex
                                 + " nodo=" + node.pos().toShortString() + " motivo={" + descenso.rechazo() + "}");
                     }
-                    // Si la columna de caída está tapada por un bloque sólido MINABLE y al alcance, despejar
-                    // exactamente ese bloque usando la misma acción BREAK del asedio (sin saltar protecciones).
+                    // DROP no puede transformarse en BREAK oportunista. La obstrucción se registra
+                    // como exclusión del aterrizaje y el planificador debe encontrar otra ruta; si romper
+                    // el bloque es necesario, deberá emitir un nodo BREAK explícito.
                     BlockPos obstaculoCaida = primerBloqueoEnCaminoDeCaida(node.pos());
-                    if (obstaculoCaida != null
-                            && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az
-                            && az.puedeRomperNodoDeNavegacion(obstaculoCaida)
-                            && recoveryAction != null) {
-                        boolean accion = recoveryAction.run(node.pos(), obstaculoCaida, NavRoute.Transition.BREAK);
-                        boolean despejado = mob.level().getBlockState(obstaculoCaida).isAir();
-                        if (accion && despejado) {
-                            ultimaAccionDeRuta = obstaculoCaida.toShortString()
-                                    + ":DROP-OBSTRUCTION-BREAK-VERIFICADO";
-                            lastMoveTarget = ultimaAccionDeRuta;
-                            if (NavTrace.on()) {
-                                NavTrace.ev("DROP_OBSTRUCTION_CLEARED", "uuid=" + mob.getUUID()
-                                        + " nodoDrop=" + node.pos().toShortString()
-                                        + " bloque=" + obstaculoCaida.toShortString() + " verified=true");
-                            }
-                            route = null;
-                            routeIndex = 0;
-                            lastRouteSignature = 0;
-                            globalCache = null;
-                            NavPlanner.cancelGlobalSearch(globalSearchHandle);
-                            globalSearchStart = null;
-                            globalSearchLastExpansions = 0;
-                            globalMision = null;
-                            globalDesde = null;
-                            state = NavState.PLANNING;
-                            nextPlanAt = 0L;
-                            return;
-                        }
-                    }
                     BlockPos desde = origenPlan != null ? origenPlan : mob.blockPosition();
                     long huellaDrop = huellaTerreno(node.pos());
                     exclusionesDescenso.excluir(NavDropExclusionPolicy.clave(
@@ -5858,11 +5830,11 @@ public final class NavExecutor {
             transicion = actual.transition();
         }
         // La recuperación genérica basada en el objetivo global ya no puede modificar terreno.
-        // Solo BREAK/BRIDGE explícitos del nodo activo pueden adquirir el actuador.
-        if (nodo == null || transicion == null || !tryAcquireTraversalAction(transicion, nodo)) {
+        // Toda invocación pasa por la misma puerta que el BREAK normal.
+        if (nodo == null || transicion == null) {
             return false;
         }
-        boolean acted = recoveryAction.run(towards, nodo, transicion);
+        boolean acted = invokeTerrainAction(transicion, nodo, towards);
         if (nodo != null) {
             // VERIFICACION REAL: la accion no se da por buena por haber sido invocada. Se relee el mundo.
             boolean resuelto = transicion == NavRoute.Transition.BREAK
@@ -5874,6 +5846,19 @@ public final class NavExecutor {
             return resuelto;
         }
         return acted;
+    }
+
+    /**
+     * Única puerta de invocación del callback de terreno. Ningún caller puede ejecutar la herramienta
+     * sin adquirir primero el lease para la transición activa y su celda exacta.
+     */
+    private boolean invokeTerrainAction(NavRoute.Transition transition, BlockPos target, BlockPos towards) {
+        if (recoveryAction == null) {
+            return false;
+        }
+        boolean leaseAcquired = tryAcquireTraversalAction(transition, target);
+        return TraversalActionDispatchPolicy.dispatch(
+                leaseAcquired, () -> recoveryAction.run(towards, target, transition));
     }
 
     /** Acción inyectable para una transición explícita (una llamada = como mucho un paso de trabajo). */
