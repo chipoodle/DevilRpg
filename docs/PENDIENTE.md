@@ -1,8 +1,10 @@
-# CURRENT CHECKPOINT — 2026-11-20 D3 single-block ascent and BUILD feet/action implementation
+# CURRENT CHECKPOINT — 2026-11-20 D3 static PASS
 
 **Branch:** `feature/autonomous-village`
 **Source implementation commit:** `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`
 **Detailed report:** `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-IMPLEMENTATION.md`
+
+- **Harness PASS:** blobs D3 correctos; compile/test/lint/diff OK; vertical/build32, route-node8, climb/DROP/arrival OK; JUMP_UP+2 eliminado; BUILD pies/action dividido. Sin runtime. Detalle: `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md`.
 **Session index:** `docs/autonomous-village/NEXT-SESSION.md`
 
 - Ordinary ascent is capped at +1; +2/+3 cannot be emitted as ordinary transitions. `JUMP_UP` remains compatibility-only and fails closed; the old 0.62 actuator and private jump methods were removed.

@@ -1,8 +1,17 @@
-# CURRENT CHECKPOINT — 2026-11-20 D3 single-block ascent and BUILD feet/action implementation
+# CURRENT CHECKPOINT — 2026-11-20 D3 static PASS
 
 **Branch:** `feature/autonomous-village`
-**Source implementation commit:** `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7`
-**Implementation report:** `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-IMPLEMENTATION.md`
+**Tested HEAD:** `9009bb7b66d9ca1fa3f601a09d369465bc926edc`
+**Validation report:** `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md`
+
+- All D3 blobs match; production logic unchanged after `c520198c`.
+- Compile/test/lint/diff PASS; vertical/build 32, route-node 8, climb/DROP/arrival PASS.
+- JUMP_UP +2 producer/actuator removed; BUILD feet/action split and physical arrival confirmed.
+- No runtime. A2 OPEN; C4 not revalidated; runtime traversal UNKNOWN.
+
+---
+
+# HISTORICAL — 2026-11-20 D3 single-block ascent implementation
 **Prior forensic report:** `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`
 
 - Ordinary ascent is now capped at +1. The planner's `SUBIDA_MAXIMA` uses `MAX_ORDINARY_ASCENT=1`; +2/+3 are not ordinary movement edges.
@@ -1241,6 +1250,7 @@ Read first, in order:
 105. `docs/autonomous-village/2026-11-20-A2-NEXT-DEFECT-FORENSICS.md`
 106. `docs/autonomous-village/2026-11-20-D1-IDX7-BUILD-ASCENT-FORENSICS.md`
 107. `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`
+108. `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1368,10 +1378,9 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT to implement single-block ordinary ascent and sequential BUILD semantics, including the
-   BUILD graph position/action split.
-2. Update affected JUMP_UP tests and add vertical/build-chain tests; then static gate.
-3. No runtime without new explicit authorization. A2 OPEN; C4 not revalidated.
+1. D3 is statically PASS; runtime traversal remains UNKNOWN.
+2. Request new explicit authorization for a controlled A2 diagnostic runtime when ready.
+3. A2 OPEN; C4 not revalidated. No Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 

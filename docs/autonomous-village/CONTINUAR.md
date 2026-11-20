@@ -1387,3 +1387,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - +2 JUMP_UP and BUILD graph semantics documented; no runtime.
 - Report: `docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md`. A2 OPEN.
+
+## 2026-11-20 — D3 single-block BUILD STATIC PASS
+
+- D3 statically valid; runtime traversal unknown. No runtime.
+- Report: `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md`. A2 OPEN.

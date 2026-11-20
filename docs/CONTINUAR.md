@@ -5516,3 +5516,9 @@ run/saves; hashes match; structural verification only.
 - Current JUMP_UP +2 producer/executor confirmed; SUBIDA_MAXIMA=2.
 - BUILD successor uses placement cell, not resulting feet; sequential BUILD chain not representable cleanly.
 - No production/tests/runtime. Report: docs/autonomous-village/2026-11-20-D2-SINGLE-BLOCK-ASCENT-FORENSICS.md. A2 OPEN.
+
+## 2026-11-20 — D3 single-block BUILD STATIC PASS
+
+- All D3 blobs match; compile/test/lint/diff PASS; vertical/build 32 assertions.
+- JUMP_UP +2 producer/actuator removed; BUILD feet/action split and physical arrival confirmed.
+- No runtime. Report: docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md. A2 OPEN.
