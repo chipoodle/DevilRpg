@@ -5534,3 +5534,9 @@ run/saves; hashes match; structural verification only.
 - Generated-world workflow; reserved build/a2n/a2n-20261120-135343-prep manifest only.
 - Protected worlds unchanged; no runtime/production changes. Actual world generated at authorized runtime.
 - Report: docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md. A2 OPEN.
+
+## 2026-11-20 — A2 Run1 D3 runtime FAIL
+
+- a2n-20261120-140611: fixture PASS 16/16,8 spawn; 0/8 strict,2/8 perimeter,0 deaths; C4 FAIL.
+- D3 BUILD not exercised (0 BUILD nodes/placements/feet approaches); IDX3/4/5 exp1/0. No retry.
+- Report: docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md. A2 OPEN.

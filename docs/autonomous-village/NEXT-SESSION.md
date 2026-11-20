@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 disposable target RESERVED; runtime pending
+# CURRENT CHECKPOINT — 2026-11-20 A2 Run1 D3 runtime FAIL
 
 **Branch:** `feature/autonomous-village`
-**Current HEAD before this checkpoint correction:** `130d5e1c5929c258e147ae431cf1448fba554c00`
-**Preparation report:** `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`
+**RUN_ID:** `a2n-20261120-140611`
+**Runtime report:** `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`
+
+- Fixture PASS (16/16, 12 professionals, 8/8 spawn); C4 FAIL.
+- A2 FAIL: 0/8 strict, 2/8 perimeter (IDX1 t509, IDX6 t280), 0 deaths.
+- D3 BUILD not exercised: zero BUILD nodes/placements/feet approaches/JUMP_UP rejects.
+- IDX3/4/5 back to exp=1/0 front exhaustion; IDX1/6 global pending; IDX7/8 global pending.
+- Protected worlds unchanged; no second run. A2 OPEN; C4 not validated.
+
+---
+
+# HISTORICAL — 2026-11-20 A2 disposable target RESERVED
 **Preparation report SHA-256:** `6D7A0B2E7C82FD018EB7DEBD254FF6C9483B281609F21E35DD93A16EF4949B12`
 
 - Preparation started from local `dc8ef0a9f1300ac420f0efc29535f1968c5dbff1`, fast-forwarded to `4b67659b8ba1ef459c4f9b9391868b8da5af28ab`, then committed documentation at `130d5e1c5929c258e147ae431cf1448fba554c00`.
@@ -1281,6 +1291,7 @@ Read first, in order:
 108. `docs/autonomous-village/2026-11-20-D3-SINGLE-BLOCK-BUILD-STATIC-VALIDATION.md`
 109. `docs/autonomous-village/2026-11-20-A2-WORLD-INTEGRITY-FORENSICS.md`
 110. `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`
+111. `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1408,9 +1419,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. Await new explicit runtime authorization for a single A2 diagnostic Run1.
-2. At runtime the launcher will generate a fresh unique `build/a2n/a2n-<timestamp>/game/a2n`.
-3. A2 OPEN; C4 not revalidated. Do not touch either protected A2 copy.
+1. ChatGPT to investigate global search first-expansion trapping (IDX3/4/5) and pending convergence
+   (IDX1/6/7/8); D3 BUILD remains runtime-unmeasured.
+2. No retry/Run2/Full12K without new explicit authorization.
+3. A2 OPEN; C4 not revalidated.
 
 ## Worlds (preserve; do not overwrite)
 

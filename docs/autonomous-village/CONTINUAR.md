@@ -1402,3 +1402,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Target reserved; no world content until runtime. Protected worlds intact.
 - Report: `docs/autonomous-village/2026-11-20-A2-DISPOSABLE-WORLD-PREP.md`. A2 OPEN.
+
+## 2026-11-20 — A2 Run1 D3 runtime FAIL
+
+- 0/8 strict; D3 BUILD unmeasured; no runtime retry.
+- Report: `docs/autonomous-village/2026-11-20-A2-RUN1-D3-RUNTIME-REPORT.md`. A2 OPEN.
