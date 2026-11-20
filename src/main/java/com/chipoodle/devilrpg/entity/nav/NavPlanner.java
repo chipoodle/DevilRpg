@@ -218,7 +218,7 @@ public final class NavPlanner {
                 || piesDesde - piesHasta > policies.maxSafeDrop()) {
             return new Arista(kind, cost, transicion, piesHasta, Rechazo.DESNIVEL);
         }
-        if (kind == NavObstruction.Kind.DROP) {
+        if (kind == NavObstruction.Kind.DROP && transicion == NavRoute.Transition.DROP) {
             BlockPos aterrizaje = new BlockPos(candidate.getX(), piesHasta, candidate.getZ());
             if (!NavObstruction.fits(level, mob, aterrizaje) || !NavObstruction.hasSupport(level, aterrizaje)) {
                 return new Arista(kind, cost, transicion, piesHasta, Rechazo.DESNIVEL);
@@ -267,7 +267,12 @@ public final class NavPlanner {
                 return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
             }
         }
-        boolean nodoEsPosicionDePie = piesHasta == candidate.getY() || escalada;
+        if (transicion == NavRoute.Transition.BUILD
+                && !NavObstruction.fits(level, mob, NavBuildTransitionPolicy.successorFeet(candidate))) {
+            return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
+        }
+        boolean nodoEsPosicionDePie = piesHasta == candidate.getY() || escalada
+                || transicion == NavRoute.Transition.BUILD;
         if (!nodoEsPosicionDePie && kind != NavObstruction.Kind.DROP
                 && transicion != NavRoute.Transition.BUILD) {
             return new Arista(kind, cost, transicion, piesHasta, Rechazo.NODO_NO_PISABLE);
@@ -279,7 +284,8 @@ public final class NavPlanner {
                     NavObstruction.fits(level, mob, candidate), NavObstruction.hasSupport(level, candidate));
         }
         return new Arista(kind, cost, transicion, piesHasta, Rechazo.NINGUNO, standPos,
-                kind == NavObstruction.Kind.BREAKABLE ? candidate.immutable() : null);
+                kind == NavObstruction.Kind.BREAKABLE || transicion == NavRoute.Transition.BUILD
+                        ? candidate.immutable() : null);
     }
 
     /**
@@ -754,7 +760,7 @@ public final class NavPlanner {
      * A2 Stage 6D · FIX 2 · SUBIDA MAXIMA de una arista (1 = escalon, 2 = salto). Es la capacidad real del ente:
      * no se admite un desplazamiento vertical mayor por el hecho de que los dos extremos sean transitables.
      */
-    private static final int SUBIDA_MAXIMA = 2;
+    private static final int SUBIDA_MAXIMA = NavVerticalTransitionPolicy.MAX_ORDINARY_ASCENT;
 
     /** Valle de "no es un movimiento ejecutable" para {@link #piesResultantes}. */
     private static final int PIES_NO_EJECUTABLE = Integer.MIN_VALUE;
@@ -793,7 +799,9 @@ public final class NavPlanner {
 
     static BlockPos estadoSucesor(BlockPos candidate, NavRoute.Transition transicion, int piesHasta) {
         return (transicion == NavRoute.Transition.STEP_UP || transicion == NavRoute.Transition.JUMP_UP)
-                ? new BlockPos(candidate.getX(), piesHasta, candidate.getZ()) : candidate;
+                ? new BlockPos(candidate.getX(), piesHasta, candidate.getZ())
+                : transicion == NavRoute.Transition.BUILD
+                ? NavBuildTransitionPolicy.successorFeet(candidate) : candidate;
     }
 
     /**
@@ -802,9 +810,10 @@ public final class NavPlanner {
      */
     static BlockPos sucesorCanonico(BlockPos candidate, NavObstruction.Kind kind,
                                     NavRoute.Transition transicion, int piesHasta) {
-        boolean escalada = kind == NavObstruction.Kind.STEP_UP || kind == NavObstruction.Kind.JUMP_UP;
+        boolean escalada = kind == NavObstruction.Kind.STEP_UP || kind == NavObstruction.Kind.JUMP_UP
+                || transicion == NavRoute.Transition.BUILD;
         int[] s = NavSuccessorPolicy.sucesor(candidate.getX(), candidate.getY(), candidate.getZ(),
-                escalada, piesHasta);
+                escalada, transicion == NavRoute.Transition.BUILD ? candidate.getY() + 1 : piesHasta);
         return new BlockPos(s[0], s[1], s[2]);
     }
 
@@ -817,8 +826,8 @@ public final class NavPlanner {
             case DROP -> cell.getY() - NavObstruction.caidaReal(level, cell, policies.maxSafeDrop() + 2);
             // Celda bloqueada a la altura de los pies con hueco encima: se sube 1.
             case STEP_UP -> cell.getY() + 1;
-            // Bloque de dos de alto con hueco encima: se salta 2.
-            case JUMP_UP -> cell.getY() + 2;
+            // Legacy enum only; a two-block jump is not an executable planner result.
+            case JUMP_UP -> PIES_NO_EJECUTABLE;
             // Intocable o infranqueable: no es un movimiento.
             case PROTECTED, BLOCKED -> PIES_NO_EJECUTABLE;
         };
@@ -1100,10 +1109,8 @@ public final class NavPlanner {
         if (delta == 1) {
             return NavRoute.Transition.STEP_UP;
         }
-        if (delta >= 2) {
-            return NavRoute.Transition.JUMP_UP;
-        }
-        return NavRoute.Transition.WALK;
+        NavRoute.Transition ordinary = NavVerticalTransitionPolicy.ordinaryTransition(delta);
+        return ordinary == null ? NavRoute.Transition.WALK : ordinary;
     }
 
     /** A2 Stage 6D · FIX 2 · Coste de la accion EFECTIVA (coherente con la etiqueta ya corregida). */
