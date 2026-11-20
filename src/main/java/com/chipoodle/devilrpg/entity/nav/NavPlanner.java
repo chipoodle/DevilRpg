@@ -787,10 +787,12 @@ public final class NavPlanner {
         return dx * dx + dz * dz <= RADIO_DE_LLEGADA_SQR && Math.abs(dy) <= 1.0D;
     }
 
-    private static final int[][] OFFSETS = {
-            {1, 0}, {-1, 0}, {0, 1}, {0, -1},
-            {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
-    };
+    /**
+     * Eight horizontal neighbours plus a same-column vertical probe. Every resulting edge
+     * still passes through validarArista; the extra direction does not bypass safe-drop,
+     * support, collision, headroom, protection or physical landing validation.
+     */
+    private static final int[][] OFFSETS = NavNeighborPolicy.offsets();
 
     /** Ordinary movement may rise at most one block per edge; higher ascent requires sequential BUILD nodes. */
     private static final int SUBIDA_MAXIMA = NavVerticalTransitionPolicy.MAX_ORDINARY_ASCENT;
