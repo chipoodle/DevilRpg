@@ -3593,6 +3593,9 @@ public final class NavExecutor {
                     NavObstruction.hasSupport(mob.level(), liveFeet), NavObstruction.fitsActualAabb(mob.level(), mob));
             return arrived && esPieValido(liveFeet);
         }
+        if (node.transition() == NavRoute.Transition.JUMP_UP) {
+            return false;
+        }
         if (recuperacionOrigenDropActiva) {
             BlockPos live = mob.blockPosition();
             return live.equals(node.pos()) && esPieValido(live)
