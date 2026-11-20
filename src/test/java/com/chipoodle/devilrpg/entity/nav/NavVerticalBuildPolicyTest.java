@@ -27,6 +27,19 @@ public final class NavVerticalBuildPolicyTest {
         }
         check("three BUILD steps represent a +3 rise without a +3 edge", previousFeetY == 68);
 
+        NavGraphSearch.Result searchedChain = searchBuildChain(true);
+        check("A* finds the three-edge BUILD chain", searchedChain.found() && searchedChain.route().size() == 3);
+        for (int i = 0; i < searchedChain.route().size(); i++) {
+            NavGraphSearch.Step step = searchedChain.route().get(i);
+            BlockPos feet = BlockPos.of(step.state());
+            check("A* BUILD edge " + (i + 1) + " retains the placement action below its feet state",
+                    step.transition() == NavRoute.Transition.BUILD && step.actionPos() != null
+                            && feet.equals(step.actionPos().above()));
+            check("A* BUILD edge " + (i + 1) + " rises exactly one",
+                    step.feet() - (65 + i) == 1 && feet.getY() == 66 + i);
+        }
+        check("A* rejects a chain with a non-buildable intermediate", !searchBuildChain(false).found());
+
         check("placement is attempted before it is verified", NavBuildTransitionPolicy.shouldPlace(false));
         check("verified placement is not repeated", !NavBuildTransitionPolicy.shouldPlace(true));
         check("BUILD arrival requires all physical predicates",
@@ -42,7 +55,35 @@ public final class NavVerticalBuildPolicyTest {
         check("real AABB collision is rejected",
                 !NavBuildTransitionPolicy.physicallyArrived(true, true, true, true, false));
 
-        System.out.println("NAV_VERTICAL_BUILD_POLICY_TEST: OK (24 assertions)");
+        System.out.println("NAV_VERTICAL_BUILD_POLICY_TEST: OK (33 assertions)");
+    }
+
+    private static NavGraphSearch.Result searchBuildChain(boolean secondStepPlaceable) {
+        BlockPos start = new BlockPos(10, 65, 10);
+        BlockPos goal = new BlockPos(13, 68, 10);
+        NavGraphSearch.Graph graph = new NavGraphSearch.Graph() {
+            @Override
+            public void expand(long state, int feet, java.util.function.Consumer<NavGraphSearch.Edge> out) {
+                BlockPos from = BlockPos.of(state);
+                if (from.getX() >= goal.getX()) return;
+                BlockPos placement = new BlockPos(from.getX() + 1, feet, from.getZ());
+                boolean placeable = from.getX() != 11 || secondStepPlaceable;
+                if (!NavBuildTransitionPolicy.canBuildStep(placeable, 1, 3)) return;
+                BlockPos successorFeet = NavBuildTransitionPolicy.successorFeet(placement);
+                out.accept(new NavGraphSearch.Edge(successorFeet.asLong(), 1.0D,
+                        NavRoute.Transition.BUILD, successorFeet.getY(), placement, null));
+            }
+            @Override public boolean goal(long state, int feet) {
+                return BlockPos.of(state).equals(goal) && feet == goal.getY();
+            }
+            @Override public double heuristic(long state) {
+                return goal.getX() - BlockPos.of(state).getX();
+            }
+            @Override public double distance(long state) {
+                return heuristic(state);
+            }
+        };
+        return NavGraphSearch.search(start.asLong(), start.getY(), graph, 16);
     }
 
     private static void check(String name, boolean value) {
