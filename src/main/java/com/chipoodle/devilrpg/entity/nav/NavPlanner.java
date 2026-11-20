@@ -174,8 +174,8 @@ public final class NavPlanner {
             piesHasta = candidate.getY();
         } else if (cost < 0) {
             int buildFeet = candidate.getY() + 1;
-            if (esConstruible(level, mob, candidate, policies)
-                    && NavBuildTransitionPolicy.allowsEdgeDelta(buildFeet - piesDesde, policies.maxSafeDrop())) {
+            if (NavBuildTransitionPolicy.canBuildStep(esConstruible(level, mob, candidate, policies),
+                    buildFeet - piesDesde, policies.maxSafeDrop())) {
                 cost = COST_BUILD;
                 transicion = NavRoute.Transition.BUILD;
                 piesHasta = buildFeet;
@@ -185,8 +185,8 @@ public final class NavPlanner {
             int caida = NavObstruction.caidaReal(level, candidate, policies.maxSafeDrop() + 2);
             if (caida > policies.maxSafeDrop()) {
                 int buildFeet = candidate.getY() + 1;
-                if (esConstruible(level, mob, candidate, policies)
-                        && NavBuildTransitionPolicy.allowsEdgeDelta(buildFeet - piesDesde, policies.maxSafeDrop())) {
+                if (NavBuildTransitionPolicy.canBuildStep(esConstruible(level, mob, candidate, policies),
+                        buildFeet - piesDesde, policies.maxSafeDrop())) {
                     cost = COST_BUILD;
                     transicion = NavRoute.Transition.BUILD;
                     piesHasta = buildFeet;
