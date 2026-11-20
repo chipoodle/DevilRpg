@@ -1,8 +1,18 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal coordination implemented (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 traversal validation FAIL (lease bypass)
 
 **Branch:** `feature/autonomous-village`
-**Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`
-**Base HEAD:** `e4692eeb0df6e9f1e83e25a0c6991004360771c8`
+**Tested HEAD:** `9a26bfbe5fa06475e611a256a26acfb3f9ac4ace`
+**Validation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`
+
+- Static gate PASS: compile/test/lint/diff; new lease test 13 assertions.
+- Behavioral FAIL: normal BREAK calls `recoveryAction.run` without `tryAcquireTraversalAction`.
+- DROP path also invokes BREAK on drop obstruction, outside the matrix.
+- NavExecutor blob handoff stale (actual differs only comments).
+- No runtime. A2 OPEN.
+
+---
+
+# HISTORICAL — 2026-11-19 traversal coordination implemented (STATIC PENDING)
 **Implementation report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
 **Design report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
 **Continuation indexes updated:** `docs/autonomous-village/CONTINUAR.md` commit `01b210c927ebace2b496b9889bf6c8cd5b0c08b2`; `docs/CONTINUAR.md` commit `a02953c7c426286b12a1100aae1c3bf1990506c5`; `docs/PENDIENTE.md` commit `6106802b3f5d5de87cd9d9646243c620aebd26d3`.
@@ -1138,6 +1148,7 @@ Read first, in order:
 100. `docs/autonomous-village/2026-11-19-HARNESS-P0-STATIC-AND-TRAVERSAL-FORENSICS.md`
 101. `docs/autonomous-village/2026-11-19-P0-ENUM-FIX-STATIC-VALIDATION.md`
 102. `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md`
+103. `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 
@@ -1265,9 +1276,10 @@ Read first, in order:
 
 ## Immediate work
 
-1. ChatGPT to review/approve the transition intent + single-use lease design.
-2. Implement traversal lease and atomic gate breach as separate production changes with pure policy tests.
-3. No runtime until static PASS and new explicit authorization. A2 OPEN; no Run2/Full12K.
+1. ChatGPT must add lease acquisition before normal BREAK (line2363) and reconcile the DROP-obstruction
+   BREAK (line5061) with the contract.
+2. Add integration tests beyond the pure policy; then re-run static gate.
+3. No runtime without new explicit authorization. A2 OPEN; no Run2/Full12K.
 
 ## Worlds (preserve; do not overwrite)
 

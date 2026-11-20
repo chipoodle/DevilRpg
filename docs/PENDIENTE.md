@@ -1,8 +1,10 @@
-# CURRENT CHECKPOINT — 2026-11-19 traversal coordination implementation (STATIC PENDING)
+# CURRENT CHECKPOINT — 2026-11-19 traversal validation FAIL (lease bypass)
 
 **Branch:** `feature/autonomous-village`
 **Implementation HEAD:** `7aaea19364d958ee0e16f9ea89b3b1be9168e878`
 **Report:** `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-IMPLEMENTATION.md`
+
+- **Harness FAIL:** gate estático PASS (13/54/5/12 aserciones), pero BREAK normal llama `recoveryAction.run` sin `tryAcquireTraversalAction` (NavExecutor:2363) y DROP invoca BREAK (5061). Lease no es única puerta. Detalle: `docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md`.
 
 - NavExecutor controla la intención de terreno desde la transición activa y concede un único lease de herramienta por entidad/tick.
 - Solo BREAK/BUILD/BRIDGE con target exacto pueden modificar terreno; WALK/STEP_UP/JUMP_UP/DROP/DOOR no autorizan herramientas.

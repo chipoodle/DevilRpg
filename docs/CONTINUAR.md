@@ -5468,3 +5468,9 @@ run/saves; hashes match; structural verification only.
 - Current goals independently choose terrain tools; NavExecutor not sole terrain authority.
 - Proposed active transition/actionTarget + single-use per-tick lease; atomic 3x3 gate design and repair gating.
 - No code/tests/runtime. Report: docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-DESIGN.md. A2 OPEN.
+
+## 2026-11-19 — Traversal validation FAIL (lease bypass)
+
+- Static gate PASS; new lease test 13 assertions, NAV plan 54, local 5, stair 12.
+- Behavioral FAIL: normal BREAK bypasses tryAcquire at NavExecutor:2363; DROP invokes BREAK at5061.
+- No runtime. Report: docs/autonomous-village/2026-11-19-TRAVERSAL-COORDINATION-STATIC-VALIDATION.md. A2 OPEN.
