@@ -23,7 +23,7 @@ public final class NavRoute {
         WALK,
         /** Subir un bloque. */
         STEP_UP,
-        /** Saltar dos bloques. */
+        /** Legacy compatibility only; ordinary route planning must never emit or execute this transition. */
         JUMP_UP,
         /** Bajar (con control de altura segura). */
         DROP,
@@ -34,9 +34,8 @@ public final class NavRoute {
         /** Colocar un bloque de apoyo para poder pisar (puente sobre un hueco). */
         BRIDGE,
         /**
-         * A2 Stage 4Q · CONSTRUIR un escalon: el nodo es la celda donde se COLOCA el bloque, y la posicion
-         * transitable resultante es su celda SUPERIOR. Es una transicion de primera clase del modelo, no un efecto
-         * secundario: entra en la ruta aceptada y se ejecuta desde la ruta.
+         * BUILD is a route action: {@code pos} is the resulting feet cell and {@code actionPos} is the exact
+         * placement cell immediately below it. The executor must verify placement and physical arrival.
          */
         BUILD
     }
