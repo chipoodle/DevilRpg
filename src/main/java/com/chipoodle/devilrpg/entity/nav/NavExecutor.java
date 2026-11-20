@@ -3718,12 +3718,6 @@ public final class NavExecutor {
      * suelo firme debajo. Así no se puede "dar por bajado" un escalón por estar cerca de él en el aire.
      */
     private boolean nodoAlcanzado(final NavRoute.Node node) {
-        if (recuperacionOrigenDropActiva) {
-            BlockPos live = mob.blockPosition();
-            return live.equals(node.pos()) && esPieValido(live)
-                    && NavObstruction.hasSupport(mob.level(), live)
-                    && NavObstruction.fitsActualAabb(mob.level(), mob);
-        }
         // BUILD is complete only after its exact placement is verified and the mob physically
         // occupies the resulting feet cell while grounded, supported and fitting its real AABB.
         if (node.transition() == NavRoute.Transition.BUILD) {
@@ -3735,6 +3729,12 @@ public final class NavExecutor {
                     placementVerified, liveFeet.equals(node.pos()), mob.onGround(),
                     NavObstruction.hasSupport(mob.level(), liveFeet), NavObstruction.fitsActualAabb(mob.level(), mob));
             return arrived && esPieValido(liveFeet);
+        }
+        if (recuperacionOrigenDropActiva) {
+            BlockPos live = mob.blockPosition();
+            return live.equals(node.pos()) && esPieValido(live)
+                    && NavObstruction.hasSupport(mob.level(), live)
+                    && NavObstruction.fitsActualAabb(mob.level(), mob);
         }
         // BREAK is an action, not a proximity waypoint. If proximity advanced this node,
         // the actuator would be skipped before it could approach the validated stand and act.
