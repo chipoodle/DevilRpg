@@ -5620,3 +5620,9 @@ run/saves; hashes match; structural verification only.
 - dbff5448: final int[] holder; compile/test/lint/diff PASS.
 - 55 policy tests; BREAK 8, planner 53. No runtime.
 - Report: docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION-R2.md. A2 OPEN.
+
+## 2026-11-20 — A2 vertical-only final Run1 FAIL
+
+- Static PASS; runtime 1/8 strict (IDX1), 2/8 perimeter, 1 death; C4 PASS.
+- First expansions 0/77 zero-enqueued; BREAK 0/128 accepted; BUILD not exercised. No retry.
+- Report: docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md. A2 OPEN.

@@ -1,10 +1,23 @@
-# CURRENT CHECKPOINT — A2 same-column vertical-edge correction (2026-11-20)
+# CURRENT CHECKPOINT — A2 vertical-only final Run1 FAIL (2026-11-20)
 
-**Branch:** `feature/autonomous-village`  
-**Production implementation:** `7e78c9360c7960f13da6062f38196e8b1627b93a`  
-**Implementation + report baseline:** `3a4767327ef9697650f8ba43dedf90c2dcfeeba4`  
-**Harness handoff:** `docs/autonomous-village/2026-11-20-A2-LAST-RUN-HARNESS-HANDOFF.md`  
-**Detailed implementation report:** `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-EDGE-IMPLEMENTATION.md`
+**Branch:** `feature/autonomous-village`
+**Tested HEAD:** `54e3c9a8b11e2b6125a589ee64795db5a98c62fb`
+**RUN_ID:** `a2n-20261120-173629`
+**Runtime report:** `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`
+
+- Static PASS: 56 policy tests; `NAV_NEIGHBOR_POLICY_TEST` 16, planner 53; lint/diff OK.
+- Runtime FAIL: A2 1/8 strict (IDX1), 2/8 perimeter (IDX1/6), 1 death; C4 PASS.
+- Vertical-only fixed zero-successor: 77 first expansions, 0 with zero enqueued.
+- BREAK accepted stands 0/128; BUILD not exercised; IDX7 selected BUILD but failed at budget.
+- No retry/Run2/Full12K. A2 OPEN.
+
+## Next action
+
+1. ChatGPT to analyze BREAK stand/LOS rejection (0 accepted) and remaining DROP/BUILD execution gaps.
+2. Do not raise budgets or weaken predicates; no runtime without new explicit authorization.
+3. C4 observed PASS is not a standalone revalidation.
+
+# HISTORICAL — A2 same-column vertical-edge correction
 
 - Evidencia raíz: el forense del 19-nov demostró que IDX3/IDX5 estaban en pozos 1×1; los ocho vecinos horizontales estaban bloqueados y el grafo no representaba el movimiento vertical en la misma columna `(0,0)`. A* agotaba la primera expansión con 56 candidatos y cero sucesores.
 - Corrección implementada: `NavNeighborPolicy` añade una novena dirección `(0,0)` a los ocho vecinos horizontales. Los planificadores local y global usan esa política.
@@ -17,7 +30,7 @@
 - Sin retry, C4 standalone, Run2 ni Full12K. Harness no modifica producción ni tests.
 - D* Lite sigue sin implementarse. El planner actual es A* incremental reanudable. D* Lite no corrige la ausencia de aristas legales; se reconsiderará solo si el runtime demuestra que el coste de replanning es un problema independiente.
 
-**Última validación:** R2 estática PASS sobre el código anterior; la nueva corrección requiere validación estática fresca.  
+**Última validación:** R2 estática PASS sobre el código anterior; la nueva corrección requiere validación estática fresca.
 **Estado:** A2 OPEN; C4 no revalidado; BUILD runtime no medido.
 
 ---
@@ -1365,6 +1378,7 @@ Read first, in order:
 112. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-LOG-FORENSICS.md`
 113. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`
 114. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION-R2.md`
+115. `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 

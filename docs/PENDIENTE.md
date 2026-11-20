@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — A2 same-column vertical-edge correction (2026-11-20)
+# CURRENT CHECKPOINT — 2026-11-20 A2 vertical-only final Run1 FAIL
 
 **Branch:** `feature/autonomous-village`  
 **Production implementation:** `7e78c9360c7960f13da6062f38196e8b1627b93a`  
@@ -4141,3 +4141,4 @@ un\saves\DevilRpg-A2-Prueba; LevelName=DevilRpg-A2-Prueba, spawn 96,144,-32, no 
 - C4: 9/12 resumed. Failed workers: weaponsmith 254f3367 at 652,62,431 (no site); fisherman f170acc0 at 678,62,436 (site 682,71,572); mason 615e8c86 at 698,62,454 (site 692,71,502). All idle on north shore; C4 intermittent.
 - Worlds: DevilRpg-A2-IDX8-Diagnostico and DevilRpg-C4-WorkerResume-Diagnostico in %APPDATA%/.minecraft/saves and
 run/saves; hashes match; structural verification only.
+- **Vertical-only Run1 `a2n-20261120-173629` FAIL:** static PASS; A2 1/8 estricto (IDX1), 2/8 perímetro, 1 muerte; C4 PASS. First expansions 0/77 sin sucesores. BREAK 0/128 aceptados; BUILD no ejercitado. Detalle: `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`.
