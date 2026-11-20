@@ -11,7 +11,7 @@ occurred. The run therefore cannot validate D3 runtime behavior.
 - BRANCH: `feature/autonomous-village`
 - INITIAL_HEAD: `3d7e6bf4d44f07b3f91068a493bb9cb1ace7fc58`
 - TESTED_HEAD: same
-- PRODUCTION_SHA: `9f00cb5ecec462df91f9905072988db90bec08b2` (D3 production blobs)
+- PRODUCTION_SHA: `c520198c0b89e5da0d6f2e760b22e8d43fcec7d7` (D3 implementation)
 - RUNTIME_WORLD: `build/a2n/a2n-20261120-140611/game/a2n`
 - SEED: `12345`
 - START: 14:06:11; END: 14:14:11 (approx 8 minutes)
@@ -119,3 +119,4 @@ build/a2n/a2n-20261120-140611/fin.txt
 The run is an A2 FAIL. It does not validate D3 BUILD; the immediate blocker remains global search
 coverage/trapping (IDX3/4/5/7/8) and insufficient progression for IDX1/6. No runtime retry was made.
 A2 remains OPEN; C4 remains unvalidated.
+
