@@ -335,6 +335,7 @@ tasks.register('policyTest') {
                 'com.chipoodle.devilrpg.entity.nav.NavBreakActionPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavBreakExclusionPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavRecoveryControllerTest',
+                'com.chipoodle.devilrpg.entity.nav.TraversalActionLeasePolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.TacticalEscapeBudgetTest',
                 'com.chipoodle.devilrpg.entity.nav.ObstructionRecoveryPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.BlockInteractionPolicyTest',
