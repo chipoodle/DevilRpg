@@ -1,16 +1,16 @@
-# CURRENT CHECKPOINT — 2026-11-20 A2 global navigation corrections implemented; STATIC PENDING
+# CURRENT CHECKPOINT — 2026-11-20 A2 global A* compile correction; STATIC PENDING
 
-La continuación operativa y las instrucciones exactas de Harness están en `docs/autonomous-village/NEXT-SESSION.md`.
-Informe de implementación: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-IMPLEMENTATION.md`.
-Implementation HEAD: `c663f5d06618d12cd8150e238308fe3e9d7652db`.
+La continuación operativa está en `docs/autonomous-village/NEXT-SESSION.md`.
+Informe de implementación/corrección: `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-IMPLEMENTATION.md`.
+Último commit de corrección fuente: `ab9d4f0c84a56b67d4efb3e4ff2468ac54e2415f`.
+Primera validación estática: FAIL al compilar; `reopensThisSlice` mutable se capturó dentro del lambda de `graph.expand`. Ninguna prueba se ejecutó; lint y diff-check PASS.
 
-- BREAK: stand candidates at validated feet Y; current supported stand may perform a zero-movement BREAK.
-- DROP: canonical A* successor is the physical landing feet cell.
-- A*: stale OPEN records are skipped; pop/stale/reopen metrics and exact cancellation caller are logged.
-- Regression tests authored; STATIC validation pending; no runtime or world changes.
-- A2 OPEN; C4 not revalidated; D3 BUILD runtime-unmeasured.
+ChatGPT corrigió únicamente la captura usando un holder `final int[]`, preservando la condición, momento de incremento y semántica de métricas. Nuevo blob `NavGraphSearch.java`: `906b480afff84780d66b4378b447e7b1e4a5a3f0`.
 
-**Next:** Harness STATIC ONLY on the exact HEAD above; preserve local work/worlds; stop after static PASS/FAIL. No Minecraft, A2, C4, Run2 or Full12K without separate explicit authorization.
+**Siguiente:** Harness STATIC ONLY sobre el nuevo HEAD. Verificar los seis blobs, ejecutar compileJava, Gradle test/policyTest, strict lint y diff-check; documentar pruebas/assertions realmente ejecutadas. Harness no modifica producción/tests. Preservar trabajo local y mundos. Detenerse tras PASS/FAIL.
+
+**Sin runtime:** no Minecraft, runServer, A2, C4, Run2 ni Full12K. La autorización Run1 anterior está consumida. A2 OPEN; C4 no revalidado; D3 BUILD runtime-unmeasured.
+
 
 ---
 
