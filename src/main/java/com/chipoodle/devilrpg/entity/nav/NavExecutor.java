@@ -3151,10 +3151,6 @@ public final class NavExecutor {
             state = NavState.IDLE;
             return;
         }
-        if (saltoActivo) {
-            tickSalto();
-            return;
-        }
         registrarProgresoHaciaMision();
         recordCell(mob.blockPosition());
         BlockPos physicalCell = mob.blockPosition();
@@ -3727,6 +3723,18 @@ public final class NavExecutor {
             return live.equals(node.pos()) && esPieValido(live)
                     && NavObstruction.hasSupport(mob.level(), live)
                     && NavObstruction.fitsActualAabb(mob.level(), mob);
+        }
+        // BUILD is complete only after its exact placement is verified and the mob physically
+        // occupies the resulting feet cell while grounded, supported and fitting its real AABB.
+        if (node.transition() == NavRoute.Transition.BUILD) {
+            BlockPos placementTarget = node.actionPos();
+            BlockPos liveFeet = mob.blockPosition();
+            boolean placementVerified = placementTarget != null && construidas.contains(placementTarget)
+                    && !mob.level().getBlockState(placementTarget).isAir();
+            boolean arrived = NavBuildTransitionPolicy.physicallyArrived(
+                    placementVerified, liveFeet.equals(node.pos()), mob.onGround(),
+                    NavObstruction.hasSupport(mob.level(), liveFeet), NavObstruction.fitsActualAabb(mob.level(), mob));
+            return arrived && esPieValido(liveFeet);
         }
         // BREAK is an action, not a proximity waypoint. If proximity advanced this node,
         // the actuator would be skipped before it could approach the validated stand and act.
@@ -4804,12 +4812,9 @@ public final class NavExecutor {
         lastMoveTarget = node.pos().toShortString() + ":" + node.transition();
         switch (node.transition()) {
             case JUMP_UP -> {
-                boolean iniciado = iniciarSalto(node);
-                trazarComandoMovimiento(node, "JUMP_UP-" + (iniciado ? "INICIADO" : "RECHAZADO"),
-                        aim.x, aim.y, aim.z, 1.0D);
-                if (!iniciado) {
-                    state = NavState.OBSTRUCTED;
-                }
+                // Legacy route data is fail-closed; ordinary ascent is capped at one block.
+                state = NavState.OBSTRUCTED;
+                lastMoveTarget = node.pos().toShortString() + ":JUMP_UP-RECHAZADO-INVARIANTE-+1";
                 return;
             }
             case STEP_UP -> {
@@ -5243,32 +5248,56 @@ public final class NavExecutor {
                 trazarComandoMovimiento(node, "DROP", aim.x, aim.y, aim.z, 0.9D);
             }
             case BUILD -> {
-                // Toda modificación de terreno requiere la autorización de la transición activa.
-                if (!tryAcquireTraversalAction(NavRoute.Transition.BUILD, node.pos())) {
+                // BUILD node.pos is the resulting feet cell; actionPos is the exact placement cell below it.
+                BlockPos placementTarget = node.actionPos();
+                if (placementTarget == null) {
                     state = NavState.OBSTRUCTED;
-                    lastMoveTarget = node.pos().toShortString() + ":BUILD-LEASE-RECHAZADO";
+                    lastMoveTarget = node.pos().toShortString() + ":BUILD-SIN-ACTION-POS";
                     return;
                 }
-                // A2 Stage 4Q · CONSTRUIR DESDE LA RUTA. El nodo es la celda donde se coloca el bloque; la posicion
-                // transitable resultante es su celda SUPERIOR. Se coloca con la primitiva de la casa, se VERIFICA
-                // releyendo el estado, y la celda pasa a la geometria construida para que siga en la ruta aceptada.
-                if (placement == null || !placement.place(node.pos())) {
-                    // No se pudo construir: se registra el motivo y NO se avanza (la ruta se conserva).
-                    lastMoveTarget = node.pos().toShortString() + ":BUILD-FALLIDO";
+                boolean placementVerified = construidas.contains(placementTarget)
+                        && !mob.level().getBlockState(placementTarget).isAir();
+                if (NavBuildTransitionPolicy.shouldPlace(placementVerified)) {
+                    // An unexpected solid cell is not accepted as our BUILD result.
+                    if (!mob.level().getBlockState(placementTarget).isAir()) {
+                        state = NavState.OBSTRUCTED;
+                        lastMoveTarget = placementTarget.toShortString() + ":BUILD-CELDA-OCUPADA";
+                        return;
+                    }
+                    if (!tryAcquireTraversalAction(NavRoute.Transition.BUILD, placementTarget)) {
+                        state = NavState.OBSTRUCTED;
+                        lastMoveTarget = placementTarget.toShortString() + ":BUILD-LEASE-RECHAZADO";
+                        return;
+                    }
+                    if (placement == null || !placement.place(placementTarget)) {
+                        lastMoveTarget = placementTarget.toShortString() + ":BUILD-FALLIDO";
+                        state = NavState.OBSTRUCTED;
+                        return;
+                    }
+                    if (mob.level().getBlockState(placementTarget).isAir()) {
+                        lastMoveTarget = placementTarget.toShortString() + ":BUILD-NO-VERIFICADO";
+                        state = NavState.OBSTRUCTED;
+                        return;
+                    }
+                    construidas.add(placementTarget.immutable());
+                    bloquesColocadosVerificados++;
+                    ultimoConstruido = placementTarget.toShortString();
+                    ultimoConstruidoTick = mob.level().getGameTime();
+                    placementVerified = true;
+                    lastMoveTarget = placementTarget.toShortString() + ":BUILD-VERIFICADO";
+                }
+                // Placement is not traversal: move to the resulting feet cell and keep this route index
+                // until nodoAlcanzado confirms exact grounded occupancy and the real AABB.
+                if (!placementVerified || !NavObstruction.fits(mob.level(), mob, node.pos())
+                        || !NavObstruction.hasSupport(mob.level(), node.pos())) {
                     state = NavState.OBSTRUCTED;
+                    lastMoveTarget = placementTarget.toShortString() + ":BUILD-POSTSTATE-INVALID";
                     return;
                 }
-                if (mob.level().getBlockState(node.pos()).isAir()) {
-                    lastMoveTarget = node.pos().toShortString() + ":BUILD-NO-VERIFICADO";
-                    state = NavState.OBSTRUCTED;
-                    return;
-                }
-                construidas.add(node.pos().immutable());
-                bloquesColocadosVerificados++;
-                ultimoConstruido = node.pos().toShortString();
-                ultimoConstruidoTick = mob.level().getGameTime();
-                // La ruta NO se descarta: se sigue con el mismo indice y el mismo objetivo.
-                lastMoveTarget = node.pos().toShortString() + ":BUILD-VERIFICADO";
+                mob.getNavigation().moveTo(node.pos().getX() + 0.5D, node.pos().getY(),
+                        node.pos().getZ() + 0.5D, 1.0D);
+                traceActuatorCommand("BUILD_FEET_APPROACH", node.pos(), mob.level().getGameTime());
+                lastMoveTarget = node.pos().toShortString() + ":BUILD-ACERCAR-PIES";
                 return;
             }
             case BREAK -> {
@@ -5950,7 +5979,8 @@ public final class NavExecutor {
         }
         return switch (node.transition()) {
             case BREAK -> node.actionTarget();
-            case BUILD, BRIDGE -> node.pos();
+            case BUILD -> node.actionPos();
+            case BRIDGE -> node.pos();
             default -> null;
         };
     }
