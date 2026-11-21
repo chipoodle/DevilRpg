@@ -1460,3 +1460,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - Static gate PASS; BUILD provenance and per-entity diagnostics. No runtime.
 - Report: `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`. A2 OPEN.
+
+## 2026-11-21 — A2 DROP fix / 2-of-8 strict
+
+- IDX6 DROP fixed; A2 2/8. BREAK post-state remains blocker. No further runtime.
+- Report: `docs/autonomous-village/2026-11-21-A2-DROP-FIX-ITERATION.md`.

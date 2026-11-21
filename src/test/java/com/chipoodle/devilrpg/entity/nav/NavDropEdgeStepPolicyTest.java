@@ -58,7 +58,6 @@ public final class NavDropEdgeStepPolicyTest {
                 && NavDropEdgeStepPolicy.timedOut(61));
         comprobar("no-progress is bounded", !NavDropEdgeStepPolicy.noProgress(20)
                 && NavDropEdgeStepPolicy.noProgress(21));
-
         System.out.println("NAV_DROP_EDGE_STEP_POLICY_TEST: OK (" + assertions + " assertions)");
     }
 

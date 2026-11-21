@@ -1,8 +1,23 @@
-# CURRENT CHECKPOINT — BUILD provenance + BREAK diagnostics STATIC PASS (2026-11-21)
+# CURRENT CHECKPOINT — A2 DROP fix iteration, 2/8 strict (2026-11-21)
 
 **Branch:** feature/autonomous-village
-**Tested HEAD:** `7bd26569da11e0a61de0af86124bf6fc6666e7fe`
-**Validation report:** `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`
+**Runtime:** `a2n-20261121-123432`
+**Report:** `docs/autonomous-village/2026-11-21-A2-DROP-FIX-ITERATION.md`
+
+- DROP edge-step no-progress now excludes the exact edge and landing, then replans. IDX6 reached strict entry.
+- Vertical probes are bounded to safe-drop descent, same level and +1 ascent; same-column descent only.
+- A2 result: 2/8 strict (IDX1, IDX6), 2/8 perimeter, 2 deaths; C4 PASS.
+- Remaining blocker: BREAK successors remain solid post-break states, so A* cannot tunnel out of 1×1 shafts;
+  IDX7/8 exhaust global budget; IDX4 leaf/DROP cycle; IDX2 local planning failure.
+- Static compile/test PASS. No further runtime authorized by this checkpoint.
+
+## Next action
+
+1. Implement BREAK post-state simulation (broken target as open feet cell) or a validated move-beyond edge.
+2. Re-run static + one controlled A2; do not raise global budget or weaken landing/support.
+3. A2 OPEN; C4 standalone pending; Full12K blocked.
+
+# HISTORICAL — BUILD provenance + BREAK diagnostics STATIC PASS
 
 - Static PASS: compile/test/policyTest/lint/diff; 57 named tests, no failures.
 - `NAV_BUILD_OBJECTIVE_POLICY_TEST`: 8 assertions; provenance requires exact `feet=actionPos.above()` and
@@ -1397,6 +1412,7 @@ Read first, in order:
 115. `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`
 116. `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`
 117. `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`
+118. `docs/autonomous-village/2026-11-21-A2-DROP-FIX-ITERATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 

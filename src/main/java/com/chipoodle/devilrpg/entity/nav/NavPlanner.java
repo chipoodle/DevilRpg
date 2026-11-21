@@ -503,7 +503,9 @@ public final class NavPlanner {
                 }
                 for (int[] off : OFFSETS) {
                     BlockPos next = new BlockPos(pos.getX() + off[0], pos.getY(), pos.getZ() + off[1]);
-                    for (int dy = -verticalRange; dy <= verticalRange; dy++) {
+                    int[] niveles = NavVerticalSearchPolicy.levels(off[0] == 0 && off[1] == 0,
+                            verticalRange, policies.maxSafeDrop());
+                    for (int dy : niveles) {
                         BlockPos candidate = next.offset(0, dy, 0);
                         if (Math.abs(candidate.getX() - start.getX()) > maxRadio
                                 || Math.abs(candidate.getZ() - start.getZ()) > maxRadio) {
@@ -984,7 +986,9 @@ public final class NavPlanner {
             for (int[] off : OFFSETS) {
                 BlockPos next = new BlockPos(pos.getX() + off[0], pos.getY(), pos.getZ() + off[1]);
                 // Y se resuelve probando niveles cercanos: el planificador decide la altura, no la asume.
-                for (int dy = -verticalRange; dy <= verticalRange; dy++) {
+                int[] niveles = NavVerticalSearchPolicy.levels(off[0] == 0 && off[1] == 0,
+                        verticalRange, policies.maxSafeDrop());
+                for (int dy : niveles) {
                     BlockPos candidate = next.offset(0, dy, 0);
                     if (Math.abs(candidate.getX() - start.getX()) > horizontalRange
                             || Math.abs(candidate.getZ() - start.getZ()) > horizontalRange) {

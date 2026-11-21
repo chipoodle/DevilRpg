@@ -5662,3 +5662,9 @@ run/saves; hashes match; structural verification only.
 - 7bd26569: compile/test/policyTest/lint/diff PASS; 57 tests.
 - BUILD provenance exact feet=actionPos.above, 8 assertions; BREAK per-Mob UUID/caller diagnostics.
 - No runtime. Report: docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md. A2 OPEN.
+
+## 2026-11-21 — A2 DROP fix / 2-of-8 strict
+
+- DROP no-progress excludes exact edge+landing and replans; IDX6 reaches strict.
+- Vertical probes bounded to safe-drop/same/+1. A2 2/8, C4 PASS.
+- Remaining: BREAK post-state solid in shafts, IDX7/8 budget, IDX4 leaves, IDX2 local. Report: docs/autonomous-village/2026-11-21-A2-DROP-FIX-ITERATION.md.

@@ -4004,8 +4004,35 @@ public final class NavExecutor {
             dropEdgeStepNoProgress++;
         }
         if (NavDropEdgeStepPolicy.noProgress(dropEdgeStepNoProgress)) {
+            // The lip did not release after the bounded window. This source->landing edge is not
+            // physically executable; blacklist it and replan instead of reactivating the same DROP.
+            BlockPos stalledTakeoff = dropEdgeStepTakeoff;
+            BlockPos stalledLanding = dropEdgeStepLanding;
+            if (stalledTakeoff != null && stalledLanding != null) {
+                long clave = NavDropExclusionPolicy.clave(stalledTakeoff.getX(), stalledTakeoff.getY(),
+                        stalledTakeoff.getZ(), stalledLanding.getX(), stalledLanding.getY(),
+                        stalledLanding.getZ());
+                exclusionesDescenso.excluir(clave, huellaTerreno(stalledLanding));
+                exclusionesDescenso.excluir(NavDropExclusionPolicy.claveDestino(
+                        stalledLanding.getX(), stalledLanding.getY(), stalledLanding.getZ()),
+                        huellaTerreno(stalledLanding));
+                if (NavTrace.on()) {
+                    NavTrace.ev("DROP_EDGE_STEP_EXCLUDED", "uuid=" + mob.getUUID()
+                            + " tick=" + now + " takeoff=" + stalledTakeoff.toShortString()
+                            + " landing=" + stalledLanding.toShortString()
+                            + " reason=no_progress");
+                }
+            }
             clearDropEdgeStep("no_progress");
-            state = NavState.OBSTRUCTED;
+            route = null;
+            routeIndex = 0;
+            lastRouteSignature = 0;
+            globalCache = null;
+            NavPlanner.cancelGlobalSearch(globalSearchHandle);
+            globalSearchStart = null;
+            globalSearchLastExpansions = 0;
+            globalDesde = null;
+            state = NavState.PLANNING;
             return;
         }
         if (NavDropEdgeStepPolicy.timedOut(dropEdgeStepTicks)) {

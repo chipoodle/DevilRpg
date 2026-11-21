@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — 2026-11-21 BUILD provenance + BREAK diagnostics STATIC PASS
+# CURRENT CHECKPOINT — 2026-11-21 A2 DROP fix, 2/8 strict
 
 **Branch:** feature/autonomous-village
 **Source baseline audited:** 54e3c9a8b11e2b6125a589ee64795db5a98c62fb
@@ -4167,3 +4167,4 @@ run/saves; hashes match; structural verification only.
 - **Vertical-only Run1 `a2n-20261120-173629` FAIL:** static PASS; A2 1/8 estricto (IDX1), 2/8 perímetro, 1 muerte; C4 PASS. First expansions 0/77 sin sucesores. BREAK 0/128 aceptados; BUILD no ejercitado. Detalle: `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`.
 - **BREAK/BUILD extract:** 128 BREAK checks solo IDX1, 0 aceptados; IDX7 sin actionPos/nodo BUILD (objetivo local 706,69,459); IDX4 19 DROP bloqueados por spruce leaves; IDX6 18 abortos (17 no_progress); IDX1 causa UNKNOWN. Detalle: `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`.
 - **Static PASS `7bd26569`:** compile/test/policyTest/lint/diff OK; 57 tests; BUILD provenance 8 assertions; BREAK diagnostics per-Mob WeakHashMap 128, UUID/caller. Sin runtime. Detalle: `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`.
+- **DROP fix `a2n-20261121-123432`:** exclusión de borde/destino en no-progress; IDX6 entra estricto. A2 2/8, C4 PASS. Bloqueo restante: BREAK post-state sólido en pozos 1×1, IDX7/8 budget, IDX4 hojas, IDX2 local. Detalle: `docs/autonomous-village/2026-11-21-A2-DROP-FIX-ITERATION.md`.
