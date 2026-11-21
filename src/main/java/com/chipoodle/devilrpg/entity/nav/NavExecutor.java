@@ -182,6 +182,8 @@ public final class NavExecutor {
     private NavRoute.Transition objetivoTransicionLocal;
     /** Solid block targeted by a global BREAK waypoint; never used as a movement objective. */
     private BlockPos objetivoAccionLocal;
+    /** Exact placement cell proving that an unsupported local objective came from a validated global BUILD edge. */
+    private BlockPos objetivoAccionConstruccion;
     /**
      * A2 FASE 4 · el objetivo actual es TACTICO (orilla, escape) y NO es la mision. Mientras este activo,
      * llegar a el no puede declarar {@link NavState#ARRIVED}: se vuelve a la mision.
@@ -1528,6 +1530,7 @@ public final class NavExecutor {
         objetivoPermiteConstruccion = false;
         objetivoTransicionLocal = null;
         objetivoAccionLocal = null;
+        objetivoAccionConstruccion = null;
         BlockPos mision = misionDePie();
         if (mision == null) {
             ultimoEscalonDeObjetivo = "sin mision utilizable (mision="
@@ -1710,6 +1713,17 @@ public final class NavExecutor {
             // Select and validate the stand as a movement waypoint, but authorize the action against actionTarget.
             // BUILD/BRIDGE retain their own action-cell contracts and are not ordinary feet waypoints.
             BlockPos waypoint = n.standPos();
+            if (requiereConstruccion && !NavBuildObjectivePolicy.isValid(waypoint, n.actionPos())) {
+                descartados = true;
+                if (NavTrace.on()) {
+                    NavTrace.ev("BUILD_GLOBAL_WAYPOINT_REJECTED", "uuid=" + mob.getUUID()
+                            + " tick=" + mob.level().getGameTime()
+                            + " feet=" + waypoint.toShortString()
+                            + " actionPos=" + (n.actionPos() == null ? "-" : n.actionPos().toShortString())
+                            + " reason=missing_or_misaligned_action_pos");
+                }
+                continue;
+            }
             if (!dentroDeLaVentana(yo, waypoint)) {
                 if (n.transition() == NavRoute.Transition.DROP
                         && NavWaypointWindowPolicy.aceptable(waypoint.getX() - yo.getX(), waypoint.getZ() - yo.getZ(),
@@ -1753,7 +1767,7 @@ public final class NavExecutor {
             objetivo = waypoint;
             objetivoConstruible = requiereConstruccion;
             objetivoTransicion = n.transition();
-            objetivoAccion = actionTarget;
+            objetivoAccion = accionBreak ? actionTarget : (requiereConstruccion ? n.actionPos() : null);
         }
         if (objetivo == null) {
             if (!global.hitBudget()) {
@@ -1829,9 +1843,23 @@ public final class NavExecutor {
         }
         // A valid global waypoint has already passed the route and physical-foot checks above.
         // A stair cooldown delays construction, not movement along this independent route.
-        objetivoPermiteConstruccion = objetivoConstruible;
+        objetivoPermiteConstruccion = objetivoConstruible
+                && NavBuildObjectivePolicy.isValid(objetivo, objetivoAccion);
         objetivoTransicionLocal = objetivoTransicion;
         objetivoAccionLocal = objetivoTransicion == NavRoute.Transition.BREAK ? objetivoAccion : null;
+        objetivoAccionConstruccion = objetivoTransicion == NavRoute.Transition.BUILD
+                ? objetivoAccion : null;
+        if (NavTrace.on()) {
+            NavTrace.ev("LOCAL_OBJECTIVE_SELECTED", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime()
+                    + " feet=" + objetivo.toShortString()
+                    + " transition=" + objetivoTransicion
+                    + " buildAuthorized=" + objetivoPermiteConstruccion
+                    + " buildActionPos=" + (objetivoAccionConstruccion == null
+                            ? "-" : objetivoAccionConstruccion.toShortString())
+                    + " routeLength=" + global.route().length()
+                    + " found=" + global.alcanzoMision());
+        }
         ultimoEscalonDeObjetivo = "global " + (global.alcanzoMision() ? "ALCANZA la mision" : "solo frente")
                 + " -> waypoint local " + objetivo.toShortString()
                 + " (transicion=" + objetivoTransicion + " build=" + objetivoPermiteConstruccion
@@ -2000,7 +2028,10 @@ public final class NavExecutor {
             ultimoEscalonDeObjetivo = "esperando cadencia de escalera; no consumir paso local";
             return false;
         }
-        boolean siguientePermiteConstruccion = objetivoPermiteConstruccion;
+        boolean siguientePermiteConstruccion = objetivoPermiteConstruccion
+                && NavBuildObjectivePolicy.isValid(siguiente, objetivoAccionConstruccion);
+        BlockPos siguienteAccionConstruccion = siguientePermiteConstruccion
+                ? objetivoAccionConstruccion : null;
         if (siguiente == null) {
             fallosDeEscalonDeObjetivo++;
             if (NavTrace.on()) {
@@ -2062,10 +2093,14 @@ public final class NavExecutor {
         if (NavTrace.on()) {
             NavTrace.ev("A2_LOCAL_STAIR_WRITE", "uuid=" + mob.getUUID() + " tick="
                     + mob.level().getGameTime() + " op=INC_STEP new=" + escalonesDeObjetivo
-                    + " objective=" + siguiente);
+                    + " objective=" + siguiente
+                    + " buildAuthorized=" + siguientePermiteConstruccion
+                    + " buildActionPos=" + (siguienteAccionConstruccion == null
+                            ? "-" : siguienteAccionConstruccion.toShortString()));
         }
         objective = siguiente;
         objetivoPermiteConstruccion = siguientePermiteConstruccion;
+        objetivoAccionConstruccion = siguienteAccionConstruccion;
         objetivoTransicionLocal = null;
         objetivoAccionLocal = null;
         plannedFrom = null;
@@ -3369,7 +3404,10 @@ public final class NavExecutor {
                 return;
             }
             if (objective == null || !dentroDeLaVentana(mob.blockPosition(), objective)
-                    || (!esPieValido(objective) && !objetivoPermiteConstruccion && !accionLocalValida)) {
+                    || (!esPieValido(objective)
+                        && !(objetivoPermiteConstruccion
+                            && NavBuildObjectivePolicy.isValid(objective, objetivoAccionConstruccion))
+                        && !accionLocalValida)) {
                 // A2 FASE 2 · ESTE era el punto ciego: `escalonarObjetivoLocal()` puede devolver true SIN
                 // cambiar nada (misma celda = idempotente) y, si esa celda NO es utilizable, se salia por aqui
                 // en CADA tick sin planificar nunca: `state=PLANNING`, `route=-`, `plans` congelado.
