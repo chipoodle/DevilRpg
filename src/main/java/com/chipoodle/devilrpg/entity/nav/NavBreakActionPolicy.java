@@ -14,16 +14,16 @@ public final class NavBreakActionPolicy {
 
     private NavBreakActionPolicy() { }
 
-    private static final java.util.Map<String, Integer> diagnosticEvents = new java.util.HashMap<>();
+    private static final java.util.Map<Mob, Integer> diagnosticEvents = new java.util.WeakHashMap<>();
 
     private static void trace(Mob mob, String reason, BlockPos stand, BlockPos target, Vec3 eye,
                               Vec3 rayEnd, BlockHitResult hit, double distanceSqr,
                               double tEnter, double legacyAimY) {
         if (!NavTrace.on()) return;
         String uuid = mob == null ? "-" : mob.getUUID().toString();
-        int emitted = diagnosticEvents.getOrDefault(uuid, 0);
+        int emitted = diagnosticEvents.getOrDefault(mob, 0);
         if (emitted >= 128) return;
-        diagnosticEvents.put(uuid, emitted + 1);
+        diagnosticEvents.put(mob, emitted + 1);
         NavTrace.ev("BREAK_LOS_DIAG", "uuid=" + uuid
                 + " caller=NavBreakActionPolicy#executable reason=" + reason
                 + " stand=" + (stand == null ? "-" : stand.toShortString())
