@@ -2,7 +2,7 @@
 
 **Branch:** `feature/autonomous-village`  
 **Run:** `a2n-20261120-173629`  
-**Tested HEAD:** `54e3c9a8b11e2b6125a589ee861ca4742caed233`  
+**Tested HEAD:** `54e3c9a8b11e2b6125a589ee64795db5a98c62fb`  
 **Final report commit:** `91ab3375bb1208502d64384ecde402eae00b29ac`  
 **Post-run forensic:** `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-POSTRUN-FORENSICS.md`
 
