@@ -5668,5 +5668,5 @@ run/saves; hashes match; structural verification only.
 
 - Static PASS on production `7bd26569da11e0a61de0af86124bf6fc6666e7fe`; documentation HEAD `fd5940ba579ae3089e072e2870811461e4073c89`; 57 tests; no runtime. Report: `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`.
 - DROP source audit confirms no-progress is based only on >0.01 improvement toward landing center and aborts after 21 consecutive non-improving ticks while AABB support remains. This is not proof of immobility; existing abort telemetry lacks sufficient state. Report: `docs/autonomous-village/2026-11-21-A2-DROP-EDGE-STEP-SOURCE-AUDIT.md`.
-- Next: Harness read-only correlate 18 IDX6 aborts and route-guard exhaustion; verify same-run UUID/IDX mapping and map killer UUID `cc4b9c97-d8f3-40e3-aee1-ccf233feab912` in the exact mob-attack run. No runtime or production/test changes.
+- Next: Harness read-only correlate 18 IDX6 aborts and route-guard exhaustion; verify same-run UUID/IDX mapping and map killer UUID `cc4b9c97-d8f3-40e3-aee1-cf233feab912` in the exact mob-attack run. No runtime or production/test changes.
 - Runtime authorization consumed; no retry/Run2/C4 standalone/Full12K. A2 OPEN.
