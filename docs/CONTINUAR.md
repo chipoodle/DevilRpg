@@ -5656,3 +5656,9 @@ run/saves; hashes match; structural verification only.
 - IDX7 no BUILD actionPos/node; 706,69,459 local fallback, terminal local budget 10/10.
 - IDX4 19 DROP blocked by spruce leaves; IDX6 17 no_progress aborts; IDX1 cause UNKNOWN.
 - Report: docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md. A2 OPEN.
+
+## 2026-11-21 — BUILD provenance + BREAK diagnostics STATIC PASS
+
+- 7bd26569: compile/test/policyTest/lint/diff PASS; 57 tests.
+- BUILD provenance exact feet=actionPos.above, 8 assertions; BREAK per-Mob UUID/caller diagnostics.
+- No runtime. Report: docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md. A2 OPEN.

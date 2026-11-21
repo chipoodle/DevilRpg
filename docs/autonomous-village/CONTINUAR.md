@@ -1455,3 +1455,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - BREAK only IDX1, 0 accepted; BUILD never reached local route/executor.
 - Report: `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`. A2 OPEN.
+
+## 2026-11-21 — BUILD provenance + BREAK diagnostics STATIC PASS
+
+- Static gate PASS; BUILD provenance and per-entity diagnostics. No runtime.
+- Report: `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`. A2 OPEN.

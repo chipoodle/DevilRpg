@@ -1,11 +1,23 @@
-# CURRENT CHECKPOINT — BUILD provenance fix + BREAK diagnostic isolation (2026-11-21)
+# CURRENT CHECKPOINT — BUILD provenance + BREAK diagnostics STATIC PASS (2026-11-21)
 
 **Branch:** feature/autonomous-village
-**Source baseline audited:** 54e3c9a8b11e2b6125a589ee64795db5a98c62fb
-**Implementation report:** docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-IMPLEMENTATION.md
-**Post-extract decision record:** docs/autonomous-village/2026-11-21-A2-POST-EXTRACT-DECISION-RECORD.md
-**Latest source commit:** fdefafaa65cf1d7825c62280c11ef25fddfbec99
-**Latest documentation commit:** 32cb89b137335c520c6b8c05c01c8eb0b86f8b43
+**Tested HEAD:** `7bd26569da11e0a61de0af86124bf6fc6666e7fe`
+**Validation report:** `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`
+
+- Static PASS: compile/test/policyTest/lint/diff; 57 named tests, no failures.
+- `NAV_BUILD_OBJECTIVE_POLICY_TEST`: 8 assertions; provenance requires exact `feet=actionPos.above()` and
+  survives INC_STEP; local gate rechecks it.
+- BREAK diagnostics include UUID/caller and use per-Mob `WeakHashMap` 128-event budgets; behavior unchanged.
+- Prompt expected HEAD `…c5071f3b` is invalid; actual remote tip `…c6666e7fe` matches all six blobs.
+- No runtime. A2 OPEN; C4 not revalidated; D3 BUILD runtime unmeasured.
+
+## Next action
+
+1. ChatGPT reviews static PASS; decide whether to authorize another controlled runtime.
+2. Any runtime requires new explicit authorization; previous Run1 authorization is consumed.
+3. No Run2/Full12K/C4 standalone without separate authorization.
+
+# HISTORICAL — BUILD provenance fix + BREAK diagnostic isolation
 
 - BUILD: added NavBuildObjectivePolicy. A BUILD waypoint now requires non-null actionPos and exact feetCell == placementCell.above(). NavExecutor retains that actionPos in a dedicated field across INC_STEP and rechecks it before allowing an unsupported local objective. Added LOCAL_OBJECTIVE_SELECTED and BUILD rejection diagnostics.
 - BUILD regression: NavBuildObjectivePolicyTest, 8 assertions, registered in policyTest. Authored; NOT RUN by ChatGPT.
@@ -1384,6 +1396,7 @@ Read first, in order:
 114. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION-R2.md`
 115. `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`
 116. `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`
+117. `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 

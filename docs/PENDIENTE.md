@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — BUILD provenance fix + BREAK diagnostic isolation (2026-11-21)
+# CURRENT CHECKPOINT — 2026-11-21 BUILD provenance + BREAK diagnostics STATIC PASS
 
 **Branch:** feature/autonomous-village
 **Source baseline audited:** 54e3c9a8b11e2b6125a589ee64795db5a98c62fb
@@ -4166,3 +4166,4 @@ un\saves\DevilRpg-A2-Prueba; LevelName=DevilRpg-A2-Prueba, spawn 96,144,-32, no 
 run/saves; hashes match; structural verification only.
 - **Vertical-only Run1 `a2n-20261120-173629` FAIL:** static PASS; A2 1/8 estricto (IDX1), 2/8 perímetro, 1 muerte; C4 PASS. First expansions 0/77 sin sucesores. BREAK 0/128 aceptados; BUILD no ejercitado. Detalle: `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`.
 - **BREAK/BUILD extract:** 128 BREAK checks solo IDX1, 0 aceptados; IDX7 sin actionPos/nodo BUILD (objetivo local 706,69,459); IDX4 19 DROP bloqueados por spruce leaves; IDX6 18 abortos (17 no_progress); IDX1 causa UNKNOWN. Detalle: `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`.
+- **Static PASS `7bd26569`:** compile/test/policyTest/lint/diff OK; 57 tests; BUILD provenance 8 assertions; BREAK diagnostics per-Mob WeakHashMap 128, UUID/caller. Sin runtime. Detalle: `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`.
