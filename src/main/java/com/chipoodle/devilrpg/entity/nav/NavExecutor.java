@@ -1226,6 +1226,7 @@ public final class NavExecutor {
     private BlockPos breachMoveTarget;
     private int breachMoveTicks;
     private long breachMoveUntil;
+    private int breachChainSteps;
     private BlockPos nodoSeguido;
     private double mejorDistAlNodo = Double.MAX_VALUE;
 
@@ -2007,6 +2008,23 @@ public final class NavExecutor {
     private void tickBreachMove(long now) {
         breachMoveTicks++;
         if (now > breachMoveUntil || mob.blockPosition().equals(breachMoveTarget)) {
+            if (mob.blockPosition().equals(breachMoveTarget) && breachChainSteps < 4
+                    && misionFinal != null
+                    && mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az) {
+                BlockPos next = az.abrirPasajeHacia(misionFinal);
+                if (next != null) {
+                    breachChainSteps++;
+                    breachMoveTarget = next;
+                    breachMoveTicks = 0;
+                    breachMoveUntil = now + 50L;
+                    if (NavTrace.on()) {
+                        NavTrace.ev("NAV_RECOVERY_BREACH_CHAIN", "uuid=" + mob.getUUID()
+                                + " tick=" + now + " step=" + breachChainSteps + "/4"
+                                + " target=" + next.toShortString());
+                    }
+                    return;
+                }
+            }
             if (NavTrace.on()) {
                 NavTrace.ev("NAV_RECOVERY_BREACH_MOVE_END", "uuid=" + mob.getUUID()
                         + " tick=" + now + " pos=" + mob.blockPosition().toShortString()
@@ -2014,6 +2032,7 @@ public final class NavExecutor {
             }
             breachMoveTarget = null;
             breachMoveTicks = 0;
+            breachChainSteps = 0;
             route = null;
             routeIndex = 0;
             globalCache = null;
@@ -2043,6 +2062,7 @@ public final class NavExecutor {
         }
         breachMoveTarget = abierto;
         breachMoveTicks = 0;
+        breachChainSteps = 1;
         breachMoveUntil = now + 50L;
         route = null;
         routeIndex = 0;

@@ -5,9 +5,10 @@
 **PARTIAL IMPROVEMENT.** IDX3 escaped its 1×1 shaft and reached the perimeter; A2 moved from 2/8 to
 3/8 perimeter, with 2/8 strict (IDX1, IDX6) unchanged. C4 PASS. No protected world was touched.
 
-- RUN_ID: `a2n-20261121-134659`
+- RUN_ID: `a2n-20261121-134659` (initial) / `a2n-20261121-135820` (chained)
 - SOURCE: working tree after `d81b75b1` plus this iteration
 - A2: 2/8 strict, 3/8 perimeter, 3 deaths
+- Chained breach: IDX3 perimeter at t2668 (was t2850), final dist 63.69 (was 64.15); no new strict
 - C4: PASS integrated
 
 ## Change
