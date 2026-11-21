@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — A2 DROP fix iteration, 2/8 strict (2026-11-21)
+# CURRENT CHECKPOINT — A2 breach+move iteration, 3/8 perimeter (2026-11-21)
 
 **Branch:** feature/autonomous-village
 **Runtime:** `a2n-20261121-123432`
@@ -1413,6 +1413,7 @@ Read first, in order:
 116. `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`
 117. `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`
 118. `docs/autonomous-village/2026-11-21-A2-DROP-FIX-ITERATION.md`
+119. `docs/autonomous-village/2026-11-21-A2-RECOVERY-BREACH-MOVE-ITERATION.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 

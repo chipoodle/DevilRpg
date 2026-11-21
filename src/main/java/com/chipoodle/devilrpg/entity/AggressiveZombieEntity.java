@@ -1052,6 +1052,43 @@ public class AggressiveZombieEntity extends Zombie {
      * hacia la orilla, reutilizando la única puerta segura ({@link #breakBlockAt}). No crea una ruta de
      * destrucción nueva ni salta protecciones.
      */
+    /** Opens one protected-checked two-high step and returns the opened feet cell, or null. */
+    public BlockPos abrirPasajeHacia(BlockPos towards) {
+        if (towards == null) {
+            return null;
+        }
+        BlockPos zPos = blockPosition();
+        int dx = towards.getX() - zPos.getX();
+        int dz = towards.getZ() - zPos.getZ();
+        int sx = Math.abs(dx) >= Math.abs(dz) ? Integer.signum(dx) : 0;
+        int sz = sx == 0 ? Integer.signum(dz) : 0;
+        if (sx == 0 && sz == 0) {
+            return null;
+        }
+        BlockPos front = new BlockPos(zPos.getX() + sx, zPos.getY(), zPos.getZ() + sz);
+        int rotos = 0;
+        for (int dy = 0; dy <= 1; dy++) {
+            BlockPos candidate = front.above(dy);
+            if (protegidoPorLaAldea(candidate)) {
+                continue;
+            }
+            BlockState state = level().getBlockState(candidate);
+            if (state.isAir() || state.getCollisionShape(level(), candidate).isEmpty()
+                    || !canBreakBlock(state)) {
+                continue;
+            }
+            if (breakBlockAt(candidate)) {
+                rotos++;
+            }
+        }
+        if (rotos > 0 && level().getBlockState(front).isAir()
+                && level().getBlockState(front.above()).isAir()
+                && com.chipoodle.devilrpg.entity.nav.NavObstruction.hasSupport(level(), front)) {
+            return front.immutable();
+        }
+        return null;
+    }
+
     public int romperRecuperacionHacia(BlockPos towards) {
         if (towards == null) {
             return 0;

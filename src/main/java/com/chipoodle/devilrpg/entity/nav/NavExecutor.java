@@ -1223,6 +1223,9 @@ public final class NavExecutor {
     private long nextBreakRetryAt;
     /** A2 Stage 7G · replanteos consumidos por rechazo de la guarda de ruta (acotado). */
     private int replanteosPorGuarda;
+    private BlockPos breachMoveTarget;
+    private int breachMoveTicks;
+    private long breachMoveUntil;
     private BlockPos nodoSeguido;
     private double mejorDistAlNodo = Double.MAX_VALUE;
 
@@ -1669,6 +1672,10 @@ public final class NavExecutor {
                 ultimoEscalonDeObjetivo = diagnostico;
             }
         }
+        if (!global.alcanzoMision() && global.route().length() <= 1
+                && intentarRoturaDeRecuperacion()) {
+            return null;
+        }
         if (global.route().isEmpty()) {
             if (!global.hitBudget()) {
                 BlockPos escalon = intentarConstruirEscalonSinWaypoint(mision, yo, "sin ruta global");
@@ -1995,6 +2002,63 @@ public final class NavExecutor {
                 && NavBreakActionPolicy.executable(mob.level(), mob, destino, actionTarget,
                         policies, NavBreakActionPolicy.ACTION_REACH_SQR);
         return NavObjectivePolicy.accionLocalValida(bridge, romper, puedeRomper);
+    }
+
+    private void tickBreachMove(long now) {
+        breachMoveTicks++;
+        if (now > breachMoveUntil || mob.blockPosition().equals(breachMoveTarget)) {
+            if (NavTrace.on()) {
+                NavTrace.ev("NAV_RECOVERY_BREACH_MOVE_END", "uuid=" + mob.getUUID()
+                        + " tick=" + now + " pos=" + mob.blockPosition().toShortString()
+                        + " target=" + breachMoveTarget.toShortString());
+            }
+            breachMoveTarget = null;
+            breachMoveTicks = 0;
+            route = null;
+            routeIndex = 0;
+            globalCache = null;
+            state = NavState.PLANNING;
+            return;
+        }
+        mob.getNavigation().stop();
+        mob.getMoveControl().setWantedPosition(breachMoveTarget.getX() + 0.5D,
+                breachMoveTarget.getY(), breachMoveTarget.getZ() + 0.5D, 0.9D);
+        if (NavTrace.on() && breachMoveTicks % 10 == 0) {
+            NavTrace.ev("NAV_RECOVERY_BREACH_MOVE", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " pos=" + mob.blockPosition().toShortString()
+                    + " target=" + breachMoveTarget.toShortString()
+                    + " ticks=" + breachMoveTicks);
+        }
+    }
+
+    private boolean intentarRoturaDeRecuperacion() {
+        long now = mob.level().getGameTime();
+        if (breachMoveTarget != null || misionFinal == null
+                || !(mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az)) {
+            return false;
+        }
+        BlockPos abierto = az.abrirPasajeHacia(misionFinal);
+        if (abierto == null) {
+            return false;
+        }
+        breachMoveTarget = abierto;
+        breachMoveTicks = 0;
+        breachMoveUntil = now + 50L;
+        route = null;
+        routeIndex = 0;
+        lastRouteSignature = 0;
+        globalCache = null;
+        NavPlanner.cancelGlobalSearch(globalSearchHandle);
+        globalSearchStart = null;
+        globalSearchLastExpansions = 0;
+        globalDesde = null;
+        state = NavState.PLANNING;
+        if (NavTrace.on()) {
+            NavTrace.ev("NAV_RECOVERY_BREACH", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " opened=" + abierto.toShortString()
+                    + " pos=" + mob.blockPosition().toShortString());
+        }
+        return true;
     }
 
     private boolean escalonarObjetivoLocal() {
@@ -3047,6 +3111,10 @@ public final class NavExecutor {
         }
         if (objective == null) {
             state = NavState.IDLE;
+            return;
+        }
+        if (breachMoveTarget != null) {
+            tickBreachMove(now);
             return;
         }
         registrarProgresoHaciaMision();
