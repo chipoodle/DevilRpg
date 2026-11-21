@@ -1655,3 +1655,12 @@ Dirección de diseño para la corrección (pendiente de implementación):
 - Preservar presupuestos, protección del recinto, restricciones de block entities salvo la futura excepción atómica específica del portón, y todas las invariantes A2/C4.
 
 Estado: diagnóstico source-level solamente. No se modificó producción, no se ejecutó build/test/lint/runtime. Este análisis no sustituye el checkpoint inmediato de Harness STATIC ONLY para P0 indicado arriba. No autoriza runtime. Tras cerrar ese checkpoint, implementar el rediseño coordinado y someterlo a STATIC ONLY antes de solicitar autorización de runtime.
+
+
+## 2026-11-21 — BUILD/BREAK static PASS + DROP source audit
+
+- Harness static validation PASS on exact production HEAD `7bd26569da11e0a61de0af86124bf6fc6666e7fe`; documentation HEAD advanced to `fd5940ba579ae3089e072e2870811461e4073c89`. Compile, test, policyTest, strict lint and diff-check PASS; 57 named tests; no runtime/world/production/test modifications. Report: `2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`.
+- ChatGPT source-only DROP audit: `NavExecutor.tickDropEdgeStep` aborts after 21 consecutive ticks without >0.01 reduction in horizontal distance to landing center, provided complete AABB support has not cleared. This does not prove the mob was stationary. Abort telemetry omits distance sequence, no-progress count, velocity, grounded and AABB. No behavior fix is justified yet.
+- Report: `2026-11-21-A2-DROP-EDGE-STEP-SOURCE-AUDIT.md` (commit `b9e3f31f9ab99f53c77af988e84af116f42ebb1f`).
+- Next: Harness read-only correlate all 18 IDX6 aborts with selected edge, commands, progress, route-node changes and route-guard events in existing logs; verify IDX6 UUID against that run's spawn records. Separately map killer UUID `cc4b9c97-d8f3-40e3-aee1-cf233feab912` against spawn records from the exact run where `minecraft:mob_attack` was captured. No runtime, no production/tests edits.
+- Runtime authorization remains consumed. No Run2/retry, C4 standalone or Full12K. A2 OPEN; last runtime 1/8 strict, 2/8 perimeter. C4 integrated PASS only.

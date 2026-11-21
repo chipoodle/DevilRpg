@@ -5663,8 +5663,10 @@ run/saves; hashes match; structural verification only.
 - BUILD provenance exact feet=actionPos.above, 8 assertions; BREAK per-Mob UUID/caller diagnostics.
 - No runtime. Report: docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md. A2 OPEN.
 
-## 2026-11-21 — A2 DROP fix / 2-of-8 strict
 
-- DROP no-progress excludes exact edge+landing and replans; IDX6 reaches strict.
-- Vertical probes bounded to safe-drop/same/+1. A2 2/8, C4 PASS.
-- Remaining: BREAK post-state solid in shafts, IDX7/8 budget, IDX4 leaves, IDX2 local. Report: docs/autonomous-village/2026-11-21-A2-DROP-FIX-ITERATION.md.
+## 2026-11-21 — BUILD/BREAK static PASS + DROP source audit
+
+- Static PASS on production `7bd26569da11e0a61de0af86124bf6fc6666e7fe`; documentation HEAD `fd5940ba579ae3089e072e2870811461e4073c89`; 57 tests; no runtime. Report: `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`.
+- DROP source audit confirms no-progress is based only on >0.01 improvement toward landing center and aborts after 21 consecutive non-improving ticks while AABB support remains. This is not proof of immobility; existing abort telemetry lacks sufficient state. Report: `docs/autonomous-village/2026-11-21-A2-DROP-EDGE-STEP-SOURCE-AUDIT.md`.
+- Next: Harness read-only correlate 18 IDX6 aborts and route-guard exhaustion; verify same-run UUID/IDX mapping and map killer UUID `cc4b9c97-d8f3-40e3-aee1-cf233feab912` in the exact mob-attack run. No runtime or production/test changes.
+- Runtime authorization consumed; no retry/Run2/C4 standalone/Full12K. A2 OPEN.

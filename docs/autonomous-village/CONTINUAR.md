@@ -1461,7 +1461,10 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 - Static gate PASS; BUILD provenance and per-entity diagnostics. No runtime.
 - Report: `docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`. A2 OPEN.
 
-## 2026-11-21 — A2 DROP fix / 2-of-8 strict
 
-- IDX6 DROP fixed; A2 2/8. BREAK post-state remains blocker. No further runtime.
-- Report: `docs/autonomous-village/2026-11-21-A2-DROP-FIX-ITERATION.md`.
+## 2026-11-21 — BUILD/BREAK static PASS + DROP source audit
+
+- Static gate PASS on production `7bd26569da11e0a61de0af86124bf6fc6666e7fe`; docs HEAD `fd5940ba579ae3089e072e2870811461e4073c89`. 57 tests; no runtime. Report: `2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-STATIC-VALIDATION.md`.
+- Source audit: DROP edge-step counts only improvement in horizontal distance to landing center; aborts at 21 non-improving ticks while AABB support remains. The 17 `no_progress` aborts do not prove immobility. Existing abort telemetry is insufficient to infer cause. Report: `2026-11-21-A2-DROP-EDGE-STEP-SOURCE-AUDIT.md`.
+- Next: read-only Harness correlation of all 18 IDX6 aborts with commands/progress/route guard; verify IDX6 UUID from same-run spawn records; map killer UUID `cc4b9c97-d8f3-40e3-aee1-cf233feab912` in the exact run with `minecraft:mob_attack`. No code/test edits or runtime.
+- No runtime authorization. No Run2/retry, C4 standalone, Full12K. A2 OPEN.
