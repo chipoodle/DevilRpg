@@ -93,7 +93,7 @@ public final class NavPlanner {
                                boolean hitBudget, String reason, String summary, boolean pending) {
     }
 
-    private static final int GLOBAL_EXPANSIONS_PER_TICK = 4;
+    private static final int GLOBAL_EXPANSIONS_PER_TICK = 8;
     /** Owner-held handle: the executor retains the search, with no static entity/session registry. */
     public static final class GlobalSearchHandle {
         private GlobalSearchState state;
