@@ -1,28 +1,24 @@
-# CURRENT CHECKPOINT — A2 post-extract decisions (2026-11-21)
+# CURRENT CHECKPOINT — BUILD provenance fix + BREAK diagnostic isolation (2026-11-21)
 
-**Branch:** `feature/autonomous-village`
-**Last Harness documentation HEAD:** `2b6e2c13d1c454afb0b52752ec7e18757ecf5812`
-**Runtime:** `a2n-20261120-173629` — FAIL, 1/8 strict, 2/8 perimeter
-**Raw extract:** `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`
-**Decision record:** `docs/autonomous-village/2026-11-21-A2-POST-EXTRACT-DECISION-RECORD.md`
-**Decision-record commit:** `80dd3286c5796379c12ff90cb4539c552e65efcf`
+**Branch:** feature/autonomous-village
+**Source baseline audited:** 54e3c9a8b11e2b6125a589ee64795db5a98c62fb
+**Implementation report:** docs/autonomous-village/2026-11-21-A2-BUILD-PROVENANCE-BREAK-DIAGNOSTICS-IMPLEMENTATION.md
+**Post-extract decision record:** docs/autonomous-village/2026-11-21-A2-POST-EXTRACT-DECISION-RECORD.md
+**Latest source commit:** fdefafaa65cf1d7825c62280c11ef25fddfbec99
+**Latest documentation commit:** 32cb89b137335c520c6b8c05c01c8eb0b86f8b43
 
-- BREAK: 128 candidates, all IDX1, zero accepted. The policy only tests eight horizontal stands at the same feet Y. LOS rejects are physically valid occlusions; do not weaken raycast. No other IDX attempted BREAK, and no alternate-height stand was tested. The previous evidence does not prove a safe alternate stand exists.
-- BUILD: IDX7 global search ended `found=false` at 8,000 expansions. The selected local target came from a partial frontier; no proven global BUILD action node/actionPos, local BUILD node, accepted local route, or executor dispatch existed. Retract the earlier unproven actionPos-handoff root-cause hypothesis. Proven failure: partial-frontier objective + local no-progress 10/10.
-- DROP: IDX4's 19 rejects are blocked spruce-leaf shafts, not invalid landings. IDX6 had 17 `no_progress` edge-step aborts and route guard exhaustion 12/12; root cause not established. Keep blocked shafts excluded and preserve landing/support rules.
-- IDX1 death cause remains UNKNOWN. Source has registered opt-in damage/death telemetry, but the extracted logs did not capture matching events; inspect telemetry/log filtering before another runtime.
-- Same-column vertical-neighbor correction remains successful: first expansions enqueued successors; preserve it.
-- No production/test behavior changes have been made from this extract. Decision record lists evidence-backed implementation tasks and required invariants.
+- BUILD: added NavBuildObjectivePolicy. A BUILD waypoint now requires non-null actionPos and exact feetCell == placementCell.above(). NavExecutor retains that actionPos in a dedicated field across INC_STEP and rechecks it before allowing an unsupported local objective. Added LOCAL_OBJECTIVE_SELECTED and BUILD rejection diagnostics.
+- BUILD regression: NavBuildObjectivePolicyTest, 8 assertions, registered in policyTest. Authored; NOT RUN by ChatGPT.
+- BREAK: diagnostic caps are now 128 per live Mob (WeakHashMap), rather than global. BREAK_STAND_CANDIDATE and BREAK_LOS_DIAG now include UUID and caller. No LOS/reach/candidate/route behavior changed.
+- DROP: no behavior patch. IDX6 no_progress is based on horizontal distance while full AABB remains supported; do not weaken support-release or landing. Further deterministic collision fixture needed.
+- Death: extraction error corrected. IDX1 died from minecraft:mob_attack; direct/causing UUID cc4b9c97-d8f3-40e3-aee1-cf233feab912. A prior minecraft:fall hit also occurred. Killer name/entity mapping still pending. Telemetry source unchanged.
+- No runtime, Gradle, tests, lint, Minecraft, or world operations were performed by ChatGPT. Static validation is pending Harness.
 
-**Immediate ChatGPT work:** implement only after source-contract review proves a defect. Priority: (1) fail-closed BUILD objective provenance (actual BUILD node + non-null actionPos); (2) graph-correct bounded alternate-height BREAK approach without weakening physical predicates; (3) DROP no-progress state-machine diagnosis; (4) damage/death telemetry gap. No arbitrary budget increases or safety relaxations.
+**Harness next:** STATIC ONLY. Safe fast-forward to branch tip; preserve all local/untracked work, partials, backups, logs, artifacts and protected worlds; stop on divergence/overwrite risk. Verify exact blobs. Run diagnostic compileJava, Gradle test + policyTest, strict lint_aldea.py, and git diff --check. Confirm NAV_BUILD_OBJECTIVE_POLICY_TEST (8 assertions) executed. Audit BUILD provenance and BREAK per-entity diagnostic fields/caps. Harness must not modify production/tests.
 
-**Harness next:** STATIC ONLY after ChatGPT publishes source changes. Harness may sync safely, preserve local/untracked files and worlds, verify blobs, run compile/test/policyTest/strict lint/diff-check, and document. Harness never edits production/tests. No Gradle/runtime/Minecraft until a static handoff requests checks; no runtime authorization exists.
-
-**Authorization:** previous single A2 Run1 authorization is consumed. No Run2, C4 standalone, retry, or Full12K. Full12K only after five consecutive 8/8 strict A2 runs. D* Lite remains deferred.
+**No runtime authorization:** no Minecraft, A2 Run2, retry, C4 standalone, or Full12K. Previous one-run authorization is consumed. Full12K remains gated behind five consecutive 8/8 strict A2 runs.
 
 **A2 OPEN.**
-
-
 ---
 
 # CURRENT CHECKPOINT — 2026-11-20 A2 vertical-only final Run1 FAIL
