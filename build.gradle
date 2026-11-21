@@ -345,6 +345,7 @@ tasks.register('policyTest') {
                 'com.chipoodle.devilrpg.entity.nav.NavTerminalDiagnosticsTest',
                 'com.chipoodle.devilrpg.entity.nav.NavRouteInvalidationPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavVerticalBuildPolicyTest',
+                'com.chipoodle.devilrpg.entity.nav.NavBuildObjectivePolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavPlannerStateTest',
                 'com.chipoodle.devilrpg.entity.nav.NavGoalMetricTest',
                 'com.chipoodle.devilrpg.entity.nav.NavClimbPolicyTest',
