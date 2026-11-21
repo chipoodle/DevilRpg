@@ -1,31 +1,27 @@
-# CURRENT CHECKPOINT — A2 Run1 FAIL; BREAK/BUILD/DROP read-only forensics (2026-11-20)
+# CURRENT CHECKPOINT — A2 post-extract decisions (2026-11-21)
 
 **Branch:** `feature/autonomous-village`
-**Run:** `a2n-20261120-173629`
-**Tested HEAD:** `54e3c9a8b11e2b6125a589ee64795db5a98c62fb`
-**Final report commit:** `91ab3375bb1208502d64384ecde402eae00b29ac`
-**Post-run forensic:** `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-POSTRUN-FORENSICS.md`
-**Raw-event extract:** `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`
+**Last Harness documentation HEAD:** `2b6e2c13d1c454afb0b52752ec7e18757ecf5812`
+**Runtime:** `a2n-20261120-173629` — FAIL, 1/8 strict, 2/8 perimeter
+**Raw extract:** `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`
+**Decision record:** `docs/autonomous-village/2026-11-21-A2-POST-EXTRACT-DECISION-RECORD.md`
+**Decision-record commit:** `80dd3286c5796379c12ff90cb4539c552e65efcf`
 
-- Raw extraction complete: all 128 BREAK checks belong to IDX1; 0 accepted. IDX3/4/5/7 emitted no BREAK candidates.
-- IDX7’s `706,69,459` came from `A2_LOCAL_STAIR_WRITE op=INC_STEP new=1` after a partial global route (`found=false`, 56 nodes); no global BUILD actionPos or local BUILD node existed.
-- IDX4: 19 DROP rejects are blocked shafts (spruce leaves at Y118/Y115), not landing failures.
-- IDX6: 18 edge-step aborts (17 `no_progress`, 1 `route_node_changed`), route guard exhausted 12/12.
-- IDX1 death cause remains UNKNOWN; no damage/death event was captured.
+- BREAK: 128 candidates, all IDX1, zero accepted. The policy only tests eight horizontal stands at the same feet Y. LOS rejects are physically valid occlusions; do not weaken raycast. No other IDX attempted BREAK, and no alternate-height stand was tested. The previous evidence does not prove a safe alternate stand exists.
+- BUILD: IDX7 global search ended `found=false` at 8,000 expansions. The selected local target came from a partial frontier; no proven global BUILD action node/actionPos, local BUILD node, accepted local route, or executor dispatch existed. Retract the earlier unproven actionPos-handoff root-cause hypothesis. Proven failure: partial-frontier objective + local no-progress 10/10.
+- DROP: IDX4's 19 rejects are blocked spruce-leaf shafts, not invalid landings. IDX6 had 17 `no_progress` edge-step aborts and route guard exhaustion 12/12; root cause not established. Keep blocked shafts excluded and preserve landing/support rules.
+- IDX1 death cause remains UNKNOWN. Source has registered opt-in damage/death telemetry, but the extracted logs did not capture matching events; inspect telemetry/log filtering before another runtime.
+- Same-column vertical-neighbor correction remains successful: first expansions enqueued successors; preserve it.
+- No production/test behavior changes have been made from this extract. Decision record lists evidence-backed implementation tasks and required invariants.
 
-- Static gate PASS: compileJava/test/strict lint/diff-check; 56 policy tests; neighbor policy 16 assertions; planner state 53.
-- Runtime FAIL: 1/8 strict, 2/8 perimeter, one death. C4 integrated PASS. Protected worlds unchanged.
-- Vertical-only edge correction worked: 77 first expansions, zero with zero enqueued.
-- BREAK: 0/128 accepted stands; candidate rejects 64 out-of-range, 32 action-not-executable, 32 not-single-step. LOS diagnostics 118 raycast reject, 10 precondition reject. Example hit block is directly above target. Do not weaken LOS.
-- BUILD: IDX7 selected global BUILD waypoint `706,69,459`, but zero BUILD actuator events. Source review found the global BUILD actionPos is not copied when the global BUILD node is reduced to a local objective; local planner must rediscover the action. This is a potential handoff defect, not yet proven root cause.
-- DROP: IDX4/IDX6 failed; 127 landing lines, 19 IDX4 descent failures. Raw per-edge event correlation is still needed.
-- IDX1 died after strict entry; cause UNKNOWN.
+**Immediate ChatGPT work:** implement only after source-contract review proves a defect. Priority: (1) fail-closed BUILD objective provenance (actual BUILD node + non-null actionPos); (2) graph-correct bounded alternate-height BREAK approach without weakening physical predicates; (3) DROP no-progress state-machine diagnosis; (4) damage/death telemetry gap. No arbitrary budget increases or safety relaxations.
 
-**No production change made after this runtime.** Existing one-run runtime authorization is consumed; no further runtime is authorized.
+**Harness next:** STATIC ONLY after ChatGPT publishes source changes. Harness may sync safely, preserve local/untracked files and worlds, verify blobs, run compile/test/policyTest/strict lint/diff-check, and document. Harness never edits production/tests. No Gradle/runtime/Minecraft until a static handoff requests checks; no runtime authorization exists.
 
-**Next:** Raw-event extraction is complete. ChatGPT may implement only evidence-backed changes: BREAK alternate stand/height validation, BUILD actionPos handoff, and DROP blocked-shaft handling. Harness then performs static validation only. No Gradle/Minecraft/runtime was executed for this extract; no Run2/C4 standalone/Full12K.
+**Authorization:** previous single A2 Run1 authorization is consumed. No Run2, C4 standalone, retry, or Full12K. Full12K only after five consecutive 8/8 strict A2 runs. D* Lite remains deferred.
 
-**A2 OPEN.** Runtime FAIL 1/8 strict.
+**A2 OPEN.**
+
 
 ---
 
