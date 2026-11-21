@@ -1,3 +1,29 @@
+# CURRENT CHECKPOINT — A2 Run1 FAIL; BREAK/BUILD/DROP read-only forensics (2026-11-20)
+
+**Branch:** `feature/autonomous-village`  
+**Run:** `a2n-20261120-173629`  
+**Tested HEAD:** `54e3c9a8b11e2b6125a589ee861ca4742caed233`  
+**Final report commit:** `91ab3375bb1208502d64384ecde402eae00b29ac`  
+**Post-run forensic:** `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-POSTRUN-FORENSICS.md`
+
+- Static gate PASS: compileJava/test/strict lint/diff-check; 56 policy tests; neighbor policy 16 assertions; planner state 53.
+- Runtime FAIL: 1/8 strict, 2/8 perimeter, one death. C4 integrated PASS. Protected worlds unchanged.
+- Vertical-only edge correction worked: 77 first expansions, zero with zero enqueued.
+- BREAK: 0/128 accepted stands; candidate rejects 64 out-of-range, 32 action-not-executable, 32 not-single-step. LOS diagnostics 118 raycast reject, 10 precondition reject. Example hit block is directly above target. Do not weaken LOS.
+- BUILD: IDX7 selected global BUILD waypoint `706,69,459`, but zero BUILD actuator events. Source review found the global BUILD actionPos is not copied when the global BUILD node is reduced to a local objective; local planner must rediscover the action. This is a potential handoff defect, not yet proven root cause.
+- DROP: IDX4/IDX6 failed; 127 landing lines, 19 IDX4 descent failures. Raw per-edge event correlation is still needed.
+- IDX1 died after strict entry; cause UNKNOWN.
+
+**No production change made after this runtime.** Existing one-run runtime authorization is consumed; no further runtime is authorized.
+
+**Next:** Harness performs READ-ONLY extraction from existing `build/a2n/a2n-20261120-173629/nav-trace.log` and `srv.log` according to `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-POSTRUN-FORENSICS.md`, specifically correlating BREAK stand/LOS events, IDX7 global/local BUILD route and terminal failure, IDX4/IDX6 DROP lifecycle, and IDX1 death. No Gradle, Minecraft, runtime, world mutation, production/test edits, or artifact overwrite. Harness may write documentation only.
+
+After raw evidence: ChatGPT implements only evidence-backed production/test changes on GitHub; Harness performs static validation only. No Run2/C4 standalone/Full12K. D* Lite remains deferred.
+
+**A2 OPEN.** Runtime FAIL 1/8 strict.
+
+---
+
 # CURRENT CHECKPOINT — 2026-11-20 A2 vertical-only final Run1 FAIL
 
 **Branch:** `feature/autonomous-village`  
