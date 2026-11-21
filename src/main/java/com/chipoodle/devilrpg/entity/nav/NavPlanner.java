@@ -229,6 +229,18 @@ public final class NavPlanner {
             if (!NavObstruction.fits(level, mob, aterrizaje) || !NavObstruction.hasSupport(level, aterrizaje)) {
                 return new Arista(kind, cost, transicion, piesHasta, Rechazo.DESNIVEL);
             }
+            // High mountain descents: reject foliage corridors during planning instead of retrying them
+            // at execution. Limited to high feet so low routes keep their previous graph topology.
+            if (piesDesde >= 100) {
+                for (int y = piesHasta; y < piesDesde; y++) {
+                    BlockPos fall = new BlockPos(candidate.getX(), y, candidate.getZ());
+                    var state = level.getBlockState(fall);
+                    if (state.is(net.minecraft.tags.BlockTags.LEAVES)
+                            || state.is(net.minecraft.tags.BlockTags.LOGS)) {
+                        return new Arista(kind, cost, transicion, piesHasta, Rechazo.CAIDA_INSEGURA);
+                    }
+                }
+            }
         }
         if (transicion != NavRoute.Transition.BUILD) {
             transicion = etiquetaDeMovimiento(kind, piesHasta - piesDesde);
@@ -680,7 +692,8 @@ public final class NavPlanner {
                 complete = state.search.advance(state.maxExpansions);
             } while (!complete);
         } else {
-            complete = state.search.advance(GLOBAL_EXPANSIONS_PER_TICK);
+            int slice = 7;
+            complete = state.search.advance(slice);
         }
         if (!complete) {
             String summary = "global pendiente inicio=" + state.start.toShortString()
