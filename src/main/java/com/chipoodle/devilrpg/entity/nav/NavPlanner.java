@@ -298,15 +298,15 @@ public final class NavPlanner {
      * A2 · el nodo BREAK debe terminar en una celda de pie desde la que la accion sea realmente
      * ejecutable. No se acepta el bloque solido como destino de navegacion.
      */
-    private static final java.util.Map<String, Integer> breakStandTraceEvents = new java.util.HashMap<>();
+    private static final java.util.Map<Mob, Integer> breakStandTraceEvents = new java.util.WeakHashMap<>();
 
     private static void traceBreakStandCandidate(Mob mob, BlockPos from, BlockPos actionPos,
                                                   BlockPos stand, String reason) {
         if (!NavTrace.on()) return;
         String uuid = mob == null ? "-" : mob.getUUID().toString();
-        int emitted = breakStandTraceEvents.getOrDefault(uuid, 0);
+        int emitted = breakStandTraceEvents.getOrDefault(mob, 0);
         if (emitted >= 128) return;
-        breakStandTraceEvents.put(uuid, emitted + 1);
+        breakStandTraceEvents.put(mob, emitted + 1);
         NavTrace.ev("BREAK_STAND_CANDIDATE", "uuid=" + uuid
                 + " caller=NavPlanner#buscarPosicionDeAtaque"
                 + " reason=" + reason
