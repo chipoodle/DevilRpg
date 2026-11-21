@@ -14,14 +14,18 @@ public final class NavBreakActionPolicy {
 
     private NavBreakActionPolicy() { }
 
-    private static int diagnosticEvents;
+    private static final java.util.Map<String, Integer> diagnosticEvents = new java.util.HashMap<>();
 
-    private static void trace(String reason, BlockPos stand, BlockPos target, Vec3 eye,
+    private static void trace(Mob mob, String reason, BlockPos stand, BlockPos target, Vec3 eye,
                               Vec3 rayEnd, BlockHitResult hit, double distanceSqr,
                               double tEnter, double legacyAimY) {
-        if (!NavTrace.on() || diagnosticEvents >= 128) return;
-        diagnosticEvents++;
-        NavTrace.ev("BREAK_LOS_DIAG", "reason=" + reason
+        if (!NavTrace.on()) return;
+        String uuid = mob == null ? "-" : mob.getUUID().toString();
+        int emitted = diagnosticEvents.getOrDefault(uuid, 0);
+        if (emitted >= 128) return;
+        diagnosticEvents.put(uuid, emitted + 1);
+        NavTrace.ev("BREAK_LOS_DIAG", "uuid=" + uuid
+                + " caller=NavBreakActionPolicy#executable reason=" + reason
                 + " stand=" + (stand == null ? "-" : stand.toShortString())
                 + " target=" + (target == null ? "-" : target.toShortString())
                 + " eye=" + eye
@@ -38,7 +42,7 @@ public final class NavBreakActionPolicy {
     public static boolean executable(CollisionGetter level, Mob mob, BlockPos stand, BlockPos target,
                                      NavObstruction.Policies policies, double actionReachSqr) {
         if (level == null || mob == null || stand == null || target == null || policies == null) {
-            trace("NULL_INPUT", stand, target, null, null, null, -1.0D, -1.0D, Double.NaN);
+            trace(mob, "NULL_INPUT", stand, target, null, null, null, -1.0D, -1.0D, Double.NaN);
             return false;
         }
         boolean protectedTarget = policies.isProtected(target);
@@ -46,7 +50,7 @@ public final class NavBreakActionPolicy {
         boolean standFits = NavObstruction.fits(level, mob, stand);
         boolean standSupported = NavObstruction.hasSupport(level, stand);
         if (protectedTarget || !breakAllowed || !standFits || !standSupported) {
-            trace("PRECONDITION_REJECT protected=" + protectedTarget + " breakAllowed=" + breakAllowed
+            trace(mob, "PRECONDITION_REJECT protected=" + protectedTarget + " breakAllowed=" + breakAllowed
                     + " standFits=" + standFits + " standSupported=" + standSupported,
                     stand, target, null, null, null, -1.0D, -1.0D, Double.NaN);
             return false;
@@ -68,7 +72,7 @@ public final class NavBreakActionPolicy {
         double dz = targetCenter.z - feetZ;
         double distanceSqr = dx * dx + dy * dy + dz * dz;
         if (!NavBreakReachPolicy.reachable(stand.getY(), target.getY(), distanceSqr, actionReachSqr)) {
-            trace("REACH_REJECT", stand, target, eye, null, null, distanceSqr, -1.0D, Double.NaN);
+            trace(mob, "REACH_REJECT", stand, target, eye, null, null, distanceSqr, -1.0D, Double.NaN);
             return false;
         }
 
@@ -94,7 +98,7 @@ public final class NavBreakActionPolicy {
         BlockHitResult hit = level.clip(new ClipContext(eye, rayEnd,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mob));
         boolean accepted = hit.getType() == HitResult.Type.BLOCK && hit.getBlockPos().equals(target);
-        trace(accepted ? "ACCEPT" : "RAYCAST_REJECT", stand, target, eye, rayEnd, hit,
+        trace(mob, accepted ? "ACCEPT" : "RAYCAST_REJECT", stand, target, eye, rayEnd, hit,
                 distanceSqr, tEnter, legacyAimY);
         return accepted;
     }
