@@ -1453,3 +1453,8 @@ C4 `assignmentsClean=false` sigue FAIL independiente; este cambio no altera C4 n
 
 - A2 1/8 strict; C4 PASS; BUILD unmeasured. No retry.
 - Report: `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`. A2 OPEN.
+
+## 2026-11-20 — A2 BREAK/BUILD raw forensic extract
+
+- BREAK only IDX1, 0 accepted; BUILD never reached local route/executor.
+- Report: `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`. A2 OPEN.

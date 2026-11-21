@@ -1,10 +1,17 @@
 # CURRENT CHECKPOINT — A2 Run1 FAIL; BREAK/BUILD/DROP read-only forensics (2026-11-20)
 
-**Branch:** `feature/autonomous-village`  
-**Run:** `a2n-20261120-173629`  
-**Tested HEAD:** `54e3c9a8b11e2b6125a589ee64795db5a98c62fb`  
-**Final report commit:** `91ab3375bb1208502d64384ecde402eae00b29ac`  
+**Branch:** `feature/autonomous-village`
+**Run:** `a2n-20261120-173629`
+**Tested HEAD:** `54e3c9a8b11e2b6125a589ee64795db5a98c62fb`
+**Final report commit:** `91ab3375bb1208502d64384ecde402eae00b29ac`
 **Post-run forensic:** `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-POSTRUN-FORENSICS.md`
+**Raw-event extract:** `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`
+
+- Raw extraction complete: all 128 BREAK checks belong to IDX1; 0 accepted. IDX3/4/5/7 emitted no BREAK candidates.
+- IDX7’s `706,69,459` came from `A2_LOCAL_STAIR_WRITE op=INC_STEP new=1` after a partial global route (`found=false`, 56 nodes); no global BUILD actionPos or local BUILD node existed.
+- IDX4: 19 DROP rejects are blocked shafts (spruce leaves at Y118/Y115), not landing failures.
+- IDX6: 18 edge-step aborts (17 `no_progress`, 1 `route_node_changed`), route guard exhausted 12/12.
+- IDX1 death cause remains UNKNOWN; no damage/death event was captured.
 
 - Static gate PASS: compileJava/test/strict lint/diff-check; 56 policy tests; neighbor policy 16 assertions; planner state 53.
 - Runtime FAIL: 1/8 strict, 2/8 perimeter, one death. C4 integrated PASS. Protected worlds unchanged.
@@ -16,9 +23,7 @@
 
 **No production change made after this runtime.** Existing one-run runtime authorization is consumed; no further runtime is authorized.
 
-**Next:** Harness performs READ-ONLY extraction from existing `build/a2n/a2n-20261120-173629/nav-trace.log` and `srv.log` according to `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-POSTRUN-FORENSICS.md`, specifically correlating BREAK stand/LOS events, IDX7 global/local BUILD route and terminal failure, IDX4/IDX6 DROP lifecycle, and IDX1 death. No Gradle, Minecraft, runtime, world mutation, production/test edits, or artifact overwrite. Harness may write documentation only.
-
-After raw evidence: ChatGPT implements only evidence-backed production/test changes on GitHub; Harness performs static validation only. No Run2/C4 standalone/Full12K. D* Lite remains deferred.
+**Next:** Raw-event extraction is complete. ChatGPT may implement only evidence-backed changes: BREAK alternate stand/height validation, BUILD actionPos handoff, and DROP blocked-shaft handling. Harness then performs static validation only. No Gradle/Minecraft/runtime was executed for this extract; no Run2/C4 standalone/Full12K.
 
 **A2 OPEN.** Runtime FAIL 1/8 strict.
 
@@ -1386,6 +1391,7 @@ Read first, in order:
 113. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION.md`
 114. `docs/autonomous-village/2026-11-20-A2-GLOBAL-ASTAR-CORRECTION-STATIC-VALIDATION-R2.md`
 115. `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`
+116. `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`
 80. `docs/autonomous-village/2026-11-18-A2-PHASE49A-VALIDATION.md`
 81. `docs/autonomous-village/2026-11-18-A2-PHASE50-MONOTONIC-STAIR-ANCHOR.md`
 

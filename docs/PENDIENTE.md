@@ -1,4 +1,4 @@
-# CURRENT CHECKPOINT — A2 Run1 FAIL; BREAK/BUILD/DROP read-only forensics (2026-11-20)
+# CURRENT CHECKPOINT — 2026-11-20 A2 BREAK/BUILD raw forensic extract
 
 **Branch:** `feature/autonomous-village`  
 **Run:** `a2n-20261120-173629`  
@@ -4168,3 +4168,4 @@ un\saves\DevilRpg-A2-Prueba; LevelName=DevilRpg-A2-Prueba, spawn 96,144,-32, no 
 - Worlds: DevilRpg-A2-IDX8-Diagnostico and DevilRpg-C4-WorkerResume-Diagnostico in %APPDATA%/.minecraft/saves and
 run/saves; hashes match; structural verification only.
 - **Vertical-only Run1 `a2n-20261120-173629` FAIL:** static PASS; A2 1/8 estricto (IDX1), 2/8 perímetro, 1 muerte; C4 PASS. First expansions 0/77 sin sucesores. BREAK 0/128 aceptados; BUILD no ejercitado. Detalle: `docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md`.
+- **BREAK/BUILD extract:** 128 BREAK checks solo IDX1, 0 aceptados; IDX7 sin actionPos/nodo BUILD (objetivo local 706,69,459); IDX4 19 DROP bloqueados por spruce leaves; IDX6 18 abortos (17 no_progress); IDX1 causa UNKNOWN. Detalle: `docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md`.

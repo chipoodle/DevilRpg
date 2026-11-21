@@ -5652,3 +5652,10 @@ run/saves; hashes match; structural verification only.
 - Static PASS; runtime 1/8 strict (IDX1), 2/8 perimeter, 1 death; C4 PASS.
 - First expansions 0/77 zero-enqueued; BREAK 0/128 accepted; BUILD not exercised. No retry.
 - Report: docs/autonomous-village/2026-11-20-A2-VERTICAL-ONLY-FINAL-RUN-REPORT.md. A2 OPEN.
+
+## 2026-11-20 — A2 BREAK/BUILD raw forensic extract
+
+- 128 BREAK checks only IDX1, zero accepted; IDX3/4/5/7 no BREAK candidates.
+- IDX7 no BUILD actionPos/node; 706,69,459 local fallback, terminal local budget 10/10.
+- IDX4 19 DROP blocked by spruce leaves; IDX6 17 no_progress aborts; IDX1 cause UNKNOWN.
+- Report: docs/autonomous-village/2026-11-20-A2-BREAK-BUILD-RUNTIME-FORENSIC-EXTRACT.md. A2 OPEN.
