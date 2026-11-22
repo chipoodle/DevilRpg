@@ -314,6 +314,8 @@ public final class NavExecutor {
     private BlockPos avanceObjetivo;
     /** Enfriamiento del avance codicioso (barrido en cruz; no se repite cada tick). */
     private long avanceNextAt;
+    /** Tick en que se entregó el último objetivo de avance (caduca si no se alcanza). */
+    private long avanceObjetivoEn;
     private static final int MAX_ASCENSOS_MISION = 12;
     private static final int ASCENSO_FASE_MAX_TICKS = 300;
     private static final int ASCENSO_COOLDOWN_TICKS = 30;
@@ -2251,6 +2253,22 @@ public final class NavExecutor {
             celdaEnEsperaDePlan = celda.immutable();
             return true;
         }
+        // A2 · DESCESO PROGRESIVO EN DESNIVEL GRANDE (>=10): medido en `a2n-20261122-020402`, IDX4 bajó de
+        // y=122 a y=109 en 6000 ticks y el descenso por DROP/escalón no llega. Un paso validado hacia abajo
+        // cada 40 ticks lo baja de forma sostenida sin tocar presupuestos globales.
+        if (desnivelDescenso() >= 10 && intentarDescensoHaciaMision(now, "desnivel_grande")) {
+            ticksEnEsperaDePlan = 0;
+            celdaEnEsperaDePlan = celda.immutable();
+            return true;
+        }
+        // A2 · APROXIMACIÓN FINAL AL MURO: en la banda del anillo el avance micro-paso manda sobre el A*, para
+        // que TODOS los atacantes se peguen al muro de la misma forma determinista (antes dependía de que el
+        // plan local fallara, lo que introducía varianza entre corridas).
+        if (misionNoDebajo() && cercaDelMuro() && intentarAvanceHaciaMision(now, "banda_muro")) {
+            ticksEnEsperaDePlan = 0;
+            celdaEnEsperaDePlan = celda.immutable();
+            return true;
+        }
         boolean mismaCelda = celdaEnEsperaDePlan != null && celdaEnEsperaDePlan.equals(celda);
         // A2 · Solo cuenta como avance una búsqueda global EN CURSO o una que ALCANZÓ la misión. Una búsqueda
         // que terminó SIN ruta no es progreso: si se contara, el contador de callejón no llegaría nunca a 0 y el
@@ -2719,8 +2737,9 @@ public final class NavExecutor {
         if (mision.getY() < yo.getY()) {
             return false;
         }
-        if (avanceObjetivo != null && avanceObjetivo.equals(objective) && esPieValido(avanceObjetivo)) {
-            return false; // ya hay un escalón de avance válido en curso
+        if (avanceObjetivo != null && avanceObjetivo.equals(objective) && esPieValido(avanceObjetivo)
+                && now - avanceObjetivoEn <= 200L) {
+            return false; // ya hay un escalón de avance válido en curso (caduca a los 200 ticks)
         }
         double actual = horizontalAlCuadrado(yo, mision);
         double actualLineal = Math.sqrt(actual);
@@ -2758,6 +2777,7 @@ public final class NavExecutor {
         }
         avanceNextAt = now + 20L;
         avanceObjetivo = mejor.immutable();
+        avanceObjetivoEn = now;
         objective = mejor.immutable();
         objetivoPermiteConstruccion = false;
         objetivoTransicionLocal = null;
@@ -2774,6 +2794,68 @@ public final class NavExecutor {
                     + " objetivo=" + mejor.toShortString() + " mision=" + mision.toShortString()
                     + " dAntes=" + String.format(java.util.Locale.ROOT, "%.1f", Math.sqrt(actual))
                     + " dDespues=" + String.format(java.util.Locale.ROOT, "%.1f", Math.sqrt(mejorDist)));
+        }
+        return true;
+    }
+
+    // ============================================================================================
+    // A2 · DESCESO PROGRESIVO VALIDADO. Cuando la misión está POR DEBAJO y el plan falla (DROP rechazado,
+    // escalón en CADENCE_WAIT), el ente puede quedar a pocos bloques de la cota sin bajar el último tramo:
+    // medido en `a2n-20261122-013840`, IDX4 en 586,76,522 con `fallosDeDescenso=19`. Esta acción da UN paso
+    // de descenso (1-3 bloques) hacia la misión, solo a una celda de pie válida con soporte que ACERCA.
+    // ============================================================================================
+    private long descensoNextAt;
+
+    private boolean intentarDescensoHaciaMision(long now, String causa) {
+        if (now < descensoNextAt) {
+            return false;
+        }
+        BlockPos mision = misionDeReferencia();
+        if (mision == null) {
+            return false;
+        }
+        BlockPos yo = mob.blockPosition();
+        if (mision.getY() >= yo.getY() || !mob.onGround()) {
+            return false;
+        }
+        if (!esPieValido(yo) || !NavObstruction.hasSupport(mob.level(), yo)) {
+            return false;
+        }
+        double actual = horizontalAlCuadrado(yo, mision);
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        BlockPos mejor = null;
+        double mejorDist = actual;
+        for (int[] dir : dirs) {
+            for (int dist = 1; dist <= 3; dist++) {
+                for (int dy = -1; dy >= -3; dy--) {
+                    BlockPos candidato = yo.offset(dir[0] * dist, dy, dir[1] * dist);
+                    if (!mob.level().hasChunkAt(candidato) || !esPieValido(candidato)
+                            || !NavObstruction.hasSupport(mob.level(), candidato)
+                            || !NavObstruction.fits(mob.level(), mob, candidato)) {
+                        continue;
+                    }
+                    double d = horizontalAlCuadrado(candidato, mision);
+                    if (d >= actual - 0.25D) {
+                        continue;
+                    }
+                    if (d < mejorDist) {
+                        mejorDist = d;
+                        mejor = candidato;
+                    }
+                }
+            }
+        }
+        if (mejor == null) {
+            descensoNextAt = now + 30L;
+            return false;
+        }
+        descensoNextAt = now + 40L;
+        mob.getNavigation().moveTo(mejor.getX() + 0.5D, mejor.getY(), mejor.getZ() + 0.5D, 1.0D);
+        traceActuatorCommand("DESCEND_STEP", mejor, now);
+        if (NavTrace.on()) {
+            NavTrace.ev("DESCEND_STEP", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " causa=" + causa + " pos=" + yo.toShortString()
+                    + " hacia=" + mejor.toShortString() + " mision=" + mision.toShortString());
         }
         return true;
     }
@@ -2875,6 +2957,25 @@ public final class NavExecutor {
     private boolean misionNoDebajo() {
         BlockPos mision = misionDeReferencia();
         return mision != null && mision.getY() >= mob.blockPosition().getY();
+    }
+
+    /** ¿La misión está por debajo de los pies? (descenso) */
+    private boolean misionDebajo() {
+        BlockPos mision = misionDeReferencia();
+        return mision != null && mision.getY() < mob.blockPosition().getY();
+    }
+
+    /** ¿La entidad está ya en la banda del muro (<=66 del objetivo)? */
+    private boolean cercaDelMuro() {
+        BlockPos mision = misionDeReferencia();
+        return mision != null
+                && horizontalAlCuadrado(mob.blockPosition(), mision) <= 66.0D * 66.0D;
+    }
+
+    /** Desnivel de descenso pendiente (positivo si la misión está por debajo). */
+    private int desnivelDescenso() {
+        BlockPos mision = misionDeReferencia();
+        return mision == null ? 0 : mob.blockPosition().getY() - mision.getY();
     }
 
     /**
@@ -4632,6 +4733,9 @@ public final class NavExecutor {
                     if (desnivelReal() && intentarAscenso(now, "sin_objetivo_local")) {
                         return;
                     }
+                    if (misionDebajo() && intentarDescensoHaciaMision(now, "sin_objetivo_local")) {
+                        return;
+                    }
                     if (misionNoDebajo() && intentarAvanceHaciaMision(now, "sin_objetivo_local")) {
                         return;
                     }
@@ -4714,6 +4818,9 @@ public final class NavExecutor {
             if (intentarPlanDeTunel(now, "presupuesto_local", true)) {
                 return;
             }
+            if (misionDebajo() && intentarDescensoHaciaMision(now, "presupuesto_local")) {
+                return;
+            }
             // A2 Stage 4K: la exhaucion de presupuesto SOLO se enruta a CONSTRUCCION si el objetivo activo exige
             // construccion por geometria real (caida > segura Y sin aterrizaje intermedio soportado). Las rutas
             // complejas normales conservan su reintento de siempre.
@@ -4773,6 +4880,9 @@ public final class NavExecutor {
             // A2 · CALLEJÓN SIN RUTA. Antes de gastar recuperación genérica se pide un plan de túnel
             // subordinado (2 de alto, cardinal, hacia la misión). Si no hay plan válido el flujo no cambia.
             if (desnivelReal() && intentarAscenso(now, "sin_ruta_local")) {
+                return;
+            }
+            if (misionDebajo() && intentarDescensoHaciaMision(now, "sin_ruta_local")) {
                 return;
             }
             if (misionNoDebajo() && intentarAvanceHaciaMision(now, "sin_ruta_local")) {
