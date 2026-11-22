@@ -1,4 +1,17 @@
-# CURRENT CHECKPOINT — Encadenado del ascenso y deadlock de ruta duplicada (2026-11-22, ronda 1)
+# CURRENT CHECKPOINT — Ronda 2: 6/8 estricto con IDX7 entrando, C4 PASS (2026-11-22)
+
+- Commit `722bc5ed` sobre `1e4f8210`. Mejor run de la ronda: `a2n-20261122-011942` → **6/8 estricto**
+  (IDX1,2,3,5,6,7), C4 PASS. IDX8 quedó en el recinto a dist 63,7; IDX4 a 72,6 con salud 3,84.
+- **Techo del stand**: al saltar al siguiente escalón la cabeza golpeaba el techo del stand (S+2) y el salto
+  quedaba capado (`pathCanReach=false`). Se despeja S+2 en la fase CLEAR → **14/14 y 16/16 subidas** completadas.
+- **Entrada al recinto** (`ENCLOSURE_STEP`): paso de descenso de 1-3 bloques hacia la misión cuando la entidad
+  está SOBRE el anillo (y=72, 62,46). IDX3 entró en `005924` (t=4204) e IDX7 en `011942` (t=3853).
+- **Umbral del ascenso**: el ascenso trepaba el muro (71→72) y dejaba al mob a 0,46; ahora exige desnivel ≥3.
+  El avance del gancho superior también se limita a desnivel real.
+- **Siguientes**: IDX8 (a 63,7 en la meseta) → brecha/paso al interior; IDX4 (descenso largo) → acelerar;
+  después, dos corridas consecutivas 8/8 + C4 PASS.
+
+# HISTORICAL — Encadenado del ascenso y deadlock de ruta duplicada (2026-11-22, ronda 1)
 
 - Commit `023f1ab5` sobre `d4d61037`. El ascenso se intenta en CADA tick de PLANNING con desnivel ≥3 y sin
   enfriamiento tras una subida verificada (tope 12). Medido: IDX7 sube el escalón 1 en t=288 y **encadena** el
