@@ -1,3 +1,16 @@
+# CURRENT CHECKPOINT — Ronda 3: 7/8 estricto (solo falta IDX4), C4 PASS (2026-11-22)
+
+- Commit `83e10d86`. Mejor run de la campaña: `a2n-20261122-012959` → **7/8 estricto**
+  (IDX1,2,3,5,6,7,8), C4 PASS. IDX8 entró en t=5176. Solo falta IDX4.
+- **Aproximación al muro**: cerca del anillo (<=66 del objetivo) el avance acepta pasos de 0,5 bloques y el
+  túnel se intenta también al agotarse el presupuesto local (no solo con ruta vacía).
+- **Timeout del escalón pendiente**: un escalón colocado e inalcanzable bloqueaba al constructor para siempre
+  (IDX4: CADENCE_WAIT/PENDING_NOT_TRAVERSED miles de ticks, escalera 7/24 congelada). A los 400 ticks se
+  abandona (queda en el mundo) y se reanuda desde la posición real.
+- **Varianza**: misma build, `a2n-20261122-013840` dio 4/8; la divergencia por combate/tiempo por corrida es
+  ahora el obstáculo principal para 8/8 dos veces. Siguiente: estabilizar IDX4 (descenso de 51 bloques) y
+  endurecer el encadenado de todos los atacantes (sin depender de que el A* "tropiece" con la brecha).
+
 # CURRENT CHECKPOINT — Ronda 2: 6/8 estricto con IDX7 entrando, C4 PASS (2026-11-22)
 
 - Commit `722bc5ed` sobre `1e4f8210`. Mejor run de la ronda: `a2n-20261122-011942` → **6/8 estricto**
