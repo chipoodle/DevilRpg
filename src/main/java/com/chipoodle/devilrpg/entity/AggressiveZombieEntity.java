@@ -1924,6 +1924,8 @@ public class AggressiveZombieEntity extends Zombie {
     // ================= A2 Stage 4J: CONSTRUCCION DE ESCALERA DESCENDENTE (acotada y persistente) =========
     /** Bloques que puede colocar por intento y presupuesto total de la escalera en curso. */
     private static final int ESCALERA_MAX_BLOQUES = 24;
+    /** A2 · espera máxima de travesía de un escalón pendiente antes de abandonarlo (inalcanzable). */
+    private static final long ESCALERA_PENDIENTE_MAX_TICKS = 400L;
     /** Cadencia: ticks minimos entre colocaciones (reutiliza el ritmo de la casa). */
     private static final int ESCALERA_ENTRE_BLOQUES = 10;
 
@@ -1975,9 +1977,26 @@ public class AggressiveZombieEntity extends Zombie {
         // realmente atravesado; sin esto todos los intentos se calculaban desde el suelo inicial y la escalera
         // nunca descendia por una cara vertical.
         if (escaleraUltimoColocado != null && !confirmarTravesiaEscalonPendiente()) {
+            // A2 · TIMEOUT DEL ESCALON PENDIENTE. Si el escalon colocado queda INALCANZABLE (el A* no puede
+            // llevar al ente hasta el), el constructor se quedaba esperando su travesia para siempre: medido en
+            // `a2n-20261122-012959`, IDX4 en CADENCE_WAIT/PENDING_NOT_TRAVERSED durante miles de ticks con
+            // `escalera=7/24` congelada. Pasado el tope se ABANDONA el escalon (se queda en el mundo) y se
+            // reanuda la construccion desde la posicion real.
+            long esperaPendiente = escaleraTickDeColocacion < 0L
+                    ? 0L : level().getGameTime() - escaleraTickDeColocacion;
+            if (esperaPendiente > ESCALERA_PENDIENTE_MAX_TICKS) {
+                NavStairTrace.ev("STAIR_PENDING_ABANDONED", "uuid=" + getUUID()
+                        + " tick=" + level().getGameTime() + " pending=" + escaleraUltimoColocado
+                        + " waited=" + esperaPendiente + " pos=" + blockPosition().toShortString());
+                escaleraUltimoColocado = null;
+                escaleraTickDeColocacion = -1L;
+                escaleraRetraso = 0;
+                return false;
+            }
             NavStairTrace.ev("STAIR_BUILDER_EARLY_RETURN", "uuid=" + getUUID()
                     + " tick=" + level().getGameTime() + " reason=PENDING_NOT_TRAVERSED"
                     + " pending=" + escaleraUltimoColocado + " delay=" + escaleraRetraso
+                    + " waited=" + esperaPendiente
                     + " anchor=" + escaleraAncla + " pos=" + blockPosition().toShortString());
             return false;
         }

@@ -2724,10 +2724,10 @@ public final class NavExecutor {
         }
         double actual = horizontalAlCuadrado(yo, mision);
         double actualLineal = Math.sqrt(actual);
-        // Con un desnivel real (>=3) hace falta poder dar PASOS CORTOS para llegar pegado al acantilado: exigir
-        // 3 bloques de mejora dejaba al ente a una celda del muro sin poder avanzar (medido: IDX8 en 748,63,532
-        // con la cara 747,63,532 en AIRE). La memoria de celdas recientes impide el vaivén A->B->A.
-        double umbral = (mision.getY() - yo.getY() >= 3) ? 0.5D : 3.0D;
+        // Con un desnivel real (>=3) o CERCA DEL MURO (<=66 del objetivo) hacen falta PASOS CORTOS para llegar
+        // pegado al muro: exigir 3 bloques dejaba al ente a una celda del anillo sin poder avanzar (medido:
+        // IDX8 en 720,71,509 a dist 63,7 con el plan agotado). La memoria de celdas recientes evita el vaivén.
+        double umbral = (mision.getY() - yo.getY() >= 3 || actualLineal <= 66.0D) ? 0.5D : 3.0D;
         BlockPos mejor = null;
         double mejorDist = Double.MAX_VALUE;
         // Barrido en CRUZ (4 direcciones cardinales × distancia 2..10): suficiente para acercarse al muro y
@@ -4706,6 +4706,12 @@ public final class NavExecutor {
                 return;
             }
             if (intentarRutaGlobalValidada(now)) {
+                return;
+            }
+            // A2 · MURO DELANTE CON PRESUPUESTO AGOTADO: el túnel es el último recurso (rompe 2 bloques de alto
+            // y avanza). Medido en `a2n-20261122-011942`: IDX8 en el muro (720,71,509, dist 63,7) con el plan
+            // local agotado 6/10 y SIN que el túnel se intentara nunca (solo se probaba con ruta VACÍA).
+            if (intentarPlanDeTunel(now, "presupuesto_local", true)) {
                 return;
             }
             // A2 Stage 4K: la exhaucion de presupuesto SOLO se enruta a CONSTRUCCION si el objetivo activo exige
