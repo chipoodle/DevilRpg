@@ -34,6 +34,31 @@ public final class TraversalActionLeasePolicy {
         return activeTarget.equals(requestedTarget);
     }
 
+    /**
+     * A2 · Lease del túnel subordinado. El túnel no tiene nodo de ruta: su autoridad es el cursor del plan, que
+     * nombra UN bloque exacto (pies o cabeza del paso activo). Se conservan las dos invariantes del actuador:
+     * una sola acción de terreno por entidad y tick, y nada de sustituir el bloque autorizado por otro.
+     */
+    public static boolean canAcquireTunnel(
+            long now,
+            long leaseTick,
+            boolean leaseUsed,
+            boolean tunnelActive,
+            BlockPos authorizedTarget,
+            NavRoute.Transition requestedTransition,
+            BlockPos requestedTarget) {
+        if (!tunnelActive || authorizedTarget == null || requestedTarget == null) {
+            return false;
+        }
+        if (requestedTransition != NavRoute.Transition.BREAK) {
+            return false;
+        }
+        if (leaseUsed && leaseTick == now) {
+            return false;
+        }
+        return authorizedTarget.equals(requestedTarget);
+    }
+
     private static boolean isTerrainAction(NavRoute.Transition transition) {
         return transition == NavRoute.Transition.BREAK
                 || transition == NavRoute.Transition.BUILD

@@ -1,3 +1,16 @@
+# CURRENT CHECKPOINT — Túnel subordinado integrado, A2 3/8 estricto (2026-11-21)
+
+**Branch:** feature/autonomous-village
+**Base:** fea54ef73520b5e28e6426c4696d7f4fa1da8fec
+**Report:** docs/autonomous-village/2026-11-21-A2-TUNNEL-SUBORDINATE-INTEGRATION.md
+
+- `TunnelActionPlanner` integrado en `NavExecutor` como planificador SUBORDINADO: emite pasos validados y no mueve ni modifica el mundo; `NavExecutor` ejecuta una acción por tick con el mismo lease de terreno.
+- Nuevas políticas puras `TunnelExecutionPolicy` (no consume el paso sin ocupación física verificada; LOS de la apertura 2-high) y `TunnelPlanPolicy` (topes 3/4/6, cooldowns, cardinales con progreso real, prioridad de construcción). `TraversalActionLeasePolicy.canAcquireTunnel` añade el lease por bloque exacto.
+- Tests: `TUNNEL_ACTION_PLANNER_TEST` 20, `TUNNEL_EXECUTION_POLICY_TEST` 31, `TUNNEL_PLAN_POLICY_TEST` 25, `TRAVERSAL_ACTION_LEASE_POLICY_TEST` 23; `policyTest` verde, lint estricto y `git diff --check` exit 0.
+- Runtime: `a2n-20261121-211306` 2/8 estricto (bug de fase MOVE_POST medido y corregido); `a2n-20261121-212053` 3/8 estricto (IDX1/4/6) con 9 pasos de túnel verificados; `a2n-20261121-213055` 3/8 estricto con 0 activaciones (prioridad de construcción). C4 PASS integrado en las tres.
+- A2 OPEN: 3/8 estricto. Bloqueos con evidencia: IDX2 FAILED por DROP source-cell recovery sin vecino seguro en 660,72,608; IDX3/5 no completan descenso por escalón; IDX7/8 por debajo de la misión y se alejan.
+- Siguiente: recuperación de fuente DROP sin vecino seguro; descenso por escalón; ascenso/rodeo. Sin subir presupuestos ni relajar puertas.
+
 # CURRENT CHECKPOINT — BUILD provenance fix + BREAK diagnostic isolation (2026-11-21)
 
 **Branch:** feature/autonomous-village

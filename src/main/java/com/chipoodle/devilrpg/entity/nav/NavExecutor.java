@@ -3,9 +3,12 @@ package com.chipoodle.devilrpg.entity.nav;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayDeque;
@@ -161,6 +164,21 @@ public final class NavExecutor {
      * usa el ente para romper, con el margen justo para que la delegación no se quede corta.
      */
     private static final double ALCANCE_DE_ACCION_SQR = 6.25D;
+    // ============================================================================================
+    // A2 · TÚNEL SUBORDINADO. `TunnelActionPlanner` (puro) produce pasos de terreno validados; este
+    // ejecutor es la ÚNICA autoridad que los ejecuta: un break por tick con lease, y el movimiento
+    // final solo lo emite él. El planificador nunca mueve a la entidad ni modifica el mundo.
+    // Medido (`a2n-20261121-123432`): IDX3/5 quedan en pozos 1x1 donde el grafo no puede representar
+    // el estado posterior al BREAK (el destino sigue sólido) y no existe stand de ataque alcanzable.
+    // ============================================================================================
+    /** Tope de pasos por activación (cada paso abre 2 bloques y avanza 1 celda). */
+    private static final int MAX_TUNEL_PASOS_POR_PLAN = TunnelPlanPolicy.MAX_STEPS_PER_PLAN;
+    /**
+     * A2 · CALLEJÓN SOSTENIDO. Ticks de PLANNING en la MISMA celda sin avance de la búsqueda global ni del
+     * escalonado antes de pedir un plan de túnel. Acotado: no sustituye ningún presupuesto, solo evita que un
+     * frente sólido deje AL EJECUTOR esperando para siempre (medido: IDX3 en CADENCE_WAIT durante miles de ticks).
+     */
+    private static final int TUNNEL_STALL_TICKS = 240;
     private static final int OSCILLATION_WINDOW = 24;
 
     private final Mob mob;
@@ -255,6 +273,27 @@ public final class NavExecutor {
     private int dropApproachTicks;
     private int dropApproachNoProgress;
     private double dropApproachBestDistance;
+
+    // ---- A2 · TÚNEL SUBORDINADO (el planificador propone, este ejecutor dispone) ----
+    /** Plan validado en curso; inmutable una vez aceptado. */
+    private java.util.List<TunnelActionPlanner.Step> tunnelPlan;
+    /** Paso y fase en curso dentro del plan. */
+    private TunnelExecutionPolicy.Cursor tunnelCursor;
+    /** Fecha límite de la fase actual: acota la espera al actuador y al movimiento físico. */
+    private long tunnelPhaseDeadline;
+    /** Enfriamiento entre planes de túnel. */
+    private long tunnelNextPlanAt;
+    /** Planes pedidos en la misión actual (tope duro). */
+    private int tunnelPlansThisMission;
+    /** Pasos VERIFICADOS en la misión actual (tope duro). */
+    private int tunnelStepsThisMission;
+    /** Diagnóstico acotado: último motivo de descarte de un plan de túnel. */
+    private String tunnelLastDiscard = "-";
+    /** A2 · detección de callejón sostenido: celda y señales de progreso de la última observación. */
+    private BlockPos celdaEnEsperaDePlan;
+    private int ticksEnEsperaDePlan;
+    private int globalExpansionesEnEspera = -1;
+    private int escalonesEnEspera = -1;
 
     // ---- Instrumentación ----
     private int plansRun;
@@ -2050,6 +2089,456 @@ public final class NavExecutor {
         }
     }
 
+    // ============================================================================================
+    // A2 · TÚNEL SUBORDINADO. Flujo: pedir plan -> por cada paso ocupar `stand` exacto -> lease BREAK
+    // para `feetBlock` y verificar Aire -> lease BREAK para `headBlock` y verificar Aire -> mover
+    // físicamente a `post` y verificar soporte/AABB/ocupación -> SOLO entonces consumir el paso.
+    // Cualquier fallo descarta el plan completo, invalida ruta/global y replanifica. El planificador
+    // puro no emite movimiento ni modifica el mundo; este ejecutor sigue siendo la única autoridad.
+    // ============================================================================================
+
+    /**
+     * A2 · DETECCIÓN ACOTADA DE CALLEJÓN SOSTENIDO. Cuenta ticks de PLANNING en la MISMA celda mientras no hay
+     * avance de la búsqueda global ni del escalonado. Al superar el tope pide un plan de túnel; si no lo hay, el
+     * contador sigue y el enfriamiento del planificador evita martillear. Devuelve {@code true} solo si arrancó
+     * un plan (el llamante debe ceder el tick).
+     */
+    private boolean actualizarEsperaDePlanificacion(long now) {
+        BlockPos celda = mob.blockPosition();
+        boolean mismaCelda = celdaEnEsperaDePlan != null && celdaEnEsperaDePlan.equals(celda);
+        boolean globalAvanzo = globalExpansionesEnEspera >= 0
+                && globalExpansionesTotal != globalExpansionesEnEspera;
+        boolean escalonAvanzo = escalonesEnEspera >= 0 && escalonesDeObjetivo != escalonesEnEspera;
+        globalExpansionesEnEspera = globalExpansionesTotal;
+        escalonesEnEspera = escalonesDeObjetivo;
+        if (!mismaCelda || globalAvanzo || escalonAvanzo) {
+            celdaEnEsperaDePlan = celda.immutable();
+            ticksEnEsperaDePlan = 0;
+            return false;
+        }
+        if (ticksEnEsperaDePlan < TUNNEL_STALL_TICKS) {
+            ticksEnEsperaDePlan++;
+            return false;
+        }
+        if (!intentarPlanDeTunel(now, "callejon_sostenido")) {
+            return false;
+        }
+        ticksEnEsperaDePlan = 0;
+        celdaEnEsperaDePlan = celda.immutable();
+        return true;
+    }
+
+    /**
+     * Pide un plan de túnel cuando la ruta local no existe o el frente es un callejón. Devuelve {@code true}
+     * solo si hay un plan válido y este ejecutor pasa a ejecutarlo. La dirección es cardinal y debe acercar
+     * de verdad a la misión; el plan se detiene en celdas protegidas o bloques no rompibles.
+     */
+    private boolean intentarPlanDeTunel(long now, String causa) {
+        if (tunnelPlan != null) {
+            return true;
+        }
+        if (!(mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az)) {
+            return false;
+        }
+        if (breachMoveTarget != null || fuenteDropPendiente != null) {
+            return false;
+        }
+        // A2 · EL TÚNEL NO COMPITE CON EL ESCALONADO. Si la misión exige DESCENSO y el plan de construcción
+        // todavía es viable, esa estrategia manda: el escalonado ya está validado y el túnel solo debe entrar
+        // cuando no queda camino de construcción (agotado o descenso bloqueado). Medido en
+        // `a2n-20261121-212053`: sin esta prioridad el túnel se adelantó al escalón que resolvía IDX3.
+        if (TunnelPlanPolicy.constructionHasPriority(planMision != null
+                        && mob.blockPosition().getY() > planMision.getY(),
+                construccionAgotada, descensoBloqueado)) {
+            return false;
+        }
+        if (!TunnelPlanPolicy.canRequest(now, tunnelNextPlanAt, tunnelPlansThisMission, tunnelStepsThisMission)) {
+            return false;
+        }
+        BlockPos mision = misionFinal != null ? misionFinal : objective;
+        if (mision == null) {
+            return false;
+        }
+        BlockPos yo = mob.blockPosition();
+        if (!NavObstruction.fits(mob.level(), mob, yo) || !NavObstruction.hasSupport(mob.level(), yo)) {
+            return false;
+        }
+        int pasosDisponibles = TunnelPlanPolicy.stepsAvailable(tunnelStepsThisMission);
+        if (pasosDisponibles <= 0) {
+            return false;
+        }
+        int[][] direcciones = TunnelPlanPolicy.directionsToward(yo.getX(), yo.getZ(),
+                mision.getX(), mision.getZ());
+        java.util.List<TunnelActionPlanner.Step> mejor = java.util.List.of();
+        double mejorAvance = TunnelPlanPolicy.MIN_HORIZONTAL_PROGRESS;
+        for (int[] direccion : direcciones) {
+            java.util.List<TunnelActionPlanner.Step> plan = TunnelActionPlanner.straight(yo,
+                    direccion[0], direccion[1], Math.min(MAX_TUNEL_PASOS_POR_PLAN, pasosDisponibles),
+                    p -> mob.level().hasChunkAt(p)
+                            && az.puedeRomperNodoDeNavegacion(p)
+                            && !mob.level().getBlockState(p).getCollisionShape(mob.level(), p).isEmpty(),
+                    az::protegidaParaNavegacion,
+                    p -> mob.level().hasChunkAt(p) && NavObstruction.hasSupport(mob.level(), p));
+            if (plan.isEmpty()) {
+                continue;
+            }
+            BlockPos post = plan.get(plan.size() - 1).post();
+            double avance = TunnelPlanPolicy.horizontalProgress(yo.getX(), yo.getZ(), post.getX(), post.getZ(),
+                    mision.getX(), mision.getZ());
+            if (avance > mejorAvance) {
+                mejorAvance = avance;
+                mejor = plan;
+            }
+        }
+        if (mejor.isEmpty()) {
+            // Sin frente tunelable AHORA: no se martillea el mundo cada tick; se reintenta tras el enfriamiento.
+            tunnelNextPlanAt = now + TunnelPlanPolicy.PLAN_COOLDOWN_TICKS;
+            return false;
+        }
+        tunnelPlan = java.util.List.copyOf(mejor);
+        tunnelCursor = TunnelExecutionPolicy.start(tunnelPlan.size());
+        tunnelPhaseDeadline = now + TunnelPlanPolicy.PHASE_WAIT_TICKS;
+        tunnelPlansThisMission++;
+        tunnelNextPlanAt = now + TunnelPlanPolicy.PLAN_COOLDOWN_TICKS;
+        ticksEnEsperaDePlan = 0;
+        celdaEnEsperaDePlan = yo.immutable();
+        // El túnel pasa a ser la única autoridad: ruta local y búsqueda global quedan invalidadas.
+        route = null;
+        routeIndex = 0;
+        plannedFrom = null;
+        globalCache = null;
+        NavPlanner.cancelGlobalSearch(globalSearchHandle);
+        globalSearchStart = null;
+        globalSearchLastExpansions = 0;
+        globalDesde = null;
+        clearDropEdgeStep("tunnel_plan");
+        clearDropApproachOwner("tunnel_plan");
+        state = NavState.RECOVERING;
+        if (NavTrace.on()) {
+            TunnelActionPlanner.Step primero = tunnelPlan.get(0);
+            NavTrace.ev("TUNNEL_PLAN_START", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " causa=" + causa
+                    + " pos=" + yo.toShortString() + " mision=" + mision.toShortString()
+                    + " direccion=" + (primero.post().getX() - yo.getX()) + ","
+                    + (primero.post().getZ() - yo.getZ())
+                    + " pasos=" + tunnelPlan.size()
+                    + " planes=" + tunnelPlansThisMission + "/" + TunnelPlanPolicy.MAX_PLANS_PER_MISSION
+                    + " pasosMision=" + tunnelStepsThisMission + "/" + TunnelPlanPolicy.MAX_STEPS_PER_MISSION
+                    + " avance=" + String.format(java.util.Locale.ROOT, "%.2f", mejorAvance));
+        }
+        return true;
+    }
+
+    /** Un único dueño por tick: fase BREAK_* rompe un bloque; MOVE_POST emite el único movimiento. */
+    private void tickTunnelPlan(long now) {
+        if (tunnelPlan == null || tunnelCursor == null) {
+            return;
+        }
+        if (tunnelCursor.complete()) {
+            completarPlanDeTunel(now);
+            return;
+        }
+        TunnelActionPlanner.Step step = tunnelPlan.get(tunnelCursor.stepIndex());
+        // La ocupación EXACTA de `stand` solo se exige en las fases de rotura: en MOVE_POST la entidad
+        // debe precisamente ABANDONAR el stand para ocupar `post`. Exigirla también allí descartaba el
+        // plan justo cuando el movimiento se completaba (medido en `a2n-20261121-211306`).
+        if (tunnelCursor.breakPhase()) {
+            BlockPos stand = TunnelExecutionPolicy.standCell(tunnelCursor, tunnelPlan);
+            if (stand == null || !mob.blockPosition().equals(stand)) {
+                descartarPlanDeTunel(now, "stand_no_ocupado stand="
+                        + (stand == null ? "-" : stand.toShortString())
+                        + " pos=" + mob.blockPosition().toShortString());
+                return;
+            }
+        }
+        if (tunnelCursor.phase() == TunnelExecutionPolicy.Phase.MOVE_POST) {
+            tickTunnelMove(now, step);
+            return;
+        }
+        tickTunnelBreak(now, step, TunnelExecutionPolicy.breakTarget(tunnelCursor, tunnelPlan),
+                TunnelExecutionPolicy.stepSibling(tunnelCursor, tunnelPlan));
+    }
+
+    private void tickTunnelBreak(long now, TunnelActionPlanner.Step step, BlockPos target, BlockPos sibling) {
+        if (target == null) {
+            descartarPlanDeTunel(now, "objetivo_de_tunel_nulo");
+            return;
+        }
+        if (!(mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az)) {
+            descartarPlanDeTunel(now, "ente_sin_actuador_de_tunel");
+            return;
+        }
+        BlockState estado = mob.level().getBlockState(target);
+        if (estado.isAir()) {
+            // Ya abierto: se verifica sin gastar lease ni acción y se avanza de fase.
+            avanzarFaseDeTunel(now, true, "ya_aire");
+            return;
+        }
+        if (!az.puedeRomperNodoDeNavegacion(target)
+                || estado.getCollisionShape(mob.level(), target).isEmpty()) {
+            descartarPlanDeTunel(now, "bloque_no_rompible target=" + target.toShortString());
+            return;
+        }
+        mob.getNavigation().stop();
+        if (!tunelBreakEjecutable(step.stand(), target, sibling)) {
+            descartarPlanDeTunel(now, "precondicion_de_tunel target=" + target.toShortString());
+            return;
+        }
+        if (!az.tunelListo()) {
+            // Cadencia/presupuesto del actuador: es una ESPERA acotada, no un fallo del paso.
+            if (now > tunnelPhaseDeadline) {
+                descartarPlanDeTunel(now, "actuador_sin_presupuesto_o_cadencia target="
+                        + target.toShortString());
+            }
+            return;
+        }
+        if (!tryAcquireTunnelAction(target)) {
+            if (now > tunnelPhaseDeadline) {
+                descartarPlanDeTunel(now, "lease_rechazado target=" + target.toShortString());
+            }
+            return;
+        }
+        boolean invoked = recoveryAction != null
+                && recoveryAction.run(objective == null ? target : objective, target, NavRoute.Transition.BREAK);
+        boolean verificado = mob.level().getBlockState(target).isAir();
+        if (!verificado) {
+            descartarPlanDeTunel(now, "break_no_verificado invoked=" + invoked
+                    + " target=" + target.toShortString());
+            return;
+        }
+        avanzarFaseDeTunel(now, true, invoked ? "break_verificado" : "break_ya_resuelto");
+    }
+
+    private void tickTunnelMove(long now, TunnelActionPlanner.Step step) {
+        BlockPos post = step.post();
+        if (mob.blockPosition().equals(post)) {
+            boolean soporte = NavObstruction.hasSupport(mob.level(), post);
+            boolean cabe = NavObstruction.fits(mob.level(), mob, post);
+            boolean aabbReal = NavObstruction.fitsActualAabb(mob.level(), mob);
+            if (!soporte || !cabe || !aabbReal) {
+                descartarPlanDeTunel(now, "post_invalido soporte=" + soporte + " cabe=" + cabe
+                        + " aabb=" + aabbReal + " post=" + post.toShortString());
+                return;
+            }
+            TunnelExecutionPolicy.Cursor antes = tunnelCursor;
+            tunnelCursor = TunnelExecutionPolicy.afterMove(tunnelCursor, true);
+            if (tunnelCursor.stepIndex() == antes.stepIndex()) {
+                return;
+            }
+            tunnelStepsThisMission++;
+            tunnelPhaseDeadline = now + TunnelPlanPolicy.PHASE_WAIT_TICKS;
+            if (NavTrace.on()) {
+                NavTrace.ev("TUNNEL_STEP_CONSUMED", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " paso=" + antes.stepIndex() + "/" + antes.planSize()
+                        + " stand=" + step.stand().toShortString() + " post=" + post.toShortString()
+                        + " pasosMision=" + tunnelStepsThisMission + "/" + TunnelPlanPolicy.MAX_STEPS_PER_MISSION
+                        + " soporte=true aabb=true");
+            }
+            if (tunnelCursor.complete()) {
+                completarPlanDeTunel(now);
+            }
+            return;
+        }
+        if (mob.blockPosition().distManhattan(post) > 3) {
+            // Deriva fuera del paso (empuje/combate): el plan ya no describe el mundo, se replanifica.
+            descartarPlanDeTunel(now, "movimiento_fuera_del_paso post=" + post.toShortString()
+                    + " pos=" + mob.blockPosition().toShortString());
+            return;
+        }
+        if (!NavObstruction.fits(mob.level(), mob, post) || !NavObstruction.hasSupport(mob.level(), post)) {
+            descartarPlanDeTunel(now, "post_no_entrable post=" + post.toShortString());
+            return;
+        }
+        if (now > tunnelPhaseDeadline) {
+            descartarPlanDeTunel(now, "movimiento_sin_ocupacion post=" + post.toShortString()
+                    + " pos=" + mob.blockPosition().toShortString());
+            return;
+        }
+        double px = post.getX() + 0.5D;
+        double py = post.getY();
+        double pz = post.getZ() + 0.5D;
+        mob.getNavigation().moveTo(px, py, pz, 1.0D);
+        traceActuatorCommand("TUNNEL_MOVE_POST", post, now);
+        if (mob.getNavigation().isDone()) {
+            // La navegación de vanilla puede dar por completa una ruta de un nodo sin ocupar la celda.
+            int manhattan = mob.blockPosition().distManhattan(post);
+            boolean nudge = NavAdjacentApproachPolicy.shouldNudge(true, true, manhattan, 2,
+                    NavObstruction.fits(mob.level(), mob, post), NavObstruction.hasSupport(mob.level(), post));
+            if (nudge) {
+                mob.getMoveControl().setWantedPosition(px, py, pz, 1.0D);
+                if (NavTrace.on()) {
+                    NavTrace.ev("TUNNEL_MOVE_NUDGE", "uuid=" + mob.getUUID() + " tick=" + now
+                            + " post=" + post.toShortString() + " manhattan=" + manhattan
+                            + " reason=navigation_done_without_physical_occupancy");
+                }
+            }
+        }
+    }
+
+    private void avanzarFaseDeTunel(long now, boolean verificado, String motivo) {
+        TunnelExecutionPolicy.Cursor antes = tunnelCursor;
+        tunnelCursor = TunnelExecutionPolicy.afterBreak(tunnelCursor, verificado);
+        if (tunnelCursor == antes) {
+            return;
+        }
+        tunnelPhaseDeadline = now + (tunnelCursor.phase() == TunnelExecutionPolicy.Phase.MOVE_POST
+                ? TunnelPlanPolicy.MOVE_WAIT_TICKS : TunnelPlanPolicy.PHASE_WAIT_TICKS);
+        if (NavTrace.on()) {
+            NavTrace.ev("TUNNEL_STEP_PHASE", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " paso=" + tunnelCursor.stepIndex() + "/" + tunnelCursor.planSize()
+                    + " fase=" + tunnelCursor.phase() + " motivo=" + motivo
+                    + " pos=" + mob.blockPosition().toShortString());
+        }
+    }
+
+    /**
+     * Mismas puertas que el BREAK de ruta (protección, permiso de rotura, stand de pie con soporte y alcance) más
+     * una línea de visión que solo admite el bloque pedido o el otro bloque de la MISMA apertura de 2 de alto.
+     */
+    private boolean tunelBreakEjecutable(BlockPos stand, BlockPos target, BlockPos sibling) {
+        if (stand == null || target == null) {
+            return false;
+        }
+        if (!NavObstruction.fits(mob.level(), mob, stand) || !NavObstruction.hasSupport(mob.level(), stand)) {
+            return false;
+        }
+        if (policies.isProtected(target) || !policies.canBreak(target)) {
+            return false;
+        }
+        double distanciaSqr = mob.distanceToSqr(target.getX() + 0.5D, target.getY() + 0.5D,
+                target.getZ() + 0.5D);
+        if (!NavBreakReachPolicy.reachable(stand.getY(), target.getY(), distanciaSqr, ALCANCE_DE_ACCION_SQR)) {
+            return false;
+        }
+        Vec3 ojo = mob.getEyePosition();
+        BlockHitResult impacto = mob.level().clip(new ClipContext(ojo, target.getCenter(),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mob));
+        BlockPos primerBloque = impacto.getType() == HitResult.Type.BLOCK ? impacto.getBlockPos() : null;
+        boolean aceptado = TunnelExecutionPolicy.lineOfSightAccepted(primerBloque, target, sibling);
+        if (!aceptado && NavTrace.on()) {
+            NavTrace.ev("TUNNEL_LOS_REJECT", "uuid=" + mob.getUUID() + " tick=" + mob.level().getGameTime()
+                    + " stand=" + stand.toShortString() + " target=" + target.toShortString()
+                    + " sibling=" + (sibling == null ? "-" : sibling.toShortString())
+                    + " primerBloque=" + (primerBloque == null ? "-" : primerBloque.toShortString())
+                    + " tipo=" + impacto.getType());
+        }
+        return aceptado;
+    }
+
+    /**
+     * Lease del túnel: una única acción de terreno por entidad y tick, y solo para el bloque exacto que autoriza
+     * el cursor (pies o cabeza del paso activo). Comparte el mismo par tick/usado que el lease de ruta, de modo
+     * que no existen dos actuadores de terreno en el mismo tick.
+     */
+    public boolean tryAcquireTunnelAction(BlockPos requestedTarget) {
+        if (tunnelPlan == null || tunnelCursor == null || tunnelCursor.complete()) {
+            return false;
+        }
+        BlockPos autorizado = TunnelExecutionPolicy.breakTarget(tunnelCursor, tunnelPlan);
+        long now = mob.level().getGameTime();
+        boolean permitido = TraversalActionLeasePolicy.canAcquireTunnel(
+                now, traversalActionLeaseTick, traversalActionLeaseUsed,
+                tunnelCursor.breakPhase(), autorizado, NavRoute.Transition.BREAK, requestedTarget);
+        if (!permitido) {
+            return false;
+        }
+        traversalActionLeaseTick = now;
+        traversalActionLeaseUsed = true;
+        return true;
+    }
+
+    /** Descarta el plan COMPLETO, invalida ruta/global y deja el ejecutor replanificando. */
+    private void descartarPlanDeTunel(long now, String motivo) {
+        tunnelLastDiscard = motivo;
+        tunnelPlan = null;
+        tunnelCursor = null;
+        tunnelPhaseDeadline = 0L;
+        tunnelNextPlanAt = now + TunnelPlanPolicy.PLAN_COOLDOWN_TICKS;
+        if (misionFinal != null) {
+            objective = misionFinal.immutable();
+        }
+        route = null;
+        routeIndex = 0;
+        plannedFrom = null;
+        objetivoPermiteConstruccion = false;
+        objetivoTransicionLocal = null;
+        objetivoAccionLocal = null;
+        globalCache = null;
+        NavPlanner.cancelGlobalSearch(globalSearchHandle);
+        globalSearchStart = null;
+        globalSearchLastExpansions = 0;
+        globalDesde = null;
+        state = NavState.PLANNING;
+        nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+        if (NavTrace.on()) {
+            NavTrace.ev("TUNNEL_PLAN_DISCARD", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " motivo={" + motivo + "} pos=" + mob.blockPosition().toShortString()
+                    + " planes=" + tunnelPlansThisMission + "/" + TunnelPlanPolicy.MAX_PLANS_PER_MISSION
+                    + " pasosMision=" + tunnelStepsThisMission + "/" + TunnelPlanPolicy.MAX_STEPS_PER_MISSION);
+        }
+    }
+
+    /** Plan completado: el terreno cambió y la misión se replanifica desde la celda realmente ocupada. */
+    private void completarPlanDeTunel(long now) {
+        int pasos = tunnelPlan == null ? 0 : tunnelPlan.size();
+        BlockPos fin = mob.blockPosition().immutable();
+        tunnelPlan = null;
+        tunnelCursor = null;
+        tunnelPhaseDeadline = 0L;
+        tunnelNextPlanAt = now + TunnelPlanPolicy.PLAN_COOLDOWN_TICKS;
+        if (misionFinal != null) {
+            objective = misionFinal.immutable();
+        }
+        route = null;
+        routeIndex = 0;
+        plannedFrom = null;
+        objetivoPermiteConstruccion = false;
+        objetivoTransicionLocal = null;
+        objetivoAccionLocal = null;
+        globalCache = null;
+        NavPlanner.cancelGlobalSearch(globalSearchHandle);
+        globalSearchStart = null;
+        globalSearchLastExpansions = 0;
+        globalDesde = null;
+        state = NavState.PLANNING;
+        nextPlanAt = now;
+        if (NavTrace.on()) {
+            NavTrace.ev("TUNNEL_PLAN_COMPLETE", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " pasos=" + pasos + " fin=" + fin.toShortString()
+                    + " pasosMision=" + tunnelStepsThisMission + "/" + TunnelPlanPolicy.MAX_STEPS_PER_MISSION);
+        }
+    }
+
+    /** Aborta sin replanificar ni tocar contadores de misión (cambio de misión u objetivo). */
+    private void limpiarPlanDeTunel() {
+        tunnelPlan = null;
+        tunnelCursor = null;
+        tunnelPhaseDeadline = 0L;
+    }
+
+    /** A2 diagnóstico acotado del túnel subordinado (una línea). */
+    public String tunelDiag() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("planes=").append(tunnelPlansThisMission).append('/')
+                .append(TunnelPlanPolicy.MAX_PLANS_PER_MISSION)
+                .append(" pasos=").append(tunnelStepsThisMission).append('/')
+                .append(TunnelPlanPolicy.MAX_STEPS_PER_MISSION)
+                .append(" disc=").append(tunnelLastDiscard);
+        if (tunnelPlan == null || tunnelCursor == null) {
+            return sb.append(" plan=-").toString();
+        }
+        sb.append(" plan=").append(tunnelCursor.stepIndex()).append('/').append(tunnelCursor.planSize())
+                .append(':').append(tunnelCursor.phase());
+        if (!tunnelCursor.complete()) {
+            TunnelActionPlanner.Step step = tunnelPlan.get(tunnelCursor.stepIndex());
+            sb.append(" stand=").append(step.stand().toShortString())
+                    .append(" feet=").append(step.feetBlock().toShortString())
+                    .append(" head=").append(step.headBlock().toShortString())
+                    .append(" post=").append(step.post().toShortString());
+        }
+        return sb.toString();
+    }
+
     private boolean intentarRoturaDeRecuperacion() {
         long now = mob.level().getGameTime();
         if (breachMoveTarget != null || misionFinal == null
@@ -2888,6 +3377,12 @@ public final class NavExecutor {
             misionEnPie = null;
             // A2 Stage 7C · mision nueva: tambien se reinicia el presupuesto de re-estadios y la ruta global.
             reestadiosGlobales = 0;
+            // A2 · una mision NUEVA abre un ciclo de tunel nuevo; el reenvio idempotente no lo reinicia.
+            limpiarPlanDeTunel();
+            tunnelPlansThisMission = 0;
+            tunnelStepsThisMission = 0;
+            tunnelNextPlanAt = 0L;
+            tunnelLastDiscard = "-";
             globalCache = null;
             NavPlanner.cancelGlobalSearch(globalSearchHandle);
             globalSearchStart = null;
@@ -2965,6 +3460,8 @@ public final class NavExecutor {
         ultimoEscalonDeObjetivo = "-";
         route = null;
         routeIndex = 0;
+        // A2 · sin objetivo no hay plan de tunel que ejecutar.
+        limpiarPlanDeTunel();
         // A2 Stage 6D · FIX 4 · sin objetivo no hay plan de construccion: se cierra su ciclo.
         reiniciarCicloDeConstruccion();
         state = NavState.IDLE;
@@ -3133,6 +3630,11 @@ public final class NavExecutor {
             state = NavState.IDLE;
             return;
         }
+        // A2 · El plan de túnel, si existe, es la ÚNICA autoridad de movimiento y acción de terreno de este tick.
+        if (tunnelPlan != null) {
+            tickTunnelPlan(now);
+            return;
+        }
         if (breachMoveTarget != null) {
             tickBreachMove(now);
             return;
@@ -3234,6 +3736,9 @@ public final class NavExecutor {
             return;
         }
 
+        if (state == NavState.PLANNING && actualizarEsperaDePlanificacion(now)) {
+            return;
+        }
         switch (state) {
             case ARRIVED -> {
                 // Terminal: solo se sale si el objetivo se mueve (setObjective lo devuelve a PLANNING).
@@ -3479,6 +3984,11 @@ public final class NavExecutor {
             }
             if (!objetivoEscalonado) {
                 if (fallosDeEscalonDeObjetivo >= MAX_FALLOS_DE_ESCALON_DE_OBJETIVO) {
+                    // A2 · FRENTE EN CALLEJÓN SIN OBJETIVO LOCAL UTILIZABLE: último recurso acotado antes
+                    // del fallo terminal es un plan de túnel subordinado hacia la misión.
+                    if (intentarPlanDeTunel(now, "sin_objetivo_local")) {
+                        return;
+                    }
                     noPlanifica("escalonado sin objetivo valido (" + fallosDeEscalonDeObjetivo + " fallos)");
                     fallar("sin objetivo local valido (" + fallosDeEscalonDeObjetivo + "/"
                             + MAX_FALLOS_DE_ESCALON_DE_OBJETIVO + "): " + ultimoEscalonDeObjetivo);
@@ -3587,6 +4097,11 @@ public final class NavExecutor {
         budgetBackoff = MIN_BUDGET_BACKOFF_TICKS;
         budgetRetries = 0;
         if (result.route().isEmpty()) {
+            // A2 · CALLEJÓN SIN RUTA. Antes de gastar recuperación genérica se pide un plan de túnel
+            // subordinado (2 de alto, cardinal, hacia la misión). Si no hay plan válido el flujo no cambia.
+            if (intentarPlanDeTunel(now, "sin_ruta_local")) {
+                return;
+            }
             // A genuinely exhausted search is also a no-progress failure. Count it toward the
             // same two-failure recovery sequence used by stale routes.
             if (intentarBacktrackTrasFallo(now, "planificador sin ruta")) return;
@@ -5922,7 +6437,7 @@ public final class NavExecutor {
      */
     public String rutaAccionDiag() {
         return "nodoRecuperacion=" + (nodoDeRecuperacion == null ? "-" : nodoDeRecuperacion.toShortString())
-                + " ultimaAccionDeRuta=" + ultimaAccionDeRuta;
+                + " ultimaAccionDeRuta=" + ultimaAccionDeRuta + " tunel={" + tunelDiag() + "}";
     }
 
     /**
@@ -6093,6 +6608,8 @@ public final class NavExecutor {
     public void terrainChanged() {
         recoveryController.onVerifiedProgress();
         limpiarRecuperacionOrigenDrop();
+        ticksEnEsperaDePlan = 0;
+        celdaEnEsperaDePlan = null;
         route = null;
         plannedFrom = null;
         // A2 REMEDIACIÓN 2 · una ruta global cacheada tambien queda obsoleta si el terreno cambio.

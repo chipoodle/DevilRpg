@@ -47,10 +47,40 @@ public final class TraversalActionLeasePolicyTest {
                 101L, 100L, true, true, NavRoute.Transition.BRIDGE, buildTarget,
                 NavRoute.Transition.BRIDGE, buildTarget));
 
-        System.out.println("TRAVERSAL_ACTION_LEASE_POLICY_TEST: OK (13 assertions)");
+        // A2 · lease del túnel subordinado: un bloque exacto por tick, sin sustitución.
+        BlockPos feet = new BlockPos(10, 64, 20);
+        BlockPos head = new BlockPos(10, 65, 20);
+        check("tunnel leases its exact feet block", TraversalActionLeasePolicy.canAcquireTunnel(
+                200L, -1L, false, true, feet, NavRoute.Transition.BREAK, feet));
+        check("tunnel cannot lease the head while feet is authorized",
+                !TraversalActionLeasePolicy.canAcquireTunnel(
+                        200L, -1L, false, true, feet, NavRoute.Transition.BREAK, head));
+        check("tunnel leases its exact head block in the next phase", TraversalActionLeasePolicy
+                .canAcquireTunnel(201L, 200L, true, true, head, NavRoute.Transition.BREAK, head));
+        check("tunnel second action in the same tick is denied", !TraversalActionLeasePolicy
+                .canAcquireTunnel(201L, 201L, true, true, head, NavRoute.Transition.BREAK, head));
+        check("tunnel lease from a previous tick does not block the next tick", TraversalActionLeasePolicy
+                .canAcquireTunnel(202L, 201L, true, true, feet, NavRoute.Transition.BREAK, feet));
+        check("tunnel cannot authorize BUILD", !TraversalActionLeasePolicy.canAcquireTunnel(
+                202L, -1L, false, true, feet, NavRoute.Transition.BUILD, feet));
+        check("tunnel cannot authorize BRIDGE", !TraversalActionLeasePolicy.canAcquireTunnel(
+                202L, -1L, false, true, feet, NavRoute.Transition.BRIDGE, feet));
+        check("inactive tunnel authorizes nothing", !TraversalActionLeasePolicy.canAcquireTunnel(
+                202L, -1L, false, false, feet, NavRoute.Transition.BREAK, feet));
+        check("tunnel without an authorized block authorizes nothing",
+                !TraversalActionLeasePolicy.canAcquireTunnel(
+                        202L, -1L, false, true, null, NavRoute.Transition.BREAK, feet));
+        check("tunnel without a requested block authorizes nothing",
+                !TraversalActionLeasePolicy.canAcquireTunnel(
+                        202L, -1L, false, true, feet, NavRoute.Transition.BREAK, null));
+
+        System.out.println("TRAVERSAL_ACTION_LEASE_POLICY_TEST: OK (" + assertions + " assertions)");
     }
 
+    private static int assertions;
+
     private static void check(String name, boolean value) {
+        assertions++;
         if (!value) {
             throw new AssertionError(name);
         }

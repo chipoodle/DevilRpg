@@ -895,6 +895,24 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
+     * A2 · <b>lectura de la regla del jugador para el planificador de túnel</b>. Es la MISMA puerta que aplica
+     * {@link #breakBlockAt} en el momento de romper; se expone en solo-lectura para que el planificador de acciones
+     * de terreno pueda detener el plan antes de proponer un bloque que la puerta rechazaría.
+     */
+    public boolean protegidaParaNavegacion(final BlockPos pos) {
+        return pos == null || protegidoPorLaAldea(pos);
+    }
+
+    /**
+     * A2 · ¿puede el actuador de túnel ejecutar UNA acción ahora? Comparte el presupuesto y la cadencia del túnel
+     * ({@code tunelRestante}/{@code tunelEspera}): el túnel subordinado no crea presupuesto nuevo. Es solo-lectura:
+     * el descuento real lo hace {@link #romperNodoDeRuta} al romper de verdad.
+     */
+    public boolean tunelListo() {
+        return tunelRestante > 0 && tunelEspera <= 0;
+    }
+
+    /**
      * Valida un nodo BREAK de navegacion contra las mismas puertas que la accion real de minado.
      * Evita que el selector descarte el nodo por no ser una celda de pie o que elija obsidiana/bloques protegidos.
      */

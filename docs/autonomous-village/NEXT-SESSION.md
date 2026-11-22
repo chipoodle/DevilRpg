@@ -1,4 +1,30 @@
-# CURRENT CHECKPOINT — A2 breach+move iteration, 3/8 perimeter (2026-11-21)
+# CURRENT CHECKPOINT — Túnel subordinado integrado, A2 3/8 estricto (2026-11-21)
+
+**Branch:** `feature/autonomous-village`
+**Base:** `fea54ef73520b5e28e6426c4696d7f4fa1da8fec`
+**Report:** `docs/autonomous-village/2026-11-21-A2-TUNNEL-SUBORDINATE-INTEGRATION.md`
+
+- `TunnelActionPlanner` integrado en `NavExecutor` como **planificador subordinado**: emite pasos validados,
+  no mueve ni modifica el mundo. `NavExecutor` sigue siendo la única autoridad (una acción por tick con lease).
+- Nuevas piezas puras: `TunnelExecutionPolicy` (cursor/fases, no consume el paso sin ocupación física; LOS de
+  la apertura 2-high) y `TunnelPlanPolicy` (topes 3/4/6, cooldowns, cardinales con progreso, prioridad de
+  construcción). `TraversalActionLeasePolicy.canAcquireTunnel` añade el lease por bloque exacto.
+- Pruebas: `TUNNEL_ACTION_PLANNER_TEST` 20, `TUNNEL_EXECUTION_POLICY_TEST` 31, `TUNNEL_PLAN_POLICY_TEST` 25,
+  `TRAVERSAL_ACTION_LEASE_POLICY_TEST` 23. `policyTest` verde; lint estricto y `git diff --check` exit 0.
+- Runtime (mundos nuevos, semilla 12345):
+  - `a2n-20261121-211306`: 2/8 estricto, C4 PASS. Bug medido: el plan se descartaba en `MOVE_POST` por exigir
+    `stand`. Corregido.
+  - `a2n-20261121-212053`: 3/8 estricto (IDX1/4/6), 3/8 perímetro, C4 PASS. 3 planes, 9 pasos consumidos con
+    soporte+AABB verificados, 0 descartes.
+  - `a2n-20261121-213055`: 3/8 estricto (IDX1/4/6), 3/8 perímetro, C4 PASS, 0 activaciones de túnel (prioridad
+    de construcción). Demuestra que la pérdida de IDX3 es varianza, no regresión.
+- **A2 OPEN:** 3/8 estricto. Bloqueos restantes con evidencia: IDX2 termina FAILED por DROP source-cell recovery
+  sin vecino seguro en `660,72,608` (reproducible en los 3 runs); IDX3/5 no completan el descenso por escalón;
+  IDX7/8 están 8 bloques por debajo de la misión y se alejan.
+- **Siguiente:** (1) recuperación de fuente DROP sin vecino seguro; (2) descenso por escalón en pozos por encima
+  de la misión; (3) ascenso/rodeo para misiones por encima. No subir presupuestos globales ni relajar puertas.
+
+# HISTORICAL — A2 breach+move iteration, 3/8 perimeter (2026-11-21)
 
 **Branch:** feature/autonomous-village
 **Runtime:** `a2n-20261121-123432`
