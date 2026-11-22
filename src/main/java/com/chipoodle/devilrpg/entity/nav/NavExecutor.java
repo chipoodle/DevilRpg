@@ -3326,6 +3326,11 @@ public final class NavExecutor {
             return false;
         }
         if (ultimoResultadoEscalon == StairBuildResult.CADENCE_WAIT) {
+            // A2 · TICK DE LA CADENCIA. Antes se retornaba sin llamar al constructor y el retraso (`escaleraRetraso`)
+            // no avanzaba NUNCA: medido en `a2n-20261122-020402`, IDX4 con `A2_LOCAL_STAIR_WAIT CADENCE_WAIT
+            // counters_unchanged=true` durante miles de ticks. Ahora se llama al constructor para que consuma la
+            // cadencia; si sigue en espera, no se gasta paso local.
+            intentarConstruirEscalonSinWaypoint(misionFinal, mob.blockPosition(), "tick_cadencia");
             ultimoEscalonDeObjetivo = "esperando cadencia de escalera; no consumir paso local";
             return false;
         }
