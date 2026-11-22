@@ -1,4 +1,19 @@
-# CURRENT CHECKPOINT — Fiabilidad del asedio zombi: 6/8 estricto, C4 PASS (2026-11-22)
+# CURRENT CHECKPOINT — Encadenado del ascenso y deadlock de ruta duplicada (2026-11-22, ronda 1)
+
+- Commit `023f1ab5` sobre `d4d61037`. El ascenso se intenta en CADA tick de PLANNING con desnivel ≥3 y sin
+  enfriamiento tras una subida verificada (tope 12). Medido: IDX7 sube el escalón 1 en t=288 y **encadena** el
+  segundo en t=289 (bloque colocado en t=379). El salto al segundo escalón falla por pathfinding
+  (`pathCanReach=false`); se añadió salto asistido acotado.
+- **IDX3 en el anillo**: deadlock medido (firma de ruta 2102820130 rechazada indefinidamente, 8 replanteos sin
+  moverse). Ahora, tras 3 rechazos idénticos se reintenta la ruta (máx. 2 forzados por misión).
+- Micro-avance en cruz (4 rayos, enfriamiento 20 ticks) para llegar pegado al acantilado.
+- Runtime: `a2n-20261122-002353` 3/8 estricto (IDX1,2,6) con C4 PASS; `a2n-20261122-003217` 4/8 (IDX1,2,5,6) con
+  C4_FAIL SOLO por `jobSite=[0,0,0]` (16/12/12 correctos; 13/14 corridas con C4 PASS): variabilidad del
+  subsistema de puestos, a revalidar.
+- **Siguiente**: resolver el salto al escalón 2 del acantilado (probar escalera en zigzag o colocar el escalón
+  a distancia 2), estabilizar IDX3 en el anillo, y repetir corridas hasta 8/8 dos veces con C4 PASS.
+
+# HISTORICAL — Fiabilidad del asedio zombi: 6/8 estricto, C4 PASS (2026-11-22)
 
 **Branch:** `feature/autonomous-village`
 **Base:** `9a4553af` (túnel subordinado)
