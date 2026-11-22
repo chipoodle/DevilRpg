@@ -133,17 +133,40 @@ deja SOBRE el anillo; IDX4 entra en los runs en los que su descenso de 51 bloque
 incluida una de IDX7) pero el A* sigue prefiriendo rodear la meseta y el encadenado de subidas no se
 completa dentro de 6000 ticks.
 
+## 5-bis. Ronda 2 (2026-11-22): techo del stand, entrada al recinto y umbral del ascenso
+
+| RUN_ID | Estricto (ever) | Notas |
+|---|---|---|
+| `a2n-20261122-004219` | 4/8 (1,2,6,8) | **IDX8 entra en estricto (t=4693)** tras 14/14 subidas encadenadas |
+| `a2n-20261122-005105` | 4/8 (1,2,5,6) | 16/16 subidas; IDX7 a 62,46 porque el ascenso lo SUBIÓ al muro |
+| `a2n-20261122-005924` | 4/8 (2,3,5,6) | **IDX3 entra en estricto (t=4204)**; IDX1 falló por exceso del avance en el gancho superior |
+| `a2n-20261122-010725` | — | arranque del servidor bloqueado (world save); relanzado |
+
+Hallazgos y correcciones de la ronda:
+
+- **Techo del propio stand**: al saltar al segundo escalón la cabeza sube un bloque y golpeaba el techo
+  del stand (S+2 sólido): el salto quedaba capado y `pathCanReach=false`. Se despeja también S+2.
+  Resultado: **14/14 subidas completadas** y IDX8 coronó la meseta y entró en el recinto.
+- **Entrada al recinto**: IDX3/IDX7 quedaban SOBRE el anillo (y=72, distancia 62,46) sin bajar al
+  interior. Nueva acción `ENCLOSURE_STEP`: un paso de descenso (1-3 bloques) hacia la misión, solo si la
+  entidad está por encima y el candidato es celda de pie válida que ACERCA.
+- **El ascenso subía al muro**: con `misionPorEncima()` (cualquier desnivel) el ascenso trepaba el muro de
+  la aldea (71 → 72) y dejaba al mob a 62,46. Ahora el ascenso exige **desnivel real ≥3**; un escalón de 1
+  lo resuelve el movimiento ordinario y el paso de entrada al recinto.
+- **Exceso del avance**: el avance horizontal en el gancho superior (cada tick) desviaba a IDX1 de su
+  aproximación; queda restringido a desnivel real y los ganchos de fallo conservan el caso de nivel.
+
+
+
 ## 6. Bloqueos restantes (con evidencia)
 
-- **IDX7/8 (meseta)**: el ascenso funciona (CLIMB_STEP_DONE x6 con bloque colocado y pies verificados)
-  pero el encadenamiento no cubre los 8 bloques del acantilado antes de t=6000; el A* intercala rutas
-  de rodeo. Siguiente: hacer que el ascenso tenga prioridad ABSOLUTA mientras `misionY - mobY >= 3` y
-  haya muro adyacente (sin esperar a que falle el plan), y/o subir `MAX_ASCENSOS_MISION` (hoy 10).
-- **IDX3 (anillo)**: se queda a 0,46 del umbral en `617,72,577` en estado `RECOVERING` durante miles de
-  ticks, con un DROP hacia `616,71,577` que no completa. Siguiente: revisar el bucle de recuperación en
-  el anillo (el DROP interior no se ejecuta desde RECOVERING).
-- **IDX4 (descenso largo)**: 51 bloques de descenso con cadencia de escalón; entra cuando llega a
-  tiempo (6/8 run). Siguiente: acelerar el descenso (o dar más ventana) sin tocar presupuestos.
+- **IDX7/8 (meseta)**: el ascenso ya encadena 8 subidas y corona la meseta (IDX8 entró en
+  `a2n-20261122-004219`); queda estabilizar que IDX7 no sea desviado por rutas de rodeo y que la entrada
+  al recinto desde el muro sea fiable en todos los rumbos.
+- **IDX3 (anillo)**: entró en estricto en `a2n-20261122-005924` (t=4204) con el reintento forzado de ruta
+  y el paso de entrada; la variabilidad restante es de aproximación/combate.
+- **IDX4 (descenso largo)**: 51 bloques de descenso con cadencia de escalón; entra cuando llega a tiempo
+  (6/8 run). Siguiente: acelerar el descenso (o dar más ventana) sin tocar presupuestos.
 
 ## 7. Preservación
 

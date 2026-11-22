@@ -2231,11 +2231,17 @@ public final class NavExecutor {
      */
     private boolean actualizarEsperaDePlanificacion(long now) {
         BlockPos celda = mob.blockPosition();
+        // A2 · ENTRADA AL RECINTO: sobre el anillo, un paso de descenso acotado hacia la misión (ver método).
+        if (intentarEntrarAlRecinto(now)) {
+            ticksEnEsperaDePlan = 0;
+            celdaEnEsperaDePlan = celda.immutable();
+            return true;
+        }
         // A2 · ENCADENADO DEL ASCENSO. Con desnivel real se intenta subir en CADA tick de PLANNING (4 direcciones,
         // barato y con enfriamiento propio). Así cada escalón de subida encadena el siguiente sin esperar al
         // callejón sostenido ni a que falle un plan: medido en `a2n-20261122-001314`, IDX8 subió el primer
         // bloque del acantilado y el encadenado se perdía porque este método salía antes por "celda nueva".
-        if (misionPorEncima() && intentarAscenso(now, "encadenado")) {
+        if (desnivelReal() && intentarAscenso(now, "encadenado")) {
             ticksEnEsperaDePlan = 0;
             celdaEnEsperaDePlan = celda.immutable();
             return true;
@@ -2264,12 +2270,12 @@ public final class NavExecutor {
             ticksEnEsperaDePlan++;
             return false;
         }
-        if (misionPorEncima() && intentarAscenso(now, "callejon_sostenido")) {
+        if (desnivelReal() && intentarAscenso(now, "callejon_sostenido")) {
             ticksEnEsperaDePlan = 0;
             celdaEnEsperaDePlan = celda.immutable();
             return true;
         }
-        if (misionPorEncima() && intentarAvanceHaciaMision(now, "callejon_sostenido")) {
+        if (misionNoDebajo() && intentarAvanceHaciaMision(now, "callejon_sostenido")) {
             ticksEnEsperaDePlan = 0;
             celdaEnEsperaDePlan = celda.immutable();
             return true;
@@ -2710,7 +2716,7 @@ public final class NavExecutor {
             return false;
         }
         BlockPos yo = mob.blockPosition();
-        if (mision.getY() <= yo.getY()) {
+        if (mision.getY() < yo.getY()) {
             return false;
         }
         if (avanceObjetivo != null && avanceObjetivo.equals(objective) && esPieValido(avanceObjetivo)) {
@@ -2773,6 +2779,70 @@ public final class NavExecutor {
     }
 
     // ============================================================================================
+    // A2 · PASO DE ENTRADA AL RECINTO. Medido en `a2n-20261122-004219`: IDX3 e IDX7 quedan SOBRE el anillo
+    // (y=72, distancia 62,46) sin poder bajar al interior; el A* local no encuentra arista para bajar del muro
+    // y la misión queda a 0,46 del umbral estricto. Esta acción da UN paso de descenso (1-3 bloques) hacia la
+    // misión, solo si la entidad está por ENCIMA del destino y el candidato es una celda de pie válida que
+    // ACERCA. Acotada: enfriamiento y ventana de 66,5 bloques alrededor del centro.
+    // ============================================================================================
+    private long recintoNextAt;
+
+    private boolean intentarEntrarAlRecinto(long now) {
+        if (now < recintoNextAt) {
+            return false;
+        }
+        BlockPos mision = misionDeReferencia();
+        if (mision == null || !mob.onGround()) {
+            return false;
+        }
+        BlockPos yo = mob.blockPosition();
+        double dist = Math.sqrt(horizontalAlCuadrado(yo, mision));
+        if (dist > 66.5D || dist <= 60.5D) {
+            return false;
+        }
+        if (!esPieValido(yo) || !NavObstruction.hasSupport(mob.level(), yo)) {
+            return false;
+        }
+        int sx = Integer.signum(mision.getX() - yo.getX());
+        int sz = Integer.signum(mision.getZ() - yo.getZ());
+        if (Math.abs(mision.getX() - yo.getX()) >= Math.abs(mision.getZ() - yo.getZ())) {
+            sz = 0;
+        } else {
+            sx = 0;
+        }
+        int[][] pasos = {{sx, 0}, {0, sz}};
+        for (int[] paso : pasos) {
+            if (paso[0] == 0 && paso[1] == 0) {
+                continue;
+            }
+            for (int dy = -1; dy >= -3; dy--) {
+                BlockPos candidato = yo.offset(paso[0], dy, paso[1]);
+                if (!mob.level().hasChunkAt(candidato) || !esPieValido(candidato)
+                        || !NavObstruction.hasSupport(mob.level(), candidato)
+                        || !NavObstruction.fits(mob.level(), mob, candidato)) {
+                    continue;
+                }
+                if (horizontalAlCuadrado(candidato, mision) >= horizontalAlCuadrado(yo, mision)) {
+                    continue;
+                }
+                recintoNextAt = now + 10L;
+                mob.getNavigation().stop();
+                mob.getMoveControl().setWantedPosition(candidato.getX() + 0.5D, candidato.getY(),
+                        candidato.getZ() + 0.5D, 1.0D);
+                if (NavTrace.on()) {
+                    NavTrace.ev("ENCLOSURE_STEP", "uuid=" + mob.getUUID() + " tick=" + now
+                            + " pos=" + yo.toShortString() + " hacia=" + candidato.toShortString()
+                            + " mision=" + mision.toShortString()
+                            + " dist=" + String.format(java.util.Locale.ROOT, "%.2f", dist));
+                }
+                return true;
+            }
+        }
+        recintoNextAt = now + 40L;
+        return false;
+    }
+
+    // ============================================================================================
     // A2 · ESCALÓN DE ASCENSO. Cuando la misión está POR ENCIMA y el terreno no ofrece un escalón natural
     // (meseta con escalón vertical de 6-8 bloques), el ejecutor despeja la cara (pies, cabeza y techo del
     // escalón) y coloca un bloque en la celda de pies; después sube físicamente a él. Una acción de terreno
@@ -2799,6 +2869,12 @@ public final class NavExecutor {
     private boolean desnivelReal() {
         BlockPos mision = misionDeReferencia();
         return mision != null && mision.getY() - mob.blockPosition().getY() >= 3;
+    }
+
+    /** ¿La misión está al mismo nivel o por encima? (el avance horizontal también aplica a nivel). */
+    private boolean misionNoDebajo() {
+        BlockPos mision = misionDeReferencia();
+        return mision != null && mision.getY() >= mob.blockPosition().getY();
     }
 
     /**
@@ -2942,9 +3018,14 @@ public final class NavExecutor {
             return;
         }
         if (!ascensoColocado) {
-            // 1) Despejar la cara: pies, cabeza y techo del escalón (una celda por tick).
-            for (BlockPos celda : new BlockPos[]{cara, arriba, cara.above(2)}) {
-                if (mob.level().getBlockState(celda).getCollisionShape(mob.level(), celda).isEmpty()) {
+            // 1) Despejar la cara: pies, cabeza y techo del escalón (una celda por tick). ADEMÁS se despeja el
+            // TECHO DEL PROPIO STAND (mob feet + 2): al saltar al escalón la cabeza sube un bloque y, si esa
+            // celda es sólida, el salto queda capado y el mob nunca corona el segundo escalón. Medido en
+            // `a2n-20261122-003217`: IDX7 con el bloque 2 colocado y `pathCanReach=false`, cabeza topando.
+            BlockPos techoDelStand = ascensoOrigen == null ? null : ascensoOrigen.above(2);
+            for (BlockPos celda : new BlockPos[]{techoDelStand, cara, arriba, cara.above(2)}) {
+                if (celda == null
+                        || mob.level().getBlockState(celda).getCollisionShape(mob.level(), celda).isEmpty()) {
                     continue;
                 }
                 if (az.protegidaParaNavegacion(celda) || !az.puedeRomperNodoDeNavegacion(celda)) {
@@ -4548,10 +4629,10 @@ public final class NavExecutor {
                 if (fallosDeEscalonDeObjetivo >= MAX_FALLOS_DE_ESCALON_DE_OBJETIVO) {
                     // A2 · FRENTE EN CALLEJÓN SIN OBJETIVO LOCAL UTILIZABLE: último recurso acotado antes
                     // del fallo terminal es un plan de túnel subordinado hacia la misión.
-                    if (misionPorEncima() && intentarAscenso(now, "sin_objetivo_local")) {
+                    if (desnivelReal() && intentarAscenso(now, "sin_objetivo_local")) {
                         return;
                     }
-                    if (misionPorEncima() && intentarAvanceHaciaMision(now, "sin_objetivo_local")) {
+                    if (misionNoDebajo() && intentarAvanceHaciaMision(now, "sin_objetivo_local")) {
                         return;
                     }
                     if (intentarPlanDeTunel(now, "sin_objetivo_local", false)) {
@@ -4618,10 +4699,10 @@ public final class NavExecutor {
             // terreno de corto alcance (acercarse a pie, luego el escalón de ascenso), y solo si ninguna aplica
             // se lanza la búsqueda global. Así cada escalón de subida encadena el siguiente sin esperar una
             // búsqueda de 8000 expansiones que, junto a un acantilado, no puede resolver nada.
-            if (misionPorEncima() && intentarAscenso(now, "presupuesto_local")) {
+            if (desnivelReal() && intentarAscenso(now, "presupuesto_local")) {
                 return;
             }
-            if (misionPorEncima() && intentarAvanceHaciaMision(now, "presupuesto_local")) {
+            if (misionNoDebajo() && intentarAvanceHaciaMision(now, "presupuesto_local")) {
                 return;
             }
             if (intentarRutaGlobalValidada(now)) {
@@ -4685,10 +4766,10 @@ public final class NavExecutor {
         if (result.route().isEmpty()) {
             // A2 · CALLEJÓN SIN RUTA. Antes de gastar recuperación genérica se pide un plan de túnel
             // subordinado (2 de alto, cardinal, hacia la misión). Si no hay plan válido el flujo no cambia.
-            if (misionPorEncima() && intentarAscenso(now, "sin_ruta_local")) {
+            if (desnivelReal() && intentarAscenso(now, "sin_ruta_local")) {
                 return;
             }
-            if (misionPorEncima() && intentarAvanceHaciaMision(now, "sin_ruta_local")) {
+            if (misionNoDebajo() && intentarAvanceHaciaMision(now, "sin_ruta_local")) {
                 return;
             }
             if (intentarPlanDeTunel(now, "sin_ruta_local", false)) {
