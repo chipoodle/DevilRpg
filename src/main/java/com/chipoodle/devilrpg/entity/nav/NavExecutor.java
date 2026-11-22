@@ -2233,6 +2233,14 @@ public final class NavExecutor {
      */
     private boolean actualizarEsperaDePlanificacion(long now) {
         BlockPos celda = mob.blockPosition();
+        // A2 · BRECHA EN EL ANILLO. Medido en `a2n-20261122-032458`: IDX4 llegó a dist 63,16 (0,16 del criterio)
+        // y se quedó fuera. Fuera del recinto y pegado al muro, el túnel debe ABRIR PASO hacia la misión sin
+        // esperar a que el A* falle: rompe la celda del muro (pies+cabeza) y avanza dentro.
+        if (cercaDelMuro() && intentarPlanDeTunel(now, "brecha_anillo", true)) {
+            ticksEnEsperaDePlan = 0;
+            celdaEnEsperaDePlan = celda.immutable();
+            return true;
+        }
         // A2 · ENTRADA AL RECINTO: sobre el anillo, un paso de descenso acotado hacia la misión (ver método).
         if (intentarEntrarAlRecinto(now)) {
             ticksEnEsperaDePlan = 0;
@@ -2256,7 +2264,7 @@ public final class NavExecutor {
         // A2 · DESCESO PROGRESIVO EN DESNIVEL GRANDE (>=10): medido en `a2n-20261122-020402`, IDX4 bajó de
         // y=122 a y=109 en 6000 ticks y el descenso por DROP/escalón no llega. Un paso validado hacia abajo
         // cada 40 ticks lo baja de forma sostenida sin tocar presupuestos globales.
-        if (desnivelDescenso() >= 10 && intentarDescensoHaciaMision(now, "desnivel_grande")) {
+        if (desnivelDescenso() >= 3 && intentarDescensoHaciaMision(now, "desnivel_grande")) {
             ticksEnEsperaDePlan = 0;
             celdaEnEsperaDePlan = celda.immutable();
             return true;
