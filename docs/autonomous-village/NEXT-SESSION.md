@@ -1,3 +1,17 @@
+# CURRENT CHECKPOINT — Ronda 5: cadencia de escalera corregida; IDX4 sigue atascado (2026-11-22)
+
+- Commit `55d9d430`. Mejor resultado vigente: **7/8 estricto** (`012959`, `020402`: IDX1,2,3,5,6,7,8) con C4 PASS.
+- **Cadencia de escalera**: el ejecutor retornaba en CADENCE_WAIT sin llamar al constructor, así que
+  `escaleraRetraso` no avanzaba nunca (IDX4 con `A2_LOCAL_STAIR_WAIT CADENCE_WAIT counters_unchanged=true`
+  miles de ticks). Ahora el camino de espera llama al constructor para consumir la cadencia.
+- **Resultados negativos documentados de IDX4** (no repetir a ciegas):
+  - Taladro lateral (romper suelo delante y bajar 1): aborta `destino_invalido` en pendientes sin soporte.
+  - Taladro vertical (romper el suelo propio y caer): el mob de AABB 0,6 **no cae** al hueco 1×1 ni centrado
+    a 0,20 (su caja sigue tocando la celda vecina). Revertido.
+  - `a2n-20261122-024128`: IDX4 bajó 122→116 y se quedó ahí; el DROP/escalón no encadena el descenso largo.
+- **Siguiente**: analizar a fondo el **pipeline de descenso DROP** (por qué se estanca en y≈109-116) con apoyo
+  de la IA local/multi-agente, y atacar la causa (cadencia de planes/rutas por tramo) sin tocar presupuestos.
+
 # CURRENT CHECKPOINT — Ronda 4: 7/8 estricto dos veces más, solo IDX4 (2026-11-22)
 
 - Commit `1cf7d8ef`. `a2n-20261122-020402` y `a2n-20261122-012959`: **7/8 estricto (IDX1,2,3,5,6,7,8), C4 PASS**.
