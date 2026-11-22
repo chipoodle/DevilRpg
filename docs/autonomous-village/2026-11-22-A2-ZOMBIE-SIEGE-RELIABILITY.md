@@ -115,6 +115,17 @@ verde.
   colocó el bloque y subió (primer ascenso de acantilado de la campaña).
 - La sonda `CLIMB_STEP_PROBE` confirma que el rechazo dominante antes del micro-avance era `sin_cara`
   (la entidad no estaba pegada al muro), no `bloque_no_rompible`.
+- **Encadenado del ascenso**: se intenta subir en CADA tick de PLANNING (antes solo tras 240 ticks de
+  callejón) y sin enfriamiento tras una subida verificada; tope de ascensos 12. Medido en
+  `a2n-20261122-002353` y `a2n-20261122-003217`: IDX7 sube el primer escalón a t=288 y **encadena el
+  segundo** a t=289 (bloque colocado en t=379). El salto al segundo escalón sigue fallando por
+  pathfinding (`pathCanReach=false`); se añadió salto asistido acotado.
+- **Deadlock por ruta duplicada** (IDX3 en el anillo): el planificador producía la MISMA ruta válida y el
+  ejecutor la rechazaba indefinidamente (firma 2102820130, 8 replanteos sin moverse). Ahora, tras 3
+  rechazos idénticos se reintenta la ruta (máximo 2 reintentos forzados por misión).
+- **C4**: 13 de 14 corridas con C4 PASS; `a2n-20261122-003217` dio C4_FAIL solo por
+  `asignacionesJobSiteLimpias=false` (`jobSite=[0,0,0]`), con 16/12/12 supervivientes y trabajadores
+  correctos: se registra como variabilidad del subsistema de puestos de trabajo, a revalidar.
 
 Notas: IDX3 oscila entre estricto (61,96) y 62,46 (a 0,46 del umbral) porque el escalón de ascenso lo
 deja SOBRE el anillo; IDX4 entra en los runs en los que su descenso de 51 bloques llega a tiempo

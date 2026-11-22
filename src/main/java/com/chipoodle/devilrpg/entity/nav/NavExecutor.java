@@ -244,6 +244,11 @@ public final class NavExecutor {
     private BlockPos dropTakeoffRechazoClave;
 
     private int lastRouteSignature;
+    /** A2 · rechazos consecutivos de la MISMA firma y reintentos forzados de esa ruta (anti-deadlock). */
+    private int duplicateRechazos;
+    private int reintentosForzados;
+    private static final int MAX_DUPLICATE_REJECTIONS = 3;
+    private static final int MAX_FORCED_ROUTE_RETRIES = 2;
     private int replans;
     private int recoveryActions;
     private long nextPlanAt;
@@ -307,7 +312,9 @@ public final class NavExecutor {
     private String ascensoUltimo = "-";
     /** Último objetivo de avance codicioso entregado (evita re-elegirlo cada tick). */
     private BlockPos avanceObjetivo;
-    private static final int MAX_ASCENSOS_MISION = 10;
+    /** Enfriamiento del avance codicioso (barrido en cruz; no se repite cada tick). */
+    private long avanceNextAt;
+    private static final int MAX_ASCENSOS_MISION = 12;
     private static final int ASCENSO_FASE_MAX_TICKS = 300;
     private static final int ASCENSO_COOLDOWN_TICKS = 30;
     private static final int ASCENSO_MAX_FALLOS = 4;
@@ -2224,6 +2231,20 @@ public final class NavExecutor {
      */
     private boolean actualizarEsperaDePlanificacion(long now) {
         BlockPos celda = mob.blockPosition();
+        // A2 · ENCADENADO DEL ASCENSO. Con desnivel real se intenta subir en CADA tick de PLANNING (4 direcciones,
+        // barato y con enfriamiento propio). Así cada escalón de subida encadena el siguiente sin esperar al
+        // callejón sostenido ni a que falle un plan: medido en `a2n-20261122-001314`, IDX8 subió el primer
+        // bloque del acantilado y el encadenado se perdía porque este método salía antes por "celda nueva".
+        if (misionPorEncima() && intentarAscenso(now, "encadenado")) {
+            ticksEnEsperaDePlan = 0;
+            celdaEnEsperaDePlan = celda.immutable();
+            return true;
+        }
+        if (desnivelReal() && intentarAvanceHaciaMision(now, "encadenado")) {
+            ticksEnEsperaDePlan = 0;
+            celdaEnEsperaDePlan = celda.immutable();
+            return true;
+        }
         boolean mismaCelda = celdaEnEsperaDePlan != null && celdaEnEsperaDePlan.equals(celda);
         // A2 · Solo cuenta como avance una búsqueda global EN CURSO o una que ALCANZÓ la misión. Una búsqueda
         // que terminó SIN ruta no es progreso: si se contara, el contador de callejón no llegaría nunca a 0 y el
@@ -2681,6 +2702,9 @@ public final class NavExecutor {
     // es aire) aplican. Se entrega un objetivo local acotado que ACERCA de verdad.
     // ============================================================================================
     private boolean intentarAvanceHaciaMision(long now, String causa) {
+        if (now < avanceNextAt) {
+            return false;
+        }
         BlockPos mision = misionDeReferencia();
         if (mision == null) {
             return false;
@@ -2700,14 +2724,13 @@ public final class NavExecutor {
         double umbral = (mision.getY() - yo.getY() >= 3) ? 0.5D : 3.0D;
         BlockPos mejor = null;
         double mejorDist = Double.MAX_VALUE;
-        for (int dx = -10; dx <= 10; dx++) {
-            for (int dz = -10; dz <= 10; dz++) {
-                int cheb = Math.max(Math.abs(dx), Math.abs(dz));
-                if (cheb < 2 || cheb > 10) {
-                    continue;
-                }
+        // Barrido en CRUZ (4 direcciones cardinales × distancia 2..10): suficiente para acercarse al muro y
+        // mucho más barato que el cuadrado completo, para poder intentarlo en cada tick de PLANNING.
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (int[] dir : dirs) {
+            for (int dist = 2; dist <= 10; dist++) {
                 for (int dy = -1; dy <= 2; dy++) {
-                    BlockPos candidato = yo.offset(dx, dy, dz);
+                    BlockPos candidato = yo.offset(dir[0] * dist, dy, dir[1] * dist);
                     if (!mob.level().hasChunkAt(candidato) || !esPieValido(candidato)
                             || recentCells.contains(candidato)) {
                         continue;
@@ -2724,8 +2747,10 @@ public final class NavExecutor {
             }
         }
         if (mejor == null) {
+            avanceNextAt = now + 40L;
             return false;
         }
+        avanceNextAt = now + 20L;
         avanceObjetivo = mejor.immutable();
         objective = mejor.immutable();
         objetivoPermiteConstruccion = false;
@@ -2768,6 +2793,12 @@ public final class NavExecutor {
     private boolean misionPorEncima() {
         BlockPos mision = misionDeReferencia();
         return mision != null && mob.blockPosition().getY() < mision.getY();
+    }
+
+    /** ¿Hay un desnivel REAL (>= 3 bloques) que exige escalones de ascenso? */
+    private boolean desnivelReal() {
+        BlockPos mision = misionDeReferencia();
+        return mision != null && mision.getY() - mob.blockPosition().getY() >= 3;
     }
 
     /**
@@ -2883,7 +2914,8 @@ public final class NavExecutor {
             ascensoUltimo = "subido " + cara.toShortString() + " -> " + arriba.toShortString();
             ascensoFallos = 0;
             limpiarAscenso();
-            ascensoNextAt = now + ASCENSO_COOLDOWN_TICKS;
+            // Sin enfriamiento tras un ascenso verificado: el escalón siguiente se intenta de inmediato.
+            ascensoNextAt = now;
             if (NavTrace.on()) {
                 NavTrace.ev("CLIMB_STEP_DONE", "uuid=" + mob.getUUID() + " tick=" + now
                         + " face=" + cara.toShortString() + " feet=" + arriba.toShortString()
@@ -2995,6 +3027,17 @@ public final class NavExecutor {
                     NavObstruction.hasSupport(mob.level(), arriba));
             if (nudge) {
                 mob.getMoveControl().setWantedPosition(px, py, pz, 1.0D);
+                // A2 · SALTO ASISTIDO: subir un bloque exige saltar. Medido en `a2n-20261122-002353`: el
+                // pathfinder declaró el segundo escalón inalcanzable (`pathCanReach=false`) y el mob se quedó
+                // abajo, con el bloque colocado. Se pide el salto de forma acotada (uno cada 10 ticks).
+                if (now % 10L == 0L) {
+                    mob.getJumpControl().jump();
+                    if (NavTrace.on()) {
+                        NavTrace.ev("CLIMB_STEP_JUMP", "uuid=" + mob.getUUID() + " tick=" + now
+                                + " target=" + arriba.toShortString()
+                                + " pos=" + mob.blockPosition().toShortString());
+                    }
+                }
             }
         }
     }
@@ -3886,6 +3929,8 @@ public final class NavExecutor {
             tunnelStepsThisMission = 0;
             tunnelNextPlanAt = 0L;
             tunnelLastDiscard = "-";
+            duplicateRechazos = 0;
+            reintentosForzados = 0;
             globalCache = null;
             NavPlanner.cancelGlobalSearch(globalSearchHandle);
             globalSearchStart = null;
@@ -4705,13 +4750,31 @@ public final class NavExecutor {
         }
         // Una ruta con la misma firma que una ya fallada no se reintenta. Compare the executable
         // route, including its final BREAK action target, rather than the WALK-only planning path.
-        if (acceptedRoute.signature() == lastRouteSignature) {
+        // A2 · DEADLOCK POR RUTA DUPLICADA. Si la entidad NO se ha movido y el planificador produce la MISMA
+        // ruta, rechazarla indefinidamente es un bloqueo: medido en `a2n-20261122-001314`, IDX3 en `617,72,577`
+        // re-planificaba la misma ruta (firma 2102820130) cada ~200 ticks y gastaba los 8 replanteos sin mover
+        // un pie. Tras 3 rechazos idénticos se REINTENTA la ruta (máximo 2 reintentos forzados por misión).
+        boolean duplicada = acceptedRoute.signature() == lastRouteSignature;
+        if (duplicada && duplicateRechazos >= MAX_DUPLICATE_REJECTIONS
+                && reintentosForzados < MAX_FORCED_ROUTE_RETRIES) {
+            reintentosForzados++;
+            duplicateRechazos = 0;
+            if (NavTrace.on()) {
+                NavTrace.ev("REPLAN_SIGNATURE_FORCED_RETRY", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " candidateSignature=" + acceptedRoute.signature()
+                        + " forced=" + reintentosForzados + "/" + MAX_FORCED_ROUTE_RETRIES);
+            }
+            duplicada = false;
+        }
+        if (duplicada) {
+            duplicateRechazos++;
             if (NavTrace.on()) {
                 NavTrace.ev("REPLAN_SIGNATURE_DECISION", "uuid=" + mob.getUUID() + " tick=" + now
                         + " candidateSignature=" + acceptedRoute.signature()
                         + " previousSignature=" + lastRouteSignature
                         + " decision=REJECT_DUPLICATE replansBefore=" + replans
-                        + " replansAfter=" + (replans + 1));
+                        + " replansAfter=" + (replans + 1)
+                        + " duplicadas=" + duplicateRechazos + "/" + MAX_DUPLICATE_REJECTIONS);
             }
             if (postSnapFirstPlanPending) {
                 if (NavTrace.on()) NavTrace.ev("POST_SNAP_FIRST_PLAN", "uuid=" + mob.getUUID()
@@ -4729,6 +4792,7 @@ public final class NavExecutor {
         }
         route = acceptedRoute;
         routeIndex = 0;
+        duplicateRechazos = 0;
         if (postSnapFirstPlanPending) {
             if (NavTrace.on()) NavTrace.ev("POST_SNAP_FIRST_PLAN", "uuid=" + mob.getUUID()
                     + " tick=" + now + " start=" + mob.blockPosition().toShortString()
