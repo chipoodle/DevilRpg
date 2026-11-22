@@ -1,3 +1,17 @@
+# CURRENT CHECKPOINT — Ronda 7: descenso largo desbloqueado (IDX4 122→75), falta tiempo (2026-11-22)
+
+- Commits `f574b4af` y `d4515543`. **Descenso largo de IDX4/IDX5 desbloqueado**: el paso de borde DROP ahora
+  arranca desde un despegue válido aunque la navegación siga activa (antes `navigationDone=false` lo impedía y
+  el nudge se re-emitía cada tick, 40 intentos y replan eterno). Restringido a misiones POR DEBAJO para no
+  romper la aproximación de IDX1/7/8 (la versión sin restringir solo logró 2-3/8).
+- Medido: IDX4 **122→75** (antes se quedaba en 109-116), IDX5 87→76, en `a2n-20261122-031519`:
+  **6/8 estricto** (IDX1,2,3,6,7,8) + C4 PASS.
+- **Las corridas son deterministas** por build: mismo código → mismas posiciones/tiempos. La "varianza" era
+  efecto de los cambios entre corridas; ahora se puede iterar A/B con fiabilidad.
+- **Bloqueo restante = TIEMPO**: IDX4 (y=75, dist 72.9) e IDX5 (y=76, dist 86.2) siguen bajando al llegar a
+  t=6000; a ~117 ticks/bloque el descenso de 51 bloques no deja margen para la entrada al muro. Siguiente:
+  acelerar el descenso (pasos de borde encadenados o menores de 3 bloques por caída) sin tocar presupuestos.
+
 # CURRENT CHECKPOINT — Ronda 6: causa raíz del DROP de IDX4 identificada (2026-11-22)
 
 - Sin cambios de código netos (se probó y revirtió un contador de intentos con progreso). HEAD `55d9d430`.
