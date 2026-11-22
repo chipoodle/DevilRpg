@@ -1,4 +1,28 @@
-# CURRENT CHECKPOINT — Túnel subordinado integrado, A2 3/8 estricto (2026-11-21)
+# CURRENT CHECKPOINT — Fiabilidad del asedio zombi: 6/8 estricto, C4 PASS (2026-11-22)
+
+**Branch:** `feature/autonomous-village`
+**Base:** `9a4553af` (túnel subordinado)
+**Report:** `docs/autonomous-village/2026-11-22-A2-ZOMBIE-SIEGE-RELIABILITY.md`
+
+- Campaña de corrección completa del asedio zombi: **8 causas raíz corregidas** con evidencia runtime.
+- Mejor run: `a2n-20261121-232035` → **6/8 estricto DENTRO-PARED** (IDX1,2,3,4,5,6), C4 PASS. Baseline 3/8.
+- Correcciones: celdas de pie por colisión (nieve), tramo local acotado, overshoot DROP + abandono del
+  take-off imposible, guardián de progreso real, troncos del muro rompibles para el planificador, cota
+  dirigida de subida, ejecución de la ruta global/frente validada, escalón de ASCENSO (minar+colocar+subir),
+  guarda de chunks descargados y tope de CPU por plan (el watchdog de 60 s queda cerrado).
+- Tests nuevos/ampliados: `NAV_FEET_CELL_POLICY_TEST` 9, `NAV_LOCAL_OBJECTIVE_LEG_POLICY_TEST` 9,
+  `NAV_DROP_OVERSHOOT_POLICY_TEST` 10, `NAV_BREAK_FILTER_POLICY_TEST` 7, `NAV_CLIMB_STEP_POLICY_TEST` 19,
+  `NAV_LOCAL_OBJECTIVE_PROGRESS_POLICY_TEST` 10, `NAV_GOAL_METRIC_TEST` y lease explícito ampliados.
+- Gates: compile/compileTest/policyTest, lint estricto y diff-check en verde. 10 corridas runtime en mundos
+  nuevos; C4 PASS en todas las completadas.
+- **Bloqueos restantes con evidencia:** IDX7/8 necesitan encadenar 6-8 subidas antes de t=6000 (el ascenso
+  funciona: 6 CLIMB DONE; el A* intercala rodeos); IDX3 se queda a 0,46 del umbral en el anillo en
+  `RECOVERING`; IDX4 entra solo cuando su descenso de 51 bloques llega a tiempo.
+- **Siguiente:** prioridad absoluta del ascenso mientras `misionY - mobY >= 3` con muro adyacente; arreglar
+  la recuperación en el anillo de IDX3; acelerar el descenso de IDX4 sin tocar presupuestos. Después,
+  8/8 dos veces consecutivas + C4 PASS.
+
+# HISTORICAL — Túnel subordinado integrado, A2 3/8 estricto (2026-11-21)
 
 **Branch:** `feature/autonomous-village`
 **Base:** `fea54ef73520b5e28e6426c4696d7f4fa1da8fec`

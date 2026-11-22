@@ -23,7 +23,20 @@ public final class NavLocalObjectiveProgressPolicyTest {
         comprobar("far-away same-level rejected",
                 !NavLocalObjectiveProgressPolicy.aceptar(79, 71, 79,
                         588, 507, 597, 533, 580, 500, false, false));
-        System.out.println("NAV_LOCAL_OBJECTIVE_PROGRESS_POLICY_TEST: OK (7 assertions)");
+        // A2 · MEDIDO en `a2n-20261121-212053`: IDX7/8 (y=63) con mision ARRIBA (y=72) aceptaban un
+        // waypoint que los alejaba 22 bloques porque el guardián vertical se auto-anulaba.
+        comprobar("idx7 away candidate rejected when mission is ABOVE",
+                !NavLocalObjectiveProgressPolicy.aceptar(63, 72, 63,
+                        718, 468, 661, 533, 762, 496, false, false));
+        comprobar("idx7 closer candidate accepted when mission is ABOVE",
+                NavLocalObjectiveProgressPolicy.aceptar(63, 72, 63,
+                        718, 468, 661, 533, 712, 470, false, false));
+        comprobar("idx7 ascending candidate accepted only with horizontal progress",
+                NavLocalObjectiveProgressPolicy.aceptar(63, 72, 64,
+                        718, 468, 661, 533, 712, 470, false, false)
+                        && !NavLocalObjectiveProgressPolicy.aceptar(63, 72, 64,
+                        718, 468, 661, 533, 700, 450, false, false));
+        System.out.println("NAV_LOCAL_OBJECTIVE_PROGRESS_POLICY_TEST: OK (10 assertions)");
     }
 
     private static void comprobar(String name, boolean ok) {

@@ -59,6 +59,31 @@ public final class TraversalActionLeasePolicy {
         return authorizedTarget.equals(requestedTarget);
     }
 
+    /**
+     * A2 · Lease de una acción de terreno declarada EXPLÍCITAMENTE por el ejecutor (escalón de ascenso): la
+     * autoridad no es un nodo de ruta ni el cursor del túnel, sino la celda exacta que el propio ejecutor acaba
+     * de validar. Se conservan las dos invariantes: una acción de terreno por entidad y tick, y nada de sustituir
+     * la celda autorizada por otra.
+     */
+    public static boolean canAcquireExplicit(
+            long now,
+            long leaseTick,
+            boolean leaseUsed,
+            boolean actionActive,
+            NavRoute.Transition authorizedTransition,
+            BlockPos authorizedTarget,
+            NavRoute.Transition requestedTransition,
+            BlockPos requestedTarget) {
+        if (!actionActive || authorizedTransition == null || authorizedTarget == null
+                || requestedTransition == null || requestedTarget == null) {
+            return false;
+        }
+        if (leaseUsed && leaseTick == now) {
+            return false;
+        }
+        return authorizedTransition == requestedTransition && authorizedTarget.equals(requestedTarget);
+    }
+
     private static boolean isTerrainAction(NavRoute.Transition transition) {
         return transition == NavRoute.Transition.BREAK
                 || transition == NavRoute.Transition.BUILD

@@ -28,6 +28,28 @@ public final class NavGoalMetric {
     }
 
     /**
+     * Cota <b>DIRIGIDA</b> para misiones por ENCIMA: a la cota admisible se le suma un término vertical. NO es
+     * admisible y es deliberado: prioriza SUBIR. Medido en A2 (`a2n-20261121-221911`): la aldea es una meseta con
+     * un escalón vertical de 6-8 bloques en todo el borde y, con la cota admisible, la búsqueda global se drenaba
+     * a las cuevas bajo la meseta (frente 26-34 bloques por debajo) sin encontrar la rampa de subida. Solo se usa
+     * cuando la entidad está por debajo de la meta.
+     */
+    public static double heuristicClimbing(int x, int y, int z, int goalX, int goalY, int goalZ,
+                                           double horizontalRadiusSquared, double verticalTolerance,
+                                           int maxStepUp, int maxSafeDrop) {
+        double base = heuristic(x, y, z, goalX, goalY, goalZ, horizontalRadiusSquared, verticalTolerance,
+                maxStepUp, maxSafeDrop);
+        if (y >= goalY) {
+            return base;
+        }
+        double vertical = verticalRemaining(y, goalY, verticalTolerance);
+        return base + vertical * CLIMB_WEIGHT;
+    }
+
+    /** Peso del término vertical de {@link #heuristicClimbing}. */
+    public static final double CLIMB_WEIGHT = 0.5D;
+
+    /**
      * Distancia al cuadrado de la region de meta en 3D. Se usa solo para elegir el mejor
      * frente parcial cuando A* agota su presupuesto; no participa en el coste A*.
      */

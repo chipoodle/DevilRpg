@@ -12,7 +12,11 @@ public final class NavLocalObjectiveProgressPolicy {
         if (escalonPendiente || rutaContinua) {
             return true;
         }
-        return missionY >= mobY || candidateY < mobY;
+        // DESCENDER es progreso por si mismo. Ascender o mantenerse NO lo es: exige demostrar avance
+        // horizontal (version de 8 argumentos). Antes esta linea era `missionY >= mobY || candidateY < mobY`
+        // y, con la mision por ENCIMA, aceptaba CUALQUIER candidato: medido en `a2n-20261121-212053`,
+        // IDX7/8 aceptaron un waypoint a 44 bloques que los alejaba (86 -> 108 de distancia al ancla).
+        return candidateY < mobY;
     }
 
     /**

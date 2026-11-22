@@ -32,6 +32,21 @@ public final class NavGoalMetricTest {
                 radioSqr, 1.0D);
         comprobar("frente parcial evita nodo justo debajo del objetivo", cercaEn3D < bajoObjetivo);
 
+        // A2 · cota dirigida para misiones por ENCIMA: suma el término vertical solo cuando y < goalY.
+        double admisibleBajo = NavGoalMetric.heuristic(0, 63, 0, 0, 71, 0, radioSqr, 1.0D, 2, 3);
+        double dirigidaBajo = NavGoalMetric.heuristicClimbing(0, 63, 0, 0, 71, 0, radioSqr, 1.0D, 2, 3);
+        comprobar("cota dirigida prioriza subir (y < meta)", dirigidaBajo > admisibleBajo);
+        comprobarCerca("cota dirigida = admisible + 0.5 * desnivel restante",
+                admisibleBajo + 0.5D * 7.0D, dirigidaBajo);
+        comprobar("a la altura de la meta la cota dirigida es la admisible",
+                NavGoalMetric.heuristicClimbing(0, 71, 0, 0, 71, 0, radioSqr, 1.0D, 2, 3)
+                        == NavGoalMetric.heuristic(0, 71, 0, 0, 71, 0, radioSqr, 1.0D, 2, 3));
+        comprobar("por encima de la meta la cota dirigida es la admisible",
+                NavGoalMetric.heuristicClimbing(0, 96, 0, 0, 71, 0, radioSqr, 1.0D, 2, 3)
+                        == NavGoalMetric.heuristic(0, 96, 0, 0, 71, 0, radioSqr, 1.0D, 2, 3));
+        comprobar("peso de subida acotado", NavGoalMetric.CLIMB_WEIGHT > 0.0D
+                && NavGoalMetric.CLIMB_WEIGHT <= 1.0D);
+
         if (fallos > 0) {
             System.out.println("NAV_GOAL_METRIC_TEST: FAIL (" + fallos + " fallos)");
             System.exit(1);

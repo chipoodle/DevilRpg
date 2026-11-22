@@ -239,6 +239,9 @@ public final class NavExecutor {
     private long inicioEsperaFuenteDropSinCandidato = -1L;
     /** Backoff for a failed bounded exact take-off search; the suspended strategic route stays intact. */
     private long nextDropRecoveryPlanAt;
+    /** A2 · rechazos consecutivos del mismo take-off de DROP: al tercero se abandona la arista, no se reintenta. */
+    private int dropTakeoffRechazos;
+    private BlockPos dropTakeoffRechazoClave;
 
     private int lastRouteSignature;
     private int replans;
@@ -289,6 +292,25 @@ public final class NavExecutor {
     private int tunnelStepsThisMission;
     /** Diagnóstico acotado: último motivo de descarte de un plan de túnel. */
     private String tunnelLastDiscard = "-";
+
+    // ---- A2 · ESCALÓN DE ASCENSO (subir 1 bloque minando la cara y colocando el escalón) ----
+    /** Celda de pies donde empezó el ascenso en curso, o null si no hay ninguno. */
+    private BlockPos ascensoOrigen;
+    /** Celda de la cara donde se colocará el escalón (y desde la que se sube). */
+    private BlockPos ascensoBloque;
+    /** El bloque del escalón ya está colocado: solo falta subir físicamente. */
+    private boolean ascensoColocado;
+    private long ascensoDeadline;
+    private long ascensoNextAt;
+    private int ascensosEnMision;
+    private int ascensoFallos;
+    private String ascensoUltimo = "-";
+    /** Último objetivo de avance codicioso entregado (evita re-elegirlo cada tick). */
+    private BlockPos avanceObjetivo;
+    private static final int MAX_ASCENSOS_MISION = 10;
+    private static final int ASCENSO_FASE_MAX_TICKS = 300;
+    private static final int ASCENSO_COOLDOWN_TICKS = 30;
+    private static final int ASCENSO_MAX_FALLOS = 4;
     /** A2 · detección de callejón sostenido: celda y señales de progreso de la última observación. */
     private BlockPos celdaEnEsperaDePlan;
     private int ticksEnEsperaDePlan;
@@ -1395,6 +1417,19 @@ public final class NavExecutor {
     }
 
     /**
+     * A2 · ¿cabe este waypoint en el tramo local? La ventana (48×6) es el límite de lo que el planificador PUEDE
+     * encolar; el tramo es el límite de lo que el A* local puede RESOLVER con su presupuesto. Se conserva el
+     * waypoint válido más lejano dentro del tramo y el primero cuando aún no hay objetivo.
+     */
+    private boolean cabeEnTramoLocal(final BlockPos yo, final BlockPos waypoint, final boolean yaHayObjetivo) {
+        if (!yaHayObjetivo || yo == null || waypoint == null) {
+            return true;
+        }
+        return NavLocalObjectiveLegPolicy.withinLeg(waypoint.getX() - yo.getX(),
+                waypoint.getZ() - yo.getZ(), NavLocalObjectiveLegPolicy.MAX_LEG_CHEBYSHEV);
+    }
+
+    /**
      * A2 Stage 7B · POSICION DE PIE valida mas cercana a una altura de referencia, en una columna dada.
      * Valida = aire en pies y cuerpo, soporte con colision debajo, fuera de la proteccion de la aldea y a menos de
      * {@code VERTICAL_RANGE} de la altura de referencia (para que siga dentro de la ventana del planificador).
@@ -1421,13 +1456,19 @@ public final class NavExecutor {
         if (c == null || !mob.level().hasChunkAt(c)) {
             return false;
         }
-        if (policies.isProtected(c)) {
-            return false;
-        }
-        if (!mob.level().getBlockState(c).isAir() || !mob.level().getBlockState(c.above()).isAir()) {
-            return false;
-        }
-        return NavObstruction.hasSolidFace(mob.level(), c.below());
+        // A2 · LA CELDA DE PIE SE VALIDA POR COLISIÓN, NO POR isAir(): la capa de nieve de 1, la hierba alta o un
+        // helecho no colisionan y no impiden estar de pie. Exigir Aire dejaba inválido un rellano nevado completo y
+        // ninguna recuperación podía elegir fuente (medido en `a2n-20221121-213055`: IDX2 FAILED en 660,72,608).
+        BlockState pies = mob.level().getBlockState(c);
+        BlockPos arriba = c.above();
+        BlockState cabeza = mob.level().getBlockState(arriba);
+        return NavFeetCellPolicy.isValid(true,
+                policies.isProtected(c),
+                !pies.getCollisionShape(mob.level(), c).isEmpty(),
+                !cabeza.getCollisionShape(mob.level(), arriba).isEmpty(),
+                !pies.getFluidState().isEmpty() || esPeligrosoParaAterrizaje(pies),
+                !cabeza.getFluidState().isEmpty() || esPeligrosoParaAterrizaje(cabeza),
+                NavObstruction.hasSolidFace(mob.level(), c.below()));
     }
 
     /** Primer bloque con colisión entre los ojos del mob y el centro del objetivo BREAK. */
@@ -1548,9 +1589,78 @@ public final class NavExecutor {
         return r;
     }
 
+    /** Distancia horizontal al cuadrado entre dos celdas (para comprobar que un tramo ACERCA de verdad). */
+    private static double horizontalAlCuadrado(BlockPos a, BlockPos b) {
+        double dx = a.getX() - b.getX();
+        double dz = a.getZ() - b.getZ();
+        return dx * dx + dz * dz;
+    }
+
     /** A2 Stage 7C · un waypoint de la ruta global es pisable si su nodo es una celda de PIE real. */
     private long huellaTerreno(BlockPos p) {
         return NavPlanner.huellaTerreno(mob.level(), p, policies.maxSafeDrop());
+    }
+
+    /**
+     * A2 · <b>EJECUTAR LA RUTA GLOBAL VALIDADA.</b> Si la búsqueda global ya unió la celda ACTUAL con la misión,
+     * esa ruta es la que hay que recorrer: sus aristas pasaron la misma validación que las locales (soporte,
+     * caída segura, BUILD/BREAK, protección) y puede contener los escalones de obra que suben el desnivel. Volver
+     * a planificar lo mismo con menos presupuesto era el bucle medido de IDX7/IDX8.
+     * <p>
+     * Devuelve {@code true} si tomó el control del tick: aceptó la ruta o dejó la búsqueda incremental en curso.
+     */
+    private boolean intentarRutaGlobalValidada(long now) {
+        BlockPos mision = misionDePie();
+        if (mision == null) {
+            return false;
+        }
+        NavPlanner.GlobalResult global = rutaGlobalHacia(mision);
+        if (global.pending()) {
+            nextPlanAt = now + 1L;
+            noPlanifica("ruta global validada: busqueda incremental pendiente");
+            return true;
+        }
+        if (global.route().isEmpty()) {
+            return false;
+        }
+        if (!global.alcanzoMision()) {
+            // A2 · RUTA-FRENTE: cuando la búsqueda global no llega a la misión pero SÍ produjo un tramo validado
+            // que ACERCA de verdad, ese tramo es ejecutable. Antes solo servía para elegir un waypoint y el ente
+            // podía quedarse clavado sin plan (medido: IDX7/8 inmóviles en su spawn durante 6000 ticks).
+            BlockPos destino = global.route().destination();
+            if (destino.equals(mob.blockPosition())) {
+                return false;
+            }
+            double antes = horizontalAlCuadrado(mob.blockPosition(), mision);
+            double despues = horizontalAlCuadrado(destino, mision);
+            if (despues >= antes - 4.0D) {
+                return false;
+            }
+        }
+        BlockPos yo = mob.blockPosition();
+        if (globalDesde == null || !globalDesde.equals(yo)) {
+            return false;
+        }
+        if (global.route().signature() == lastRouteSignature) {
+            return false;
+        }
+        route = global.route();
+        routeIndex = 0;
+        plannedFrom = yo;
+        mejorDistEnPresupuesto = Double.MAX_VALUE;
+        budgetRetries = 0;
+        presupuestosSinProgresoTotal = 0;
+        intentosObjetivoInvalido = 0;
+        mejorDistObjetivoInvalido = Double.MAX_VALUE;
+        intentosDeDescenso = 0;
+        state = NavState.TRAVERSING;
+        if (NavTrace.on()) {
+            NavTrace.ev("GLOBAL_ROUTE_EXECUTED", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " pos=" + yo.toShortString() + " mision=" + mision.toShortString()
+                    + " nodos=" + route.length() + " exp=" + global.expansions()
+                    + " resumen={" + global.summary() + "}");
+        }
+        return true;
     }
 
     static boolean esWaypointDePie(final NavRoute.Node n) {
@@ -1777,6 +1887,9 @@ public final class NavExecutor {
                                 waypoint.getY() - yo.getY(), true, HORIZONTAL_RANGE - MARGEN_DE_VENTANA,
                                 VERTICAL_RANGE, policies.maxSafeDrop())
                         && esPieValido(waypoint)) {
+                    if (!cabeEnTramoLocal(yo, waypoint, objetivo != null)) {
+                        break;
+                    }
                     objetivo = waypoint;
                     objetivoConstruible = false;
                     objetivoTransicion = n.transition();
@@ -1810,6 +1923,12 @@ public final class NavExecutor {
             if (!requiereConstruccion && !accionBreak && !accionBridge && !esPieValido(waypoint)) {
                 descartados = true;
                 continue;
+            }
+            // A2 · TRAMO LOCAL ACOTADO: el waypoint válido más lejano que quepa en la pierna. Quedarse con el
+            // último nodo de la ventana (medido: 58,8 bloques) entregaba al A* local una pierna que sus 900
+            // expansiones no resolvían y el ejecutor terminaba FAILED sin moverse.
+            if (!cabeEnTramoLocal(yo, waypoint, objetivo != null)) {
+                break;
             }
             objetivo = waypoint;
             objetivoConstruible = requiereConstruccion;
@@ -2106,8 +2225,12 @@ public final class NavExecutor {
     private boolean actualizarEsperaDePlanificacion(long now) {
         BlockPos celda = mob.blockPosition();
         boolean mismaCelda = celdaEnEsperaDePlan != null && celdaEnEsperaDePlan.equals(celda);
+        // A2 · Solo cuenta como avance una búsqueda global EN CURSO o una que ALCANZÓ la misión. Una búsqueda
+        // que terminó SIN ruta no es progreso: si se contara, el contador de callejón no llegaría nunca a 0 y el
+        // ente se quedaría reiniciando búsquedas de 8000 expansiones para siempre (medido: IDX7/8 clavados).
+        boolean globalConRuta = globalCache == null || globalCache.pending() || globalCache.alcanzoMision();
         boolean globalAvanzo = globalExpansionesEnEspera >= 0
-                && globalExpansionesTotal != globalExpansionesEnEspera;
+                && globalExpansionesTotal != globalExpansionesEnEspera && globalConRuta;
         boolean escalonAvanzo = escalonesEnEspera >= 0 && escalonesDeObjetivo != escalonesEnEspera;
         globalExpansionesEnEspera = globalExpansionesTotal;
         escalonesEnEspera = escalonesDeObjetivo;
@@ -2120,7 +2243,17 @@ public final class NavExecutor {
             ticksEnEsperaDePlan++;
             return false;
         }
-        if (!intentarPlanDeTunel(now, "callejon_sostenido")) {
+        if (misionPorEncima() && intentarAscenso(now, "callejon_sostenido")) {
+            ticksEnEsperaDePlan = 0;
+            celdaEnEsperaDePlan = celda.immutable();
+            return true;
+        }
+        if (misionPorEncima() && intentarAvanceHaciaMision(now, "callejon_sostenido")) {
+            ticksEnEsperaDePlan = 0;
+            celdaEnEsperaDePlan = celda.immutable();
+            return true;
+        }
+        if (!intentarPlanDeTunel(now, "callejon_sostenido", true)) {
             return false;
         }
         ticksEnEsperaDePlan = 0;
@@ -2133,7 +2266,7 @@ public final class NavExecutor {
      * solo si hay un plan válido y este ejecutor pasa a ejecutarlo. La dirección es cardinal y debe acercar
      * de verdad a la misión; el plan se detiene en celdas protegidas o bloques no rompibles.
      */
-    private boolean intentarPlanDeTunel(long now, String causa) {
+    private boolean intentarPlanDeTunel(long now, String causa, boolean ultimoRecurso) {
         if (tunnelPlan != null) {
             return true;
         }
@@ -2147,7 +2280,10 @@ public final class NavExecutor {
         // todavía es viable, esa estrategia manda: el escalonado ya está validado y el túnel solo debe entrar
         // cuando no queda camino de construcción (agotado o descenso bloqueado). Medido en
         // `a2n-20261121-212053`: sin esta prioridad el túnel se adelantó al escalón que resolvía IDX3.
-        if (TunnelPlanPolicy.constructionHasPriority(planMision != null
+        // Excepción medida (`a2n-20261121-221911`, IDX5): un CALLEJÓN SOSTENIDO (240 ticks sin ruta, sin avance
+        // global ni escalonado) es evidencia más fuerte que "la construcción sigue siendo viable": ahí el túnel
+        // sí puede entrar. Los otros dos disparadores conservan la prioridad intacta.
+        if (!ultimoRecurso && TunnelPlanPolicy.constructionHasPriority(planMision != null
                         && mob.blockPosition().getY() > planMision.getY(),
                 construccionAgotada, descensoBloqueado)) {
             return false;
@@ -2537,6 +2673,361 @@ public final class NavExecutor {
                     .append(" post=").append(step.post().toShortString());
         }
         return sb.toString();
+    }
+
+    // ============================================================================================
+    // A2 · AVANCE CODICIOSO VALIDADO. Cuando el plan falla y la misión está POR ENCIMA, el ente puede estar en
+    // terreno abierto a 8-10 bloques del acantilado: ni el escalón (no hay cara adyacente) ni el túnel (el frente
+    // es aire) aplican. Se entrega un objetivo local acotado que ACERCA de verdad.
+    // ============================================================================================
+    private boolean intentarAvanceHaciaMision(long now, String causa) {
+        BlockPos mision = misionDePie();
+        if (mision == null) {
+            return false;
+        }
+        BlockPos yo = mob.blockPosition();
+        if (mision.getY() <= yo.getY()) {
+            return false;
+        }
+        if (avanceObjetivo != null && avanceObjetivo.equals(objective) && esPieValido(avanceObjetivo)) {
+            return false; // ya hay un escalón de avance válido en curso
+        }
+        double actual = horizontalAlCuadrado(yo, mision);
+        double actualLineal = Math.sqrt(actual);
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (int dx = -10; dx <= 10; dx++) {
+            for (int dz = -10; dz <= 10; dz++) {
+                int cheb = Math.max(Math.abs(dx), Math.abs(dz));
+                if (cheb < 2 || cheb > 10) {
+                    continue;
+                }
+                for (int dy = -1; dy <= 2; dy++) {
+                    BlockPos candidato = yo.offset(dx, dy, dz);
+                    if (!mob.level().hasChunkAt(candidato) || !esPieValido(candidato)) {
+                        continue;
+                    }
+                    double d = horizontalAlCuadrado(candidato, mision);
+                    // A2 · MEJORA MÍNIMA DE 3 BLOQUES (lineal). Con un umbral laxo el ente aceptaba mejoras de
+                    // medio bloque y oscilaba entre dos celdas sin acercarse ni llegar al acantilado: medido en
+                    // `a2n-20261121-232035`, IDX8 rebotando entre 748,532 y 747,534 con dAntes=87.0/dDespues=86.0.
+                    if (Math.sqrt(d) >= actualLineal - 3.0D) {
+                        continue;
+                    }
+                    if (d < mejorDist) {
+                        mejorDist = d;
+                        mejor = candidato;
+                    }
+                }
+            }
+        }
+        if (mejor == null) {
+            return false;
+        }
+        avanceObjetivo = mejor.immutable();
+        objective = mejor.immutable();
+        objetivoPermiteConstruccion = false;
+        objetivoTransicionLocal = null;
+        objetivoAccionLocal = null;
+        objetivoTactico = false;
+        plannedFrom = null;
+        route = null;
+        routeIndex = 0;
+        nextPlanAt = now;
+        state = NavState.PLANNING;
+        if (NavTrace.on()) {
+            NavTrace.ev("PROGRESS_STEP_TARGET", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " causa=" + causa + " pos=" + yo.toShortString()
+                    + " objetivo=" + mejor.toShortString() + " mision=" + mision.toShortString()
+                    + " dAntes=" + String.format(java.util.Locale.ROOT, "%.1f", Math.sqrt(actual))
+                    + " dDespues=" + String.format(java.util.Locale.ROOT, "%.1f", Math.sqrt(mejorDist)));
+        }
+        return true;
+    }
+
+    // ============================================================================================
+    // A2 · ESCALÓN DE ASCENSO. Cuando la misión está POR ENCIMA y el terreno no ofrece un escalón natural
+    // (meseta con escalón vertical de 6-8 bloques), el ejecutor despeja la cara (pies, cabeza y techo del
+    // escalón) y coloca un bloque en la celda de pies; después sube físicamente a él. Una acción de terreno
+    // por tick con lease, verificación real y presupuesto compartido con el túnel.
+    // ============================================================================================
+
+    /** ¿La misión utilizable está por encima de los pies? Solo entonces tiene sentido un ascenso. */
+    private boolean misionPorEncima() {
+        BlockPos mision = misionDePie();
+        return mision != null && mob.blockPosition().getY() < mision.getY();
+    }
+
+    /**
+     * Pide un escalón de ascenso si la misión está por encima y hay una cara rompible hacia ella. Devuelve
+     * {@code true} si tomó el control (plan iniciado). Todos los topes son duros y la celda se valida contra
+     * el MISMO contrato que usa el ejecutor para romper y colocar.
+     */
+    private boolean intentarAscenso(long now, String causa) {
+        if (ascensoBloque != null) {
+            return true;
+        }
+        if (!(mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az)) {
+            return false;
+        }
+        if (breachMoveTarget != null || fuenteDropPendiente != null || tunnelPlan != null) {
+            return false;
+        }
+        if (now < ascensoNextAt || ascensosEnMision >= MAX_ASCENSOS_MISION
+                || ascensoFallos >= ASCENSO_MAX_FALLOS) {
+            return false;
+        }
+        BlockPos mision = misionDePie();
+        if (mision == null) {
+            return false;
+        }
+        BlockPos yo = mob.blockPosition();
+        if (mision.getY() <= yo.getY()) {
+            return false;
+        }
+        if (!esPieValido(yo) || !NavObstruction.hasSupport(mob.level(), yo)) {
+            return false;
+        }
+        int[][] direcciones = TunnelPlanPolicy.directionsToward(yo.getX(), yo.getZ(),
+                mision.getX(), mision.getZ());
+        String primerRechazo = "-";
+        for (int[] direccion : direcciones) {
+            BlockPos cara = yo.offset(direccion[0], 0, direccion[1]);
+            if (!mob.level().hasChunkAt(cara) || az.protegidaParaNavegacion(cara)) {
+                if (primerRechazo.equals("-")) primerRechazo = "carga_o_protegida " + cara.toShortString();
+                continue;
+            }
+            if (mob.level().getBlockState(cara).getCollisionShape(mob.level(), cara).isEmpty()) {
+                if (primerRechazo.equals("-")) primerRechazo = "sin_cara " + cara.toShortString();
+                continue; // no es una cara: ahí no hay nada que escalar
+            }
+            // Solo muros de 2+ bloques. Un escalón de 1 se sube andando (STEP_UP): picarlo y reconstruirlo
+            // sería un desperdicio de presupuesto y de terreno.
+            if (NavObstruction.classify(mob.level(), mob, cara, policies) != NavObstruction.Kind.BREAKABLE) {
+                if (primerRechazo.equals("-")) {
+                    primerRechazo = "no_muro " + cara.toShortString() + " kind="
+                            + NavObstruction.classify(mob.level(), mob, cara, policies);
+                }
+                continue;
+            }
+            if (!az.puedeRomperNodoDeNavegacion(cara)) {
+                continue;
+            }
+            BlockPos cabeza = cara.above();
+            BlockPos techo = cara.above(2);
+            if (!NavClimbStepPolicy.clearable(true, true, false)) {
+                continue;
+            }
+            if (!mob.level().getBlockState(cabeza).getCollisionShape(mob.level(), cabeza).isEmpty()
+                    && !az.puedeRomperNodoDeNavegacion(cabeza)) {
+                continue;
+            }
+            if (!mob.level().getBlockState(techo).getCollisionShape(mob.level(), techo).isEmpty()
+                    && !az.puedeRomperNodoDeNavegacion(techo)) {
+                continue;
+            }
+            if (!NavObstruction.hasSolidFace(mob.level(), cara.below())) {
+                continue; // el escalón necesita apoyo debajo
+            }
+            ascensoOrigen = yo.immutable();
+            ascensoBloque = cara.immutable();
+            ascensoColocado = false;
+            ascensoDeadline = now + ASCENSO_FASE_MAX_TICKS;
+            state = NavState.RECOVERING;
+            if (NavTrace.on()) {
+                NavTrace.ev("CLIMB_STEP_START", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " causa=" + causa + " stand=" + yo.toShortString()
+                        + " face=" + cara.toShortString() + " head=" + cabeza.toShortString()
+                        + " top=" + techo.toShortString()
+                        + " mision=" + mision.toShortString()
+                        + " ascensos=" + ascensosEnMision + "/" + MAX_ASCENSOS_MISION);
+            }
+            return true;
+        }
+        ascensoNextAt = now + 40L;
+        if (NavTrace.on()) {
+            NavTrace.ev("CLIMB_STEP_PROBE", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " causa=" + causa + " pos=" + yo.toShortString()
+                    + " mision=" + mision.toShortString() + " rechazo={" + primerRechazo + "}");
+        }
+        return false;
+    }
+
+    /** Una acción de terreno (o el movimiento final) por tick, con verificación real. */
+    private void tickAscenso(long now) {
+        if (ascensoBloque == null) {
+            return;
+        }
+        if (!(mob instanceof com.chipoodle.devilrpg.entity.AggressiveZombieEntity az)) {
+            abortarAscenso(now, "sin_actuador");
+            return;
+        }
+        BlockPos cara = ascensoBloque;
+        BlockPos arriba = cara.above();
+        if (NavClimbStepPolicy.landingVerified(mob.blockPosition().equals(arriba), mob.onGround(),
+                NavObstruction.hasSupport(mob.level(), arriba),
+                NavObstruction.fitsActualAabb(mob.level(), mob))) {
+            ascensosEnMision++;
+            ascensoUltimo = "subido " + cara.toShortString() + " -> " + arriba.toShortString();
+            ascensoFallos = 0;
+            limpiarAscenso();
+            ascensoNextAt = now + ASCENSO_COOLDOWN_TICKS;
+            if (NavTrace.on()) {
+                NavTrace.ev("CLIMB_STEP_DONE", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " face=" + cara.toShortString() + " feet=" + arriba.toShortString()
+                        + " ascensos=" + ascensosEnMision + "/" + MAX_ASCENSOS_MISION
+                        + " pos=" + mob.blockPosition().toShortString());
+            }
+            terrainChanged();
+            nextPlanAt = now;
+            state = NavState.PLANNING;
+            return;
+        }
+        // A2 · El salto de un bloque es parte del ascenso: NO se aborta por estar en el aire ni por un desvío
+        // de una celda. Solo se abandona si la entidad YA está en el suelo, lejos del origen y fuera del destino.
+        // Medido en `a2n-20261121-232929`: el mob saltó (blockPosition y=64) y el aborto lo mató a mitad de vuelo
+        // justo después de colocar el escalón.
+        if (ascensoOrigen != null && !mob.blockPosition().equals(ascensoOrigen)
+                && !mob.blockPosition().equals(arriba)
+                && mob.onGround() && mob.blockPosition().distManhattan(ascensoOrigen) > 1) {
+            abortarAscenso(now, "movido pos=" + mob.blockPosition().toShortString());
+            return;
+        }
+        if (now > ascensoDeadline) {
+            abortarAscenso(now, "timeout face=" + cara.toShortString());
+            return;
+        }
+        if (!ascensoColocado) {
+            // 1) Despejar la cara: pies, cabeza y techo del escalón (una celda por tick).
+            for (BlockPos celda : new BlockPos[]{cara, arriba, cara.above(2)}) {
+                if (mob.level().getBlockState(celda).getCollisionShape(mob.level(), celda).isEmpty()) {
+                    continue;
+                }
+                if (az.protegidaParaNavegacion(celda) || !az.puedeRomperNodoDeNavegacion(celda)) {
+                    abortarAscenso(now, "bloque_no_rompible " + celda.toShortString());
+                    return;
+                }
+                mob.getNavigation().stop();
+                if (!az.tunelListo()) {
+                    return; // cadencia del actuador: espera acotada por ascensoDeadline
+                }
+                if (!tryAcquireExplicit(NavRoute.Transition.BREAK, celda)) {
+                    return;
+                }
+                boolean invoked = recoveryAction != null
+                        && recoveryAction.run(objective == null ? celda : objective, celda,
+                        NavRoute.Transition.BREAK);
+                if (!mob.level().getBlockState(celda).getCollisionShape(mob.level(), celda).isEmpty()) {
+                    abortarAscenso(now, "break_no_verificado invoked=" + invoked
+                            + " " + celda.toShortString());
+                    return;
+                }
+                ascensoDeadline = now + ASCENSO_FASE_MAX_TICKS;
+                return; // una accion por tick
+            }
+            // 2) Colocar el escalón en la celda de la cara. PRIMERO se centra la entidad en SU celda: si está
+            // pegada al borde, su AABB (inflado) invade la celda vecina y la primitiva rechaza la colocación.
+            // Medido en `a2n-20261121-231122`: `escalon_no_colocable soporte=true invade=true` y el ascenso
+            // se abortaba sin llegar a colocar nada.
+            if (ascensoOrigen != null && !NavSourceCellPolicy.centeredInCell(
+                    mob.getX(), mob.getZ(), ascensoOrigen, 0.20D)) {
+                mob.getNavigation().stop();
+                mob.getMoveControl().setWantedPosition(ascensoOrigen.getX() + 0.5D, mob.getY(),
+                        ascensoOrigen.getZ() + 0.5D, 0.35D);
+                if (now > ascensoDeadline) {
+                    abortarAscenso(now, "no_centrado " + ascensoOrigen.toShortString());
+                }
+                return;
+            }
+            boolean soporte = NavObstruction.hasSolidFace(mob.level(), cara.below())
+                    || NavObstruction.hasSupportFace(mob.level(), cara);
+            boolean invade = new net.minecraft.world.phys.AABB(cara)
+                    .intersects(mob.getBoundingBox().inflate(0.05D));
+            boolean colocable = NavClimbStepPolicy.placeable(true, true, true, soporte, invade,
+                    az.protegidaParaNavegacion(cara));
+            if (!colocable) {
+                abortarAscenso(now, "escalon_no_colocable soporte=" + soporte + " invade=" + invade);
+                return;
+            }
+            if (!tryAcquireExplicit(NavRoute.Transition.BUILD, cara)) {
+                return;
+            }
+            boolean colocado = placement != null && placement.place(cara);
+            if (!colocado || mob.level().getBlockState(cara).getCollisionShape(mob.level(), cara).isEmpty()) {
+                abortarAscenso(now, "place_fallido " + cara.toShortString());
+                return;
+            }
+            ascensoColocado = true;
+            ascensoDeadline = now + ASCENSO_FASE_MAX_TICKS;
+            if (NavTrace.on()) {
+                NavTrace.ev("CLIMB_STEP_PLACED", "uuid=" + mob.getUUID() + " tick=" + now
+                        + " face=" + cara.toShortString() + " pos=" + mob.blockPosition().toShortString());
+            }
+            return;
+        }
+        // 3) Subir físicamente al escalón colocado.
+        if (!NavObstruction.fits(mob.level(), mob, arriba)
+                || !NavObstruction.hasSupport(mob.level(), arriba)) {
+            abortarAscenso(now, "destino_no_entrable " + arriba.toShortString());
+            return;
+        }
+        double px = arriba.getX() + 0.5D;
+        double py = arriba.getY();
+        double pz = arriba.getZ() + 0.5D;
+        mob.getNavigation().moveTo(px, py, pz, 1.0D);
+        traceActuatorCommand("CLIMB_STEP_MOVE", arriba, now);
+        if (mob.getNavigation().isDone()) {
+            int manhattan = mob.blockPosition().distManhattan(arriba);
+            boolean nudge = NavAdjacentApproachPolicy.shouldNudge(true, true, manhattan, 2,
+                    NavObstruction.fits(mob.level(), mob, arriba),
+                    NavObstruction.hasSupport(mob.level(), arriba));
+            if (nudge) {
+                mob.getMoveControl().setWantedPosition(px, py, pz, 1.0D);
+            }
+        }
+    }
+
+    private void abortarAscenso(long now, String motivo) {
+        ascensoUltimo = motivo;
+        ascensoFallos++;
+        limpiarAscenso();
+        ascensoNextAt = now + ASCENSO_COOLDOWN_TICKS;
+        state = NavState.PLANNING;
+        nextPlanAt = now + REPLAN_COOLDOWN_TICKS;
+        if (NavTrace.on()) {
+            NavTrace.ev("CLIMB_STEP_ABORTED", "uuid=" + mob.getUUID() + " tick=" + now
+                    + " motivo={" + motivo + "} fallos=" + ascensoFallos + "/" + ASCENSO_MAX_FALLOS
+                    + " pos=" + mob.blockPosition().toShortString());
+        }
+    }
+
+    private void limpiarAscenso() {
+        ascensoOrigen = null;
+        ascensoBloque = null;
+        ascensoColocado = false;
+        ascensoDeadline = 0L;
+    }
+
+    private boolean tryAcquireExplicit(NavRoute.Transition transicion, BlockPos objetivo) {
+        long now = mob.level().getGameTime();
+        boolean permitido = TraversalActionLeasePolicy.canAcquireExplicit(
+                now, traversalActionLeaseTick, traversalActionLeaseUsed,
+                ascensoBloque != null, transicion, objetivo, transicion, objetivo);
+        if (!permitido) {
+            return false;
+        }
+        traversalActionLeaseTick = now;
+        traversalActionLeaseUsed = true;
+        return true;
+    }
+
+    /** A2 diagnóstico acotado del escalón de ascenso (una línea). */
+    public String ascensoDiag() {
+        return "ascensos=" + ascensosEnMision + "/" + MAX_ASCENSOS_MISION
+                + " fallos=" + ascensoFallos + "/" + ASCENSO_MAX_FALLOS
+                + " ultimo={" + ascensoUltimo + "}"
+                + " activo=" + (ascensoBloque == null ? "-"
+                : ascensoBloque.toShortString() + " colocado=" + ascensoColocado);
     }
 
     private boolean intentarRoturaDeRecuperacion() {
@@ -3635,6 +4126,11 @@ public final class NavExecutor {
             tickTunnelPlan(now);
             return;
         }
+        // A2 · El escalón de ascenso, si está en curso, también es dueño único del tick.
+        if (ascensoBloque != null) {
+            tickAscenso(now);
+            return;
+        }
         if (breachMoveTarget != null) {
             tickBreachMove(now);
             return;
@@ -3906,6 +4402,15 @@ public final class NavExecutor {
                     + " replans=" + replans + "/" + MAX_REPLANS_PER_DESTINATION
                     + " budget=" + presupuestosSinProgresoTotal + "/" + MAX_BUDGET_RETRIES);
         }
+        // A2 · DESNIVEL REAL CON MURO DELANTE: el ascenso manda sobre planificar. Si la misión está >= 3 bloques
+        // por encima y hay un muro rompible adyacente, la ruta óptima es escalar ahí mismo; el A* prefiere rodear
+        // la meseta (medido: IDX7/8 deambulando 500+ bloques alrededor del acantilado). Es acotado por
+        // MAX_ASCENSOS_MISION y por el presupuesto del actuador.
+        BlockPos misionAscenso = misionDePie();
+        if (misionAscenso != null && misionAscenso.getY() - mob.blockPosition().getY() >= 3
+                && intentarAscenso(now, "desnivel_mayor")) {
+            return;
+        }
         if (Boolean.getBoolean("devilrpg.a2n.diagJump")) {
             com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPDBG] PLAN objective={} misionFinal={}",
                     objective, misionFinal);
@@ -3986,7 +4491,13 @@ public final class NavExecutor {
                 if (fallosDeEscalonDeObjetivo >= MAX_FALLOS_DE_ESCALON_DE_OBJETIVO) {
                     // A2 · FRENTE EN CALLEJÓN SIN OBJETIVO LOCAL UTILIZABLE: último recurso acotado antes
                     // del fallo terminal es un plan de túnel subordinado hacia la misión.
-                    if (intentarPlanDeTunel(now, "sin_objetivo_local")) {
+                    if (misionPorEncima() && intentarAscenso(now, "sin_objetivo_local")) {
+                        return;
+                    }
+                    if (misionPorEncima() && intentarAvanceHaciaMision(now, "sin_objetivo_local")) {
+                        return;
+                    }
+                    if (intentarPlanDeTunel(now, "sin_objetivo_local", false)) {
                         return;
                     }
                     noPlanifica("escalonado sin objetivo valido (" + fallosDeEscalonDeObjetivo + " fallos)");
@@ -4041,6 +4552,24 @@ public final class NavExecutor {
         expansionsTotal += result.expansions();
         lastPlanSummary = result.summary();
         if (result.hitBudget()) {
+            // A2 · UNA RUTA GLOBAL VALIDADA SE EJECUTA, NO SE RE-PLANIFICA. Medido en `a2n-20261121-221911`:
+            // IDX7 tenía una ruta global de 52 nodos desde SU MISMA celda hasta la misión (con aristas BUILD que
+            // suben los 6-8 bloques de desnivel) y, aun así, gastaba el presupuesto local de 900 en un plan
+            // equivalente y entraba en el bucle de reintentos. Si la ruta global une la celda actual con la
+            // misión, es la ruta a ejecutar.
+            // A2 · PRESUPUESTO LOCAL AGOTADO CON LA MISIÓN POR ENCIMA. Orden de decisión: primero la acción de
+            // terreno de corto alcance (acercarse a pie, luego el escalón de ascenso), y solo si ninguna aplica
+            // se lanza la búsqueda global. Así cada escalón de subida encadena el siguiente sin esperar una
+            // búsqueda de 8000 expansiones que, junto a un acantilado, no puede resolver nada.
+            if (misionPorEncima() && intentarAscenso(now, "presupuesto_local")) {
+                return;
+            }
+            if (misionPorEncima() && intentarAvanceHaciaMision(now, "presupuesto_local")) {
+                return;
+            }
+            if (intentarRutaGlobalValidada(now)) {
+                return;
+            }
             // A2 Stage 4K: la exhaucion de presupuesto SOLO se enruta a CONSTRUCCION si el objetivo activo exige
             // construccion por geometria real (caida > segura Y sin aterrizaje intermedio soportado). Las rutas
             // complejas normales conservan su reintento de siempre.
@@ -4099,7 +4628,13 @@ public final class NavExecutor {
         if (result.route().isEmpty()) {
             // A2 · CALLEJÓN SIN RUTA. Antes de gastar recuperación genérica se pide un plan de túnel
             // subordinado (2 de alto, cardinal, hacia la misión). Si no hay plan válido el flujo no cambia.
-            if (intentarPlanDeTunel(now, "sin_ruta_local")) {
+            if (misionPorEncima() && intentarAscenso(now, "sin_ruta_local")) {
+                return;
+            }
+            if (misionPorEncima() && intentarAvanceHaciaMision(now, "sin_ruta_local")) {
+                return;
+            }
+            if (intentarPlanDeTunel(now, "sin_ruta_local", false)) {
                 return;
             }
             // A genuinely exhausted search is also a no-progress failure. Count it toward the
@@ -4939,12 +5474,54 @@ public final class NavExecutor {
             }
             // Keep the original route, cursor and plannedFrom untouched. A failed temporary
             // search must not destroy the route whose DROP take-off we are trying to recover.
+            if (dropTakeoffRechazoClave != null && dropTakeoffRechazoClave.equals(takeoff)) {
+                dropTakeoffRechazos++;
+            } else {
+                dropTakeoffRechazoClave = takeoff.immutable();
+                dropTakeoffRechazos = 1;
+            }
+            // A2 · NO LIVELOCK: un take-off al que el grafo no puede volver (ascenso > +1 por arista) se
+            // reintentaba para siempre conservando la ruta. Medido en `a2n-20261121-212053`: 160 rechazos
+            // idénticos y el ente congelado en TRAVERSING. Al tercer rechazo, con una fuente física válida,
+            // se abandona la arista y se replanifica desde la celda real.
+            boolean fuenteValida = grounded && esPieValido(start)
+                    && NavObstruction.hasSupport(mob.level(), start)
+                    && NavObstruction.fitsActualAabb(mob.level(), mob);
+            if (dropTakeoffRechazos >= 3 && fuenteValida) {
+                if (NavTrace.on()) {
+                    NavTrace.ev("DROP_TAKEOFF_RECOVERY_ABANDONED", "uuid=" + mob.getUUID()
+                            + " tick=" + now + " from=" + start.toShortString()
+                            + " takeoff=" + takeoff.toShortString() + " rechazos=" + dropTakeoffRechazos
+                            + " action=discard_drop_edge_and_replan_from_real_source");
+                }
+                dropTakeoffRechazos = 0;
+                dropTakeoffRechazoClave = null;
+                if (misionFinal != null) {
+                    objective = misionFinal.immutable();
+                }
+                route = null;
+                routeIndex = 0;
+                plannedFrom = null;
+                objetivoTransicionLocal = null;
+                objetivoAccionLocal = null;
+                globalCache = null;
+                NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                globalSearchStart = null;
+                globalSearchLastExpansions = 0;
+                globalDesde = null;
+                nextDropRecoveryPlanAt = 0L;
+                state = NavState.PLANNING;
+                nextPlanAt = now;
+                return false;
+            }
             nextDropRecoveryPlanAt = now + REPLAN_COOLDOWN_TICKS;
             return false;
         }
 
         rutaDropSuspendida = route;
         indiceRutaDropSuspendida = routeIndex;
+        dropTakeoffRechazos = 0;
+        dropTakeoffRechazoClave = null;
         objetivoRecuperacionOrigenDrop = takeoff.immutable();
         plannedFromDropSuspendido = plannedFrom;
         plannedFromDropSuspendidoCapturado = true;
@@ -5549,6 +6126,46 @@ public final class NavExecutor {
                     return;
                 }
 
+                // A2 · DROP QUE ATERRIZA MÁS ABAJO DE LO PREVISTO. Si el mob ya cayó a una celda de pie válida
+                // (suelo, soporte, AABB) dentro de la caída segura y a ≤1 horizontal del aterrizaje del nodo,
+                // el DROP está físicamente completado: se acepta el aterrizaje real y se replanifica en vez de
+                // exigir volver al take-off (imposible cuando el grafo solo asciende +1 por arista).
+                if (node.transition() == NavRoute.Transition.DROP
+                        && NavDropOvershootPolicy.acceptRealLanding(
+                                mob.onGround(), esPieValido(mob.blockPosition()),
+                                NavObstruction.hasSupport(mob.level(), mob.blockPosition()),
+                                NavObstruction.fitsActualAabb(mob.level(), mob),
+                                mob.blockPosition().getX(), mob.blockPosition().getY(), mob.blockPosition().getZ(),
+                                node.pos().getX(), node.pos().getY(), node.pos().getZ(),
+                                policies.maxSafeDrop())) {
+                    if (NavTrace.on()) {
+                        NavTrace.ev("DROP_OVERSHOOT_LANDING_ACCEPTED", "uuid=" + mob.getUUID()
+                                + " tick=" + sourceCheckTick + " planned=" + node.pos().toShortString()
+                                + " real=" + mob.blockPosition().toShortString()
+                                + " dy=" + (node.pos().getY() - mob.blockPosition().getY())
+                                + " action=accept_real_landing_and_replan");
+                    }
+                    clearDropApproachOwner("drop_overshoot_landed");
+                    clearDropEdgeStep("drop_overshoot_landed");
+                    dropTakeoffRechazos = 0;
+                    dropTakeoffRechazoClave = null;
+                    if (misionFinal != null) {
+                        objective = misionFinal.immutable();
+                    }
+                    route = null;
+                    routeIndex = 0;
+                    plannedFrom = null;
+                    objetivoTransicionLocal = null;
+                    objetivoAccionLocal = null;
+                    globalCache = null;
+                    NavPlanner.cancelGlobalSearch(globalSearchHandle);
+                    globalSearchStart = null;
+                    globalSearchLastExpansions = 0;
+                    globalDesde = null;
+                    state = NavState.PLANNING;
+                    nextPlanAt = now;
+                    return;
+                }
                 if (origenPlan != null
                         && !NavDropTransitionPolicy.origenFisicamenteAlcanzado(
                                 mob.onGround(), esPieValido(mob.blockPosition()),
@@ -6437,7 +7054,8 @@ public final class NavExecutor {
      */
     public String rutaAccionDiag() {
         return "nodoRecuperacion=" + (nodoDeRecuperacion == null ? "-" : nodoDeRecuperacion.toShortString())
-                + " ultimaAccionDeRuta=" + ultimaAccionDeRuta + " tunel={" + tunelDiag() + "}";
+                + " ultimaAccionDeRuta=" + ultimaAccionDeRuta + " tunel={" + tunelDiag() + "}"
+                + " ascenso={" + ascensoDiag() + "}";
     }
 
     /**

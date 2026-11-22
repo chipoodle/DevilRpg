@@ -921,12 +921,16 @@ public class AggressiveZombieEntity extends Zombie {
             return false;
         }
         BlockState state = level().getBlockState(pos);
-        // Keep navigation's promise aligned with breakBlockAt: foliage and logs are never mined for a route.
+        // Keep navigation's promise aligned with breakBlockAt: foliage and logs are never mined for a route,
+        // EXCEPTO los troncos del anillo del muro (breakBlockAt los acepta: el muro perimetral es la brecha).
         // Fluids are never mining targets; EscapeWaterGoal must navigate to a real shore.
         if (!state.getFluidState().isEmpty()) {
             return false;
         }
-        if (state.is(net.minecraft.tags.BlockTags.LOGS) || state.is(net.minecraft.tags.BlockTags.LEAVES)) {
+        boolean esTronco = state.is(net.minecraft.tags.BlockTags.LOGS);
+        boolean esHoja = state.is(net.minecraft.tags.BlockTags.LEAVES);
+        boolean celdaDelMuro = esTronco && esLaMuralla(pos, cotaParaElRecinto());
+        if (com.chipoodle.devilrpg.entity.nav.NavBreakFilterPolicy.vetoWood(esHoja, esTronco, celdaDelMuro)) {
             return false;
         }
         return !state.hasBlockEntity() && canBreakBlock(state);

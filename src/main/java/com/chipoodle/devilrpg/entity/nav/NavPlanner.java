@@ -55,6 +55,13 @@ public final class NavPlanner {
     private static final double COST_BUILD = 16.0D;
     /** Penalización por cambio de dirección, para que las rutas no zigzagueen. */
     private static final double COST_TURN = 0.3D;
+    /**
+     * A2 · TOPE DE TIEMPO DE CPU POR PLAN LOCAL. Una búsqueda patológica (terreno enorme, reaperturas masivas)
+     * no puede bloquear el hilo del servidor: al agotarse se devuelve el mismo resultado que un presupuesto
+     * agotado (inconcluyente, con reintento). Medido en `a2n-20261121-223916`: el watchdog mató el servidor por
+     * un tick de más de 60 s dentro del planificador local.
+     */
+    private static final long MAX_PLAN_MILLIS = 30L;
 
     /** Resultado de una planificación. */
     /**
@@ -129,7 +136,7 @@ public final class NavPlanner {
 
     /** Motivo por el que una arista NO es ejecutable (para no perder los contadores del diagnostico). */
     private enum Rechazo {
-        NINGUNO, CAIDA_INSEGURA, DESNIVEL, NODO_NO_PISABLE, CLASIFICACION
+        NINGUNO, CAIDA_INSEGURA, DESNIVEL, NODO_NO_PISABLE, CLASIFICACION, FUERA_DE_CARGA
     }
 
     /** Una arista ya validada: coste, etiqueta y nivel de pies; o el motivo del rechazo. */
@@ -155,6 +162,14 @@ public final class NavPlanner {
                                         int piesDesde, NavObstruction.Policies policies,
                                         java.util.Set<BlockPos> construidas,
                                         NavBreakExclusionPolicy exclusionesBreak) {
+        // A2 · NUNCA SE PLANIFICA HACIA UN CHUNK SIN CARGAR. Evaluar colisiones en un chunk descargado dispara
+        // su generación SÍNCRONA en el hilo del servidor: medido en `a2n-20261121-223916` como un tick de más
+        // de 60 s que el watchdog mató (pila: NavExecutor.tryPlan -> NavPlanner.plan -> validarArista ->
+        // NavObstruction.fits). El ejecutor ya exige `hasChunkAt` en sus propias celdas; el grafo también.
+        if (level instanceof net.minecraft.world.level.Level world && !world.hasChunkAt(candidate)) {
+            return new Arista(NavObstruction.Kind.BLOCKED, -1.0D, NavRoute.Transition.WALK,
+                    PIES_NO_EJECUTABLE, Rechazo.FUERA_DE_CARGA);
+        }
         NavObstruction.Kind kind = NavObstruction.classify(level, mob, candidate, policies);
         boolean diagBorde = DIAG_DROP && DIAG_START != null && from.equals(DIAG_START);
         if (diagBorde) {
@@ -783,7 +798,8 @@ public final class NavPlanner {
 
     /** A2 Stage 7C · cota inferior admisible horizontal + vertical hacia la region de meta. */
     private static double heuristicaGlobal(BlockPos a, BlockPos b, int maxSafeDrop) {
-        return NavGoalMetric.heuristic(a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ(),
+        // A2 · si la meta está POR ENCIMA se usa la cota dirigida: prioriza subir en vez de drenarse a las cuevas.
+        return NavGoalMetric.heuristicClimbing(a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ(),
                 RADIO_DE_LLEGADA_SQR, 1.0D, SUBIDA_MAXIMA, maxSafeDrop);
     }
 
@@ -979,8 +995,13 @@ public final class NavPlanner {
         int aristasRechazadasPorNodoNoPisable = 0;
         int encolados = 0;
         boolean metaEncolada = false;
+        final long planDeadlineNanos = System.nanoTime() + MAX_PLAN_MILLIS * 1_000_000L;
 
         while (!open.isEmpty()) {
+            if (System.nanoTime() > planDeadlineNanos) {
+                hitBudget = true;
+                break;
+            }
             Node current = open.poll();
             BlockPos pos = current.pos();
             if (closed.contains(pos)) {

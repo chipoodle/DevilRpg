@@ -1,3 +1,15 @@
+# CURRENT CHECKPOINT — 2026-11-22 Asedio zombi: 8 causas raíz corregidas, A2 6/8 estricto
+
+**Branch:** feature/autonomous-village
+**Base:** 9a4553af
+**Report:** docs/autonomous-village/2026-11-22-A2-ZOMBIE-SIEGE-RELIABILITY.md
+
+- Campaña de corrección del asedio zombi: celdas de pie por colisión (nieve), tramo local acotado, overshoot DROP y abandono del take-off imposible, guardián de progreso real, troncos del muro rompibles para el planificador, cota dirigida de subida, ejecución de ruta global/frente validada, escalón de ASCENSO, guarda de chunks descargados y tope de CPU por plan (watchdog de 60 s cerrado).
+- Mejor run `a2n-20261121-232035`: 6/8 estricto (IDX1,2,3,4,5,6), C4 PASS. Baseline de la campaña: 3/8. Diez corridas en mundos nuevos; C4 PASS en todas las completadas.
+- Tests nuevos: NAV_FEET_CELL 9, NAV_LOCAL_OBJECTIVE_LEG 9, NAV_DROP_OVERSHOOT 10, NAV_BREAK_FILTER 7, NAV_CLIMB_STEP 19; ampliados NAV_LOCAL_OBJECTIVE_PROGRESS 10, NAV_GOAL_METRIC y lease explícito. Gates verdes.
+- Bloqueos restantes con evidencia: IDX7/8 necesitan encadenar 6-8 subidas antes de t=6000 (el ascenso ya completa subidas; el A* intercala rodeos); IDX3 a 0,46 del umbral en el anillo en RECOVERING; IDX4 descenso largo variable.
+- Siguiente: ascenso con prioridad absoluta mientras misionY-mobY>=3 y muro adyacente; arreglar la recuperación en el anillo (IDX3); acelerar el descenso (IDX4). Después 8/8 dos veces consecutivas + C4 PASS. Sin subir presupuestos globales ni relajar protección/lease/soporte/AABB/headroom.
+
 # CURRENT CHECKPOINT — 2026-11-21 Túnel subordinado integrado, A2 3/8 estricto
 
 **Branch:** feature/autonomous-village
