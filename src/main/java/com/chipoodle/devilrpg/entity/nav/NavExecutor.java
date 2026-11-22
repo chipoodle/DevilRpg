@@ -6606,7 +6606,7 @@ public final class NavExecutor {
                     // re-emitía el nudge cada tick (distanceToLanding oscilando, 40 intentos y replan eterno).
                     // Si el mob YA está en una celda de despegue soportada y contigua, el paso de borde manda:
                     // activa su propio MoveControl y suelta la gravedad cuando el AABB sale del soporte.
-                    boolean navDoneODespegueValido = mob.getNavigation().isDone() || takeoffOk;
+                    boolean navDoneODespegueValido = mob.getNavigation().isDone() || (takeoffOk && misionDebajo());
                     if (NavDropEdgeStepPolicy.shouldStart(node.transition() == NavRoute.Transition.DROP,
                             navDoneODespegueValido, mob.onGround(),
                             approachCurrent.equals(node.pos()), horizontalDistance,
