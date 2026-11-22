@@ -1,3 +1,20 @@
+# CURRENT CHECKPOINT — Ronda 11: 7/8 reproducible en ventana oficial; IDX4 a ~1 bloque (2026-11-22)
+
+- Sin cambios netos de código (reserva probada y revertida). HEAD `60606d8f` sobre `314224ed`.
+- **`a2n-20261122-043133` (12000, build validada): 7/8 estricto** (IDX2,6,5,1,3,8,7) + **C4 PASS**.
+  **IDX4: `600,71,549`, dist 62,91** (entroPerimetroEver=true). Reproduce el 7/8 de `034636`: son dos corridas
+  con 7/8 en la ventana oficial.
+- **Varianza medida**: la build validada dio 7/8 (034636, 043133) y 4/8 en dos corridas con cambios de prueba
+  (040302 con exención, 041739 con reserva). Los 4/8 no son atribuibles con certeza a esos cambios: hay
+  variabilidad de orden de tick/combate entre corridas. Medir siempre con varias corridas por build.
+- **Reserva de brecha (≤6 bloques, no romper terreno no-muro): NO ayuda a IDX4** porque gasta los 40 bloques en
+  la MONTAÑA antes de llegar a la banda del muro. Revertida.
+- **Causa raíz final de IDX4**: la ruta de descenso TALADRA la montaña (BREAK_HEAD/BREAK_STAND casi cada bloque)
+  y consume el presupuesto; llega al muro con 0/40 y no puede abrir la brecha (dist 62,9-63,2).
+- **Siguiente hipótesis (ronda 12)**: denegar el BREAK de ruta en descensos largos (desnivel >6) para forzar la
+  bajada por caídas/pasos de borde, preservando el presupuesto; validar con 2-3 corridas 12000 y medir si IDX4
+  llega al muro con bloques y cruza a <=62.
+
 # CURRENT CHECKPOINT — Ronda 10: exención del muro probada y REVERTIDA (2026-11-22)
 
 - **Exención de presupuesto para romper el muro objetivo: probada y REVERTIDA.** La corrida
