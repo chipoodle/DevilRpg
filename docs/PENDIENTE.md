@@ -1,3 +1,28 @@
+# CURRENT CHECKPOINT — A2 ACEPTADO: 8/8 estricto en TRES corridas consecutivas + C4 PASS (2026-11-22)
+
+**Criterio cumplido con margen**: 8/8 estricto DENTRO-PARED en tres corridas completas consecutivas con C4
+integrado PASS (el criterio pedía dos), semilla 12345, ventana oficial 12000, mundos nuevos y desechables.
+
+```text
+a2n-20261122-054142 → C4_PASS · estrictos=1,2,3,4,5,6,7,8 · entranPerimetroEver=8
+a2n-20261122-094529 → C4_PASS · estrictos=1,2,3,4,5,6,7,8 · entranPerimetroEver=8
+a2n-20261122-100646 → C4_PASS · estrictos=1,2,3,4,5,6,7,8 · entranPerimetroEver=8
+```
+
+**Build aceptada**: `5ad02088` (narrow wall exemption + descent break cost), encima de `314224ed`, `d4515543`,
+`f574b4af`, `55d9d430`, `1cf7d8ef`, `83e10d86`, `92083380` y `9a4553af`.
+
+**Las dos correcciones finales que cerraron A2**:
+1. **Exención estrecha del muro**: romper una celda del anillo no consume el presupuesto de 40 bloques de
+   terreno, **solo** cuando el ente ya está en la banda del anillo (60,5-65 del objetivo); la cadencia se
+   mantiene y lejos del muro el contrato no cambia. Desbloqueó IDX4 (llegaba con `tunel 0/40`).
+2. **Penalización de BREAK en descenso largo** (+120 si la meta está >6 por debajo): el A* prefiere caídas y
+   pasos de borde en la bajada de la montaña.
+
+**Reporte completo**: `docs/autonomous-village/2026-11-22-A2-ZOMBIE-SIEGE-RELIABILITY.md` (§0 y §5-bis/§6).
+**Preservación**: solo mundos nuevos `build/a2n/<runId>/game/a2n`; `run/a2n`=False; `run/saves` intacto; sin
+borrados ni `reset --hard`; untracked previos conservados.
+
 # CURRENT CHECKPOINT — 2026-11-22 Asedio zombi: 8 causas raíz corregidas, A2 6/8 estricto
 
 **Branch:** feature/autonomous-village

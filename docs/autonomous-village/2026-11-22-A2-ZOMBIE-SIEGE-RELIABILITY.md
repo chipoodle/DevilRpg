@@ -1,14 +1,30 @@
 # A2 — Fiabilidad del asalto zombi: causas raíz y correcciones (2026-11-21/22)
 
-## 1. Resultado
+## 0. RESULTADO FINAL (2026-11-22 10:19) — A2 ACEPTADO
 
-**A2 sigue OPEN, pero sube de 3/8 a 6/8 estricto DENTRO-PARED** en el mejor run de la campaña, con
-**C4 integrado PASS en todas las corridas**. Se han corregido ocho causas raíz con evidencia runtime y
-pruebas deterministas; los tres asaltantes restantes tienen diagnóstico medido y trabajo acotado.
+**A2 aceptado: 8/8 estricto DENTRO-PARED en TRES corridas completas consecutivas con C4 integrado PASS**
+(criterio: dos consecutivas). Semilla 12345, ventana oficial de aceptación (12000 ticks), mundos nuevos y
+desechables, sin tocar `run/saves` ni mundos protegidos.
 
 ```text
-Mejor run: a2n-20261121-232035 → 6/8 estricto (IDX1, IDX2, IDX3, IDX4, IDX5, IDX6), C4 PASS
+a2n-20261122-054142 → C4_PASS · estrictos=1,2,3,4,5,6,7,8 · entraronPerimetroEver=8
+a2n-20261122-094529 → C4_PASS · estrictos=1,2,3,4,5,6,7,8 · entraronPerimetroEver=8
+a2n-20261122-100646 → C4_PASS · estrictos=1,2,3,4,5,6,7,8 · entraronPerimetroEver=8
 ```
+
+Build aceptada: commit `5ad02088` (`fix(nav): preserve the wall breach - narrow wall exemption plus descent
+break cost`). IDX4, el último bloqueador, entra en t=8541/8451/8668 tras la exención estrecha del muro.
+
+## 1. Resultado de la campaña de corrección
+
+**Punto de partida: 3/8 estricto; final: 8/8 en tres corridas consecutivas.** Se han corregido once causas
+raíz con evidencia runtime y pruebas deterministas.
+
+```text
+Mejor run previo: a2n-20261121-232035 → 6/8 estricto (IDX1, IDX2, IDX3, IDX4, IDX5, IDX6), C4 PASS
+Run de aceptación: a2n-20261122-100646 → 8/8 estricto, C4 PASS
+```
+
 
 ## 2. Punto de partida
 
