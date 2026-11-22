@@ -1,3 +1,15 @@
+# CURRENT CHECKPOINT — Ronda 10: exención del muro probada y REVERTIDA (2026-11-22)
+
+- **Exención de presupuesto para romper el muro objetivo: probada y REVERTIDA.** La corrida
+  `a2n-20261122-040302` (12000, con exención) dio solo **4/8 estricto** (IDX6,2,5,1) frente a 7/8 de
+  `034636`: al no descontar presupuesto por el muro, los atacantes cambian su comportamiento de rotura y
+  IDX3/7/8 se pierden. Commit `314224ed` sigue siendo el estado válido (HEAD actual).
+- **Causa raíz vigente de IDX4**: su presupuesto `tunel 0/40` se gasta en el DESCENSO de la montaña (ruta con
+  BREAK_HEAD/BREAK_STAND en y=109-77 y en el borde exterior del muro). La brecha final no puede romper.
+- **Siguientes (sin exenciones globales)**: (1) que el descenso NO consuma el túnel — preferir DROP/paso de borde
+  y negar BREAK de ruta en pendiente cuando la misión está por debajo (preservando la cadencia); (2) validar con
+  dos corridas 12000 seguidas.
+
 # CURRENT CHECKPOINT — Ronda 9: 7/8 en ventana oficial; IDX4 sin presupuesto de túnel (2026-11-22)
 
 - Commit `314224ed`. **Corrida `a2n-20261122-034636` (ventana oficial 12000): 7/8 estricto**
