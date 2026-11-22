@@ -1232,6 +1232,11 @@ public final class NavExecutor {
      * escalonado: es la que mide el progreso y la que usa el plan de construccion.
      */
     private BlockPos misionFinal;
+
+    /** A2 · misión final actual (para la exención estrecha de la brecha en el ente). */
+    public BlockPos misionActual() {
+        return misionFinal;
+    }
     /** A2 Stage 7B · objetivos locales usados y fallos seguidos eligiendolos (ambos ACOTADOS). */
     private int escalonesDeObjetivo;
     /** One bounded rearm of the local stair budget after a verified terrain break, per mission. */

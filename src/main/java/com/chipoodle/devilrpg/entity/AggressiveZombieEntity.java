@@ -1888,6 +1888,30 @@ public class AggressiveZombieEntity extends Zombie {
         if (!alAlcanceDeRotura(nodo)) {
             return false; // no se pica a distancia
         }
+        // A2 · EXENCIÓN ESTRECHA DE LA BRECHA FINAL. El presupuesto de 40 bloques acota la modificación de
+        // terreno; la celda del MURO, y solo cuando el ente ya está en la banda del anillo (60,5-65 del objetivo),
+        // no lo consume. Medido en `a2n-20261122-043133`: IDX4 llega al muro con 0/40 y se queda a 0,9 del criterio.
+        // La ventana estrecha evita que la exención cambie el comportamiento de aproximación de los demás.
+        BlockPos misionBrecha = navExecutor == null ? null : navExecutor.misionActual();
+        boolean enBandaDelMuro = false;
+        if (misionBrecha != null) {
+            double dxb = blockPosition().getX() - misionBrecha.getX();
+            double dzb = blockPosition().getZ() - misionBrecha.getZ();
+            double distB = Math.sqrt(dxb * dxb + dzb * dzb);
+            enBandaDelMuro = distB >= 60.5D && distB <= 65.0D;
+        }
+        boolean muroEnBanda = enBandaDelMuro && esLaMuralla(nodo, cotaParaElRecinto());
+        if (muroEnBanda) {
+            if (tunelEspera > 0) {
+                return false; // la cadencia sigue aplicando
+            }
+            boolean rotoMuro = breakBlockAt(nodo);
+            if (rotoMuro) {
+                tunelEspera = TUNEL_ENTRE_BLOQUES;
+                navExecutor.terrainChanged();
+            }
+            return rotoMuro;
+        }
         if (tunelRestante <= 0 || tunelEspera > 0) {
             return false; // mismo presupuesto y misma cadencia que el túnel
         }

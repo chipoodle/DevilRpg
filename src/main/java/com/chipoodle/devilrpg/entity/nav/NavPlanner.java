@@ -47,6 +47,8 @@ public final class NavPlanner {
     private static final double COST_DROP = 1.8D;
     /** Romper es caro: solo cuando de verdad no hay paso. */
     private static final double COST_BREAK = 12.0D;
+    /** A2 · coste extra de romper terreno cuando la meta está >6 bloques por debajo (descenso largo). */
+    private static final double COST_BREAK_DESCENSO = 120.0D;
     private static final double COST_BRIDGE = 14.0D;
     /**
      * A2 Stage 4Q · Coste de CONSTRUIR un escalon. Caro a proposito: construir es la ultima opcion, nunca un atajo
@@ -159,7 +161,7 @@ public final class NavPlanner {
      * el de la capa local y no hay dos verdades sobre que es un movimiento legal.
      */
     private static Arista validarArista(CollisionGetter level, Mob mob, BlockPos from, BlockPos candidate,
-                                        int piesDesde, NavObstruction.Policies policies,
+                                        int piesDesde, int goalY, NavObstruction.Policies policies,
                                         java.util.Set<BlockPos> construidas,
                                         NavBreakExclusionPolicy exclusionesBreak) {
         // A2 · NUNCA SE PLANIFICA HACIA UN CHUNK SIN CARGAR. Evaluar colisiones en un chunk descargado dispara
@@ -181,6 +183,12 @@ public final class NavPlanner {
                     level.getBlockState(candidate.below()));
         }
         double cost = costOf(kind);
+        // A2 · PENALIZACIÓN DE BREAK EN DESCENSO LARGO. Medido en `a2n-20261122-043133`: IDX4 taladraba la ladera
+        // (BREAK casi en cada bloque) y llegaba al muro con `tunel 0/40`. Con la penalización el A* prefiere las
+        // caídas/pasos de borde y conserva presupuesto para la muralla. Es un coste, no una prohibición.
+        if (kind == NavObstruction.Kind.BREAKABLE && from.getY() - goalY > 6) {
+            cost += COST_BREAK_DESCENSO;
+        }
         NavRoute.Transition transicion = transitionOf(kind);
         int piesHasta = piesResultantes(kind, candidate, level, policies);
         if (cost < 0 && construidas != null && construidas.contains(candidate)) {
@@ -538,7 +546,7 @@ public final class NavPlanner {
                                 || Math.abs(candidate.getZ() - start.getZ()) > maxRadio) {
                             continue;
                         }
-                        Arista arista = validarArista(level, mob, pos, candidate, feet, policies,
+                        Arista arista = validarArista(level, mob, pos, candidate, feet, objetivo.getY(), policies,
                                 construidas, exclusionesBreak);
                         if (traceThisExpansion) {
                             BlockPos feetCell = arista.piesHasta() == PIES_NO_EJECUTABLE
@@ -1031,7 +1039,7 @@ public final class NavPlanner {
                     // A2 Stage 7C · la validacion de arista vive en UN solo sitio (`validarArista`) y la comparten
                     // la busqueda local y la global: mismo grafo, mismas reglas, mismos contadores.
                     Arista arista = validarArista(level, mob, pos, candidate,
-                            piesDe.getOrDefault(pos, pos.getY()), policies, construidas, exclusionesBreak);
+                            piesDe.getOrDefault(pos, pos.getY()), goal.getY(), policies, construidas, exclusionesBreak);
                     NavObstruction.Kind kind = arista.kind();
                     evaluados++;
                     porCategoria[kind.ordinal()]++;
