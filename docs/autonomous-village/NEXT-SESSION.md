@@ -1,3 +1,17 @@
+# CURRENT CHECKPOINT — Ronda 6: causa raíz del DROP de IDX4 identificada (2026-11-22)
+
+- Sin cambios de código netos (se probó y revirtió un contador de intentos con progreso). HEAD `55d9d430`.
+- **Causa raíz medida del bucle de IDX4** (`a2n-20261122-024128` y `-025141`): el nodo DROP `568,115` con dy=-1
+  se ejecuta con `salida = (x_aterrizaje, y_mob, z_aterrizaje)` (la celda ENCIMA del aterrizaje). Para dy=-1 esa
+  celda no es pisable (su soporte sería el propio aterrizaje, que debe ser aire): el mob queda en 568,116 con
+  `DROP_COMMAND`/`DROP_VALID` cada tick, `distanceToLanding` 0,916→0,732 y vuelta atrás cada 40 intentos.
+  El contador de progreso (probado) lo convierte en bloqueo permanente, así que se revirtió.
+- **Arreglo propuesto (siguiente)**: en `describirDescenso`, para dy=-1 con aterrizaje contiguo en horizontal, la
+  salida debe ser la CELDA DEL MOB (walk-off lateral), no la celda sobre el aterrizaje; validar con las pruebas
+  de DROP existentes y con los ataques que ya funcionan (IDX3/5 bajan al interior con dy=-1 y no deben romperse).
+- Estado vigente: **7/8 estricto** (`012959`, `020402`) con C4 PASS; IDX4 es el único ausente (se queda en
+  y≈116 cerca de 568,116,524).
+
 # CURRENT CHECKPOINT — Ronda 5: cadencia de escalera corregida; IDX4 sigue atascado (2026-11-22)
 
 - Commit `55d9d430`. Mejor resultado vigente: **7/8 estricto** (`012959`, `020402`: IDX1,2,3,5,6,7,8) con C4 PASS.
