@@ -1,3 +1,16 @@
+# CURRENT CHECKPOINT — Ronda 12: reserva en descenso probada y revertida; varianza bimodal (2026-11-22)
+
+- **Reserva de presupuesto en descenso largo (≤8 bloques, no romper terreno no-muro): probada y REVERTIDA.**
+  `a2n-20261122-044527` (12000) dio **4/8** (IDX2,6,5,1) — el mismo patrón que las otras dos corridas con
+  cambios en `romperNodoDeRuta` (040302 exención, 041739 reserva final). HEAD vuelve a `314224ed`.
+- **Hallazgo: la varianza es BIMODAL** — la build validada produce **7/8** (034636, 043133) o **4/8**
+  (las tres corridas con cambios en el ente). En las 4/8 fallan IDX3/7/8 en la fase tardía. No se puede
+  concluir con una sola corrida; hay que medir 2-3 por build.
+- **IDX4 no se arregla desde `romperNodoDeRuta`**: tocar ese punto coincide con la atracción mala. La vía
+  siguiente es el PLANIFICADOR: penalizar (no denegar) las aristas BREAK cuando el desnivel de descenso es >6,
+  para que el A* prefiera caídas/pasos de borde y el presupuesto llegue al muro.
+- Estado: **7/8 estricto reproducible + C4 PASS** (ventana oficial); IDX4 a 62,9-63,2 con `tunel 0/40`.
+
 # CURRENT CHECKPOINT — Ronda 11: 7/8 reproducible en ventana oficial; IDX4 a ~1 bloque (2026-11-22)
 
 - Sin cambios netos de código (reserva probada y revertida). HEAD `60606d8f` sobre `314224ed`.
