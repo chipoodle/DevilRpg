@@ -1,3 +1,17 @@
+# CURRENT CHECKPOINT — Ronda 8: ventana oficial 12000 medida; dos bloqueos concretos (2026-11-22)
+
+- Sin cambios de código. Corrida con la **ventana OFICIAL de aceptación (12000 ticks)**:
+  `a2n-20261122-032458` → 5/8 estricto (IDX2,6,1,7,8) + **C4 PASS** en 12000.
+- **IDX4 llegó al borde estricto**: final `602,71,556` dist **63,16** (entroPerimetroEver=true) pero no cruzó a
+  <=62. Necesita ~1,2 bloques hacia dentro: el avance de banda y la brecha no lo metieron. Es el bloqueo más
+  cercano (a 0,16 del criterio).
+- **IDX5 se quedó en y=76** (`602,76,469`, dist 86,2): su descenso se estanca tras bajar de 87; el paso de borde
+  no encadena los últimos bloques.
+- IDX3 esta corrida no entró (final 604,71,580, 74,05); en la corrida 6000 sí entraba (t=2664). La duración de la
+  fase B cambia el calendario del arnés: comparar solo corridas con la misma configuración.
+- **Siguientes**: (1) brecha determinista en el anillo para dist 62-64 (romper la celda del muro hacia la misión y
+  pisar dentro) — desbloquearía IDX4; (2) desbloqueo del descenso de IDX5 en y≈76; (3) dos corridas 8/8 con C4.
+
 # CURRENT CHECKPOINT — Ronda 7: descenso largo desbloqueado (IDX4 122→75), falta tiempo (2026-11-22)
 
 - Commits `f574b4af` y `d4515543`. **Descenso largo de IDX4/IDX5 desbloqueado**: el paso de borde DROP ahora
