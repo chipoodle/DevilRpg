@@ -2681,7 +2681,7 @@ public final class NavExecutor {
     // es aire) aplican. Se entrega un objetivo local acotado que ACERCA de verdad.
     // ============================================================================================
     private boolean intentarAvanceHaciaMision(long now, String causa) {
-        BlockPos mision = misionDePie();
+        BlockPos mision = misionDeReferencia();
         if (mision == null) {
             return false;
         }
@@ -2694,6 +2694,10 @@ public final class NavExecutor {
         }
         double actual = horizontalAlCuadrado(yo, mision);
         double actualLineal = Math.sqrt(actual);
+        // Con un desnivel real (>=3) hace falta poder dar PASOS CORTOS para llegar pegado al acantilado: exigir
+        // 3 bloques de mejora dejaba al ente a una celda del muro sin poder avanzar (medido: IDX8 en 748,63,532
+        // con la cara 747,63,532 en AIRE). La memoria de celdas recientes impide el vaivén A->B->A.
+        double umbral = (mision.getY() - yo.getY() >= 3) ? 0.5D : 3.0D;
         BlockPos mejor = null;
         double mejorDist = Double.MAX_VALUE;
         for (int dx = -10; dx <= 10; dx++) {
@@ -2704,14 +2708,12 @@ public final class NavExecutor {
                 }
                 for (int dy = -1; dy <= 2; dy++) {
                     BlockPos candidato = yo.offset(dx, dy, dz);
-                    if (!mob.level().hasChunkAt(candidato) || !esPieValido(candidato)) {
+                    if (!mob.level().hasChunkAt(candidato) || !esPieValido(candidato)
+                            || recentCells.contains(candidato)) {
                         continue;
                     }
                     double d = horizontalAlCuadrado(candidato, mision);
-                    // A2 · MEJORA MÍNIMA DE 3 BLOQUES (lineal). Con un umbral laxo el ente aceptaba mejoras de
-                    // medio bloque y oscilaba entre dos celdas sin acercarse ni llegar al acantilado: medido en
-                    // `a2n-20261121-232035`, IDX8 rebotando entre 748,532 y 747,534 con dAntes=87.0/dDespues=86.0.
-                    if (Math.sqrt(d) >= actualLineal - 3.0D) {
+                    if (Math.sqrt(d) >= actualLineal - umbral) {
                         continue;
                     }
                     if (d < mejorDist) {
@@ -2752,9 +2754,19 @@ public final class NavExecutor {
     // por tick con lease, verificación real y presupuesto compartido con el túnel.
     // ============================================================================================
 
+    /**
+     * A2 · REFERENCIA DE MISIÓN PARA LAS ACCIONES DE TERRENO. `misionDePie()` puede ser null cuando la misión
+     * cae en una celda no pisable (edificio/huerto del punto de aproximación); para decidir "hay que subir" y
+     * hacia dónde, la altura de la misión FINAL es suficiente y no depende de que exista una celda de pie.
+     */
+    private BlockPos misionDeReferencia() {
+        BlockPos dePie = misionDePie();
+        return dePie != null ? dePie : misionFinal;
+    }
+
     /** ¿La misión utilizable está por encima de los pies? Solo entonces tiene sentido un ascenso. */
     private boolean misionPorEncima() {
-        BlockPos mision = misionDePie();
+        BlockPos mision = misionDeReferencia();
         return mision != null && mob.blockPosition().getY() < mision.getY();
     }
 
@@ -2777,7 +2789,7 @@ public final class NavExecutor {
                 || ascensoFallos >= ASCENSO_MAX_FALLOS) {
             return false;
         }
-        BlockPos mision = misionDePie();
+        BlockPos mision = misionDeReferencia();
         if (mision == null) {
             return false;
         }
@@ -4406,7 +4418,7 @@ public final class NavExecutor {
         // por encima y hay un muro rompible adyacente, la ruta óptima es escalar ahí mismo; el A* prefiere rodear
         // la meseta (medido: IDX7/8 deambulando 500+ bloques alrededor del acantilado). Es acotado por
         // MAX_ASCENSOS_MISION y por el presupuesto del actuador.
-        BlockPos misionAscenso = misionDePie();
+        BlockPos misionAscenso = misionDeReferencia();
         if (misionAscenso != null && misionAscenso.getY() - mob.blockPosition().getY() >= 3
                 && intentarAscenso(now, "desnivel_mayor")) {
             return;

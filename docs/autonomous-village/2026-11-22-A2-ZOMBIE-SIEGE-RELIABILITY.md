@@ -101,6 +101,20 @@ verde.
 | `a2n-20261121-233720` | 4/8 (1,2,5,6) | salto del ascenso completado (6 CLIMB DONE) |
 | `a2n-20261121-234558` | 4/8 (1,2,5,6) | prioridad de ascenso |
 | `a2n-20261121-235432` | 4/8 (1,2,5,6) | sonda de rechazo; IDX3 a 62,46 |
+| `a2n-20261122-000544` | 5/8 (1,2,3,5,6) | referencia de misión con `misionFinal`; IDX3 entra (61,98) |
+| `a2n-20261122-001314` | 4/8 (1,2,5,6) | micro-avance ≥0,5 con memoria de celdas; **primer ascenso de acantilado** (IDX8: 747,63,533 → 747,64,533) |
+
+Últimos hallazgos medidos:
+
+- **`misionDePie()` puede no describir la misión**: el ascenso y el avance usaban solo la celda de pie; ahora
+  usan `misionFinal` como referencia de altura (`misionDeReferencia`). Con eso el ascenso se intenta también
+  cuando la misión cae en una celda no pisable.
+- **Micro-avance junto al acantilado**: exigir 3 bloques de mejora dejaba a IDX8 a UNA celda del muro
+  (`748,63,532` con la cara `747,63,532` en aire). Con desnivel ≥3 se permiten pasos de ≥0,5 bloques,
+  evitando el vaivén con la memoria de celdas recientes. Resultado: IDX8 llegó a `747,63,533` y el ascenso
+  colocó el bloque y subió (primer ascenso de acantilado de la campaña).
+- La sonda `CLIMB_STEP_PROBE` confirma que el rechazo dominante antes del micro-avance era `sin_cara`
+  (la entidad no estaba pegada al muro), no `bloque_no_rompible`.
 
 Notas: IDX3 oscila entre estricto (61,96) y 62,46 (a 0,46 del umbral) porque el escalón de ascenso lo
 deja SOBRE el anillo; IDX4 entra en los runs en los que su descenso de 51 bloques llega a tiempo
