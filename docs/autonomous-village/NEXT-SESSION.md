@@ -1,3 +1,16 @@
+# CURRENT CHECKPOINT — Ronda 4: 7/8 estricto dos veces más, solo IDX4 (2026-11-22)
+
+- Commit `1cf7d8ef`. `a2n-20261122-020402` y `a2n-20261122-012959`: **7/8 estricto (IDX1,2,3,5,6,7,8), C4 PASS**.
+- **Banda del muro determinista**: a <=66 del objetivo el micro-avance manda desde el gancho superior de PLANNING;
+  todos los atacantes se pegan al anillo igual (antes dependía de que fallara el plan local → varianza).
+- **Caducidad del objetivo de avance** (200 ticks): un objetivo elegido e inalcanzable bloqueaba el re-encolado
+  para siempre (guardián "ya en curso").
+- **Descenso progresivo** acotado (1-3 bloques, 40 ticks): ayuda en fallos, pero IDX4 sigue bajando solo
+  ~10 bloques por corrida (122→109/114) porque el DROP/escalón no cubre el desnivel de la montaña.
+- **C4**: 2 de 5 corridas dieron C4_FAIL SOLO por `jobSite=[0,0,0]` (variabilidad del subsistema de puestos).
+- **Siguiente**: taladro descendente dedicado para IDX4 (romper suelo y caer 1-2 bloques de forma controlada,
+  sin tocar presupuestos globales), revalidar C4 y buscar dos 8/8 consecutivos.
+
 # CURRENT CHECKPOINT — Ronda 3: 7/8 estricto (solo falta IDX4), C4 PASS (2026-11-22)
 
 - Commit `83e10d86`. Mejor run de la campaña: `a2n-20261122-012959` → **7/8 estricto**
