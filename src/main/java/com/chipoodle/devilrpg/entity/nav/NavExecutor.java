@@ -6600,8 +6600,15 @@ public final class NavExecutor {
                     boolean takeoffOk = esPieValido(approachCurrent)
                             && NavObstruction.hasSupport(mob.level(), approachCurrent)
                             && NavObstruction.fitsAtCellCenter(mob.level(), mob, approachCurrent);
+                    // A2 · PASO DE BORDE CON DESPEGUE VÁLIDO. Medido en `a2n-20261122-025141`: IDX4 quedaba
+                    // sobre el borde (568,116) con el aterrizaje (568,115) y la navegación activa hacia `aim`
+                    // sin completarse; como `navigationDone` era false, el paso de borde NUNCA arrancaba y se
+                    // re-emitía el nudge cada tick (distanceToLanding oscilando, 40 intentos y replan eterno).
+                    // Si el mob YA está en una celda de despegue soportada y contigua, el paso de borde manda:
+                    // activa su propio MoveControl y suelta la gravedad cuando el AABB sale del soporte.
+                    boolean navDoneODespegueValido = mob.getNavigation().isDone() || takeoffOk;
                     if (NavDropEdgeStepPolicy.shouldStart(node.transition() == NavRoute.Transition.DROP,
-                            mob.getNavigation().isDone(), mob.onGround(),
+                            navDoneODespegueValido, mob.onGround(),
                             approachCurrent.equals(node.pos()), horizontalDistance,
                             NavDropEdgeStepPolicy.MAX_HORIZONTAL, takeoffOk, takeoffOk,
                             supportLanding, fitsLanding)) {
