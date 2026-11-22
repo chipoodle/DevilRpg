@@ -1,3 +1,17 @@
+# CURRENT CHECKPOINT — Ronda 9: 7/8 en ventana oficial; IDX4 sin presupuesto de túnel (2026-11-22)
+
+- Commit `314224ed`. **Corrida `a2n-20261122-034636` (ventana oficial 12000): 7/8 estricto**
+  (IDX6 t=691, IDX2 t=719, IDX5 t=1888, IDX1 t=2173, IDX3 t=3014, IDX8 t=4572, IDX7 t=7896) **+ C4 PASS**.
+- **Brecha en el anillo**: fuera del recinto y en la banda del muro, el plan de túnel se pide DIRECTAMENTE
+  (antes solo tras fallar el A*). **Descenso progresivo desde desnivel ≥3** (antes 10): IDX5 entró en t=1888
+  tras atascarse en y=76.
+- **IDX4 (único ausente) — causa raíz medida**: llegó a `601,71,553` dist **63,10** (a 0,1 del criterio) pero su
+  **presupuesto de rotura está en `tunel 0/40`**: gastó los 40 bloques en el descenso de la montaña, así que la
+  brecha no puede romper el muro. Es un problema de ASIGNACIÓN de presupuesto, no de navegación.
+- **Siguientes**: (1) preservar presupuesto para la brecha final (el descenso no debe gastar los 40: cortar
+  roturas no esenciales de la ruta de bajada, o reservar los últimos bloques para la muralla); (2) validar que
+  IDX4 entra con presupuesto; (3) dos corridas 8/8 con C4 en ventana oficial.
+
 # CURRENT CHECKPOINT — Ronda 8: ventana oficial 12000 medida; dos bloqueos concretos (2026-11-22)
 
 - Sin cambios de código. Corrida con la **ventana OFICIAL de aceptación (12000 ticks)**:
