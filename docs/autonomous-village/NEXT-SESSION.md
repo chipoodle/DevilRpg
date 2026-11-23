@@ -1,3 +1,15 @@
+# AUDITORÍA DE CONSOLIDACIÓN — A2 Y C4 ACEPTADOS; SIGUIENTE ETAPA PENDIENTE DE DECISIÓN (2026-11-23)
+
+- **Informe:** `docs/autonomous-village/2026-11-23-AUTONOMOUS-VILLAGE-CONSOLIDATION-AUDIT.md` (auditoría completa: Git, ramas, NeoForge, navegación §K/§L, persistencia, reconciliación, muro, Full12K, contrato de finalización y hoja de ruta).
+- **A2:** CLOSED — ACCEPTED (3 corridas, 8/8 estricto, C4 integrado PASS).
+- **C4 standalone / Save-ReLoad:** PASS — ACCEPTED (3 campañas consecutivas; 12/12, 0 duplicados, 0 pérdidas).
+- **Git:** `feature/autonomous-village` en `d27bd6c7`, **33 commits por delante** de origin, merge-base `fea54ef7`, árbol limpio salvo untracked preservados.
+- **NeoForge:** AV ya es NeoForge 1.21.1 (moddev 2.0.146 / 21.1.249). `migration-neoforge-1.21.1` comparte base `c2fb3699` y aporta **6 commits exclusivos de A1** (guardias de fundación) **no portados** a AV. Decisión de integración pendiente del dueño; recomendación: AV autoritativa + port selectivo revisado.
+- **Defectos abiertos demostrados:** ninguno. Quedan limitaciones conocidas, deuda técnica (ruta vanilla de POI, cobertura de tests de persistencia, §L) y una decisión de ramas (§K.1).
+- **Full12K:** sin definición independiente; equivale a las corridas de 12000 ticks ya aceptadas.
+- **Muro (`5ad02088`):** se conserva; cumple banda 60,5–65, cadencia y alcance, sin tocar protección/lease/soporte/AABB/headroom.
+- **Siguiente:** el dueño debe decidir (1) estrategia de ramas, (2) si A1 se porta a AV, (3) aprobar el contrato de finalización. No se inicia implementación hasta esa decisión.
+
 # C4 STANDALONE + SAVE/RELOAD — PASS (2026-11-23)
 
 - **Aceptación: 3 campañas completas consecutivas PASS** (`c4n-20261123-021`, `-022`, `-023`), cada una con PREPARE + RELOAD1 + RELOAD2 en PASS, 12/12 presentes, 0 pérdidas, 12/12 profesiones/goals/reanudados, **0 duplicados de job site**, actividad efectiva y guardado/cierre/reapertura verificados.

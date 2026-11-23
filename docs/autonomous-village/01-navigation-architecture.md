@@ -7,9 +7,11 @@
 > dos corridas controladas idénticas**, con **C4 integrado PASS**— se cumplió en **tres corridas consecutivas
 > de 12000 ticks** (`a2n-20261122-054142`, `-094529`, `-100646`; semilla 12345). Evidencia y cierre formal en
 > `docs/autonomous-village/2026-11-22-A2-FINAL-ACCEPTANCE-AND-CLOSURE.md` y en
-> `docs/autonomous-village/2026-11-22-A2-ZOMBIE-SIEGE-RELIABILITY.md`. Este documento sigue siendo la
-> **referencia arquitectónica**; sus conflictos abiertos (§K) y los límites de DROP/BREAK/BUILD (§L) no
-> quedan resueltos por la aceptación y siguen pendientes de decisión/validación.
+> `docs/autonomous-village/2026-11-22-A2-ZOMBIE-SIEGE-RELIABILITY.md`. **Auditoría de consolidación
+> (2026-11-23)**: `docs/autonomous-village/2026-11-23-AUTONOMOUS-VILLAGE-CONSOLIDATION-AUDIT.md` clasifica
+> §K/§L; §K.1 (política de ramas) es **decisión del dueño** y §L (límites de DROP/BREAK/BUILD) queda como
+> **limitación conocida / deuda técnica**, no como defecto abierto. C4 standalone también quedó **ACCEPTED**
+> (`2026-11-22-C4-STANDALONE-SAVE-RELOAD-ACCEPTANCE.md`).
 >
 > **Se escribe mientras el dueño termina de medir con su Arnés.** No se ha empezado ninguna implementación nueva a
 > partir de él.
