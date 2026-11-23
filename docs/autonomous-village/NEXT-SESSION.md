@@ -1,3 +1,11 @@
+# CAMPAÑA DE EVOLUCIÓN — INCREMENTO 1 VALIDADO; CAMPAÑA ABIERTA (2026-11-23)
+
+- Informe: `docs/autonomous-village/2026-11-23-AUTONOMOUS-VILLAGE-EVOLUTION-CAMPAIGN.md`.
+- Entregado: `VillageRosterInvariants` (puro: 12 puestos, 4 fundadores, un dueño por puesto, cupos, UUID únicos) + `VillageRosterInvariantsTest` (11 aserciones) + integración informativa en el arnés C4 (`ROSTER_INVARIANTS` en `phase-*.json`); `VillageJobSiteOwnershipPolicyTest` ampliado a 13 (idempotencia, no destrucción, dos ciclos).
+- Gates: compileJava, compileTestJava, test, policyTest, lint, diff-check — verdes.
+- A2/C4 intactos: verificador de solo lectura, sin cambios en navegación/persistencia.
+- Pendientes ejecutables: matriz de navegación (C), medición de rendimiento (D), GuardHarness/métricas (E), integración NBT de save/reload (B) y revalidación de invariantes en campaña C4. La campaña NO se declara completa.
+
 # A1 — AUDITORÍA FORENSE DE LOS 6 COMMITS DE `migration-neoforge-1.21.1` (2026-11-23)
 
 - Informe: `docs/autonomous-village/2026-11-23-A1-SIX-COMMITS-FORENSIC-AUDIT.md`.

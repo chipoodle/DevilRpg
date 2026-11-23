@@ -55,6 +55,27 @@ public final class VillageJobSiteOwnershipPolicyTest {
                                 new VillageJobSiteOwnershipPolicy.Registro(b, 9L),
                                 new VillageJobSiteOwnershipPolicy.Registro(a, 9L)))));
 
+        // Idempotencia: tras excluir a los sobrantes, un segundo pase no encuentra nada y conserva al titular.
+        java.util.List<VillageJobSiteOwnershipPolicy.Registro> todos = java.util.List.of(
+                new VillageJobSiteOwnershipPolicy.Registro(a, 1L),
+                new VillageJobSiteOwnershipPolicy.Registro(b, 1L),
+                new VillageJobSiteOwnershipPolicy.Registro(c, 1L));
+        java.util.Set<UUID> sobrantes1 = sobrantes(todos);
+        java.util.List<VillageJobSiteOwnershipPolicy.Registro> despues = new java.util.ArrayList<>();
+        for (VillageJobSiteOwnershipPolicy.Registro r : todos) {
+            if (!sobrantes1.contains(r.uuid())) {
+                despues.add(r);
+            }
+        }
+        check("reconciliacion idempotente", sobrantes(despues).isEmpty());
+        check("no destruye la asignacion valida", despues.size() == 1 && despues.get(0).uuid().equals(a));
+        // Dos ciclos: los sobrantes se reasignan a POIs libres y el siguiente pase queda limpio.
+        java.util.List<VillageJobSiteOwnershipPolicy.Registro> ciclo2 = new java.util.ArrayList<>(despues);
+        long libre = 2L;
+        for (UUID sobrante : sobrantes1) {
+            ciclo2.add(new VillageJobSiteOwnershipPolicy.Registro(sobrante, libre++));
+        }
+        check("dos ciclos sin duplicados", sobrantes(ciclo2).isEmpty());
         System.out.println("VILLAGE_JOB_SITE_OWNERSHIP_POLICY_TEST: OK (" + assertions + " assertions)");
     }
 

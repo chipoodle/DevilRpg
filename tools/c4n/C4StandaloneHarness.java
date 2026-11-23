@@ -391,6 +391,27 @@ public final class C4StandaloneHarness {
         }
 
         int[] jobSite = auditarJobSite();
+        // C4 · invariantes del censo (12 puestos, 4 fundadores, un dueno por puesto, cupos). Informativo: se
+        // registra en la fase y en el log; no invalida una campana ya aceptada, pero deja el diagnostico listo
+        // para exigirlo cuando se revalide.
+        java.util.List<com.chipoodle.devilrpg.world.VillageRosterInvariants.Miembro> roster = new java.util.ArrayList<>();
+        for (var v : aldeanos()) {
+            if (!v.isAlive() || v.isRemoved() || v.isBaby()) {
+                continue;
+            }
+            long puesto = v.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE)
+                    .map(m -> m.pos().asLong()).orElse(0L);
+            boolean fund = com.chipoodle.devilrpg.world.VillageManager.esGuardiaFundadora(v);
+            roster.add(new com.chipoodle.devilrpg.world.VillageRosterInvariants.Miembro(
+                    v.getUUID(), v.getVillagerData().getProfession().toString(), puesto, fund));
+        }
+        java.util.Map<String, Integer> cupoRoster = new java.util.LinkedHashMap<>();
+        com.chipoodle.devilrpg.world.VillageGenerator.puestosPorOficio()
+                .forEach((k, n) -> cupoRoster.put(k.toString(), n));
+        var invariantes = com.chipoodle.devilrpg.world.VillageRosterInvariants.comprobar(
+                roster, com.chipoodle.devilrpg.world.VillageGenerator.puestosDelPueblo(), cupoRoster, 4);
+        log("ROSTER_INVARIANTS ok=" + invariantes.ok() + " violaciones=" + invariantes.violaciones());
+        chequeos.add("\"roster_invariantes_ok\":" + invariantes.ok());
         int duplicados = jobSite[2];
         boolean registrados = presentes == esperadoTotal;
         boolean reanudadosOk = reanudados == esperadoTotal;
