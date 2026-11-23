@@ -2887,6 +2887,26 @@ public final class VillageManager {
      * parecería muerta (se marcaría caída sin motivo y se repoblaría a lo tonto).
      */
     /** C4 · ¿la aldea ya terminó de cargar? No se repuebla hasta que los aldeanos persistidos estén cargados. */
+    /**
+     * C4 · <b>¿otro aldeano de la aldea tiene ese POI como {@code JOB_SITE}?</b> Se mira la aldea ENTERA, no un
+     * radio corto: un dueño legítimo que está lejos de su estación (en su parcela o el almacén) quedaba fuera del
+     * radio de 48 de los goals del minero/herrero, y el recién llegado le liberaba el ticket y se llevaba el puesto
+     * (medido en {@code c4n-20261123-016}: POI 628,63,547 con dos granjeros). Es la única autoridad que consultan
+     * los goals antes de reclamar o de liberar un ticket.
+     */
+    public static boolean puestoReclamadoPorOtro(ServerLevel level, BlockPos puesto, Villager excepto) {
+        var zona = new AABB(puesto).inflate(VillageGenerator.FENCE_RADIUS + 32.0D);
+        for (Villager otro : level.getEntitiesOfClass(Villager.class, zona)) {
+            if (otro == excepto || otro.isBaby() || VillagerGuardGoal.esGuardia(otro)) {
+                continue;
+            }
+            Optional<GlobalPos> suyo = otro.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+            if (suyo.isPresent() && suyo.get().pos().equals(puesto)) {
+                return true;
+            }
+        }
+        return false;
+    }
     private static boolean cargaDeAldeaAsentada(ServerLevel level) {
         long ahora = level.getGameTime();
         if (primerTickDeVida < 0L) {

@@ -735,21 +735,17 @@ public class VillagerMinerGoal extends Goal {
         if (mio.isPresent() && level.getBlockState(mio.get().pos()).is(Blocks.STONECUTTER)) {
             return;
         }
-        for (Villager otro : level.getEntitiesOfClass(Villager.class,
-                new net.minecraft.world.phys.AABB(puesto).inflate(RADIO_PUESTO))) {
-            if (otro == villager) {
-                continue;
-            }
-            Optional<GlobalPos> suyo = otro.getBrain().getMemory(MemoryModuleType.JOB_SITE);
-            if (suyo.isPresent() && suyo.get().pos().equals(puesto)) {
-                return; // el puesto es de otro: no se le quita a nadie
-            }
+        if (com.chipoodle.devilrpg.world.VillageManager.puestoReclamadoPorOtro(level, puesto, villager)) {
+            return; // el puesto es de otro (en cualquier punto de la aldea): no se le quita a nadie
         }
         PoiManager poi = level.getPoiManager();
         Predicate<Holder<PoiType>> vale = villager.getVillagerData().getProfession().heldJobSite();
         BiPredicate<Holder<PoiType>, BlockPos> cual = (tipo, pos) -> pos.equals(puesto);
         if (poi.take(vale, cual, puesto, 1).isEmpty()) {
-            poi.release(puesto); // ticket PERDIDO: se suelta y se vuelve a intentar
+            if (com.chipoodle.devilrpg.world.VillageManager.puestoReclamadoPorOtro(level, puesto, villager)) {
+                return; // el ticket lo tiene su titular real: NO se libera
+            }
+            poi.release(puesto); // ticket PERDIDO de verdad (nadie lo tiene): se suelta y se vuelve a intentar
             if (poi.take(vale, cual, puesto, 1).isEmpty()) {
                 return; // no hay manera (el chunk no está cargado...): se reintenta en el siguiente canUse
             }
