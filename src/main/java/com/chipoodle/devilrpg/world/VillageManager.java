@@ -4724,8 +4724,45 @@ public final class VillageManager {
      * telar con el ticket cogido sin dueño. Y no se le quita el puesto a nadie: si otro aldeano <b>cargado</b> lo
      * tiene en el cerebro, ese puesto se respeta.
      */
+    /**
+     * C4 · <b>UN PUESTO, UN DUEÑO (memoria)</b>. Un mundo reabierto puede traer dos aldeanos con la MISMA memoria
+     * {@code JOB_SITE} si el guardado capturó una reasignación transitoria del reparto (medido en
+     * {@code c4n-20261123-010}, reload1: 11 puestos presentes, 1 duplicado). Se conserva el UUID menor por POI y al
+     * resto se le quita la memoria para que este mismo reparto le dé otra estación. NO se suelta el ticket del POI:
+     * su titular real lo conserva y la lógica existente («ocupada sin dueño» → se suelta y se vuelve a coger) la
+     * reconcilia. Solo actúa cuando dos o más aldeanos comparten exactamente la misma celda.
+     */
+    private static void reconciliarPuestosDuplicados(List<Villager> aldeanos) {
+        List<VillageJobSiteOwnershipPolicy.Registro> registros = new ArrayList<>();
+        Map<UUID, Villager> porUuid = new HashMap<>();
+        for (Villager v : aldeanos) {
+            if (v.isBaby() || VillagerGuardGoal.esGuardia(v)) {
+                continue;
+            }
+            Optional<GlobalPos> mem = v.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+            if (mem.isEmpty()) {
+                continue;
+            }
+            registros.add(new VillageJobSiteOwnershipPolicy.Registro(v.getUUID(), mem.get().pos().asLong()));
+            porUuid.put(v.getUUID(), v);
+        }
+        for (UUID sobrante : VillageJobSiteOwnershipPolicy.sobrantes(registros)) {
+            Villager v = porUuid.get(sobrante);
+            if (v == null) {
+                continue;
+            }
+            String poi = v.getBrain().getMemory(MemoryModuleType.JOB_SITE)
+                    .map(m -> m.pos().toShortString()).orElse("?");
+            v.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
+            v.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+            DevilRpg.LOGGER.info("[Village] {}: memoria de puesto DUPLICADA en {}; se limpia y el reparto le dara otra",
+                    sobrante, poi);
+        }
+    }
+
     private static void reclamarEstacionesDelPueblo(ServerLevel level, List<Villager> aldeanos, BlockPos center,
                                                     int objectiveIndex) {
+        reconciliarPuestosDuplicados(aldeanos);
         PoiManager poi = level.getPoiManager();
         for (Villager villager : aldeanos) {
             if (villager.isBaby()) {
