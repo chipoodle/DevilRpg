@@ -1,7 +1,35 @@
-# CAMPAÑA — INCREMENTO 3: REVALIDACIÓN C4 CON CENSO OBLIGATORIO (2026-11-23)
+# CAMPAÑA — INCREMENTO 3 COMPLETADO: C4 RUNTIME, NBT REAL, MÉTRICAS Y HERRAMIENTAS (2026-11-23)
 
-- **Objetivo A cumplido**: campaña `c4n-20261123-024` (SHA `1abab57d`) — PREPARE, RELOAD1 y RELOAD2 **PASS** con `roster_invariantes_ok=true` obligatorio (si falla, la fase falla). 12/12 puestos, 4 fundadores, 0 duplicados, 0 pérdidas, identidades/profesiones/goals/reanudación correctos.
-- Pendiente: B (prueba NBT/save-reload en `test`), D (instrumentación del planner y línea base), E (herramientas), F (docs). Campaña ABIERTA.
+- **A · C4 runtime PASS (final, con el arnés enriquecido):** `c4n-20261123-1550` sobre
+  `69d7e55a6c848fd6c0542e61a8efe8913431f13c`. `C4N_PASS prepare=PASS reload1=PASS reload2=PASS`, las 3 fases con
+  `roster_invariantes_ok=true`, `guardado_ok=true` y `fase_ok=true`; 12/12 profesionales, 4 fundadores (máscara
+  `0b1111`, 4/4 con goal, armadura 4/4), 0 pérdidas, 0 duplicados, 0 huérfanos; `JOB_SITE` 1→3→3 y **3/3 estables**
+  en reload2 (0 cambiados/perdidos; 0 duplicados/huérfanos al cargar). Evidencia previa aceptada: `c4n-20261123-024`
+  (SHA `1abab57d`). Informe: `2026-11-23-INCREMENT-3-RUNTIME-PERSISTENCE-INSTRUMENTATION.md`.
+- **B · NBT/save-reload DONE:** `VillagePersistenceIntegrationTest` (**484 aserciones**, gate `test`): `CompoundTag`,
+  `VillageSavedData.save/load`, `NbtIo` a fichero, `Villager` real + `EntityType.create` + `Brain/JOB_SITE`, dos
+  ciclos, carga parcial, corrupción y reconciliación. Defecto real corregido: `VillageSavedData.readBlueprint`
+  descarta planos corruptos (antes lanzaba al cargar/recorrer). Limitación: `StubLevel` sin `PoiManager`/`ServerLevel`.
+- **D · Instrumentación DONE:** `NavPlannerMetrics` (flag `devilrpg.nav.metrics` OFF por defecto), `NavPlanner`
+  instrumentado sin tocar `NavGraphSearch`; `NavPlannerMetricsTest` (68) y `NavSearchBaselineTest` (119, 5 escenarios
+  deterministas + 4 entidades + ON/OFF idéntico). `-PnavMetrics=true` disponible; C4 vuelca `metrics-<fase>.txt` si
+  se habilita. La navegación real en runtime sigue sin medirse (A2 cerrado).
+- **E · Herramientas DONE:** arnés C4 con `AL_CARGAR`, `jobsite-<fase>.txt`, comparación de propiedad, guardias,
+  `esperado/observado/invariantes/causa_conocida/causa_desconocida`, `guardado_ok` y `done` tras el guardado;
+  `tools/av/{diagnose,collect,nav-baseline}.ps1` + `LEEME.md`. `GuardHarness` evaluado y **no portado**.
+- **F · Documentación DONE:** este checkpoint, `TEST-MATRIX.md`, invariantes I387–I391 y el informe del incremento.
+- **Gates:** `compileJava`, `compileTestJava`, `test` (incluye `policyTest` 74 clases y `villagePersistenceTest`
+  484), `navBaselineTest` (119), `compileJava -Pa2nDiagnostics=true`, `lint_aldea.py --strict`, `git diff --check` —
+  todos verdes. Campaña final `c4n-20261123-1550` PASS; el `SHA` de código probado es `69d7e55a`.
+- **Limitaciones declaradas:** `JOB_SITE` solo en 3/12 aldeanos (no se exige cobertura); `reanudados` es señal débil;
+  D no mide navegación real; B no prueba `PoiManager`. Campaña **COMPLETA** para los objetivos ejecutables.
+
+# HISTÓRICO — INCREMENTO 3: REVALIDACIÓN C4 CON CENSO OBLIGATORIO (2026-11-23)
+
+- **Objetivo A cumplido (primera campaña):** `c4n-20261123-024` (SHA `1abab57d`) — PREPARE, RELOAD1 y RELOAD2
+  **PASS** con `roster_invariantes_ok=true` obligatorio. 12/12 puestos, 4 fundadores, 0 duplicados, 0 pérdidas,
+  identidades/profesiones/goals/reanudación correctos. Esta campaña usó el arnés anterior; la campaña final
+  `c4n-20261123-1550` valida el arnés enriquecido.
 
 # CAMPAÑA DE EVOLUCIÓN — INCREMENTO 2: MATRIZ DE NAVEGACIÓN Y CENSO OBLIGATORIO (2026-11-23)
 

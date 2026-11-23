@@ -127,4 +127,7 @@ No se declara la campaña completa: quedan tareas ejecutables de C/D/E y la reva
 - **F · Documentación:** informe del incremento, invariantes I387–I391, matriz de pruebas y checkpoints.
 - **Gates:** `compileJava`, `compileTestJava`, `test` (incluye `policyTest` y `villagePersistenceTest`),
   `navBaselineTest`, `compileJava -Pa2nDiagnostics=true`, `lint_aldea.py --strict`, `git diff --check` — verdes.
-- **Estado:** A, B, D, E y F completados; campaña final C4 sobre el SHA de cierre registrada en el informe.
+- **Estado:** A, B, D, E y F completados. Campaña final `c4n-20261123-1550` sobre el SHA de código
+  `69d7e55a6c848fd6c0542e61a8efe8913431f13c` → `C4N_PASS` en las 3 fases, con `roster_invariantes_ok=true`,
+  `guardado_ok=true`, 12/12, 4 fundadores, 0 duplicados/huérfanos y `JOB_SITE` 3/3 estable en reload2.
+  Evidencia completa en el informe del incremento §6.

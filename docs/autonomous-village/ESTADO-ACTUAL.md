@@ -1,13 +1,13 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
-> **ACTUALIZACIÓN 23-nov-2026 (Incremento 3).** A revalidado en runtime (`c4n-20261123-024`, SHA `1abab57d`,
-> `roster_invariantes_ok=true` en PREPARE/RELOAD1/RELOAD2). B: `VillagePersistenceIntegrationTest` (482
-> aserciones, NBT/`NbtIo`/`Villager` reales) en el gate `test`; defecto real corregido en
-> `VillageSavedData.readBlueprint`. D: `NavPlannerMetrics` + `NavPlannerMetricsTest` (68) +
-> `NavSearchBaselineTest` (119), planner sin cambio de algoritmo. E: arnés C4 enriquecido y
-> `tools/av/{diagnose,collect,nav-baseline}.ps1` + `LEEME.md`; `GuardHarness` no portado. Informe:
-> `2026-11-23-INCREMENT-3-RUNTIME-PERSISTENCE-INSTRUMENTATION.md`. La campaña final sobre el SHA de cierre se
-> registra en el informe §6.
+> **ACTUALIZACIÓN 23-nov-2026 (Incremento 3).** A revalidado en runtime: `c4n-20261123-1550` sobre
+> `69d7e55a` → `C4N_PASS` en PREPARE/RELOAD1/RELOAD2 con `roster_invariantes_ok=true`, `guardado_ok=true`, 12/12,
+> 4 fundadores y 0 duplicados/huérfanos; `JOB_SITE` 1→3→3 con 3/3 estables en reload2 (campaña previa:
+> `c4n-20261123-024`, SHA `1abab57d`). B: `VillagePersistenceIntegrationTest` (484 aserciones,
+> NBT/`NbtIo`/`Villager` reales) en el gate `test`; defecto real corregido en `VillageSavedData.readBlueprint`.
+> D: `NavPlannerMetrics` + `NavPlannerMetricsTest` (68) + `NavSearchBaselineTest` (119), planner sin cambio de
+> algoritmo. E: arnés C4 enriquecido y `tools/av/{diagnose,collect,nav-baseline}.ps1` + `LEEME.md`;
+> `GuardHarness` no portado. Informe: `2026-11-23-INCREMENT-3-RUNTIME-PERSISTENCE-INSTRUMENTATION.md`.
 
 > **ACTUALIZACIÓN 23-nov-2026 — A2 y C4 CERRADOS Y ACEPTADOS; auditoría de consolidación publicada** (`2026-11-23-AUTONOMOUS-VILLAGE-CONSOLIDATION-AUDIT.md`). La decisión de la siguiente etapa queda en manos del dueño. Se conserva el texto histórico. **ACTUALIZACIÓN 22-nov-2026 — A2 CERRADO Y ACEPTADO.** Este documento es un **traspaso histórico** del
 > 16-oct-2026; su texto original se conserva íntegro por trazabilidad. El estado vigente de A2 está en

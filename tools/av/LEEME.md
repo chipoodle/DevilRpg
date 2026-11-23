@@ -69,8 +69,13 @@ build/c4n/<run>/
 ```
 
 `jobsite-<fase>.txt` se escribe **después** de la ventana de trabajo, no al cargar. La foto de carga se
-registra aparte (`AL_CARGAR` y campos `job_site_al_cargar_*`): así no se confunde "memoria vacía al cargar,
-se reclama durante la ventana" con "el dueño cambió durante la ventana".
+registra aparte (`AL_CARGAR` y campos `job_site_al_cargar_*`, incluidos `job_site_al_cargar_duplicados` y
+`job_site_al_cargar_huerfanos`): así no se confunde "memoria vacía al cargar, se reclama durante la ventana" con
+"el dueño cambió durante la ventana".
+
+**Validación runtime del formato nuevo:** `c4n-20261123-1550` (SHA `69d7e55a`) pasó las 3 fases con
+`guardado_ok=true`, `roster_invariantes_ok=true`, `JOB_SITE` 1→3→3 (3/3 estables en reload2, 0 cambiados/perdidos)
+y guardias 4/4 con máscara `0b1111`. `diagnose.ps1 -Run c4n-20261123-1550 -FailOnError` → exit 0.
 
 ## Los cinco estados que distingue el diagnóstico
 
