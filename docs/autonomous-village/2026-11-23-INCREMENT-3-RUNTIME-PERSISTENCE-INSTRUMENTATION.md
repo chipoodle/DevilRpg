@@ -2,7 +2,7 @@
 
 > **Estado:** A revalidado en runtime; B, D y E implementados y verdes; F (este documento) actualizado.
 > **SHA de código probado en la campaña final:** `69d7e55a6c848fd6c0542e61a8efe8913431f13c`
-> **Campaña final:** `c4n-20261123-1550` (3 fases sobre un mundo desechable nuevo)
+> **Campañas finales:** `c4n-20261123-1550` y `c4n-20261123-1602` (dos campañas consecutivas, mundos nuevos)
 > **Fecha:** 2026-11-23 · Rama `feature/autonomous-village`
 > **Restricciones respetadas:** sin push, sin merge externo, sin cambio de rama, sin `reset --hard`, sin `clean`, sin
 > borrar mundos/backups/logs/evidencia, sin incorporar los seis commits descartados y sin debilitar criterios.
@@ -13,7 +13,7 @@
 
 | Objetivo | Estado | Evidencia principal |
 |---|---|---|
-| A · C4 runtime con invariantes obligatorios | **PASS** | `build/c4n/c4n-20261123-024` (SHA `1abab57d`) y campaña final `c4n-20261123-1550` (SHA `69d7e55a`) |
+| A · C4 runtime con invariantes obligatorios | **PASS** | `c4n-20261123-024` (SHA `1abab57d`) + campañas finales `c4n-20261123-1550` (SHA `69d7e55a`) y `c4n-20261123-1602` (SHA `5c427842`, mismo código) |
 | B · NBT/save-reload real | **DONE** | `VillagePersistenceIntegrationTest`: **484 aserciones**, 10 bloques, `NbtIo` real y `Villager` real |
 | D · Instrumentación del planner + línea base | **DONE** | `NavPlannerMetrics` (640 líneas), 68 + 119 aserciones, 5 escenarios deterministas |
 | E · Herramientas de diagnóstico | **DONE** | arnés C4 enriquecido, `diagnose.ps1`, `collect.ps1`, `nav-baseline.ps1`, evaluación de GuardHarness |
@@ -84,6 +84,11 @@ La campaña `c4n-20261123-024`, ejecutada sobre `1abab57dce53a0e802d7133606ed3ad
     `job_site_al_cargar_huerfanos=0` en ambas recargas.
 - **Guardias**: 4/4 fundadores, máscara persistida `[true,true,true,true]` (`0b1111`), 4/4 con goal, armadura
   completa 4/4, arma 4/4, 2 escudos.
+- **Repetibilidad (segunda campaña):** `c4n-20261123-1602` sobre `5c427842` (commit **solo de documentación**
+  encima de `69d7e55a`; árbol de código idéntico) volvió a dar `C4N_PASS` en las 3 fases con
+  `roster_invariantes_ok=true`, `guardado_ok=true`, 12/12, 4 fundadores, 0 duplicados/huérfanos y `JOB_SITE`
+  2→3→3, **3/3 estables** en reload2 (0 cambiados/perdidos; 0 duplicados/huérfanos al cargar). Dos campañas
+  consecutivas con mundos nuevos confirman que el PASS no depende de una sola fase ni de un mundo concreto.
 - **Conservación:** el mundo, logs, JSON, snapshots y `sha.txt` del run quedan íntegros. No se reutiliza el run id
   (el `prepare` exige mundo virgen; el lanzador aborta si ya hay evidencia). No se borra ningún run histórico.
 
@@ -329,6 +334,24 @@ duplicados/huérfanos 0; reload2 `cargados=12/12`, `job_site_al_cargar_presentes
 
 Diagnóstico: `.\tools\av\diagnose.ps1 -Run c4n-20261123-1550 -FailOnError` → `C4N_PASS`, 3×`OK`, exit 0.
 Colector: `.\tools\av\collect.ps1 -Run 1550` → 3 filas PASS, 0/3 fases no-PASS.
+
+### 6.1 Segunda campaña (repetibilidad)
+
+```
+Run:        c4n-20261123-1602
+SHA:        5c4278422c057117d48d2303bc94b56d24cb6dad  (docs-only sobre 69d7e55a; código idéntico)
+fin.txt:    C4N_PASS prepare=PASS reload1=PASS reload2=PASS
+```
+
+| Fase | result | guardado_ok | roster | 12/12 | 4 fundadores | JOB_SITE | estables/cambiados/perdidos/nuevos | carga: presentes/duplicados |
+|---|---|---|---|---|---|---|---|---|
+| prepare | PASS | true | true | 12/12 | 4 | 2 | 0/0/0/0 | — |
+| reload1 | PASS | true | true | 12/12 | 4 | 3 | 2/0/0/1 | 2/0 |
+| reload2 | PASS | true | true | 12/12 | 4 | 3 | 3/0/0/0 | 3/0 |
+
+`guardias` 4/4, máscara `0b1111`, armadura/arma 4/4, 2 escudos en las tres fases. Dos campañas consecutivas
+(`1550` y `1602`) con mundos nuevos: **PASS en las seis fases**, sin duplicados, sin pérdidas y con propiedad
+estable (3/3) en la última recarga.
 
 ---
 

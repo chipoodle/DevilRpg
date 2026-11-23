@@ -1,10 +1,11 @@
 # CAMPAÑA — INCREMENTO 3 COMPLETADO: C4 RUNTIME, NBT REAL, MÉTRICAS Y HERRAMIENTAS (2026-11-23)
 
-- **A · C4 runtime PASS (final, con el arnés enriquecido):** `c4n-20261123-1550` sobre
-  `69d7e55a6c848fd6c0542e61a8efe8913431f13c`. `C4N_PASS prepare=PASS reload1=PASS reload2=PASS`, las 3 fases con
-  `roster_invariantes_ok=true`, `guardado_ok=true` y `fase_ok=true`; 12/12 profesionales, 4 fundadores (máscara
-  `0b1111`, 4/4 con goal, armadura 4/4), 0 pérdidas, 0 duplicados, 0 huérfanos; `JOB_SITE` 1→3→3 y **3/3 estables**
-  en reload2 (0 cambiados/perdidos; 0 duplicados/huérfanos al cargar). Evidencia previa aceptada: `c4n-20261123-024`
+- **A · C4 runtime PASS (final, con el arnés enriquecido):** dos campañas consecutivas con mundos nuevos,
+  `c4n-20261123-1550` (SHA `69d7e55a`) y `c4n-20261123-1602` (SHA `5c427842`, docs-only sobre el mismo código).
+  Ambas: `C4N_PASS prepare=PASS reload1=PASS reload2=PASS`, 3 fases con `roster_invariantes_ok=true`,
+  `guardado_ok=true` y `fase_ok=true`; 12/12 profesionales, 4 fundadores (máscara `0b1111`, 4/4 con goal, armadura
+  4/4), 0 pérdidas, 0 duplicados, 0 huérfanos; `JOB_SITE` 1→3→3 y 2→3→3, **3/3 estables** en reload2 (0
+  cambiados/perdidos; 0 duplicados/huérfanos al cargar). Evidencia previa aceptada: `c4n-20261123-024`
   (SHA `1abab57d`). Informe: `2026-11-23-INCREMENT-3-RUNTIME-PERSISTENCE-INSTRUMENTATION.md`.
 - **B · NBT/save-reload DONE:** `VillagePersistenceIntegrationTest` (**484 aserciones**, gate `test`): `CompoundTag`,
   `VillageSavedData.save/load`, `NbtIo` a fichero, `Villager` real + `EntityType.create` + `Brain/JOB_SITE`, dos
@@ -20,7 +21,8 @@
 - **F · Documentación DONE:** este checkpoint, `TEST-MATRIX.md`, invariantes I387–I391 y el informe del incremento.
 - **Gates:** `compileJava`, `compileTestJava`, `test` (incluye `policyTest` 74 clases y `villagePersistenceTest`
   484), `navBaselineTest` (119), `compileJava -Pa2nDiagnostics=true`, `lint_aldea.py --strict`, `git diff --check` —
-  todos verdes. Campaña final `c4n-20261123-1550` PASS; el `SHA` de código probado es `69d7e55a`.
+  todos verdes. Campañas finales `c4n-20261123-1550` y `c4n-20261123-1602` PASS; el `SHA` de código probado es
+  `69d7e55a`.
 - **Limitaciones declaradas:** `JOB_SITE` solo en 3/12 aldeanos (no se exige cobertura); `reanudados` es señal débil;
   D no mide navegación real; B no prueba `PoiManager`. Campaña **COMPLETA** para los objetivos ejecutables.
 
