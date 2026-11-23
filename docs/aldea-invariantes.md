@@ -11484,3 +11484,48 @@ de runtime 62/65, 27, 57/58 y 81). Invariantes que no deben romperse:
 
 Cambios futuros en estas áreas requieren la regresión mínima indicada en la
 sección J del documento de aceptación, no la campaña A1–A7 completa.
+
+## INVARIANTES DEL INCREMENTO 3 — C4, NBT, INSTRUMENTACIÓN Y DIAGNÓSTICO (23-nov-2026)
+
+Estas invariantes nacen de la campaña de evolución (A/B/D/E/F) y se añaden a las anteriores. No sustituyen a
+ninguna; el lint y los gates siguen siendo obligatorios.
+
+### I387 · EL CENSO C4 ES OBLIGATORIO, NO INFORMATIVO
+
+La fase C4 (`prepare`, `reload1`, `reload2`) **falla** si `VillageRosterInvariants` no se cumple: 12 puestos de
+profesión, 4 guardias de fundación, UUID únicos, profesiones válidas dentro de cupo, un solo dueño por `JOB_SITE`
+presente y ausencia de miembros nulos. `roster_invariantes_ok` debe ser `true` en las tres fases; un `PASS` con
+`false` (o ausente) no es aceptable. Evidencia: `VillageRosterInvariantsTest` (12) y
+`C4StandaloneHarness` (`fase_ok && invariantes.ok()`). Campaña aceptada: `c4n-20261123-024` (SHA `1abab57d`).
+
+### I388 · EL NBT DE LA ALDEA SE PRUEBA CON EL MECANISMO REAL
+
+Toda prueba de persistencia debe usar `VillageSavedData.save/load` y `CompoundTag` reales, y al menos un ciclo a
+fichero con `NbtIo.writeCompressed/readCompressed`. No se acepta una copia superficial de campos ni un doble de
+`CompoundTag`. La identidad de aldeano y `JOB_SITE` se prueban con un `Villager` real y `EntityType.create`, o se
+declara la limitación exacta. Evidencia: `VillagePersistenceIntegrationTest` (482 aserciones, bloques 1–10).
+
+### I389 · UN PLANO NBT CORRUPTO NO PUEDE TUMBAR LA CARGA NI EL OBRA
+
+`VillageSavedData.readBlueprint` valida `Palette`, `Pos` y `State`; si el plano no es consistente se **descarta**
+(`hasBlueprint=false`) para que el gestor lo recapture. `Pos`/`State` desalineados, índices fuera de la paleta o un
+`Name` que no sea `ResourceLocation` no deben lanzar `ArrayIndexOutOfBoundsException`,
+`IndexOutOfBoundsException` ni `ResourceLocationException` durante la carga. Evidencia: bloques 7 del test y
+`build/av/village-persistence-before-fix.log` (7 fallos antes, 0 después).
+
+### I390 · LA INSTRUMENTACIÓN DEL PLANNER NO CAMBIA EL PLAN
+
+`NavPlannerMetrics` está **apagada por defecto** (`devilrpg.nav.metrics=false`); con el flag apagado no asigna ni
+formatea. `NavGraphSearch` no se modifica. El cuerpo de `NavPlanner.plan(...)` se conserva y solo se envuelve para
+medir. Las rutas, expansiones, `hitBudget` y `reason` deben ser idénticos con métricas ON y OFF. Memoria acotada
+(512 entidades / 4096 activas / 512 registros) y sin excepciones. Evidencia: `NavPlannerMetricsTest` (68),
+`NavSearchBaselineTest` (119, 6 escenarios ON/OFF `OK`).
+
+### I391 · EL DIAGNÓSTICO DISTINGUE ESTADO, INVARIANTE Y CAUSA
+
+Las herramientas (`tools/av/diagnose.ps1`, `collect.ps1`, `LEEME.md`) deben distinguir: estado esperado, estado
+observado, invariante incumplida, causa conocida y causa desconocida, sin inventar ninguna. `diagnose.ps1` no puede
+romper con JSON inválido o ficheros ausentes. Las causas conocidas no convierten un fallo en PASS; los FAIL duros
+siguen decidiéndose en el arnés. `GuardHarness` no se porta: su mundo, centro y mutaciones no son compatibles con la
+arquitectura actual; la instrumentación de guardias vive en C4. Evidencia: `c4n-20261123-020` diagnosticado como
+`INVARIANTE_INCUMPLIDA` y `LEEME.md` §5 estados.

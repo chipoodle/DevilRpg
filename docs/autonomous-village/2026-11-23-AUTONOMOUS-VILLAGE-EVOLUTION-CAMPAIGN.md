@@ -99,3 +99,32 @@ No se declara la campaña completa: quedan tareas ejecutables de C/D/E y la reva
 - **Objetivo B**: prueba NBT/save-reload en `test`.
 - **Objetivo D**: instrumentación de expansiones/tiempo y línea base.
 - **Objetivo E**: herramientas (GuardHarness/verificador/métricas) contra AV.
+
+---
+
+## INCREMENTO 3 (2026-11-23) — A revalidado; B, D y E implementados
+
+**Informe completo:** `2026-11-23-INCREMENT-3-RUNTIME-PERSISTENCE-INSTRUMENTATION.md`.
+
+- **A · C4 runtime con invariantes obligatorios: PASS.** `c4n-20261123-024` (SHA `1abab57d`) pasó PREPARE,
+  RELOAD1 y RELOAD2 con `roster_invariantes_ok=true` en las tres; 12/12 profesionales, 4 fundadores, 0 UUID
+  duplicados, 0 pérdidas, 0 `JOB_SITE` duplicados/huérfanos, identidades y goals estables. Limitación declarada:
+  solo 2–3 de 12 aldeanos tienen `JOB_SITE` en la ventana; el verificador exige un dueño por puesto **presente**,
+  no cobertura total. La campaña final sobre el SHA de código se registra en el informe §6.
+- **B · NBT/save-reload real: DONE.** Nuevo `src/villageTest/.../VillagePersistenceIntegrationTest.java` (484
+  aserciones) con `Bootstrap` headless, `VillageSavedData.save/load`, `NbtIo` a fichero, `Villager` real +
+  `EntityType.create` + `Brain/JOB_SITE`, dos ciclos, carga parcial, corrupción, reconciliación y máscara de
+  fundadores. Defecto real corregido: `VillageSavedData.readBlueprint` descarta planos corruptos (arrays
+  desalineados, índice fuera de paleta, `Name` inválido) que antes podían lanzar al cargar o al recorrerlos.
+- **D · Instrumentación del planner: DONE.** `NavPlannerMetrics` (flag `devilrpg.nav.metrics`, default off) mide
+  expansiones, duración, slices, nodos/avance, reanudadas, replanificaciones, fallos, presupuesto, coste por
+  entidad y agregado; `NavGraphSearch` intacto; `NavPlanner` conserva el cuerpo original. `NavPlannerMetricsTest`
+  (68) y `NavSearchBaselineTest` (119) con 5 escenarios deterministas y no-regresión ON/OFF.
+- **E · Herramientas: DONE.** Arnés C4 con `AL_CARGAR`, `jobsite-<fase>.txt`, comparación de propiedad,
+  métricas de guardias, `esperado/observado/invariantes/causa_conocida/causa_desconocida`, `guardado_ok` y
+  `done` después del guardado. Nuevos `tools/av/diagnose.ps1`, `collect.ps1`, `nav-baseline.ps1` y `LEEME.md`.
+  `GuardHarness` evaluado y **no portado** (hardcodes, mutación del mundo, duplicaría el mantenimiento actual).
+- **F · Documentación:** informe del incremento, invariantes I387–I391, matriz de pruebas y checkpoints.
+- **Gates:** `compileJava`, `compileTestJava`, `test` (incluye `policyTest` y `villagePersistenceTest`),
+  `navBaselineTest`, `compileJava -Pa2nDiagnostics=true`, `lint_aldea.py --strict`, `git diff --check` — verdes.
+- **Estado:** A, B, D, E y F completados; campaña final C4 sobre el SHA de cierre registrada en el informe.

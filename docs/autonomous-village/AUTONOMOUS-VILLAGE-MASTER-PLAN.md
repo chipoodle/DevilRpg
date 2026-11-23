@@ -1,5 +1,12 @@
 # Autonomous Village — Master Plan and Stabilization Roadmap
 
+> **Actualización 23-nov-2026 — Incremento 3.** A (C4 runtime con invariantes obligatorios) revalidado;
+> B (NBT/save-reload real), D (instrumentación del planner + línea base), E (herramientas de diagnóstico) y F
+> (documentación) implementados. Informe: `2026-11-23-INCREMENT-3-RUNTIME-PERSISTENCE-INSTRUMENTATION.md`.
+> Gates: `test` incluye `villagePersistenceTest` (484 aserciones) y `policyTest` incluye
+> `NavPlannerMetricsTest` (68) y `NavSearchBaselineTest` (119). Estado del planner: **sin cambios de algoritmo**;
+> la instrumentación está apagada por defecto (`devilrpg.nav.metrics`). A2/C4 siguen aceptados.
+
 ## A. Project objective
 
 The repository already contains an autonomous village: generated settlements,

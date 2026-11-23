@@ -89,6 +89,11 @@ neoForge {
             if (providers.gradleProperty('a2nTraceCombat').isPresent()) {
                 systemProperty 'devilrpg.a2n.traceCombat', providers.gradleProperty('a2nTraceCombat').get()
             }
+            // Incremento 3 · D: la instrumentacion del planner esta APAGADA por defecto. Para medir en un
+            // runServer concreto: -PnavMetrics=true (y volcar NavPlannerMetrics.dump() al cerrar el arnes).
+            if (providers.gradleProperty('navMetrics').isPresent()) {
+                systemProperty 'devilrpg.nav.metrics', providers.gradleProperty('navMetrics').get()
+            }
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.
@@ -278,6 +283,13 @@ sourceSets {
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
     }
+    // Incremento 3 · B: pruebas de integracion NBT/save-reload con las clases reales de Minecraft
+    // (Bootstrap headless, CompoundTag y VillageSavedData.save/load). No necesitan servidor.
+    villageTest {
+        java.srcDir 'src/villageTest/java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
 }
 
 tasks.register('foodTestSuite') {
@@ -301,6 +313,24 @@ tasks.register('foodNbtTest', JavaExec) {
     classpath = sourceSets.foodTest.runtimeClasspath
     mainClass = 'com.chipoodle.devilrpg.world.FoodStateNbtTest'
 }
+// Incremento 3 · B: serializacion/restauracion REAL de VillageSavedData con CompoundTag de Minecraft.
+tasks.register('villagePersistenceTest', JavaExec) {
+    group = 'verification'
+    description = 'Prueba de integracion NBT/save-reload de la aldea (Bootstrap headless, sin servidor).'
+    dependsOn tasks.named('villageTestClasses')
+    classpath = sourceSets.villageTest.runtimeClasspath
+    mainClass = 'com.chipoodle.devilrpg.world.VillagePersistenceIntegrationTest'
+}
+
+// Incremento 3 · D: linea base reproducible del A* real con grafos sinteticos deterministas.
+tasks.register('navBaselineTest', JavaExec) {
+    group = 'verification'
+    description = 'Ejecuta la linea base del planner (expansiones, tiempo, nodos/tick, agregado).'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.chipoodle.devilrpg.entity.nav.NavSearchBaselineTest'
+}
+
 tasks.register('policyTest') {
     group = 'verification'
     description = 'Ejecuta las pruebas puras de política de navegación, asedio y generación.'
@@ -360,6 +390,8 @@ tasks.register('policyTest') {
                 'com.chipoodle.devilrpg.entity.nav.NavVerticalBuildPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavBuildObjectivePolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavPlannerStateTest',
+                'com.chipoodle.devilrpg.entity.nav.NavPlannerMetricsTest',
+                'com.chipoodle.devilrpg.entity.nav.NavSearchBaselineTest',
                 'com.chipoodle.devilrpg.entity.nav.NavGoalMetricTest',
                 'com.chipoodle.devilrpg.entity.nav.NavClimbPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavDropColumnPolicyTest',
@@ -394,4 +426,6 @@ tasks.register('policyTest') {
 
 tasks.named('test') {
     dependsOn tasks.named('policyTest')
+    // Incremento 3 · B: el gate `test` incluye la serializacion/restauracion NBT real de la aldea.
+    dependsOn tasks.named('villagePersistenceTest')
 }

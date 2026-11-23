@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.world;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
@@ -261,14 +262,49 @@ public final class VillageSavedData extends SavedData {
         HolderGetter<Block> blocks = registries.lookupOrThrow(Registries.BLOCK);
         for (Tag element : tag.getList("Blueprints", Tag.TAG_COMPOUND)) {
             CompoundTag entry = (CompoundTag) element;
-            List<BlockState> palette = new ArrayList<>();
+            Blueprint blueprint = readBlueprint(entry, blocks);
+            if (blueprint != null) {
+                data.blueprints.put(entry.getInt("Index"), blueprint);
+            }
+        }
+        return data;
+    }
+
+    /**
+     * Lee un plano del NBT <b>validándolo</b>. Un guardado corrupto no puede dejar un {@link Blueprint}
+     * que reviente al recorrerlo: arrays {@code Pos}/{@code State} desalineados o índices fuera de la
+     * paleta provocaban {@code ArrayIndexOutOfBoundsException}/{@code IndexOutOfBoundsException} en
+     * {@link Blueprint#stateAt}, y un {@code Name} que no fuera un {@code ResourceLocation} hacía que
+     * {@link NbtUtils#readBlockState} lanzara {@code ResourceLocationException} durante la carga del mundo.
+     * Si el plano no es consistente se <b>descarta</b>: {@link #hasBlueprint} queda en {@code false} y el
+     * gestor lo vuelve a capturar, que es preferible a conservar una parte silenciosamente incompleta.
+     */
+    private static Blueprint readBlueprint(CompoundTag entry, HolderGetter<Block> blocks) {
+        List<BlockState> palette = new ArrayList<>();
+        try {
             for (Tag stateTag : entry.getList("Palette", Tag.TAG_COMPOUND)) {
                 palette.add(NbtUtils.readBlockState(blocks, (CompoundTag) stateTag));
             }
-            data.blueprints.put(entry.getInt("Index"),
-                    new Blueprint(palette, entry.getLongArray("Pos"), entry.getIntArray("State")));
+        } catch (RuntimeException malformed) {
+            DevilRpg.LOGGER.warn("[Village] plano NBT descartado (indice={}): paleta ilegible: {}",
+                    entry.getInt("Index"), malformed.toString());
+            return null; // p. ej. Name con caracteres inválidos: el plano entero no es fiable
         }
-        return data;
+        long[] positions = entry.getLongArray("Pos");
+        int[] states = entry.getIntArray("State");
+        if (positions.length != states.length) {
+            DevilRpg.LOGGER.warn("[Village] plano NBT descartado (indice={}): Pos={} State={}",
+                    entry.getInt("Index"), positions.length, states.length);
+            return null; // arrays desalineados: stateAt(i) se saldría del array de estados
+        }
+        for (int state : states) {
+            if (state < 0 || state >= palette.size()) {
+                DevilRpg.LOGGER.warn("[Village] plano NBT descartado (indice={}): State={} fuera de paleta={}",
+                        entry.getInt("Index"), state, palette.size());
+                return null; // índice fuera de la paleta: stateAt(i) se saldría de la paleta
+            }
+        }
+        return new Blueprint(palette, positions, states);
     }
 
     @Override

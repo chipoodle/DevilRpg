@@ -40,6 +40,14 @@ public final class NavPlanner {
         }
     }
 
+    /**
+     * A3 · fuente del tick para las métricas. Devuelve {@code -1} cuando el nivel no expone reloj (arnés/test),
+     * de modo que la instrumentación nunca obliga a que el llamador sea un {@code Level}.
+     */
+    private static long tickDeInstrumentacion(CollisionGetter level) {
+        return level instanceof net.minecraft.world.level.Level world ? world.getGameTime() : -1L;
+    }
+
     /** Coste base de caminar una celda. */
     private static final double COST_WALK = 1.0D;
     private static final double COST_STEP = 1.4D;
@@ -119,10 +127,12 @@ public final class NavPlanner {
         final int[] counters;
         final NavGraphSearch.Session search;
         final String entityUuid;
+        /** A3 · id de la búsqueda en {@link NavPlannerMetrics}; {@code 0} si la instrumentación está apagada. */
+        final long metricsId;
 
         GlobalSearchState(CollisionGetter level, BlockPos start, BlockPos objective, boolean exactGoal,
                           int maxRadio, int verticalRange, int maxExpansions, int[] counters,
-                          NavGraphSearch.Session search, String entityUuid) {
+                          NavGraphSearch.Session search, String entityUuid, long metricsId) {
             this.level = level;
             this.start = start.immutable();
             this.objective = objective.immutable();
@@ -133,6 +143,7 @@ public final class NavPlanner {
             this.counters = counters;
             this.search = search;
             this.entityUuid = entityUuid;
+            this.metricsId = metricsId;
         }
     }
 
@@ -454,6 +465,7 @@ public final class NavPlanner {
                     + " reopens=" + state.search.totalReopens()
                     + " caller=" + cancellationCaller()
                     + " reason=owner_cancelled");
+            NavPlannerMetrics.cancel(state.metricsId, "owner_cancelled");
             handle.state = null;
         }
     }
@@ -505,6 +517,7 @@ public final class NavPlanner {
                     + " newGoal=" + objetivo.toShortString()
                     + " oldExp=" + retained.search.expansions()
                     + " reason=search_parameters_changed");
+            NavPlannerMetrics.cancel(retained.metricsId, "search_parameters_changed");
             if (handle != null) handle.state = null;
             retained = null;
         }
@@ -697,8 +710,13 @@ public final class NavPlanner {
             }
         };
         NavGraphSearch.Session search = NavGraphSearch.begin(start.asLong(), start.getY(), graph, maxExpansions);
+        // A3 · instrumentación: el id se guarda en el estado retenido para medir cada avance y el cierre.
+        final long metricsId = NavPlannerMetrics.enabled()
+                ? NavPlannerMetrics.begin(exactGoal ? NavPlannerMetrics.Tipo.GLOBAL_EXACT
+                        : NavPlannerMetrics.Tipo.GLOBAL, mob.getUUID(), tickDeInstrumentacion(level), maxExpansions)
+                : NavPlannerMetrics.SIN_BUSQUEDA;
         GlobalSearchState created = new GlobalSearchState(level, start, objetivo, exactGoal,
-                maxRadio, verticalRange, maxExpansions, contadores, search, mob.getUUID().toString());
+                maxRadio, verticalRange, maxExpansions, contadores, search, mob.getUUID().toString(), metricsId);
         traceGlobalSearch("GLOBAL_SEARCH_START", "uuid=" + created.entityUuid
                 + " start=" + start.toShortString() + " goal=" + objetivo.toShortString()
                 + " exactGoal=" + exactGoal + " maxRadio=" + maxRadio
@@ -708,15 +726,29 @@ public final class NavPlanner {
     }
 
     private static GlobalResult advanceGlobalSearch(Mob mob, GlobalSearchState state, GlobalSearchHandle handle) {
+        // A3 · instrumentación: una medición por llamada (un avance lógico), con el delta de expansiones del slice.
+        final long metricsT0 = state.metricsId != NavPlannerMetrics.SIN_BUSQUEDA ? System.nanoTime() : 0L;
+        final int metricsExpansionesAntes = state.metricsId != NavPlannerMetrics.SIN_BUSQUEDA
+                ? state.search.expansions() : 0;
         boolean complete;
-        if (handle == null) {
-            // Legacy callers remain synchronous even if stale OPEN entries require extra queue-pop slices.
-            do {
-                complete = state.search.advance(state.maxExpansions);
-            } while (!complete);
-        } else {
-            int slice = 7;
-            complete = state.search.advance(slice);
+        try {
+            if (handle == null) {
+                // Legacy callers remain synchronous even if stale OPEN entries require extra queue-pop slices.
+                do {
+                    complete = state.search.advance(state.maxExpansions);
+                } while (!complete);
+            } else {
+                int slice = 7;
+                complete = state.search.advance(slice);
+            }
+        } catch (RuntimeException ex) {
+            // A3 · una busqueda que lanza no debe quedar abierta en las metricas hasta el desalojo.
+            NavPlannerMetrics.cancel(state.metricsId, "advance_exception");
+            throw ex;
+        }
+        if (state.metricsId != NavPlannerMetrics.SIN_BUSQUEDA) {
+            NavPlannerMetrics.advance(state.metricsId, state.search.expansions() - metricsExpansionesAntes,
+                    System.nanoTime() - metricsT0);
         }
         if (!complete) {
             String summary = "global pendiente inicio=" + state.start.toShortString()
@@ -745,6 +777,11 @@ public final class NavPlanner {
         int maxExpansions = state.maxExpansions;
         int[] contadores = state.counters;
         NavGraphSearch.Result resultado = state.search.result();
+        // A3 · cierre de la instrumentación con el resultado REAL de la búsqueda (sin inferir nada).
+        if (state.metricsId != NavPlannerMetrics.SIN_BUSQUEDA) {
+            NavPlannerMetrics.end(state.metricsId, resultado.found(), resultado.hitBudget(),
+                    resultado.route().size(), resultado.reason());
+        }
         traceGlobalSearch("GLOBAL_SEARCH_COMPLETE", "uuid=" + state.entityUuid
                 + " start=" + state.start.toShortString()
                 + " goal=" + state.objective.toShortString()
@@ -964,12 +1001,56 @@ public final class NavPlanner {
                 policies, construidas, exclusiones, null);
     }
 
+    /**
+     * A3 · <b>Instrumentación del plan LOCAL</b>: envuelve {@link #planImpl} (mismo cuerpo, mismas firmas y mismos
+     * resultados) midiendo duración real y expansiones. Con el flag apagado no toca el reloj ni asigna nada.
+     */
     public static Result plan(CollisionGetter level, Mob mob, BlockPos start, BlockPos goal,
                               int horizontalRange, int verticalRange, int maxExpansions,
                               NavObstruction.Policies policies,
                               java.util.Set<BlockPos> construidas,
                               NavDropExclusionPolicy exclusiones,
                               NavBreakExclusionPolicy exclusionesBreak) {
+        final long metricsId = NavPlannerMetrics.enabled()
+                ? NavPlannerMetrics.begin(NavPlannerMetrics.Tipo.LOCAL,
+                        mob == null ? null : mob.getUUID(), tickDeInstrumentacion(level), maxExpansions)
+                : NavPlannerMetrics.SIN_BUSQUEDA;
+        final long metricsT0 = metricsId != NavPlannerMetrics.SIN_BUSQUEDA ? System.nanoTime() : 0L;
+        Result resultado;
+        try {
+            resultado = planImpl(level, mob, start, goal, horizontalRange, verticalRange, maxExpansions,
+                    policies, construidas, exclusiones, exclusionesBreak);
+        } catch (RuntimeException ex) {
+            // A3 · si el plan lanza, la busqueda medida no queda abierta para siempre. Se re-lanza la misma excepcion:
+            // el comportamiento del planner NO cambia (el flag apagado hace que cancel sea no-op).
+            NavPlannerMetrics.cancel(metricsId, "plan_exception");
+            throw ex;
+        }
+        if (metricsId != NavPlannerMetrics.SIN_BUSQUEDA && resultado != null) {
+            NavPlannerMetrics.advance(metricsId, resultado.expansions(), System.nanoTime() - metricsT0);
+            NavRoute ruta = resultado.route();
+            int longitud = ruta == null ? 0 : ruta.nodes().size();
+            NavPlannerMetrics.end(metricsId, ruta != null && !ruta.isEmpty(), resultado.hitBudget(),
+                    longitud, motivoLocal(resultado));
+        }
+        return resultado;
+    }
+
+    /** Motivo acotado para la métrica local; no influye en el plan. */
+    private static String motivoLocal(Result resultado) {
+        if (resultado.hitBudget()) {
+            return "presupuesto local agotado";
+        }
+        NavRoute ruta = resultado.route();
+        return ruta == null || ruta.isEmpty() ? "sin ruta" : "meta alcanzada";
+    }
+
+    private static Result planImpl(CollisionGetter level, Mob mob, BlockPos start, BlockPos goal,
+                                   int horizontalRange, int verticalRange, int maxExpansions,
+                                   NavObstruction.Policies policies,
+                                   java.util.Set<BlockPos> construidas,
+                                   NavDropExclusionPolicy exclusiones,
+                                   NavBreakExclusionPolicy exclusionesBreak) {
         DIAG_START = DIAG_DROP ? start.immutable() : null;
         if (start.equals(goal)) {
             return new Result(new NavRoute(List.of(new NavRoute.Node(goal, NavRoute.Transition.WALK)), goal), 0, false,
