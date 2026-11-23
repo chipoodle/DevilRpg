@@ -1,3 +1,10 @@
+# C4 STANDALONE / SAVE-RELOAD — EN CURSO (2026-11-23)
+
+- Arnés `tools/c4n/C4StandaloneHarness.java` + lanzador `tools/c4n/lanzar-c4n.ps1` (untracked): fases prepare/reload1/reload2 sobre el MISMO mundo desechable, con censo 12/12, identidades, goals, reanudación, job sites y actividad.
+- **Causa raíz del duplicado (demostrada en `c4n-20261123-015` y `-017`)**: al cargar, el reparto veía los POI de los trabajadores persistidos como «cogidos SIN dueño» (sus memorias JOB_SITE aún no estaban cargadas), **liberaba sus tickets** y otro aldeano los reclamaba → dos memorias sobre el mismo POI. En `015` además la aldea repobló antes de cargar (trabajador nuevo + pérdida de uno esperado).
+- **Correcciones commiteadas**: `09255bfd` (política un puesto/un dueño + reconciliación), `41e58087` (ventana de gracia de carga: no repoblar), `2fb687ab` (los goals del minero/herrero no liberan tickets ajenos; comprobación a escala de aldea), `ff48e257` (aplazar el reparto completo 1200 ticks desde el arranque).
+- **Tests**: `VillageJobSiteOwnershipPolicyTest` (9), `VillagePopulationLoadPolicyTest` (7), registrados en policyTest. Gates compile/compileTest/policyTest/lint/diff-check verdes.
+- **Estado de aceptación**: NO conseguido aún. `011`,`012`,`013` dieron 3 campañas PASS (antes de los endurecimientos); `014` PASS; `015`,`017` fallaron por el duplicado (ya corregido en `ff48e257`); `016` falló por el same (fix previo insuficiente); `018` **crasheó por ServerHangWatchdog en `VillageGenerator.isVegetation`** durante la generación del mundo (sitio de aldea hostil, no es el arnés). Pendiente: 3 campañas consecutivas sobre `ff48e257`.
 # A2 CERRADO FORMALMENTE — CLOSED / ACCEPTED (2026-11-22)
 
 **Veredicto:** A2 (Zombie Siege) queda **CLOSED — ACCEPTED**. Informe de cierre:
