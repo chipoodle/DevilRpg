@@ -3,8 +3,13 @@
 > **ESTADO DE ESTE DOCUMENTO.** Registra la **arquitectura objetivo acordada**. **NO** afirma que esté
 > implementada ni aceptada. La implementación actual es la de `com.chipoodle.devilrpg.entity.nav`
 > (`NavState`/`NavRoute`/`NavObstruction`/`NavPlanner`/`NavExecutor`) más `AggressiveZombiePathPlanner`, y
-> **A2 sigue ABIERTO**: el objetivo de aceptación es **8/8 asaltantes entrando en la aldea en dos corridas
-> controladas idénticas**, seguido de la regresión de caza. Este documento no cambia ese objetivo; lo enmarca.
+> **A2 CERRADO — ACEPTADO (2026-11-22).** El objetivo de aceptación —**8/8 asaltantes entrando en la aldea en
+> dos corridas controladas idénticas**, con **C4 integrado PASS**— se cumplió en **tres corridas consecutivas
+> de 12000 ticks** (`a2n-20261122-054142`, `-094529`, `-100646`; semilla 12345). Evidencia y cierre formal en
+> `docs/autonomous-village/2026-11-22-A2-FINAL-ACCEPTANCE-AND-CLOSURE.md` y en
+> `docs/autonomous-village/2026-11-22-A2-ZOMBIE-SIEGE-RELIABILITY.md`. Este documento sigue siendo la
+> **referencia arquitectónica**; sus conflictos abiertos (§K) y los límites de DROP/BREAK/BUILD (§L) no
+> quedan resueltos por la aceptación y siguen pendientes de decisión/validación.
 >
 > **Se escribe mientras el dueño termina de medir con su Arnés.** No se ha empezado ninguna implementación nueva a
 > partir de él.

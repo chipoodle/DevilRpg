@@ -1,5 +1,11 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 22-nov-2026 — A2 CERRADO Y ACEPTADO.** Este documento es un **traspaso histórico** del
+> 16-oct-2026; su texto original se conserva íntegro por trazabilidad. El estado vigente de A2 está en
+> `docs/autonomous-village/2026-11-22-A2-FINAL-ACCEPTANCE-AND-CLOSURE.md` (8/8 estricto en tres corridas
+> consecutivas de 12000 ticks, C4_PASS). Las afirmaciones de «A2 sigue ABIERTO» que aparecen más abajo
+> describen el estado de aquella fecha, no el actual.
+
 > **Documento de traspaso.** Escrito al cerrar **Stage 6B**. Describe el estado **real y verificado** del
 > repositorio en ese momento, no el estado deseado. Léelo antes de tocar nada.
 >

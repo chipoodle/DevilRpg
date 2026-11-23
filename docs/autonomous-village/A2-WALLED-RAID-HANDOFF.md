@@ -1,5 +1,11 @@
 # A2 · ASEDIO AMURALLADO — HANDOFF DE CONTINUACIÓN
 
+> **ACTUALIZACIÓN 22-nov-2026 — A2 CERRADO Y ACEPTADO.** El bloque «Estado global: A2 SIGUE ABIERTO» que sigue
+> es el estado **histórico** de este handoff y se conserva por trazabilidad. El gate del asedio amurallado
+> quedó medido y aceptado: 8/8 estricto DENTRO-PARED en tres corridas consecutivas de 12000 ticks con C4_PASS
+> (`a2n-20261122-054142`, `-094529`, `-100646`). Ver
+> `docs/autonomous-village/2026-11-22-A2-FINAL-ACCEPTANCE-AND-CLOSURE.md`.
+
 > **Estado global: A2 SIGUE ABIERTO.** El gate del asedio amurallado completo está **sin medir**.
 > Este documento es el registro de continuación del *asedio*, no un parte de aceptación.
 >

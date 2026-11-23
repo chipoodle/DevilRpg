@@ -1,3 +1,29 @@
+# A2 CERRADO FORMALMENTE — CLOSED / ACCEPTED (2026-11-22)
+
+**Veredicto:** A2 (Zombie Siege) queda **CLOSED — ACCEPTED**. Informe de cierre:
+`docs/autonomous-village/2026-11-22-A2-FINAL-ACCEPTANCE-AND-CLOSURE.md`.
+Build aceptada: `5ad020882a184e8e6e95d1398175fb598b600754`. HEAD al cerrar: `dce7d504aa153c15f95bfe196da7232f0f6cb844`.
+
+**Criterio:** 8/8 estricto DENTRO-PARED (distancia ≤62) en dos corridas consecutivas con C4 integrado PASS,
+ventana oficial 12000 ticks (todas las entradas antes de t=8668), semilla 12345, mundos nuevos.
+
+**Corridas aceptadas (tres consecutivas):**
+
+| RUN_ID | Veredicto | Estricto | Fase B |
+|---|---|---|---|
+| `a2n-20261122-054142` | C4_PASS | 8/8 | 8/8, entraronPerimetroEver=8 |
+| `a2n-20261122-094529` | C4_PASS | 8/8 | 8/8, entraronPerimetroEver=8 |
+| `a2n-20261122-100646` | C4_PASS | 8/8 | 8/8, entraronPerimetroEver=8 |
+
+**Corrida NO contabilizada:** `a2n-20261122-055413` (8/8 entradas, sin `fin.txt`, interrumpida antes del C4).
+
+**Pendiente inmediato (documentado, no ejecutado):** revisar la exención estrecha del presupuesto del muro
+(`5ad02088`); C4 standalone/save-reload; reconciliar diagnósticos históricos BUILD/BREAK/DROP; definir si
+existe una campaña «Full12K» distinta de las corridas de 12000 ticks. Detalle completo en el informe §10.
+
+**Restricciones de este cierre:** sin cambios de código ni tests, sin Gradle, sin runtime, sin tocar mundos.
+El historial de fallos y diagnósticos se conserva íntegro.
+
 # CURRENT CHECKPOINT — BUILD provenance fix + BREAK diagnostic isolation (2026-11-21)
 
 **Branch:** feature/autonomous-village
