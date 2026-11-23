@@ -185,7 +185,7 @@ public final class VillageManager {
      * granjeros y un trabajador perdido). Durante esta ventana no se repuebla: la aldea solo gana gente en
      * minutos, esperar unos segundos no cambia nada y evita duplicados y pérdidas.
      */
-    private static final int CARGA_POBLACION_GRACIA_TICKS = 240;
+    private static final int CARGA_POBLACION_GRACIA_TICKS = 1200;
     private static long primerTickDeVida = -1L;
     /**
      * Cuánta presión extra acumula la aldea por cada aldeano que le falta. Con 1 aldeano acumula el doble, y
@@ -4812,6 +4812,15 @@ public final class VillageManager {
 
     private static void reclamarEstacionesDelPueblo(ServerLevel level, List<Villager> aldeanos, BlockPos center,
                                                     int objectiveIndex) {
+        // C4 · NO SE REPARTE MIENTRAS LA ALDEA CARGA. Al abrir un mundo, las memorias JOB_SITE persistidas aún no
+        // están todas cargadas: el reparto veía puestos «cogidos SIN dueño», les soltaba el ticket y un recién
+        // llegado los reclamaba; al cargar el dueño real quedaban dos aldeanos con el mismo POI (medido en
+        // `c4n-20261123-017`, reload1: farmers 628,120,547 y 668,120,537). Se aplaza el reparto completo hasta que
+        // la ventana de carga termine: entonces se ven los dueños reales y no se libera ningún ticket ajeno.
+        if (!cargaDeAldeaAsentada(level)) {
+            DevilRpg.LOGGER.info("[Village] reparto de estaciones aplazado: la aldea aun esta cargando");
+            return;
+        }
         reconciliarPuestosDuplicados(aldeanos);
         PoiManager poi = level.getPoiManager();
         for (Villager villager : aldeanos) {
