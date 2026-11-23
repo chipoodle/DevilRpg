@@ -223,6 +223,10 @@ expansiones y 13 avances. No-regresión ON/OFF: `misma_ruta=true`, mismas expans
 - **No**: no se ha medido el planner sobre terreno de Minecraft real ni con aldeanos reales en runtime; eso requiere
   un arnés de navegación (A2) con `-PnavMetrics=true`. No se ha cambiado el algoritmo (no hay evidencia que lo
   justifique); A* incremental se conserva.
+- **Cableado global**: no hay test unitario que ejecute `planGlobalIncremental` con un `CollisionGetter`/`Mob`
+  reales porque el repo no tiene un doble de mundo navegable; el wrapper local sí se prueba (rama `inicio==fin`), y la
+  instrumentación global se revisó por diff y se ejercita en el arnés C4 (que vuelca `metrics-<fase>.txt` si se
+  habilita, aunque C4 no navega). Queda pendiente un arnés de navegación para medir el cableado global en runtime.
 
 ---
 
