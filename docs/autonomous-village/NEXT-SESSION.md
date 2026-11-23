@@ -1,3 +1,10 @@
+# A1 — AUDITORÍA FORENSE DE LOS 6 COMMITS DE `migration-neoforge-1.21.1` (2026-11-23)
+
+- Informe: `docs/autonomous-village/2026-11-23-A1-SIX-COMMITS-FORENSIC-AUDIT.md`.
+- **Recomendación: NO incorporar ninguno de los seis commits.** A1 (4 guardias de fundación armados, adicionales, sin tocar los 12 puestos) **ya está implementado y validado en AV** (`spawnGuardiasFundadores`, `guardiasFundadoras` persistente, `esGuardiaFundadora`, `equiparDesdeAlmacen`; A2 midió 4/4 fundadores equipados; C4 midió 12/12 puestos con 16 aldeanos).
+- Los commits de la otra rama son una implementación paralela anterior con **nombres y persistencia distintos** (`GuardiaDeFundacion`/`Set` vs `GuardiaFundadora`/máscara): portarlos crearía un doble mecanismo de fundación (riesgo C4). Todos conflictúan textualmente con AV (`git merge-tree`).
+- A2 y C4 permanecen **ACCEPTED**; no se ha modificado código, tests ni evidencia.
+
 # AUDITORÍA DE CONSOLIDACIÓN — A2 Y C4 ACEPTADOS; SIGUIENTE ETAPA PENDIENTE DE DECISIÓN (2026-11-23)
 
 - **Informe:** `docs/autonomous-village/2026-11-23-AUTONOMOUS-VILLAGE-CONSOLIDATION-AUDIT.md` (auditoría completa: Git, ramas, NeoForge, navegación §K/§L, persistencia, reconciliación, muro, Full12K, contrato de finalización y hoja de ruta).
