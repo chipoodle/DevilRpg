@@ -1,3 +1,8 @@
+# CAMPAÑA — INCREMENTO 3: REVALIDACIÓN C4 CON CENSO OBLIGATORIO (2026-11-23)
+
+- **Objetivo A cumplido**: campaña `c4n-20261123-024` (SHA `1abab57d`) — PREPARE, RELOAD1 y RELOAD2 **PASS** con `roster_invariantes_ok=true` obligatorio (si falla, la fase falla). 12/12 puestos, 4 fundadores, 0 duplicados, 0 pérdidas, identidades/profesiones/goals/reanudación correctos.
+- Pendiente: B (prueba NBT/save-reload en `test`), D (instrumentación del planner y línea base), E (herramientas), F (docs). Campaña ABIERTA.
+
 # CAMPAÑA DE EVOLUCIÓN — INCREMENTO 2: MATRIZ DE NAVEGACIÓN Y CENSO OBLIGATORIO (2026-11-23)
 
 - `NavTerrainMatrixTest` (policyTest, ~40 aserciones): STEP_UP, DROP, DROP+overshoot, BREAK+BUILD (fases del escalón), presupuestos del túnel; escenarios RUNTIME documentados.
