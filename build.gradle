@@ -341,6 +341,7 @@ tasks.register('policyTest') {
                 'com.chipoodle.devilrpg.entity.nav.TunnelActionPlannerTest',
                 'com.chipoodle.devilrpg.entity.nav.TunnelExecutionPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.TunnelPlanPolicyTest',
+                'com.chipoodle.devilrpg.entity.nav.NavTerrainMatrixTest',
                 'com.chipoodle.devilrpg.world.VillageJobSiteOwnershipPolicyTest',
                 'com.chipoodle.devilrpg.world.VillagePopulationLoadPolicyTest',
                 'com.chipoodle.devilrpg.world.VillageRosterInvariantsTest',

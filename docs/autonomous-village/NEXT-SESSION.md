@@ -1,3 +1,9 @@
+# CAMPAÑA DE EVOLUCIÓN — INCREMENTO 2: MATRIZ DE NAVEGACIÓN Y CENSO OBLIGATORIO (2026-11-23)
+
+- `NavTerrainMatrixTest` (policyTest, ~40 aserciones): STEP_UP, DROP, DROP+overshoot, BREAK+BUILD (fases del escalón), presupuestos del túnel; escenarios RUNTIME documentados.
+- El arnés C4 ahora **falla** si `VillageRosterInvariants` no se cumple (antes solo lo registraba).
+- Gates verdes. Pendiente: revalidación C4 con el censo obligatorio (runtime), prueba NBT de save/reload, instrumentación de rendimiento y herramientas.
+
 # CAMPAÑA DE EVOLUCIÓN — INCREMENTO 1 VALIDADO; CAMPAÑA ABIERTA (2026-11-23)
 
 - Informe: `docs/autonomous-village/2026-11-23-AUTONOMOUS-VILLAGE-EVOLUTION-CAMPAIGN.md`.

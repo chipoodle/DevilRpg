@@ -76,3 +76,26 @@ SHA probado: `340f7f466bdb43b2bef01cd869e31a7b9cce403b` + este incremento (commi
 4. **Revalidación**: una campaña C4 nueva que exija `roster_invariantes_ok=true`.
 
 No se declara la campaña completa: quedan tareas ejecutables de C/D/E y la revalidación de A.
+
+---
+
+## INCREMENTO 2 (2026-11-23) — Objetivo C: matriz de navegación
+
+- **Nuevo `NavTerrainMatrixTest`** (registrado en `policyTest`): matriz de **~40 aserciones** que combina
+  STEP_UP (celda de pies válida/protegida/sin soporte/colisión/fluido/chunk descargado), DROP (bordes 1-3,
+  fuera de alcance, aterrizaje sin soporte/holgura, en el aire, despegue sin soporte), **DROP+overshoot**
+  (cae al aterrizaje, cae por debajo dentro de la caída segura, exceso rechazado, por encima rechazado,
+  horizontal >1), **BREAK+BUILD** (escalón de ascenso: despeje, fases CLEAR/PLACE/MOVE, aterrizaje
+  verificado) y **presupuestos** (túnel: primer plan, cooldown, topes de planes/pasos, pasos disponibles).
+- **Invariantes del censo ahora OBLIGATORIOS** en el arnés C4: la fase falla si `VillageRosterInvariants` no
+  se cumple (`okFase && invariantes.ok()`), además de registrarlo en el JSON.
+- Escenarios que **requieren runtime** (documentados en la propia prueba): DROP entre columnas reales,
+  BREAK con línea de visión, BUILD con colocación, reanudación de A*, cambios dinámicos de terreno y
+  objetivos inaccesibles con presupuesto.
+- Gates verdes: compileJava/compileTestJava/test/policyTest/lint/diff-check.
+
+### Pendiente tras el incremento 2
+- **Objetivo A (revalidación)**: campaña C4 nueva con `roster_invariantes_ok=true` obligatorio (runtime).
+- **Objetivo B**: prueba NBT/save-reload en `test`.
+- **Objetivo D**: instrumentación de expansiones/tiempo y línea base.
+- **Objetivo E**: herramientas (GuardHarness/verificador/métricas) contra AV.

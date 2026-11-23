@@ -421,7 +421,7 @@ public final class C4StandaloneHarness {
         boolean jobSiteOk = jobSite[1] == 0 && jobSite[2] == 0;
         boolean actividad = activos.size() + movidos >= Math.max(1, (esperadoTotal * 5) / 6);
         boolean preparadoOk = sinPerdidas && registrados && identidades && sinDuplicados && jobSiteOk;
-        boolean okFase = preparadoOk && reanudadosOk && goalsOk == esperadoTotal;
+        boolean okFase = preparadoOk && reanudadosOk && goalsOk == esperadoTotal && invariantes.ok();
 
         chequeos.add("\"fase_ok\":" + okFase);
         chequeos.add("\"esperados\":" + esperadoTotal);
