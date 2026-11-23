@@ -1,3 +1,13 @@
+# C4 STANDALONE + SAVE/RELOAD — PASS (2026-11-23)
+
+- **Aceptación: 3 campañas completas consecutivas PASS** (`c4n-20261123-021`, `-022`, `-023`), cada una con PREPARE + RELOAD1 + RELOAD2 en PASS, 12/12 presentes, 0 pérdidas, 12/12 profesiones/goals/reanudados, **0 duplicados de job site**, actividad efectiva y guardado/cierre/reapertura verificados.
+- SHA de aceptación: `0ab01d0da7807cffa638661bfb3e1b6e0ac60686`; producción: `ff48e257` sobre `2fb687ab`, `41e58087`, `09255bfd`.
+- Causa raíz demostrada (015/016/017): al cargar, el reparto veía los POI persistidos como «cogidos SIN dueño» (memorias aún no cargadas) y **liberaba sus tickets**; además la aldea repoblaba antes de cargar y los goals de minero/herrero liberaban tickets ajenos. Correcciones: un-puesto-un-dueño + reconciliación (`09255bfd`), ventana de gracia de repoblado (`41e58087`), comprobación de propiedad a escala de aldea en los goals (`2fb687ab`), reparto aplazado durante la carga (`ff48e257`).
+- Instrumentación: censo solo con entidades+chunks cargados (`CARGA_COMPLETA tick=5`), tabla por tick antes/después de mantenimiento; las memorias `JOB_SITE` llegan **vacías** al cargar (el duplicado no es persistido, se crea después). El arnés ahora espera la carga completa antes de cualquier mantenimiento (corrige el escenario de `020`).
+- Tests: `VillageJobSiteOwnershipPolicyTest` (9) y `VillagePopulationLoadPolicyTest` (7); gates: compileJava, compileTestJava, test, policyTest, lint, diff-check — todos PASS.
+- Informe: `docs/autonomous-village/2026-11-22-C4-STANDALONE-SAVE-RELOAD-ACCEPTANCE.md`.
+- A2 sin regresión requerida (cambios de población/puestos, no de navegación).
+
 # C4 STANDALONE / SAVE-RELOAD — EN CURSO (2026-11-23)
 
 - Arnés `tools/c4n/C4StandaloneHarness.java` + lanzador `tools/c4n/lanzar-c4n.ps1` (untracked): fases prepare/reload1/reload2 sobre el MISMO mundo desechable, con censo 12/12, identidades, goals, reanudación, job sites y actividad.
