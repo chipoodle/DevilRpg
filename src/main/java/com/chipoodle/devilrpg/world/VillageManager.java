@@ -179,6 +179,15 @@ public final class VillageManager {
     /** Cada cuánto se repone UN aldeano en una aldea debilitada (5 min). */
     private static final int REPOPULATE_INTERVAL_TICKS = 5 * 60 * 20;
     /**
+     * C4 · VENTANA DE GRACIA DE CARGA. Al abrir un mundo, los aldeanos persistidos tardan en cargarse: el conteo
+     * por radio los ve incompletos y el mantenimiento reponía puestos «vacíos», creando un aldeano NUEVO que
+     * reclamaba el POI de un trabajador persistido (medido en `c4n-20261123-015`, reload1: POI 628,63,547 con dos
+     * granjeros y un trabajador perdido). Durante esta ventana no se repuebla: la aldea solo gana gente en
+     * minutos, esperar unos segundos no cambia nada y evita duplicados y pérdidas.
+     */
+    private static final int CARGA_POBLACION_GRACIA_TICKS = 240;
+    private static long primerTickDeVida = -1L;
+    /**
      * Cuánta presión extra acumula la aldea por cada aldeano que le falta. Con 1 aldeano acumula el doble, y
      * vacía dos veces y media: <i>los monstruos huelen la debilidad</i>.
      */
@@ -1205,9 +1214,14 @@ public final class VillageManager {
                     tickVillageLife(level, saved, i, target);
                 }
                 if (vivos == 0) {
-                    VillageGenerator.spawnVillagers(level, target);
-                    saved.markRepopulated(i, level.getGameTime());
-                    DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
+                    if (!cargaDeAldeaAsentada(level)) {
+                        DevilRpg.LOGGER.info("[Village] Aldea {} parece vacia pero los aldeanos persistidos aun"
+                                + " estan cargando: no se repuebla en este latido", i);
+                    } else {
+                        VillageGenerator.spawnVillagers(level, target);
+                        saved.markRepopulated(i, level.getGameTime());
+                        DevilRpg.LOGGER.info("[Village] Aldea {} estaba vacia: aldeanos y golem repuestos", i);
+                    }
                 } else {
                     // Qué oficios quedan vivos y cuál falta (si mataron al recolector, vuelve un recolector; si al
                     // granjero, un granjero): no se repone "el sitio siguiente".
@@ -1218,6 +1232,11 @@ public final class VillageManager {
                             .toList();
                     int slot = VillageGenerator.slotDeProfesionFaltante(vivas);
                     if (slot >= 0) {
+                        if (!cargaDeAldeaAsentada(level)) {
+                            DevilRpg.LOGGER.info("[Village] Aldea {}: falta el puesto de {} pero los aldeanos"
+                                    + " persistidos aun estan cargando; se espera al siguiente latido",
+                                    i, VillageGenerator.profesionDeSlot(slot));
+                        } else {
                         // PUESTO VACÍO: se repone YA y ADULTO, sin esperar el turno de crecimiento (5 min) ni a que
                         // crezca una cría (20 min). Una aldea sin recolector acumula basura por el suelo y sin
                         // granjero pasa hambre, así que el relevo de un puesto que se ha quedado vacío no puede
@@ -1240,8 +1259,10 @@ public final class VillageManager {
                         saved.markRepopulated(i, level.getGameTime());
                         DevilRpg.LOGGER.info("[Village] Aldea {}: repuesto el puesto de {} que se habia quedado vacio "
                                 + "(comida {})", i, VillageGenerator.profesionDeSlot(slot), saved.getFood(i));
+                        }
                     } else if (saved.getFood(i) >= FOOD_TO_GROW
                             && vivos < VillageGenerator.puestosDelPueblo() + MILICIA_MAX
+                            && cargaDeAldeaAsentada(level)
                             && level.getGameTime() - saved.getRepopulatedAt(i) >= REPOPULATE_INTERVAL_TICKS) {
                         // Crecer cuesta comida: una aldea hambrienta no se recupera hasta que la granja produzca.
                         // El que llega nace CRÍA (crece sola, mecánica vanilla): así se ve el relevo generacional.
@@ -2865,6 +2886,15 @@ public final class VillageManager {
      * {@link VillageSavedData#HEALTH_UNKNOWN} y no toca nada: contar entidades descargadas daría 0 y la aldea
      * parecería muerta (se marcaría caída sin motivo y se repoblaría a lo tonto).
      */
+    /** C4 · ¿la aldea ya terminó de cargar? No se repuebla hasta que los aldeanos persistidos estén cargados. */
+    private static boolean cargaDeAldeaAsentada(ServerLevel level) {
+        long ahora = level.getGameTime();
+        if (primerTickDeVida < 0L) {
+            primerTickDeVida = ahora;
+        }
+        return VillagePopulationLoadPolicy.cargaAsentada(ahora, primerTickDeVida, CARGA_POBLACION_GRACIA_TICKS);
+    }
+
     private static int observeVillagers(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center) {
         if (!level.isLoaded(center)) {
             return VillageSavedData.HEALTH_UNKNOWN;
