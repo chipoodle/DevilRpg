@@ -1,3 +1,26 @@
+# SOAK MULTI-DÍA — HERRAMIENTA Y HALLAZGOS; NO ACEPTADO (2026-11-24)
+
+- **Herramienta:** `tools/soak/SoakHarness.java` + `lanzar-soak.ps1` (opt-in `-PsoakHarness=true`,
+  excluye `debug/**`). Genera aldea propia, mantenimiento real cada 200 ticks, sprint, muestreo de
+  población/cobertura/duplicados/huérfanos/inactividad/comida/leña/hierro y muertes por evento.
+- **Fix real encontrado:** el ganadero se asfixiaba en una valla mientras `Recogiendo el corral`
+  (`soak-diag-20261124-1150`, Zacarías en 708,55,533). `VillagerAnimalFarmGoal.tick` ahora llama a
+  `desatascarSiEstaEncajado` **cada tick** (mismo patrón que leñador/granjero/recolector/clérigo).
+  Código probado `552e9b57`; 12k y 72k posteriores no reprodujeron la asfixia. Informe:
+  `2026-11-24-ANIMAL-FARM-SUFFOCATION-FIX.md`.
+- **Run oficial 72k** `soak-final-20261124-1120` (`552e9b57`): `SOAK_PASS_CON_BAJAS`, 16→11 población,
+  **5 muertes por hambre**, 4 ausentes, cobertura 8/11, **0 duplicados, 0 huérfanos, 0 inactivos
+  permanentes**, comida 6–77 (final 19), guardado OK, sin excepciones. Detalle:
+  `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md`.
+- **NO ACEPTADO:** el contrato de estabilidad (asignaciones) pasa; **la sostenibilidad alimentaria
+  falla** (5 muertes en 3 días). Las trazas muestran a los cinco **yendo a la taberna** (4 atascados en
+  `630,63,530`, uno dentro de una puerta en `628,66,529`): no es solo cantidad de comida. Causas
+  candidatas: ruta/puerta de la taberna, `repartirRaciones` que marca comida pero no reduce el hambre,
+  puerta de 1 h del goal frente a +1 de hambre/10 s, y solo 4 camas para 16. **Siguiente objetivo:
+  economía/hambre a 16 bocas** y repetir 72k con **0 muertes por hambre**.
+- **Límite del arnés:** sin jugador no se ejecuta `VillageManager.manageNearby` (reposición); una baja
+  deja la cobertura por debajo de 11/11. C4 cubre 12/12 y 11/11.
+
 # L4 RESUELTO — LA POSICIÓN DEL DUEÑO SE REFRESCA MIENTRAS ESTÁ CARGADO (2026-11-24)
 
 - **Fallo corregido:** `cargarDueniosDePuestos` ignoraba a los dueños cargados, así que `OwnerPos` solo

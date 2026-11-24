@@ -1,5 +1,13 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — SOAK MULTI-DÍA: HERRAMIENTA + HALLAZGOS; NO ACEPTADO.** Código probado
+> `552e9b57`. Nuevo arnés `tools/soak` (72.000 ticks, sprint, aldea desechable). Encontró y corrigió una
+> **asfixia real del ganadero** (`VillageAnimalFarmGoal` ahora se desatasca cada tick). El run oficial
+> 72k dio **0 duplicados, 0 huérfanos, 0 inactivos permanentes**, pero **5 muertes por hambre** con
+> comida en la despensa: la sostenibilidad alimentaria a 16 bocas **falla** y queda como siguiente
+> objetivo. No se declara la aldea autosuficiente. Informes:
+> `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` y `2026-11-24-ANIMAL-FARM-SUFFOCATION-FIX.md`.
+
 > **ACTUALIZACIÓN 24-nov-2026 — L4 CERRADO.** Código probado `e335d867`. Mientras el dueño del libro
 > está cargado, `cargarDueniosDePuestos` refresca su `OwnerPos` (mismo titular, sin tocar tickets), para
 > que una descarga posterior cargue su chunk correcto. Persistencia **553** (544+9); ownership 54; skills

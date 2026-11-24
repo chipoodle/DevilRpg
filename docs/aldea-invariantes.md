@@ -11681,3 +11681,23 @@ lint y `git diff --check` verdes en `e335d867`.
 
 **Límites:** sin corrida runtime de alejamiento/descarga; el refresco ocurre cada `VILLAGE_POLL_TICKS`
 (10 s), no cada tick. El patrón de marcar `dirty` al moverse ya existía para titulares con `JOB_SITE`.
+
+### I404 · EL GANADERO SE DESATASCA EN CADA TICK, TAMBIÉN TRABAJANDO (24-nov-2026)
+
+**Regla:** `VillagerAnimalFarmGoal.tick()` llama a
+`VillageManager.desatascarSiEstaEncajado(villager)` al principio de `tick`, antes de la comprobación de
+distancia/fase, igual que `VillagerLumberjackGoal`, `VillagerFarmGoal`, `VillagerPickupGoal`,
+`VillagerCollectGoal` y `VillagerClericGoal`. El desatasco del latido (cada 10 s) no basta: si un animal
+empuja al ganadero contra una valla mientras recoge/trabaja, puede asfixiarse antes.
+
+**Causa raíz:** el goal solo comprobaba el desatasco en la rama de navegación (`distancia > alcance`);
+en la rama de trabajo no. Medido en el soak de 12.000 ticks: `Zacarias (Ganadero) / Recogiendo el
+corral` murió `suffocated in a wall` en `708,55,533`.
+
+**Evidencia:** `build/soak/soak-diag-20261124-1150/srv.log` (muerte) y
+`build/soak/soak-diag2-20261124-1200`/`soak-final-20261124-1120` (sin asfixia tras el fix). Informe:
+`2026-11-24-ANIMAL-FARM-SUFFOCATION-FIX.md`.
+
+**Límites:** no hay test headless del goal (necesita `ServerLevel`); la muerte es estocástica y la
+evidencia es runtime (soak). El fix no repuebla aldeanos: la reposición depende de `manageNearby`
+(jugador cerca) y no se ejecuta en el soak sin jugador.

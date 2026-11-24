@@ -35,6 +35,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | L6 | Navegación runtime con una entidad por escenario. | `nav-final-20261124-0255`, 21 escenarios. | No cubre multientidad, laberintos largos, combate, agua ni puertas. | Matriz multientidad y escenarios compuestos. |
 | L7 | fastutil sin A/B runtime. | A/B sintético 750 rutas idénticas; campaña real sin baseline anterior. | Ganancia runtime no cuantificada; no se declara. | A/B de 6+ ejecuciones por brazo, mismo mundo y rutas. |
 | L8 | A2 no se reejecutó en el cierre. | Excluido expresamente por el usuario; C4/NAV cubren el camino actual. | Regresión A2 no medida. | Campaña A2 acotada solo si el análisis de dependencias la justifica. |
+| **F1** | **Hambre a 16 bocas en 3 días.** El soak oficial 72k dio 5 muertes por hambre; las trazas muestran a los cinco **yendo a la taberna** (4 atascados en `630,63,530`, uno en la puerta `628,66,529`), 4 camas para 16, y `repartirRaciones` no reduce el hambre personal. | `build/soak/soak-final-20261124-1120`; log `ha muerto de hambre`; `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` §4. | La aldea no es autosuficiente a 3 días; la cobertura cae con cada baja. | Medir ruta a la taberna, reparto y cadencia de hambre; corregir la causa demostrada y repetir 72k con **0 muertes por hambre**. |
 
 ## 3. Protocolo de continuidad
 
@@ -125,3 +126,11 @@ Informe: `2026-11-24-L3-JOB-SITE-RESTORE-OWNER.md`.
 y no removido (mismo titular, sin tocar tickets); si no está cargado, se conserva la carga por la última
 posición. Persistencia **553** aserciones (+9). **Límite:** sin runtime de alejamiento/descarga.
 Informe: `2026-11-24-L4-JOB-SITE-OWNER-POSITION-REFRESH.md`.
+
+**Soak multi-día (24-nov, `552e9b57`).** Nuevo arnés `tools/soak` (72k ticks, sprint, mundo desechable,
+sin jugador). Encontró una **asfixia real del ganadero** mientras `Recogiendo el corral`; corregida con
+`desatascarSiEstaEncajado` en cada tick del `VillageAnimalFarmGoal`. El run oficial 72k dio **0
+duplicados, 0 huérfanos, 0 inactivos permanentes**, pero **5 muertes por hambre** (población 16→11,
+cobertura 8/11, comida 6–77, inicial 20). **No se acepta el soak**: la sostenibilidad alimentaria a 16
+bocas es el objetivo abierto **F1**; el arnés sin jugador no ejecuta `manageNearby` (reposición).
+Informes: `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` y `2026-11-24-ANIMAL-FARM-SUFFOCATION-FIX.md`.

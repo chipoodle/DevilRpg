@@ -72,6 +72,7 @@
 | C4 puestos/guardias | mismo arnés | `jobsite-<fase>.txt`, `AL_CARGAR`, máscara de fundadores, equipo | JSON/log del run |
 | POI real `ServerLevel`/`PoiManager` | `tools/poi/lanzar-poi-harness.ps1` | 4 fases, tickets, digest vivo==disco, tardío, F1–F4, parcial medido | `build/av/poi-final-20261124-0305` (**POI_PASS 4/4**) |
 | Matriz navegación runtime | `tools/nav/lanzar-nav-harness.ps1` | 21 escenarios STEP_UP/DROP/BREAK/BUILD/túnel/terreno/A*/límites | `build/av/nav-final-20261124-0255` (**NAV_PASS 21/21**) |
+| Soak multi-día | `tools/soak/lanzar-soak.ps1 -PsoakHarness=true` | 72.000 ticks (3 días de juego), sin jugador; duplicados/huérfanos/inactividad/comida/muertes | `build/soak/soak-final-20261124-1120` (**`SOAK_PASS_CON_BAJAS`**: 0 dup/huérf./inactivos, **5 muertes por hambre → F1 abierto**) |
 | Rendimiento real | `tools/perf/resumir-metricas.ps1` | Agregación literal, `NO_MEDIDO` fuera de medias | `build/av/perf-final/perf-resumen-final.md` |
 
 ## 3. Comandos de los gates
@@ -108,6 +109,11 @@ Herramientas de evidencia:
 - **Muerte/conversión real de un aldeano** (L1): la semántica del libro está cubierta por el bloque 11 de
   `VillagePersistenceIntegrationTest`, pero el disparador `VillageAgentRegistry.onDeath/onConversion` no se
   ha medido en runtime con una entidad muriendo. C4/POI no matan aldeanos.
+- **Soak sin jugador**: `VillageManager.manageNearby` (reposición de aldeanos) no se ejecuta; una baja
+  deja la cobertura por debajo de 11/11. El soak **no** demuestra reposición; C4 cubre 12/12/11/11.
+- **Soak y hambre**: el run 72k `soak-final-20261124-1120` registró 5 muertes por hambre con comida en
+  la despensa (F1 abierto). El arnés reporta `bajas` y `ausentes_fin`; no se declara PASS de
+  sostenibilidad alimentaria.
 - **Skills**: cubiertas headless por `SkillCapabilityIntegrationTest` (376); **no** se ha ejecutado un
   servidor dedicado con jugador ni la UI de cliente (`SkillScreen`/HUD). La doble ejecución
   cliente/servidor de `onKeyInput` sigue sin revisar. Ver `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`.

@@ -25,6 +25,7 @@ asignaciones huérfanas, deriva de almacén ni bucles de inactividad permanentes
 | Inactividad larga | 0 permanente (sin goal corriendo y sin moverse 12.000 ticks de día); los huecos de 2.400 ticks se reportan como pico |
 | Comida de despensa | nunca negativa; no 0 durante más de 30 muestras seguidas |
 | Población final | >0 |
+| Muertes | se reportan (`bajas`, `bajas_detalle`); si hay bajas el resultado es `SOAK_PASS_CON_BAJAS`, **no** un PASS limpio. El run 72k de referencia tuvo **5 muertes por hambre** (F1 abierto) |
 | Guardado | `saveEverything` OK |
 | Excepciones | sin `Exception in thread`/`ServerHangWatchdog` en `srv.log` (lo revisa el lanzador) |
 
@@ -50,8 +51,9 @@ históricos, y no relanza un `RunId` con evidencia. No ejecutar otro Gradle/serv
 build/soak/<run>/
   soak.json        veredicto + métricas finales
   muestras.csv     una fila por muestra (200 ticks)
-  fin.txt          SOAK_PASS/SOAK_FAIL con detalle
+  fin.txt          SOAK_PASS / SOAK_PASS_CON_BAJAS / SOAK_FAIL con detalle
   sha.txt          SHA del código usado
+  soak.log         trazas del arnés (muestras, bajas, inactividad)
   srv.log          log del servidor
   launcher.txt     resultado y escaneo de excepciones
 ```
@@ -65,5 +67,8 @@ build/soak/<run>/
 - **No hay libro mayor de transacciones**: comida/leña/hierro/almacén son un *proxy* de deriva, no una
   prueba de conservación exacta por evento.
 - **No hay asedio**: el objetivo es la aldea en paz durante días; A2/C4 cubren el asedio.
+- **Hambre:** el run 72k encontró 5 muertes por hambre; las trazas las sitúan **yendo a la taberna** y
+  con 4 camas para 16. No se declara autosuficiencia alimentaria; ver
+  `docs/autonomous-village/2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` §4.
 - Una aldea con todos los oficios cubiertos puede seguir teniendo comportamientos no medidos
   (calidad de rutas, tiempo de faena); este arnés no los convierte en PASS.

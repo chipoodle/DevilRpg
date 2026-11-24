@@ -193,5 +193,10 @@ POI (15); aldea/terreno/comida/siege. **Skills: 0.**
   `2026-11-24-L3-JOB-SITE-RESTORE-OWNER.md`. Límite: sin runtime de dos aldeanos reales.
 - **L4 RESUELTO** en `e335d867`: `OwnerPos` se refresca para el dueño cargado; persistencia **553**
   (544+9). Informe: `2026-11-24-L4-JOB-SITE-OWNER-POSITION-REFRESH.md`. Límite: sin runtime de descarga.
+- **Soak multi-día IMPLEMENTADO y ejecutado (72.000 ticks)**, pero **NO ACEPTADO**: el arnés encontró y
+  se corrigió una asfixia real del ganadero; el run oficial dio 0 duplicados/huérfanos/inactivos pero
+  **5 muertes por hambre** en 16 bocas. Nuevo objetivo **F1** (sostenibilidad alimentaria). Informes:
+  `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` y `2026-11-24-ANIMAL-FARM-SUFFOCATION-FIX.md`.
+- **Siguen abiertos:** L2, L5–L8, **F1 hambre**, §L/rendimiento, decisión de ramas/A1.
 - Las clasificaciones de §2 se mantienen como **foto de la auditoría**; esta sección registra qué se
   corrigió después, sin reescribir los hallazgos.
