@@ -9205,8 +9205,29 @@ public final class VillageManager {
             return 0;
         }
         int dados = VillagePantry.sacarComida(level, center, puntos, bocas.size());
-        if (dados > 0) {
-            for (Villager v : bocas) marcarComida(level, v);
+        if (dados <= 0) {
+            return 0;
+        }
+        // SOAK 24-nov-2026 · LA RACIÓN TIENE QUE REDUCIR EL HAMBRE, NO SOLO MARCAR `ultimaComida`.
+        // Medido: la despensa tenía 42-63 puntos, `repartirRaciones` sacaba comida y marcaba a las bocas,
+        // pero el hambre personal seguía subiendo; los aldeanos solo bajaban hambre en la taberna o antes
+        // de dormir (y con 4 camas para 16, la mayoría no dormía). Se reparte en orden de más tiempo sin
+        // comer y se descuenta 25 por punto, igual que la ración de la taberna. Antes se marcaba a TODAS
+        // las bocas si se sacaba algo, aunque la comida no llegara para todas.
+        bocas.sort(Comparator.comparingLong(v -> ultimaComida(level, v)));
+        int restante = dados;
+        for (Villager v : bocas) {
+            int pedido = FoodHungerPolicy.rationForWork(trabajoHoy(level, v));
+            int dar = Math.min(pedido, restante);
+            if (dar <= 0) {
+                break;
+            }
+            restante -= dar;
+            marcarComida(level, v);
+            reducirHambre(v, 25 * dar);
+            if (dar < pedido) {
+                break;
+            }
         }
         return dados;
     }

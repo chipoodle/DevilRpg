@@ -170,6 +170,15 @@ public class VillagerTavernGoal extends Goal {
         if (!(villager.level() instanceof ServerLevel level)) {
             return;
         }
+        // SOAK 24-nov-2026 · MEDIDO: los aldeanos hambrientos morían "Yendo a la taberna" atascados en
+        // 630,63,530 (ruta 34-37 nodos, anda=true, llega=false) y uno DENTRO de la puerta 628,66,529.
+        // El goal no comprobaba el desatasco; el latido lo hace cada 10 s y la puerta lo abría pero no
+        // lo sacaba. Se comprueba en CADA tick, igual que los demás goals del pueblo.
+        if (VillageManager.desatascarSiEstaEncajado(villager)) {
+            mejorDistancia = Double.MAX_VALUE;
+            stuckTicks = 0;
+            return;
+        }
         BlockPos destino = usandoDespensa && destinoComida != null ? destinoComida : mesaDeEsteAldeano(level);
         villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
         // I158 (30-sep-2026) · EL ATASCO SE MIDE CONTRA **EL PASO**, NO CONTRA LA MESA. La mesa es un mueble que NO SE
