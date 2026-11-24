@@ -3,8 +3,8 @@
 **RUN_ID:** `av-skills-20261124-1040`
 **Rama:** `feature/autonomous-village`
 **INITIAL_HEAD:** `941ac75bef6ba2d2f4718525ad4e2f51bf8b8031` (docs de L1)
-**TESTED_HEAD (código y pruebas):** se registra al commitear; el contenido probado es el de este informe.
-**FINAL_HEAD:** commit de este informe.
+**TESTED_HEAD (código y pruebas):** `0a9f86700e39ae97cb90fb9eaeafada2c586cb62`
+**FINAL_HEAD:** commit que contiene este informe (posterior a `0a9f8670`, solo documentación).
 **Origen previo:** auditoría `2026-11-24-PENDING-AUDIT.md` §2, donde las skills quedaron
 `IMPLEMENTED` pero con **0 tests** y una dependencia de cliente en código común.
 
