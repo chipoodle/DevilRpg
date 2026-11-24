@@ -61,6 +61,7 @@ public class VillagerTavernGoal extends Goal {
     private long diagTick;
     private boolean diag() { return Boolean.getBoolean("devilrpg.fooddiag"); }
     private boolean usandoDespensa;
+    private boolean enEntrada;
     private BlockPos destinoComida;
     private int stuckTicks;
     private double mejorDistancia = Double.MAX_VALUE;
@@ -156,6 +157,7 @@ public class VillagerTavernGoal extends Goal {
         espera = 0;
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
+        enEntrada = false;
         if (villager.level() instanceof ServerLevel level) {
             BlockPos destino = usandoDespensa && destinoComida != null ? destinoComida : mesaDeEsteAldeano(level);
             VillageManager.caminarHacia(villager, destino, VELOCIDAD);
@@ -194,6 +196,19 @@ public class VillagerTavernGoal extends Goal {
             return;
         }
         BlockPos destino = usandoDespensa && destinoComida != null ? destinoComida : mesaDeEsteAldeano(level);
+        BlockPos objetivo = destino;
+        // SOAK 24-nov-2026 · El aldeano que viene del ESTE no encontraba ruta a la mesa (el planificador
+        // se estrellaba contra el muro este: `ruta=6 nodos … alcanza=NO`). Se entra por la puerta oeste o
+        // sur: primero una casilla EXTERIOR de la puerta y, ya allí, la mesa. No se come en la puerta.
+        if (!enEntrada && !VillageGenerator.dentroDeLaTaberna(center, villager.blockPosition())) {
+            BlockPos entrada = VillageGenerator.entradaExteriorDeLaTaberna(level, center, villager.blockPosition());
+            if (entrada != null && villager.distanceToSqr(entrada.getX() + 0.5D, entrada.getY() + 0.5D,
+                    entrada.getZ() + 0.5D) > REACH * REACH) {
+                destino = entrada;
+            } else if (entrada != null) {
+                enEntrada = true;
+            }
+        }
         villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
         // I158 (30-sep-2026) · EL ATASCO SE MIDE CONTRA **EL PASO**, NO CONTRA LA MESA. La mesa es un mueble que NO SE
         // PISA (`destino=dark_oak_fence encima=oak_pressure_plate`), así que la recta hasta ella puede no bajar nunca
@@ -243,6 +258,12 @@ public class VillagerTavernGoal extends Goal {
                         villager.onGround(), villager.isNoAi(), villager.isPassenger(),
                         villager.isSleeping(), stuckTicks, distancia);
             }
+            return;
+        }
+        if (distancia <= REACH && !destino.equals(objetivo)) {
+            // Ya está en la casilla exterior de la puerta: el siguiente tick entra a la mesa.
+            enEntrada = true;
+            VillageManager.parar(villager);
             return;
         }
         VillageManager.parar(villager);

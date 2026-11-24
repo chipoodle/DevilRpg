@@ -9599,6 +9599,50 @@ public final class VillageGenerator {
         return new BlockPos(base.getX(), nivel, base.getZ() + TABERNA_PUERTA);
     }
 
+    /** ¿Esa casilla está dentro de la huella de la taberna? (no mira la Y). */
+    public static boolean dentroDeLaTaberna(BlockPos center, BlockPos pos) {
+        BlockPos base = baseDeLaTaberna(center);
+        int dx = pos.getX() - base.getX();
+        int dz = pos.getZ() - base.getZ();
+        return dx >= 0 && dx < TABERNA_ANCHO && dz >= 0 && dz < TABERNA_FONDO;
+    }
+
+    /**
+     * <b>Punto de entrada EXTERIOR de la taberna</b>: una casilla de pie junto a la puerta oeste o a la
+     * sur, la más cercana al aldeano.
+     * <p>
+     * SOAK 24-nov-2026 · Medido: los aldeanos que venían del ESTE no encontraban ruta a las mesas
+     * (`ruta=6 nodos … alcanza=NO`) y morían de hambre en la puerta con la despensa llena. Ir primero a
+     * una casilla exterior de la puerta y entrar desde ahí evita el planificador contra el muro este.
+     */
+    @Nullable
+    public static BlockPos entradaExteriorDeLaTaberna(ServerLevel level, BlockPos center, BlockPos desde) {
+        int nivel = cotaDeLaPlaza(level, center);
+        BlockPos base = baseDeLaTaberna(center);
+        BlockPos[] candidatos = {
+                new BlockPos(base.getX() - 1, nivel, base.getZ() + TABERNA_PUERTA),
+                new BlockPos(base.getX() + TABERNA_PUERTA_SUR, nivel, base.getZ() + TABERNA_FONDO),
+                new BlockPos(base.getX() - 1, nivel, base.getZ() + TABERNA_PUERTA + 1),
+                new BlockPos(base.getX() + TABERNA_PUERTA_SUR + 1, nivel, base.getZ() + TABERNA_FONDO)
+        };
+        BlockPos mejor = null;
+        double mejorDist = Double.MAX_VALUE;
+        for (BlockPos p : candidatos) {
+            if (!VillageManager.esCeldaDePie(level, p)) {
+                continue;
+            }
+            double dx = p.getX() - desde.getX();
+            double dy = p.getY() - desde.getY();
+            double dz = p.getZ() - desde.getZ();
+            double d = dx * dx + dy * dy + dz * dz;
+            if (d < mejorDist) {
+                mejorDist = d;
+                mejor = p;
+            }
+        }
+        return mejor;
+    }
+
     /**
      * <b>ABRE EL PASO DE LA TABERNA AL ALMACÉN</b> (migración 72): una <b>puerta de servicio en el muro ESTE de la
      * taberna</b>, a la altura del cobertizo del almacén, para que el <b>cocinero</b> pueda ir a por leña.
