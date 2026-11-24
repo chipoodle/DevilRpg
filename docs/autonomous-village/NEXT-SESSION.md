@@ -8,8 +8,11 @@
   `soak-f1-table` (256 + mesa) → **9 muertes**, población 21, comida 124–284;
   `soak-f1-table-diag` (misma semilla, `-Diag`) → **13 muertes**, comida 56, cobertura final 11/11;
   `soak-f1-waypoint` (oeste+sur) → **10**; **`soak-f1-west` (solo oeste) → 8 muertes**, población 22,
-  comida 164, 11/11 final, 0 ausentes. Las bajas siguen `Yendo a la taberna` en
+  comida 164, 11/11 final, 0 ausentes; `soak-f1-plaza` (tramo de plaza) → **30 muertes, población 0**,
+  comida 292 (regresión, **revertida** en `af711875`). Las bajas siguen `Yendo a la taberna` en
   `709-728,63,541-578` (más una caída).
+- **Waypoint de plaza DESCARTADO:** mandó a los aldeanos al oeste `599,63,519`/centro y mató a 30 con
+  la despensa llena; el 12k no lo vio. No se reintroduce.
 - **Causa raíz capturada:** las mesas (`dark_oak_fence` + `oak_pressure_plate`) dan
   `ruta=6 nodos … alcanza=NO`; la entrada exterior oeste mejora 13→8, pero el **terreno/ruta del
   este/sureste** sigue atascando. **No es hambre de despensa ni destino único: es ruta/terreno.** No se

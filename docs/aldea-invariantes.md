@@ -11777,3 +11777,16 @@ exterior oeste bajó de 13 a **8** muertes (población 22, comida 164, 11/11 fin
 
 **Límites:** F1 **no cerrado**; el siguiente objetivo es la ruta/terreno (plaza/road waypoints o
 navegación). Sin test headless.
+
+### I409 · EL WAYPOINT DE PLAZA ESTÁ DESCARTADO (24-nov-2026)
+
+**Regla:** no usar el centro de la plaza como primer tramo de `VillagerTavernGoal`. El 72k
+`soak-f1-plaza` (`f375446b`) mató a **30 aldeanos** (población 0, comida 268–292) en `599,63,519` y
+`666-675,63,534-546`; el tramo de plaza los mandó al **oeste/choke central**, no a un camino seguro.
+El 12k con el mismo código dio 0 muertes: **no basta un 12k para aceptar una ruta**.
+
+**Evidencia:** `build/soak/soak-f1-plaza-20261124-1705`; reversión `af711875`; mejor variante vigente
+`soak-f1-west` (8 muertes). Informe: `2026-11-24-F1-PLAZA-WAYPOINT-REGRESSION.md`.
+
+**Límites:** la entrada oeste sigue sin 0 muertes; F1 abierto. El fletcher `c7230316…` sin POI válido
+en `610,63,508` es un defecto aparte (job site).

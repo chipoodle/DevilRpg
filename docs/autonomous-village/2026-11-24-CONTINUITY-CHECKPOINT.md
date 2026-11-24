@@ -35,7 +35,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | L6 | Navegación runtime con una entidad por escenario. | `nav-final-20261124-0255`, 21 escenarios. | No cubre multientidad, laberintos largos, combate, agua ni puertas. | Matriz multientidad y escenarios compuestos. |
 | L7 | fastutil sin A/B runtime. | A/B sintético 750 rutas idénticas; campaña real sin baseline anterior. | Ganancia runtime no cuantificada; no se declara. | A/B de 6+ ejecuciones por brazo, mismo mundo y rutas. |
 | L8 | A2 no se reejecutó en el cierre. | Excluido expresamente por el usuario; C4/NAV cubren el camino actual. | Regresión A2 no medida. | Campaña A2 acotada solo si el análisis de dependencias la justifica. |
-| **F1** | **Hambre/acceso a la taberna a 3 días.** Correcciones: ración con `reducirHambre`, desatasco por tick, **remesa 256**, **mesa por aldeano** y **entrada exterior por la puerta oeste**. El mundo que colapsó bajó de **29 → 16 → 9 → 8** (13 en el diagnóstico con `-Diag`); comida 164, 11/11 final, pero las bajas siguen en `709-728,63,541-578` `Yendo a la taberna`: **ruta/terreno del este**. | `build/soak/soak-f1-west-20261124-1630`; `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md`, `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`, `2026-11-24-F1-TAVERN-ENTRANCE-WAYPOINT.md`. | La aldea aún no es autosuficiente a 3 días: la ruta/terreno a la comida mata. | Ruta/terreno (plaza/road waypoints o navegación) y 72k con **0 muertes**; no relajar el hambre. |
+| **F1** | **Hambre/acceso a la taberna a 3 días.** Correcciones: ración con `reducirHambre`, desatasco por tick, **remesa 256**, **mesa por aldeano** y **entrada exterior por la puerta oeste**. El mundo que colapsó bajó de **29 → 16 → 9 → 8**; el waypoint de **plaza** posterior mató a **30** y se revirtió (`af711875`). Comida 164, 11/11 final, pero las bajas siguen en `709-728,63,541-578` `Yendo a la taberna`: **ruta/terreno del este**. | `build/soak/soak-f1-west-20261124-1630`; `soak-f1-plaza-20261124-1705` (regresión); `2026-11-24-F1-PLAZA-WAYPOINT-REGRESSION.md`. | La aldea aún no es autosuficiente a 3 días: la ruta/terreno a la comida mata; además el POI del fletcher queda inválido con población 30. | Ruta/terreno (sin plaza) y POI del fletcher; 72k con **0 muertes**. |
 
 ## 3. Protocolo de continuidad
 
@@ -157,3 +157,10 @@ oeste+sur movió las muertes al sur (`701,581`, 10 bajas); solo oeste bajó a **
 164, 11/11 final) pero las bajas siguen en `709-728,63,541-578`. **El choke es la ruta/terreno del este**,
 no la puerta ni la despensa. F1 **no cerrado**; siguiente: ruta/terreno (plaza/road waypoints o
 navegación). Informe: `2026-11-24-F1-TAVERN-ENTRANCE-WAYPOINT.md`.
+
+**Waypoint de plaza: regresión revertida (`f375446b` → `af711875`).** El 12k con plaza dio 0 muertes,
+pero el 72k mató a **30** (población 0, comida 268–292) en `599,63,519` y centro-oeste; el tramo de plaza
+mandó a los aldeanos al choke del oeste. Se revirtió. El mejor código vigente es la entrada oeste
+(`2ebf8ef4`, 8 muertes). El 12k con plaza también destapó un **fletcher** (`c7230316…`) sin POI válido
+en `610,63,508` (`sin_puesto=1`, 49 muestras) con población 30: defecto de **job site/POI**, no de
+hambre. Informe: `2026-11-24-F1-PLAZA-WAYPOINT-REGRESSION.md`.

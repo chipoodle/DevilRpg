@@ -5,11 +5,12 @@
 > puntos** y **mesa por aldeano** (antes todos al mismo punto de apoyo) y **entrada exterior por la
 > puerta oeste**. El 72k del mundo que colapsaba bajó de **29 → 16 → 9 → 8**; el diagnóstico con semilla
 > y `-Diag` capturó las mesas inalcanzables (`ruta=6 nodos … alcanza=NO`) y la variante oeste redujo de
-> 13 a 8, pero las bajas siguen en `709-728,63,541-578` con comida 164: el choke es la **ruta/terreno
+> 13 a 8; un waypoint de **plaza** posterior mató a **30** (población 0, comida 292) y fue **revertido**
+> (`af711875`). Las bajas siguen en `709-728,63,541-578` con comida 164: el choke es la **ruta/terreno
 > del este**, no la despensa ni la puerta. F1 **no cerrado**; soak **NO ACEPTADO**. Informes:
 > `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md`,
-> `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md` y `2026-11-24-F1-TAVERN-ENTRANCE-WAYPOINT.md`. Siguiente:
-> ruta/terreno (plaza/road waypoints o navegación), no hambre.
+> `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`, `2026-11-24-F1-TAVERN-ENTRANCE-WAYPOINT.md` y
+> `2026-11-24-F1-PLAZA-WAYPOINT-REGRESSION.md`. Siguiente: ruta/terreno (sin plaza) y POI del fletcher.
 
 > **ACTUALIZACIÓN 24-nov-2026 — F1 PARCIAL.** Código probado `0e57b569`. La ración diaria ya **reduce el
 > hambre** (25/punto), reparte solo lo que saca y ordena por más tiempo sin comer; `VillagerTavernGoal`
