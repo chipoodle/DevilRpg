@@ -5234,7 +5234,12 @@ public final class VillageManager {
      */
     private static void restaurarDueniosDelLibro(ServerLevel level, VillageSavedData saved, BlockPos center,
                                                 int objectiveIndex) {
+        if (saved.jobSiteOwners().isEmpty()) {
+            return;
+        }
         PoiManager poi = level.getPoiManager();
+        List<Villager> cargados = level.getEntitiesOfClass(Villager.class,
+                new AABB(center).inflate(VillageGenerator.FENCE_RADIUS));
         for (var entrada : saved.jobSiteOwners().entrySet()) {
             if (!(level.getEntity(entrada.getValue()) instanceof Villager v)
                     || v.isBaby() || !v.isAlive() || v.isRemoved()
@@ -5247,21 +5252,36 @@ public final class VillageManager {
             }
             BlockPos pos = BlockPos.of(entrada.getKey());
             Optional<Holder<PoiType>> tipo = poi.getType(pos);
-            if (tipo.isEmpty() || !profesion.heldJobSite().test(tipo.get()) || !esDeDentroDelMuro(center, pos)) {
+            // C4/L3 · el libro es la autoridad: si otro aldeano cargado conserva la memoria de ESTE
+            // puesto, no se le deja bloquear al titular. La decisión (y a quién limpiar) es pura; aquí
+            // solo se ejecuta. No se suelta el ticket: pertenece al puesto y lo conserva el titular.
+            List<UUID> ajenos = new ArrayList<>();
+            for (Villager otro : cargados) {
+                if (otro.getUUID().equals(v.getUUID())) {
+                    continue;
+                }
+                boolean mismo = otro.getBrain().getMemory(MemoryModuleType.JOB_SITE)
+                        .map(sitio -> sitio.pos().equals(pos)).orElse(false);
+                if (mismo) {
+                    ajenos.add(otro.getUUID());
+                }
+            }
+            boolean ticketCogido = tipo.isPresent() && poi.getFreeTickets(pos) == 0;
+            var plan = VillageJobSiteReconciliationPolicy.planificarRestauracion(
+                    new VillageJobSiteReconciliationPolicy.Restauracion(
+                            entrada.getValue(), entrada.getKey(), true, true, tipo.isPresent(),
+                            tipo.isPresent() && profesion.heldJobSite().test(tipo.get()),
+                            esDeDentroDelMuro(center, pos), ticketCogido, ajenos));
+            if (!plan.restaurar()) {
                 continue;
             }
-            // Un JOB sin ticket sería un fantasma: solo se restaura si el ticket sigue cogido.
-            if (poi.getFreeTickets(pos) != 0) {
-                continue;
-            }
-            // Y no se duplica el puesto si otro aldeano cargado ya lo tiene.
-            boolean yaDeOtro = level.getEntitiesOfClass(Villager.class,
-                            new AABB(center).inflate(VillageGenerator.FENCE_RADIUS)).stream()
-                    .anyMatch(otro -> !otro.getUUID().equals(v.getUUID())
-                            && otro.getBrain().getMemory(MemoryModuleType.JOB_SITE)
-                                    .map(sitio -> sitio.pos().equals(pos)).orElse(false));
-            if (yaDeOtro) {
-                continue;
+            for (UUID sobrante : plan.limpiarMemorias()) {
+                if (level.getEntity(sobrante) instanceof Villager otro) {
+                    otro.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
+                    otro.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                    DevilRpg.LOGGER.info("[Village] Aldea {}: el libro es la autoridad en {}; se limpia"
+                                    + " la memoria de {}", objectiveIndex, pos.toShortString(), sobrante);
+                }
             }
             v.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), pos));
             v.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);

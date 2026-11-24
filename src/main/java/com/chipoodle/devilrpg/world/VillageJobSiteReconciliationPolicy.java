@@ -3,8 +3,10 @@ package com.chipoodle.devilrpg.world;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -168,5 +170,88 @@ public final class VillageJobSiteReconciliationPolicy {
             }
         }
         return out;
+    }
+
+    /**
+     * C4/L3 · <b>Foto de un puesto del libro que podría devolverse a su titular</b>.
+     * <p>
+     * El libro persistido es la autoridad (I393). Si el titular está cargado, vivo, sin {@code JOB_SITE}, su
+     * POI existe, es de su oficio, está dentro del recinto y el ticket sigue cogido, el puesto se le devuelve.
+     * El caso que antes se perdía era {@code yaDeOtro}: otro aldeano cargado conservaba la memoria del mismo
+     * POI y el titular legítimo quedaba sin estación hasta que el otro la soltara. Esa memoria es la que hay
+     * que limpiar (sin tocar el ticket, que es del puesto), no la que hay que respetar.
+     *
+     * @param titular               UUID del dueño persistido (nunca {@code null} en producción)
+     * @param poi                   posición empaquetada del puesto
+     * @param titularCargado        la entidad del titular está cargada
+     * @param titularSinJob         el titular no tiene ya {@code JOB_SITE}
+     * @param poiExiste             el POI sigue registrado
+     * @param tipoDelOficio         el tipo del POI satisface {@code profesion.heldJobSite()}
+     * @param dentroDeLaAldea       el POI está dentro del recinto del pueblo
+     * @param ticketCogido          {@code free_tickets == 0} (un JOB sin ticket sería un fantasma)
+     * @param dueniosCargadosAjenos aldeanos cargados (dentro del radio) con el mismo POI como {@code JOB_SITE},
+     *                              excluido el titular
+     */
+    public record Restauracion(UUID titular, long poi, boolean titularCargado, boolean titularSinJob,
+                               boolean poiExiste, boolean tipoDelOficio, boolean dentroDeLaAldea,
+                               boolean ticketCogido, List<UUID> dueniosCargadosAjenos) {
+    }
+
+    /**
+     * Plan de restauración: si se devuelve el puesto y qué memorias ajenas hay que limpiar antes.
+     * {@code limpiarMemorias} va ordenado por UUID y sin duplicados para que dos pasadas decidan igual.
+     */
+    public record PlanRestauracion(boolean restaurar, List<UUID> limpiarMemorias, String motivo) {
+    }
+
+    /**
+     * Decide si el titular persistido recupera su puesto y a quién hay que quitarle la memoria duplicada.
+     * <p>
+     * Reglas, en este orden: el titular debe estar cargado y sin {@code JOB_SITE}; el POI debe existir, ser
+     * de su oficio, estar dentro de la aldea y tener el ticket cogido. Si todo se cumple, se restaura
+     * <b>siempre</b>, y se limpian las memorias de los aldeanos cargados que no son el titular (el libro
+     * manda). No suelta tickets: el ticket pertenece al puesto y lo conserva el titular restaurado.
+     */
+    public static PlanRestauracion planificarRestauracion(final Restauracion r) {
+        if (r == null) {
+            return new PlanRestauracion(false, List.of(), "sin datos");
+        }
+        if (r.titular() == null || !r.titularCargado()) {
+            return noRestaurar("el titular no esta cargado");
+        }
+        if (!r.titularSinJob()) {
+            return noRestaurar("el titular ya tiene JOB_SITE");
+        }
+        if (!r.poiExiste()) {
+            return noRestaurar("el POI ya no existe");
+        }
+        if (!r.tipoDelOficio()) {
+            return noRestaurar("el POI no es del oficio del titular");
+        }
+        if (!r.dentroDeLaAldea()) {
+            return noRestaurar("el POI esta fuera de la aldea");
+        }
+        if (!r.ticketCogido()) {
+            return noRestaurar("el ticket no esta cogido: un JOB sin ticket seria un fantasma");
+        }
+        Set<UUID> unicos = new HashSet<>();
+        if (r.dueniosCargadosAjenos() != null) {
+            for (UUID uuid : r.dueniosCargadosAjenos()) {
+                if (uuid != null && !uuid.equals(r.titular())) {
+                    unicos.add(uuid);
+                }
+            }
+        }
+        List<UUID> limpiar = new ArrayList<>(unicos);
+        limpiar.sort(Comparator.comparing(UUID::toString));
+        return new PlanRestauracion(true, List.copyOf(limpiar),
+                limpiar.isEmpty()
+                        ? "puesto libre: el libro devuelve la estacion a su titular"
+                        : "el libro es la autoridad: se limpia la memoria de " + limpiar.size()
+                        + " aldeano(s) que no son el titular");
+    }
+
+    private static PlanRestauracion noRestaurar(final String motivo) {
+        return new PlanRestauracion(false, List.of(), motivo);
     }
 }

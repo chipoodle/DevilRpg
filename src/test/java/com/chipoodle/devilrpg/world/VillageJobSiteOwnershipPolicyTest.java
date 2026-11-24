@@ -81,7 +81,70 @@ public final class VillageJobSiteOwnershipPolicyTest {
         probarReconciliacionDePotenciales();
         probarTicketsPerdidos();
         probarLibroAlDesaparecerTitular();
+        probarRestauracionDelLibro();
         System.out.println("VILLAGE_JOB_SITE_OWNERSHIP_POLICY_TEST: OK (" + assertions + " assertions)");
+    }
+
+    // ------------------------------------------------------------- C4/L3 · restauración del libro
+
+    private static void probarRestauracionDelLibro() {
+        UUID alice = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID bob = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        UUID carol = UUID.fromString("00000000-0000-0000-0000-000000000003");
+        long poi = 77L;
+
+        var sinDuenios = new VillageJobSiteReconciliationPolicy.Restauracion(
+                alice, poi, true, true, true, true, true, true, List.of());
+        var plan = VillageJobSiteReconciliationPolicy.planificarRestauracion(sinDuenios);
+        check("restauracion: sin duplicados se devuelve el puesto",
+                plan.restaurar() && plan.limpiarMemorias().isEmpty());
+        check("restauracion: el motivo no habla de limpieza", !plan.motivo().contains("limpia"));
+
+        var conBob = new VillageJobSiteReconciliationPolicy.Restauracion(
+                alice, poi, true, true, true, true, true, true, List.of(bob));
+        var planBob = VillageJobSiteReconciliationPolicy.planificarRestauracion(conBob);
+        check("restauracion: limpia al que no es titular",
+                planBob.restaurar() && planBob.limpiarMemorias().equals(List.of(bob)));
+        check("restauracion: el motivo nombra la limpieza", planBob.motivo().contains("limpia"));
+
+        var conDuplicados = new VillageJobSiteReconciliationPolicy.Restauracion(
+                alice, poi, true, true, true, true, true, true, List.of(carol, bob, bob, alice));
+        var planDuplicados = VillageJobSiteReconciliationPolicy.planificarRestauracion(conDuplicados);
+        check("restauracion: limpia ajenos sin duplicados y ordenados",
+                planDuplicados.limpiarMemorias().equals(List.of(bob, carol)));
+        check("restauracion: no limpia al propio titular", !planDuplicados.limpiarMemorias().contains(alice));
+        check("restauracion: dos pasadas deciden igual",
+                VillageJobSiteReconciliationPolicy.planificarRestauracion(conDuplicados).equals(planDuplicados));
+
+        check("restauracion: no si el titular no esta cargado",
+                !restaurar(new VillageJobSiteReconciliationPolicy.Restauracion(
+                        alice, poi, false, true, true, true, true, true, List.of())).restaurar());
+        check("restauracion: no si el titular ya tiene JOB",
+                !restaurar(new VillageJobSiteReconciliationPolicy.Restauracion(
+                        alice, poi, true, false, true, true, true, true, List.of())).restaurar());
+        check("restauracion: no si el POI no existe",
+                !restaurar(new VillageJobSiteReconciliationPolicy.Restauracion(
+                        alice, poi, true, true, false, true, true, true, List.of())).restaurar());
+        check("restauracion: no si el POI no es del oficio",
+                !restaurar(new VillageJobSiteReconciliationPolicy.Restauracion(
+                        alice, poi, true, true, true, false, true, true, List.of())).restaurar());
+        check("restauracion: no si el POI esta fuera de la aldea",
+                !restaurar(new VillageJobSiteReconciliationPolicy.Restauracion(
+                        alice, poi, true, true, true, true, false, true, List.of())).restaurar());
+        var sinTicket = restaurar(new VillageJobSiteReconciliationPolicy.Restauracion(
+                alice, poi, true, true, true, true, true, false, List.of(bob)));
+        check("restauracion: no sin ticket cogido y no limpia a nadie",
+                !sinTicket.restaurar() && sinTicket.limpiarMemorias().isEmpty());
+        check("restauracion: sin titular no restaura",
+                !restaurar(new VillageJobSiteReconciliationPolicy.Restauracion(
+                        null, poi, true, true, true, true, true, true, List.of(bob))).restaurar());
+        check("restauracion: plan nulo no restaura",
+                !VillageJobSiteReconciliationPolicy.planificarRestauracion(null).restaurar());
+    }
+
+    private static VillageJobSiteReconciliationPolicy.PlanRestauracion restaurar(
+            VillageJobSiteReconciliationPolicy.Restauracion restauracion) {
+        return VillageJobSiteReconciliationPolicy.planificarRestauracion(restauracion);
     }
 
     // ------------------------------------------------------------- C4/L1 · libro al desaparecer el titular
