@@ -174,9 +174,15 @@ def includeA4Lab = providers.gradleProperty('a4nLab').getOrElse('false') == 'tru
 // NavScenarioHarness.java es un entry point de `debug/`; el resto se excluye para que ningún otro
 // suscriptor compita por ServerStartedEvent/ServerTickEvent ni detenga el servidor.
 def includeNavHarness = providers.gradleProperty('navHarness').getOrElse('false') == 'true'
+// AV · Soak multi-día. Opt-in y aislado: -PsoakHarness=true excluye TODO debug/ y compila tools/soak,
+// que es el único entry point del run. Así C4/A2/POI no compiten por ServerStartedEvent ni por el tick.
+def includeSoakHarness = providers.gradleProperty('soakHarness').getOrElse('false') == 'true'
 sourceSets.main {
     java {
-        if (!includeA2Diagnostics && !includeNavHarness) {
+        if (includeSoakHarness) {
+            exclude 'com/chipoodle/devilrpg/debug/**'
+            srcDir file('tools/soak')
+        } else if (!includeA2Diagnostics && !includeNavHarness) {
             exclude 'com/chipoodle/devilrpg/debug/**'
         } else if (includeNavHarness) {
             // Único entry point del run de navegación.

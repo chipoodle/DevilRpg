@@ -322,6 +322,17 @@ public class VillagerAnimalFarmGoal extends Goal {
         if (target == null || !(villager.level() instanceof ServerLevel level)) {
             return;
         }
+        // SOAK 24-nov-2026 · SI UN ANIMAL LO EMPUJA DENTRO DE UNA VALLA/MURO, EL DESATASCO GENÉRICO
+        // DEL LATIDO (cada 10 s) LLEGA TARDE: medido en el soak de 3 días, el ganadero murió
+        // "suffocated in a wall" en 708,55,533 mientras `Recogiendo el corral`. El goal ya comprobaba
+        // el atasco en la rama de NAVEGACIÓN, pero no cuando estaba parado trabajando (o lo empujaba
+        // un animal). Se comprueba en CADA tick, como ya hacen el leñador, el granjero, el recolector,
+        // el clérigo y la recogida; el ayudante no toca nada si la celda está libre.
+        if (VillageManager.desatascarSiEstaEncajado(villager)) {
+            mejorDistancia = Double.MAX_VALUE;
+            stuckTicks = 0;
+            return;
+        }
         // I33 TAMBIÉN PARA LOS DESTINOS FIJOS (el almacén, el punto de apoyo del corral): ésos se calculan fuera de
         // las búsquedas —que son las que saltan lo aparcado—, así que sin esto el ganadero volvía a por el MISMO punto
         // del almacén en bucle (medido con el arnés: 12 veces el mismo `1461,121,1434`). Se suelta y el goal arranca
