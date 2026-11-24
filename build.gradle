@@ -353,6 +353,13 @@ sourceSets {
         java.srcDir 'tools/poi'
         java.include '**/PoiPersistenceReport.java'
     }
+    // Skills · primer gate headless del subsistema (24-nov-2026): arbol JSON, catalogo, ejecutores y NBT
+    // de la capability. No necesita cliente ni servidor; usa Bootstrap como villageTest.
+    skillTest {
+        java.srcDir 'src/skillTest/java'
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
 }
 
 tasks.register('foodTestSuite') {
@@ -383,6 +390,15 @@ tasks.register('villagePersistenceTest', JavaExec) {
     dependsOn tasks.named('villageTestClasses')
     classpath = sourceSets.villageTest.runtimeClasspath
     mainClass = 'com.chipoodle.devilrpg.world.VillagePersistenceIntegrationTest'
+}
+
+// Skills · arbol JSON <-> SkillEnum <-> ejecutores <-> NBT de la capability, sin cliente ni servidor.
+tasks.register('skillCapabilityTest', JavaExec) {
+    group = 'verification'
+    description = 'Valida el arbol de skills y la persistencia de la capability (Bootstrap headless).'
+    dependsOn tasks.named('skillTestClasses')
+    classpath = sourceSets.skillTest.runtimeClasspath
+    mainClass = 'com.chipoodle.devilrpg.capability.skill.SkillCapabilityIntegrationTest'
 }
 
 // POI · autotest PURO de la logica del arnes de POI/tickets. No lanza Minecraft ni el servidor.
@@ -512,6 +528,8 @@ tasks.named('test') {
     dependsOn tasks.named('policyTest')
     // Incremento 3 · B: el gate `test` incluye la serializacion/restauracion NBT real de la aldea.
     dependsOn tasks.named('villagePersistenceTest')
+    // Skills · arbol y persistencia de la capability (headless, sin cliente).
+    dependsOn tasks.named('skillCapabilityTest')
     // POI · autotest puro de la logica del arnes de POI/tickets (sin Minecraft, barato).
     dependsOn tasks.named('poiPersistenceSelftest')
     // AV · contrato del catalogo runtime de navegacion (headless).
