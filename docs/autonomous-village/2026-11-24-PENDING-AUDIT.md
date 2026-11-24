@@ -191,5 +191,7 @@ POI (15); aldea/terreno/comida/siege. **Skills: 0.**
 - **L3 RESUELTO** en `e9afbdfc`: `planificarRestauracion` (pura) + limpieza de memorias ajenas y
   restauración del titular; ownership **54** (39+15). Informe:
   `2026-11-24-L3-JOB-SITE-RESTORE-OWNER.md`. Límite: sin runtime de dos aldeanos reales.
+- **L4 RESUELTO** en `e335d867`: `OwnerPos` se refresca para el dueño cargado; persistencia **553**
+  (544+9). Informe: `2026-11-24-L4-JOB-SITE-OWNER-POSITION-REFRESH.md`. Límite: sin runtime de descarga.
 - Las clasificaciones de §2 se mantienen como **foto de la auditoría**; esta sección registra qué se
   corrigió después, sin reescribir los hallazgos.

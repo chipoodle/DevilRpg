@@ -1,5 +1,10 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — L4 CERRADO.** Código probado `e335d867`. Mientras el dueño del libro
+> está cargado, `cargarDueniosDePuestos` refresca su `OwnerPos` (mismo titular, sin tocar tickets), para
+> que una descarga posterior cargue su chunk correcto. Persistencia **553** (544+9); ownership 54; skills
+> 376. Informe: `2026-11-24-L4-JOB-SITE-OWNER-POSITION-REFRESH.md`. Límite: sin runtime de descarga.
+
 > **ACTUALIZACIÓN 24-nov-2026 — L3 CERRADO EN SU PARTE EJECUTABLE.** Código probado `e9afbdfc`.
 > `restaurarDueniosDelLibro` ya no se rinde ante `yaDeOtro`: la política pura `planificarRestauracion`
 > decide devolver el puesto al titular del libro y limpiar las memorias de los aldeanos cargados que no

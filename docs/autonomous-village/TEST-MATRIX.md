@@ -21,7 +21,7 @@
 
 | Prueba | Nivel | Aserciones | Gate | Invariante / qué protege |
 |---|---|---:|---|---|
-| `VillagePersistenceIntegrationTest` | Integración NBT | **544** | `villagePersistenceTest` → `test` | I388, I389, I400: save/load real, dos ciclos, fichero, parcial, corrupción, identidad, JOB_SITE, fundadores, reconciliación y **limpieza del libro al desaparecer el titular** (bloque 11) |
+| `VillagePersistenceIntegrationTest` | Integración NBT | **553** | `villagePersistenceTest` → `test` | I388, I389, I400, I403: save/load real, dos ciclos, fichero, parcial, corrupción, identidad, JOB_SITE, fundadores, reconciliación, **limpieza por muerte** (bloque 11) y **refresco de `OwnerPos`** (bloque 12) |
 | `VillageRosterInvariantsTest` | Unitario | 12 | `policyTest` | I387: 12 puestos, 4 fundadores, UUID único, cupo, un dueño por puesto |
 | `VillageJobSiteOwnershipPolicyTest` | Unitario | **54** | `policyTest` | Un solo dueño por POI; idempotencia; no destruir titular; **puestosDelTitular** (L1/I400); **restauración del titular frente a `yaDeOtro`** (L3/I402) |
 | `VillagePopulationLoadPolicyTest` | Unitario | 7 | `policyTest` | Ventana de gracia de carga (no repoblar antes de cargar) |

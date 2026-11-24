@@ -11662,3 +11662,22 @@ deciden igual. Gates `test`, lint y `git diff --check` verdes en `e9afbdfc`.
 **Límites:** no hay fixture runtime de dos aldeanos reales; C4/POI no reejecutaron este escenario. Si el
 libro estuviera obsoleto y B fuera el titular real, manda el libro (I393); no se añade una heurística
 alternativa.
+
+### I403 · LA POSICIÓN DEL DUEÑO SE REFRESCA MIENTRAS ESTÁ CARGADO (24-nov-2026)
+
+**Regla:** en el latido de la aldea, si el dueño persistido de un puesto está **cargado, vivo y no
+removido**, `cargarDueniosDePuestos` debe refrescar su `OwnerPos` con `v.blockPosition()` mediante
+`claimJobSite` (mismo UUID; no cambia la titularidad y solo marca `dirty` si la posición cambió). Si no
+está cargado, se conserva el comportamiento anterior: cargar el chunk de `OwnerPos` y no borrar la
+entrada si el UUID no aparece. No se tocan tickets ni el libro de otros.
+
+**Causa raíz:** `cargarDueniosDePuestos` hacía `continue` con el dueño cargado, así que `OwnerPos` solo
+se escribía al reclamar. Un dueño cargado sin `JOB_SITE` conservaba una posición vieja y, al descargarse,
+la carga podía buscarle donde ya no estaba (L4).
+
+**Evidencia:** `VillagePersistenceIntegrationTest` bloque 12 (**553** aserciones, +9): el mismo dueño
+refresca la posición, otro dueño no la pisa, y la posición refrescada persiste en NBT. Gates `test`,
+lint y `git diff --check` verdes en `e335d867`.
+
+**Límites:** sin corrida runtime de alejamiento/descarga; el refresco ocurre cada `VILLAGE_POLL_TICKS`
+(10 s), no cada tick. El patrón de marcar `dirty` al moverse ya existía para titulares con `JOB_SITE`.

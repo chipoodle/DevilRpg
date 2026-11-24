@@ -1,3 +1,19 @@
+# L4 RESUELTO — LA POSICIÓN DEL DUEÑO SE REFRESCA MIENTRAS ESTÁ CARGADO (2026-11-24)
+
+- **Fallo corregido:** `cargarDueniosDePuestos` ignoraba a los dueños cargados, así que `OwnerPos` solo
+  se actualizaba al reclamar (o al reconciliar un `JOB_SITE`). Un dueño cargado sin `JOB_SITE` conservaba
+  una posición vieja y, al descargarse, la carga podía buscarle donde ya no estaba.
+- **Código probado:** `e335d867`. Si el dueño está cargado, vivo y no removido, se llama a
+  `claimJobSite(clave, dueño, v.blockPosition())`: mismo titular, `OwnerPos` refrescada, `dirty` solo si
+  cambió. Si no está cargado, se mantiene la carga por `OwnerPos`.
+- **Pruebas:** persistencia **553** (544+9: refresco, dueño intacto, intento ajeno no pisa, NBT); ownership
+  54; skills 376; `test` + `compileJava -Pa2nDiagnostics=true` verdes; lint OK; `git diff --check` 0.
+  Informe: `2026-11-24-L4-JOB-SITE-OWNER-POSITION-REFRESH.md`.
+- **Límite:** sin corrida runtime de alejamiento/descarga; el refresco ocurre en el latido de aldea (10 s),
+  no cada tick.
+- **Siguientes:** L2 (limitación de medición, no defecto seguro), soak multi-día, servidor dedicado/UI de
+  skills, decisión de ramas/A1.
+
 # L3 RESUELTO — EL LIBRO RECUPERA SU PUESTO AUNQUE OTRO CARGADO LO OCUPE (2026-11-24)
 
 - **Fallo corregido:** `restaurarDueniosDelLibro` se rendía ante `yaDeOtro`: si B (cargado) tenía el
