@@ -2,7 +2,9 @@
 
 **RUN_ID:** `av-f1-20261124-1240` / `av-f1-20261124-1245`
 **Rama:** `feature/autonomous-village`
-**Código probado:** `0e57b5695ea83560bfc62cab0acdf5d1091fc23f`
+**Código probado (72k oficial):** `0e57b5695ea83560bfc62cab0acdf5d1091fc23f`
+**Diagnóstico 12k:** mismo contenido, ejecutado antes del commit; el lanzador registró `36bb7cd0`
+(la diferencia es solo el commit, no el código). La evidencia oficial es el 72k de `0e57b569`.
 **Origen:** soak oficial `soak-final-20261124-1120` (`552e9b57`): 5 muertes por hambre, 4/5 atascadas en
 `630,63,530` y una dentro de la puerta `628,66,529`. Informe:
 `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` §4.
@@ -56,7 +58,7 @@ despensa inicial, C1, C4, POI ni navegación.
 | Run | Ticks | Resultado | Población | Cobertura | Comida | Bajas |
 |---|---:|---|---:|---:|---|---:|
 | `soak-final-20261124-1120` (antes, `552e9b57`) | 72.000 | `SOAK_PASS_CON_BAJAS` | 11 | 8/11 | 6–77 | **5 (hambre)** |
-| `soak-f1-diag-20261124-1240` (después, 12k) | 12.000 | **SOAK_PASS** | 16 | 11/11 | 20→124 | **0** |
+| `soak-f1-diag-20261124-1240` (después, 12k, pre-commit) | 12.000 | **SOAK_PASS** | 16 | 11/11 | 20→124 | **0** |
 | `soak-f1-final-20261124-1245` (después, 72k, `0e57b569`) | 72.000 | **`SOAK_PASS_CON_BAJAS`** | 15 | 10/11 | 4–80 (final 20) | **1 (hambre)** |
 
 El run de 72k bajó las muertes de **5 a 1**, pero **no las eliminó**: la víctima,
