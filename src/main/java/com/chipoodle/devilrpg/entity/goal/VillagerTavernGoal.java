@@ -128,7 +128,21 @@ public class VillagerTavernGoal extends Goal {
             if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] reject uuid={} tick={} hunger={} reason=PANTRY pantry={}", villager.getUUID(), level.getGameTime(), VillageManager.hambre(villager), VillagePantry.comida(level, center));
             return false;
         }
-        // La mesa es preferente, pero no puede bloquear la comida: la despensa es el acceso garantizado.
+        // La mesa es preferente: cada aldeano tiene la suya (por UUID), así no se apilan todos en el
+        // mismo punto. La despensa es solo el acceso garantizado si no hay mesa o la suya está aparcada.
+        // SOAK 24-nov-2026 · ANTES ESTO ESTABA AL REVÉS: `usandoDespensa = true` siempre, así que los 16
+        // aldeanos hambrientos iban al MISMO punto de apoyo de la despensa y se atascaban en la puerta de
+        // la taberna (soak `soak-f1-remesa`: 16 muertes con la despensa a 160 puntos). La mesa ya existe
+        // (canUse exige `tabernaConstruida`) y `comer` retira la ración de la despensa de forma remota:
+        // no hace falta ir al cofre.
+        BlockPos mesa = mesaDeEsteAldeano(level);
+        if (mesa != null && !VillageManager.esPuntoFallido(villager, mesa)) {
+            usandoDespensa = false;
+            destinoComida = null;
+            if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] result uuid={} hunger={} dest=mesa {} result=true",
+                    villager.getUUID(), VillageManager.hambre(villager), mesa);
+            return true;
+        }
         destinoComida = VillagePantry.puntoDeApoyo(level, center);
         usandoDespensa = true;
         if (diag()) DevilRpg.LOGGER.info("[FOODDIAG] result uuid={} hunger={} dest={} pantry={} result={}",
@@ -159,7 +173,7 @@ public class VillagerTavernGoal extends Goal {
         if (stuckTicks >= STUCK_LIMIT) {
             // RENDIRSE = DEJARLO POR UN RATO (I33): la mesa a la que no llegó se apunta para no volver a ella en
             // bucle, que es lo que dejaba al aldeano empujando la misma silla (o la valla) para siempre.
-            VillageManager.marcarPuntoFallido(villager, mesa);
+            VillageManager.marcarPuntoFallido(villager, usandoDespensa ? destinoComida : mesa);
             return false;
         }
         return VillageManager.tieneHambre(level, villager) || espera > 0;
