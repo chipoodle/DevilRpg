@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.world.FoodHungerPolicy;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import com.chipoodle.devilrpg.world.VillagePantry;
@@ -64,6 +65,7 @@ public class VillagerTavernGoal extends Goal {
     private boolean enEntrada;
     private BlockPos destinoComida;
     private int stuckTicks;
+    private long inicioGoal;
     private double mejorDistancia = Double.MAX_VALUE;
     private int restTicks;
 
@@ -158,6 +160,7 @@ public class VillagerTavernGoal extends Goal {
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
         enEntrada = false;
+        inicioGoal = villager.level().getGameTime();
         if (villager.level() instanceof ServerLevel level) {
             BlockPos destino = usandoDespensa && destinoComida != null ? destinoComida : mesaDeEsteAldeano(level);
             VillageManager.caminarHacia(villager, destino, VELOCIDAD);
@@ -170,6 +173,18 @@ public class VillagerTavernGoal extends Goal {
             return false;
         }
         if (VillageManager.estaDescansando(villager)) {
+            return false;
+        }
+        // F1 · SOAK 24-nov-2026: no basta con esperar a que `stuckTicks` llegue al tope. Medido en
+        // `soak-f2-fall`: dos aldeanos murieron de hambre "Yendo a la taberna" aunque la ruta seguía
+        // reportando avance (el contador se reseteaba) y la despensa tenía 98. Si el hambre ya es
+        // CRÍTICA y lleva 10 s en el goal, come su ración en el sitio: es la promesa del comentario de
+        // la clase y sigue siendo una ración real con el mismo `tieneHambre` de 3 min.
+        if (VillageManager.hambre(villager) >= FoodHungerPolicy.CRITICAL
+                && level.getGameTime() - inicioGoal >= 200L
+                && VillagePantry.comida(level, center) >= COMIDA_MINIMA
+                && VillageManager.tieneHambre(level, villager)) {
+            comer(level, false);
             return false;
         }
         if (stuckTicks >= STUCK_LIMIT) {
