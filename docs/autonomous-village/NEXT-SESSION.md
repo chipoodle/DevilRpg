@@ -1,3 +1,19 @@
+# L3 RESUELTO — EL LIBRO RECUPERA SU PUESTO AUNQUE OTRO CARGADO LO OCUPE (2026-11-24)
+
+- **Fallo corregido:** `restaurarDueniosDelLibro` se rendía ante `yaDeOtro`: si B (cargado) tenía el
+  `JOB_SITE` del POI, A (dueño del libro) no recuperaba su estación hasta que B la soltara, y
+  `reconciliarPuestosDuplicados` no actuaba porque solo A/B con el **mismo** JOB cuentan como duplicado.
+- **Código probado:** `e9afbdfc`. `VillageJobSiteReconciliationPolicy.Restauracion`/`PlanRestauracion`
+  (decisión pura) + `restaurarDueniosDelLibro` limpia las memorias ajenas y **después** devuelve el
+  puesto al titular; no suelta tickets (pertenecen al puesto).
+- **Pruebas:** `VILLAGE_JOB_SITE_OWNERSHIP_POLICY_TEST` **54** (39+15: restaura, limpia ajenos sin
+  duplicados/ordenados, no limpia al titular, 6 negativos, idempotencia); persistencia 544; skills 376;
+  `test` + `compileJava -Pa2nDiagnostics=true` verdes; lint OK; `git diff --check` 0. Informe:
+  `2026-11-24-L3-JOB-SITE-RESTORE-OWNER.md`.
+- **Límite:** sin fixture runtime de dos aldeanos reales; C4/POI no reejecutados. Si el libro estuviera
+  obsoleto, manda el libro (I393).
+- **Siguientes:** L2/L4, soak multi-día, servidor dedicado/UI de skills, decisión de ramas/A1.
+
 # P1 RESUELTO — SKILLS: ÁRBOL SIN CLIENTE Y PRIMER GATE (2026-11-24)
 
 - **Fallo estructural corregido:** `PlayerSkillCapabilityImplementation` (común) construía

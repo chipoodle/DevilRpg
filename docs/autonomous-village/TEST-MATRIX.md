@@ -23,7 +23,7 @@
 |---|---|---:|---|---|
 | `VillagePersistenceIntegrationTest` | Integración NBT | **544** | `villagePersistenceTest` → `test` | I388, I389, I400: save/load real, dos ciclos, fichero, parcial, corrupción, identidad, JOB_SITE, fundadores, reconciliación y **limpieza del libro al desaparecer el titular** (bloque 11) |
 | `VillageRosterInvariantsTest` | Unitario | 12 | `policyTest` | I387: 12 puestos, 4 fundadores, UUID único, cupo, un dueño por puesto |
-| `VillageJobSiteOwnershipPolicyTest` | Unitario | **39** | `policyTest` | Un solo dueño por POI; idempotencia; no destruir titular; **puestosDelTitular** (L1/I400) |
+| `VillageJobSiteOwnershipPolicyTest` | Unitario | **54** | `policyTest` | Un solo dueño por POI; idempotencia; no destruir titular; **puestosDelTitular** (L1/I400); **restauración del titular frente a `yaDeOtro`** (L3/I402) |
 | `VillagePopulationLoadPolicyTest` | Unitario | 7 | `policyTest` | Ventana de gracia de carga (no repoblar antes de cargar) |
 | `VillageFarmOwnershipTest` | Unitario | 6 | `policyTest` | Una parcela, un dueño; liberación segura |
 | `VillageTerrainPolicyTest` | Unitario | 11 | `policyTest` | Terreno/altura de aldea |

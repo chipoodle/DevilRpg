@@ -187,6 +187,9 @@ POI (15); aldea/terreno/comida/siege. **Skills: 0.**
   aserciones dentro de `test`. Informe:
   `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`. Límites: sin servidor dedicado con jugador ni UI
   de cliente; doble ejecución cliente/servidor sin revisar.
-- **Siguen abiertos:** L2, L3, L4, L5–L8, soak multi-día, §L/rendimiento, decisión de ramas/A1.
+- **Siguen abiertos:** L2, L4, L5–L8, soak multi-día, §L/rendimiento, decisión de ramas/A1.
+- **L3 RESUELTO** en `e9afbdfc`: `planificarRestauracion` (pura) + limpieza de memorias ajenas y
+  restauración del titular; ownership **54** (39+15). Informe:
+  `2026-11-24-L3-JOB-SITE-RESTORE-OWNER.md`. Límite: sin runtime de dos aldeanos reales.
 - Las clasificaciones de §2 se mantienen como **foto de la auditoría**; esta sección registra qué se
   corrigió después, sin reescribir los hallazgos.

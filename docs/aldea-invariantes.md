@@ -11639,3 +11639,26 @@ Gates `test`, lint y `git diff --cached --check` verdes en `0a9f8670`.
 **Límites:** sin corrida de **servidor dedicado con jugador** ni UI de cliente reejecutada; el resource
 pack ya no puede sobrescribir el árbol; la doble ejecución cliente/servidor de `onKeyInput` sigue sin
 revisar.
+
+### I402 · EL LIBRO MANDA SOBRE UNA MEMORIA CARGADA AJENA (24-nov-2026)
+
+**Regla:** si el libro persistido dice que un puesto es de **A**, y **B** (cargado, dentro del radio de
+la valla) conserva la memoria `JOB_SITE` de ese mismo POI, la restauración **no** se rinde: se limpia la
+memoria de B (`JOB_SITE` y `POTENTIAL_JOB_SITE`) y **después** se devuelve el puesto a A. No se suelta el
+ticket: pertenece al puesto y lo conserva el titular restaurado. La decisión es pura
+(`VillageJobSiteReconciliationPolicy.planificarRestauracion`) y solo restaura si el titular está cargado
+y sin `JOB_SITE`, el POI existe, es de su oficio, está dentro de la aldea y el ticket está cogido; en
+cualquier otro caso no toca nada.
+
+**Causa raíz:** `restaurarDueniosDelLibro` tenía un `if (yaDeOtro) continue;`. Con el libro en A y B
+cargado con el JOB, A quedaba sin estación hasta que B la soltara, y `reconciliarPuestosDuplicados` no
+actuaba porque solo B tenía la memoria (no había dos memorias iguales). Es L3.
+
+**Evidencia:** `VillageJobSiteOwnershipPolicyTest` (**54** aserciones, +15): restaura sin duplicados,
+limpia ajenos ordenados y sin duplicados, no limpia al titular, 6 casos negativos (sin cargar, con JOB,
+POI inexistente, tipo incorrecto, fuera de aldea, ticket libre), sin titular y plan nulo; dos pasadas
+deciden igual. Gates `test`, lint y `git diff --check` verdes en `e9afbdfc`.
+
+**Límites:** no hay fixture runtime de dos aldeanos reales; C4/POI no reejecutaron este escenario. Si el
+libro estuviera obsoleto y B fuera el titular real, manda el libro (I393); no se añade una heurística
+alternativa.

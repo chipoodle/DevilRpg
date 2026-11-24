@@ -1,5 +1,11 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — L3 CERRADO EN SU PARTE EJECUTABLE.** Código probado `e9afbdfc`.
+> `restaurarDueniosDelLibro` ya no se rinde ante `yaDeOtro`: la política pura `planificarRestauracion`
+> decide devolver el puesto al titular del libro y limpiar las memorias de los aldeanos cargados que no
+> lo son, sin soltar el ticket. Pruebas de ownership **54** (39+15); persistencia 544; skills 376.
+> Informe: `2026-11-24-L3-JOB-SITE-RESTORE-OWNER.md`. Límite: sin fixture runtime de dos aldeanos.
+
 > **ACTUALIZACIÓN 24-nov-2026 — P1 SKILLS CERRADO EN SU PARTE EJECUTABLE.** Código probado `0a9f8670`.
 > El árbol de skills se lee del classpath (sin `Minecraft`) y los iconos se resuelven contra
 > `BuiltInRegistries.ITEM`, así que la capability común ya no depende del cliente. Nuevo gate

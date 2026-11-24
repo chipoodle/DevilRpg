@@ -29,7 +29,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 |---|---|---|---|---|
 | L1 | Sin limpieza automática del libro al morir el propietario; la estación puede quedar reservada hasta `forgetJobSite`. **RESUELTO 24-nov (`7db821ea`)**: hooks de muerte y conversión + `releaseJobSitesOwnedBy`; ver `2026-11-24-L1-JOB-SITE-LEDGER-DEATH-CLEANUP.md`. | `cargarDueniosDePuestos` no borra vivos; ahora `VillageAgentRegistry.onDeath`/`onConversion` limpian el libro. C4/POI no matan aldeanos. | Estación libre pero reservada para datos históricos anteriores al fix; el runtime de muerte real no se midió. | Test de muerte + recarga: el libro debe limpiarse y la estación reclamarse (semántica cubierta por `VillagePersistenceIntegrationTest` bloque 11; falta runtime de entidad). |
 | L2 | Duplicado con keeper no cargado: se limpian memorias cargadas sin liberar ticket; F1 lo declara `NO_MEDIDO`. | `reconciliarPuestosDuplicados`, `poi-final-20261124-0305` F1. | Posible JOB sin ticket si el borrado era el titular. | Fixture F1 con keeper en chunk no cargado y comprobación de ticket/ghost. |
-| L3 | `restaurar` con `yaDeOtro` no restaura al dueño del libro si otro aldeano cargado tiene el JOB. | `restaurarDueniosDelLibro`. | El titular persistido puede quedarse sin estación hasta que el otro la suelte. | Test de dos aldeanos, uno con JOB no titular y ledger del otro. |
+| L3 | `restaurar` con `yaDeOtro` no restaura al dueño del libro si otro aldeano cargado tiene el JOB. **RESUELTO 24-nov (`e9afbdfc`)**: `planificarRestauracion` limpia la memoria ajena y devuelve el puesto al titular; ver `2026-11-24-L3-JOB-SITE-RESTORE-OWNER.md`. | `restaurarDueniosDelLibro` ya no se rinde ante `yaDeOtro`. | El titular puede quedarse sin estación hasta que otro la suelte (datos históricos/ejecución runtime no medida). | Política pura 54 aserciones; falta fixture runtime de dos aldeanos reales. |
 | L4 | `OwnerPos` no se refresca al moverse el propietario. | `claimJobSite(..., ownerPos)` solo al reclamar. | La restauración puede esperar a que el dueño se cargue por otra vía; no hay pérdida por el no-forget. | Guardar posición periódica y test de dueño que se aleja antes de recargar. |
 | L5 | POI no mide horas de chunks descargados ni jugador conectado. | `POI` dura ~2 min/fase, sin jugador. | Comportamiento a largo plazo no demostrado. | Campaña POI con ciclos largos y jugador conectado. |
 | L6 | Navegación runtime con una entidad por escenario. | `nav-final-20261124-0255`, 21 escenarios. | No cubre multientidad, laberintos largos, combate, agua ni puertas. | Matriz multientidad y escenarios compuestos. |
@@ -114,3 +114,9 @@ un aldeano muriendo**. L2, L3, L4, L5–L8 y el soak multi-día siguen abiertos.
 de partidas viejas). Límites: **sin servidor dedicado con jugador ni UI de cliente reejecutada**; el
 resource pack ya no sobrescribe el árbol; la doble ejecución cliente/servidor sigue sin revisar. Informe:
 `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`.
+
+**L3 corregido a nivel de decisión y cableado (`e9afbdfc`).** `restaurarDueniosDelLibro` ya no se rinde
+ante `yaDeOtro`: la política pura `planificarRestauracion` devuelve el puesto al titular del libro y
+ordena limpiar las memorias de los aldeanos cargados que no lo son, sin soltar el ticket. Ownership
+**54** aserciones (+15). **Límite:** sin fixture runtime de dos aldeanos reales; C4/POI no reejecutados.
+Informe: `2026-11-24-L3-JOB-SITE-RESTORE-OWNER.md`.
