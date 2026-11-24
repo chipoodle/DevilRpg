@@ -42,6 +42,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import com.chipoodle.devilrpg.world.VillageManager;
+import com.chipoodle.devilrpg.world.VillageFallPolicy;
 import com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.npc.Villager;
@@ -107,6 +108,15 @@ public class CommonForgeInteractionEventSubscriber {
                 }
             };
             EventUtils.onWerewolfTransformation((Player) event.getEntity(), c, event);
+        }
+        // F2 · SOAK 24-nov-2026: el aldeano que vuelve al pueblo por terreno abrupto moría al caer
+        // (`Volviendo al pueblo hit the ground too hard` en 729,64,542). El pueblo lo protege fuera del
+        // asedio; durante la defensa la caída sigue contando. Ver `VillageFallPolicy`.
+        if (event.getEntity() instanceof Villager v
+                && v.getPersistentData().contains(VillageManager.CENTRO_TAG)
+                && v.level() instanceof ServerLevel level
+                && VillageFallPolicy.protegeDeLaCaida(true, VillageManager.hayAsedioEnLaAldeaDe(level, v))) {
+            event.setCanceled(true);
         }
     }
 

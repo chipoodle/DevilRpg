@@ -2670,6 +2670,25 @@ public final class VillageManager {
     }
 
     /**
+     * ¿La aldea a la que pertenece este aldeano (su {@link #CENTRO_TAG}) está en asedio ahora mismo?
+     * Lo usa la política de caída (F2): el miembro se protege del terreno, pero no en plena defensa.
+     */
+    public static boolean hayAsedioEnLaAldeaDe(ServerLevel level, net.minecraft.world.entity.npc.Villager villager) {
+        long centro = villager.getPersistentData().getLong(CENTRO_TAG);
+        if (centro == 0L) {
+            return false;
+        }
+        VillageSavedData saved = VillageSavedData.get(level);
+        for (int i : saved.generatedIndices()) {
+            BlockPos c = centroDe(level, i);
+            if (c != null && c.asLong() == centro) {
+                return hayAsedio(level, i);
+            }
+        }
+        return false;
+    }
+
+    /**
      * A2 REMEDIACIÓN 2 · ¿este UUID sigue en la ola VIGENTE de esa aldea? Sirve para que un asediador que
      * estuvo descargado no se reenganche a un asedio NUEVO del mismo índice con su campaña vieja.
      */
