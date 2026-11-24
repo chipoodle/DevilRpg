@@ -47,7 +47,7 @@ if ($ajenos.Count -gt 0) {
 
 Write-Output "=== SOAK run=$Run sha=$sha : $(Get-Date -Format 'HH:mm:ss') ==="
 Write-Output "  ticks=$Ticks timeout=${TimeoutMinutes}m game=$gameDir"
-$env:JDK_JAVA_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\Windows\Temp -Dsoak.run=$Run -Dsoak.raiz=$raiz -Dsoak.ticks=$Ticks -Ddevilrpg.a2n.allowMaintenanceHook=true" + $(if ($Diag) { " -Ddevilrpg.taverndiag=true -Dsoak.stuckdiag=true" } else { "" })
+$env:JDK_JAVA_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\Windows\Temp -Dsoak.run=$Run -Dsoak.raiz=$raiz -Dsoak.ticks=$Ticks -Ddevilrpg.a2n.allowMaintenanceHook=true" + $(if ($Diag) { " -Ddevilrpg.taverndiag=true -Dsoak.stuckdiag=true -Dsoak.poidiag=true" } else { "" })
 $log = Join-Path $base 'srv.log'
 $srv = Start-Process -FilePath (Join-Path $raiz 'gradlew.bat') `
     -ArgumentList 'runServer', '--console=plain', '-PsoakHarness=true', '-Pa2nDiagnostics=true', `

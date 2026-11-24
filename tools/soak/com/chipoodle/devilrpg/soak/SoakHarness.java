@@ -286,6 +286,15 @@ public final class SoakHarness {
                     conPuesto++;
                 } else if (p != VillagerProfession.NITWIT) {
                     sinPuestoNoNitwit++;
+                    if (Boolean.getBoolean("soak.poidiag")) {
+                        String poi = job.map(g -> nivel.getPoiManager().getType(g.pos())
+                                .map(Object::toString).orElse("SIN_POI")).orElse("SIN_JOB");
+                        String bloque = job.map(g -> nivel.getBlockState(g.pos()).toString()).orElse("-");
+                        log("SOAK_POI_INVALID uuid=" + v.getUUID() + " prof=" + p
+                                + " pos=" + v.blockPosition().toShortString()
+                                + " job=" + job.map(g -> g.pos().toShortString()).orElse("SIN_JOB")
+                                + " poi=" + poi + " block=" + bloque);
+                    }
                 }
                 if (tieneGoalCorriendo(v)) {
                     goalsCorriendo++;

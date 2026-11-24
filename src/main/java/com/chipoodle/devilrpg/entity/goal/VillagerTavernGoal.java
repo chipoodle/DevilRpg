@@ -176,6 +176,14 @@ public class VillagerTavernGoal extends Goal {
             // RENDIRSE = DEJARLO POR UN RATO (I33): la mesa a la que no llegó se apunta para no volver a ella en
             // bucle, que es lo que dejaba al aldeano empujando la misma silla (o la valla) para siempre.
             VillageManager.marcarPuntoFallido(villager, usandoDespensa ? destinoComida : mesa);
+            // SOAK 24-nov-2026 · F1: el comentario de la clase promete que, si no puede llegar a la taberna,
+            // el reparto le da su ración y nadie muere de hambre por no llegar a la mesa. No se cumplía:
+            // el goal se rendía y el aldeano seguía con hambre hasta morir con la despensa llena (8-30
+            // muertes). Se le da una ración REAL de la despensa en el sitio (consume punto, marca comida y
+            // reduce 25), sujeta al mismo `tieneHambre` de 3 min; no es comida gratis.
+            if (VillagePantry.comida(level, center) >= COMIDA_MINIMA && VillageManager.tieneHambre(level, villager)) {
+                comer(level, false);
+            }
             return false;
         }
         return VillageManager.tieneHambre(level, villager) || espera > 0;
@@ -288,6 +296,10 @@ public class VillagerTavernGoal extends Goal {
 
     /** Come una ración de la despensa: la saca de verdad (un punto), marca al aldeano y lo apunta en el log. */
     private void comer(ServerLevel level) {
+        comer(level, true);
+    }
+
+    private void comer(ServerLevel level, boolean enLaTaberna) {
         int racion = VillagePantry.sacarComida(level, center, 1, 1);
         if (racion <= 0) {
             return; // se acabó la comida: se quedará con hambre y el reparto del minuto decidirá
@@ -295,11 +307,13 @@ public class VillagerTavernGoal extends Goal {
         int hambreAntes = VillageManager.hambre(villager);
         VillageManager.marcarComida(level, villager);
         VillageManager.reducirHambre(villager, 25);
-        DevilRpg.LOGGER.info("[C1-MEAL] uuid={} before={} after={} siege={} tick={}", villager.getUUID(), hambreAntes,
-                VillageManager.hambre(villager), VillageManager.hayAsedio(level, objectiveIndex), level.getGameTime()); // una ración completa baja el hambre por debajo del umbral normal
+        DevilRpg.LOGGER.info("[C1-MEAL] uuid={} before={} after={} siege={} tick={} sitio={}", villager.getUUID(),
+                hambreAntes, VillageManager.hambre(villager), VillageManager.hayAsedio(level, objectiveIndex),
+                level.getGameTime(), enLaTaberna ? "taberna" : "racion-en-el-sitio");
         level.playSound(null, villager.blockPosition(), SoundEvents.GENERIC_EAT, SoundSource.NEUTRAL, 0.7F, 1.0F);
-        VillageManager.ponerSuceso(villager, "Comio en la taberna");
-        DevilRpg.LOGGER.info("[Village] {} comio en la taberna (comida de la aldea {})",
-                villager.getUUID(), VillagePantry.comida(level, center));
+        VillageManager.ponerSuceso(villager, enLaTaberna ? "Comio en la taberna" : "Comio su racion");
+        DevilRpg.LOGGER.info("[Village] {} comio {} (comida de la aldea {})", villager.getUUID(),
+                enLaTaberna ? "en la taberna" : "su racion (no llego a la taberna)",
+                VillagePantry.comida(level, center));
     }
 }
