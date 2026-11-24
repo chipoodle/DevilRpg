@@ -86,6 +86,9 @@ public final class SoakHarness {
     private static final Map<UUID, String> profesiones = new LinkedHashMap<>();
     private static final Map<UUID, double[]> ultimaPos = new LinkedHashMap<>();
     private static final Map<UUID, Integer> quietos = new LinkedHashMap<>();
+    private static final Map<UUID, double[]> posMuestra = new LinkedHashMap<>();
+    private static final Map<UUID, Integer> quietosMuestra = new LinkedHashMap<>();
+    private static final Set<UUID> stuckLogged = new HashSet<>();
     private static final Set<UUID> inactivosMarcados = new HashSet<>();
     private static final Set<UUID> inactivosPermanentesSet = new HashSet<>();
     private static int duplicadosMax;
@@ -244,6 +247,9 @@ public final class SoakHarness {
         muestras++;
         List<Villager> aldeanos = aldeanos();
         int poblacion = aldeanos.size();
+        if (Boolean.getBoolean("soak.stuckdiag")) {
+            diagnosticarAtascos(aldeanos);
+        }
         Map<Long, List<UUID>> porPoi = new HashMap<>();
         int conPuesto = 0;
         int sinPuestoNoNitwit = 0;
@@ -403,6 +409,51 @@ public final class SoakHarness {
             }
         }
         return false;
+    }
+
+    /** Diagnóstico opt-in: un aldeano que no se mueve 400+ ticks, con su ruta/nodos/bloques. */
+    private static void diagnosticarAtascos(List<Villager> aldeanos) {
+        for (Villager v : aldeanos) {
+            if (v.isBaby() || !v.isAlive() || v.isRemoved()) {
+                continue;
+            }
+            double[] prev = posMuestra.get(v.getUUID());
+            double x = v.getX(), y = v.getY(), z = v.getZ();
+            boolean movido = prev == null || Math.sqrt((x - prev[0]) * (x - prev[0])
+                    + (y - prev[1]) * (y - prev[1]) + (z - prev[2]) * (z - prev[2])) >= 0.75D;
+            posMuestra.put(v.getUUID(), new double[]{x, y, z});
+            if (movido) {
+                quietosMuestra.put(v.getUUID(), 0);
+                stuckLogged.remove(v.getUUID());
+                continue;
+            }
+            int q = quietosMuestra.merge(v.getUUID(), 1, Integer::sum);
+            if (q < 2 || !stuckLogged.add(v.getUUID())) {
+                continue;
+            }
+            var camino = v.getNavigation().getPath();
+            BlockPos siguiente = camino != null && !camino.isDone() && camino.getNodeCount() > 0
+                    ? camino.getNextNodePos() : null;
+            StringBuilder goals = new StringBuilder();
+            for (var wrapped : v.goalSelector.getAvailableGoals()) {
+                if (wrapped.isRunning()) {
+                    if (goals.length() > 0) goals.append(',');
+                    goals.append(wrapped.getGoal().getClass().getSimpleName());
+                }
+            }
+            log("SOAK_STUCK uuid=" + v.getUUID() + " prof=" + v.getVillagerData().getProfession()
+                    + " pos=" + v.blockPosition().toShortString()
+                    + " next=" + (siguiente == null ? "SIN_NODO" : siguiente.toShortString())
+                    + " nextBlock=" + (siguiente == null ? "-" : nivel.getBlockState(siguiente))
+                    + " feet=" + nivel.getBlockState(v.blockPosition())
+                    + " below=" + nivel.getBlockState(v.blockPosition().below())
+                    + " pathNodes=" + (camino == null ? -1 : camino.getNodeCount())
+                    + " idx=" + (camino == null ? -1 : camino.getNextNodeIndex())
+                    + " done=" + (camino == null || camino.isDone())
+                    + " reach=" + (camino == null || camino.canReach())
+                    + " ground=" + v.onGround() + " hunger=" + VillageManager.hambre(v)
+                    + " goals=[" + goals + "]");
+        }
     }
 
     private static boolean dentroDelMuro(BlockPos pos) {

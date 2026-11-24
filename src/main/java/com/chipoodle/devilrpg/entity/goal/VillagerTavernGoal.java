@@ -211,6 +211,24 @@ public class VillagerTavernGoal extends Goal {
             } else {
                 stuckTicks++;
             }
+            if (stuckTicks > 0 && stuckTicks % 20 == 0 && Boolean.getBoolean("devilrpg.taverndiag")) {
+                var camino = villager.getNavigation().getPath();
+                BlockPos siguiente = camino != null && !camino.isDone() && camino.getNodeCount() > 0
+                        ? camino.getNextNodePos() : null;
+                DevilRpg.LOGGER.info("[TAVERNDIAG] uuid={} pos={} next={} nextBlock={} feet={} below={}"
+                                + " pathNodes={} idx={} done={} reach={} ground={} noAi={} passenger={}"
+                                + " sleeping={} stuck={} dist={}",
+                        villager.getUUID(), villager.blockPosition().toShortString(),
+                        siguiente == null ? "SIN_NODO" : siguiente.toShortString(),
+                        siguiente == null ? "-" : level.getBlockState(siguiente).toString(),
+                        level.getBlockState(villager.blockPosition()).toString(),
+                        level.getBlockState(villager.blockPosition().below()).toString(),
+                        camino == null ? -1 : camino.getNodeCount(),
+                        camino == null ? -1 : camino.getNextNodeIndex(),
+                        camino == null || camino.isDone(), camino == null || camino.canReach(),
+                        villager.onGround(), villager.isNoAi(), villager.isPassenger(),
+                        villager.isSleeping(), stuckTicks, distancia);
+            }
             return;
         }
         VillageManager.parar(villager);

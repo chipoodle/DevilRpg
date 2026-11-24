@@ -1,7 +1,9 @@
 param(
     [string]$Run = "",
     [int]$Ticks = 72000,
-    [int]$TimeoutMinutes = 60
+    [int]$TimeoutMinutes = 60,
+    [long]$Seed = 0,
+    [switch]$Diag
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,6 +22,17 @@ if (Test-Path -LiteralPath (Join-Path $base 'fin.txt')) {
     exit 3
 }
 New-Item -ItemType Directory -Force -Path $gameDir | Out-Null
+if ($Seed -ne 0) {
+    $props = Join-Path $gameDir 'server.properties'
+    Set-Content -LiteralPath $props -Encoding ASCII -Value @(
+        "level-seed=$Seed",
+        'online-mode=false',
+        'spawn-protection=0',
+        'view-distance=10',
+        'simulation-distance=10'
+    )
+    Write-Output "  seed=$Seed (server.properties)"
+}
 $sha = (& git -C $raiz rev-parse HEAD).Trim()
 Set-Content -LiteralPath (Join-Path $base 'sha.txt') -Value $sha -Encoding UTF8
 
@@ -34,7 +47,7 @@ if ($ajenos.Count -gt 0) {
 
 Write-Output "=== SOAK run=$Run sha=$sha : $(Get-Date -Format 'HH:mm:ss') ==="
 Write-Output "  ticks=$Ticks timeout=${TimeoutMinutes}m game=$gameDir"
-$env:JDK_JAVA_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\Windows\Temp -Dsoak.run=$Run -Dsoak.raiz=$raiz -Dsoak.ticks=$Ticks -Ddevilrpg.a2n.allowMaintenanceHook=true"
+$env:JDK_JAVA_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\Windows\Temp -Dsoak.run=$Run -Dsoak.raiz=$raiz -Dsoak.ticks=$Ticks -Ddevilrpg.a2n.allowMaintenanceHook=true" + $(if ($Diag) { " -Ddevilrpg.taverndiag=true -Dsoak.stuckdiag=true" } else { "" })
 $log = Join-Path $base 'srv.log'
 $srv = Start-Process -FilePath (Join-Path $raiz 'gradlew.bat') `
     -ArgumentList 'runServer', '--console=plain', '-PsoakHarness=true', '-Pa2nDiagnostics=true', `

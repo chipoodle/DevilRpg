@@ -95,7 +95,27 @@ acceso. La campaña de 72k dirá si aguanta 3 días.
 
 ---
 
-## 5 · Riesgos y límites
+## 5 · Diagnóstico de ruta (24-nov-2026)
+
+Para no adivinar el choke se añadió instrumentación **opt-in**:
+
+- `lanzar-soak.ps1 -Seed <long>`: escribe `level-seed` en `server.properties` para reproducir un mundo.
+- `lanzar-soak.ps1 -Diag`: activa `-Ddevilrpg.taverndiag=true` (goal de taberna) y
+  `-Dsoak.stuckdiag=true` (cualquier aldeano que no se mueve 400+ ticks).
+- `SOAK_STUCK` registra UUID, profesión, posición, nodo siguiente, bloque del nodo, pies/suelo, número/índice
+  de nodos, `done/reach`, `onGround`, hambre y goals corriendo.
+
+Run `soak-tavern-seed-20261124-1330` con la **semilla del mundo que falló**
+(`7454239611058706439`), 12.000 ticks, `-Diag`: **PASS, 0 bajas**, comida 20→42, 11/11. No hubo
+`TAVERNDIAG` (ningún goal de taberna atascado en 12k); sí 49 `SOAK_STUCK` transitorios, varios con
+`path=1 nodo … reach=false` en puertas de valla (`661,63,594`, `goals=[VillagerCollectGoal,
+VillagerGateGoal]`), pero se recuperan y no mueren. El choke `630,63,530` **no se reprodujo en 12k**:
+es intermitente. El siguiente paso es repetir el 72k con `-Seed … -Diag` y usar el `SOAK_STUCK` del
+punto exacto para decidir entre puerta, valla o tramo de ruta.
+
+---
+
+## 6 · Riesgos y límites
 
 - **No hay test headless** de `repartirRaciones`/`VillagerTavernGoal` (necesitan `ServerLevel`); la
   evidencia es runtime (12k/72k).
@@ -107,3 +127,9 @@ acceso. La campaña de 72k dirá si aguanta 3 días.
 - La despensa inicial de 20 puntos no se cambió; si el 72k falla por comida, el siguiente paso es
   producción/reparto/dotación, no relajar el hambre.
 - C4/POI no se reejecutan: este cambio no toca `JOB_SITE` ni tickets.
+
+---
+
+## 7 · Veredicto
+
+**F1 parcialmente resuelto:** la ración diaria ya alimenta y el goal de taberna se desatasca; el soak de 72k bajó de 5 a 1 muerte. **No está cerrado:** la muerte restante está en el choke de acceso a la taberna (630,63,530), y la instrumentación -Seed/-Diag queda lista para localizarlo en la siguiente campaña. No se declara el soak aceptado.
