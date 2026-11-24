@@ -3111,7 +3111,12 @@ public final class VillageManager {
 
     private static void cargarDueniosDePuestos(ServerLevel level, VillageSavedData saved) {
         for (var entrada : saved.jobSiteOwners().entrySet()) {
-            if (level.getEntity(entrada.getValue()) != null) {
+            if (level.getEntity(entrada.getValue()) instanceof Villager v && v.isAlive() && !v.isRemoved()) {
+                // C4/L4 · el dueño está cargado: se refresca su última posición conocida. Si luego se
+                // descarga (se aleja o se cierra el mundo), la próxima carga le busca donde se le vio por
+                // última vez, no donde reclamó el puesto. `claimJobSite` no cambia de dueño y solo marca
+                // dirty si la posición cambió.
+                saved.claimJobSite(entrada.getKey(), entrada.getValue(), v.blockPosition());
                 continue;
             }
             Long pos = saved.jobSiteOwnerPosition(entrada.getKey());

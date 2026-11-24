@@ -139,6 +139,7 @@ public final class VillagePersistenceIntegrationTest {
             identityAndJobSite(level);
             rosterInvariants(level);
             deadOwnerReleasesBook(registries);
+            ownerPositionRefresh(registries);
         } catch (Throwable t) {
             fallos++;
             System.out.println("  EXCEPCION NO CONTROLADA: " + t);
@@ -1241,6 +1242,36 @@ public final class VillagePersistenceIntegrationTest {
         check(reloaded.getJobSiteOwner(poiB) == null, "libro: la entrada muerta de ALICE no resucita");
         check(reloaded.releaseJobSitesOwnedBy(BOB) == 1, "libro: tras recargar se puede olvidar a BOB");
         check(CAROL.equals(reloaded.getJobSiteOwner(poiC)), "libro: olvidar a BOB no toca a CAROL");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 12 · L4: la posición del dueño se refresca con el mismo titular y persiste
+    // ---------------------------------------------------------------------------------------------
+
+    private static void ownerPositionRefresh(RegistryAccess.Frozen registries) {
+        System.out.println("[12] L4: la posicion del duenio se refresca y persiste");
+        VillageSavedData data = VillageSavedData.load(new CompoundTag(), registries);
+        BlockPos puesto = new BlockPos(50, 64, 50);
+        BlockPos primera = new BlockPos(60, 64, 60);
+        BlockPos segunda = new BlockPos(61, 64, 61);
+        long poi = puesto.asLong();
+
+        check(data.claimJobSite(poi, ALICE, primera), "posicion: ALICE reclama con posicion inicial");
+        check(Long.valueOf(primera.asLong()).equals(data.jobSiteOwnerPosition(poi)),
+                "posicion: se guarda la posicion inicial");
+        check(data.claimJobSite(poi, ALICE, segunda), "posicion: el mismo duenio puede refrescar");
+        check(Long.valueOf(segunda.asLong()).equals(data.jobSiteOwnerPosition(poi)),
+                "posicion: la posicion se refresca");
+        check(ALICE.equals(data.getJobSiteOwner(poi)), "posicion: el duenio no cambia");
+        check(!data.claimJobSite(poi, BOB, primera), "posicion: otro duenio no puede robar");
+        check(Long.valueOf(segunda.asLong()).equals(data.jobSiteOwnerPosition(poi)),
+                "posicion: el intento ajeno no pisa la posicion");
+
+        CompoundTag saved = data.save(new CompoundTag(), registries);
+        VillageSavedData reloaded = VillageSavedData.load(saved, registries);
+        check(Long.valueOf(segunda.asLong()).equals(reloaded.jobSiteOwnerPosition(poi)),
+                "posicion: la posicion refrescada persiste");
+        check(ALICE.equals(reloaded.getJobSiteOwner(poi)), "posicion: el duenio persiste");
     }
 
     // ---------------------------------------------------------------------------------------------
