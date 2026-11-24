@@ -20,9 +20,9 @@
 
 | Prueba | Nivel | Aserciones | Gate | Invariante / qué protege |
 |---|---|---:|---|---|
-| `VillagePersistenceIntegrationTest` | Integración NBT | **525** | `villagePersistenceTest` → `test` | I388, I389: save/load real, dos ciclos, fichero, parcial, corrupción, identidad, JOB_SITE, fundadores, reconciliación |
+| `VillagePersistenceIntegrationTest` | Integración NBT | **544** | `villagePersistenceTest` → `test` | I388, I389, I400: save/load real, dos ciclos, fichero, parcial, corrupción, identidad, JOB_SITE, fundadores, reconciliación y **limpieza del libro al desaparecer el titular** (bloque 11) |
 | `VillageRosterInvariantsTest` | Unitario | 12 | `policyTest` | I387: 12 puestos, 4 fundadores, UUID único, cupo, un dueño por puesto |
-| `VillageJobSiteOwnershipPolicyTest` | Unitario | 32 | `policyTest` | Un solo dueño por POI; idempotencia; no destruir titular |
+| `VillageJobSiteOwnershipPolicyTest` | Unitario | **39** | `policyTest` | Un solo dueño por POI; idempotencia; no destruir titular; **puestosDelTitular** (L1/I400) |
 | `VillagePopulationLoadPolicyTest` | Unitario | 7 | `policyTest` | Ventana de gracia de carga (no repoblar antes de cargar) |
 | `VillageFarmOwnershipTest` | Unitario | 6 | `policyTest` | Una parcela, un dueño; liberación segura |
 | `VillageTerrainPolicyTest` | Unitario | 11 | `policyTest` | Terreno/altura de aldea |
@@ -36,7 +36,7 @@
 | Prueba | Nivel | Aserciones | Gate | Invariante / qué protege |
 |---|---|---:|---|---|
 | `NavTerrainMatrixTest` | Unitario (matriz) | 36 | `policyTest` | STEP_UP/DROP/BREAK/BUILD/presupuestos; escenarios runtime documentados |
-| `NavVerticalBuildPolicyTest` | Unitario | 32 | `policyTest` | Ascenso +1, BUILD con pies/acción separados |
+| `NavVerticalBuildPolicyTest` | Unitario | 39 | `policyTest` | Ascenso +1, BUILD con pies/acción separados |
 | `NavBreakGraphStateTest` | Unitario | — | `policyTest` | Estado post-BREAK y arista exacta |
 | `NavBreakAttackPositionPolicyTest` | Unitario | 8 | `policyTest` | Posición de ataque BREAK |
 | `NavBreakFilterPolicyTest`, `NavBreakRoutePolicyTest`, `NavBreakContractTest` | Unitario | — | `policyTest` | Filtros/contratos de rotura |
@@ -44,7 +44,7 @@
 | `NavNeighborPolicyTest` | Unitario | 16 | `policyTest` | 8 vecinos + `(0,0)`, sin relajar aristas |
 | `NavClimbPolicyTest`, `NavClimbStepPolicyTest` | Unitario | — | `policyTest` | Escalón/escalera y cadencia |
 | `TunnelActionPlannerTest`, `TunnelExecutionPolicyTest`, `TunnelPlanPolicyTest` | Unitario | 20/31/25 | `policyTest` | Túnel subordinado: fases, cursor, topes |
-| `TraversalActionLeasePolicyTest`, `TraversalActionDispatchPolicyTest` | Unitario | 13/6 | `policyTest` | Un solo lease/acción por tick |
+| `TraversalActionLeasePolicyTest`, `TraversalActionDispatchPolicyTest` | Unitario | 23/6 | `policyTest` | Un solo lease/acción por tick |
 | `NavPlannerMetricsTest` | Unitario | 68 | `policyTest` | I390: métricas exactas, no-op OFF, memoria acotada, null/ids raros |
 | `NavSearchBaselineTest` | Unitario (A* real) | 119 | `policyTest` / `navBaselineTest` | I390: determinismo, no-regresión ON/OFF, línea base |
 | `NavPlannerStateTest`, `NavRouteNodePolicyTest`, `NavGoalMetricTest` | Unitario | — | `policyTest` | Estado del planner, nodo de ruta, métrica de meta |
@@ -77,7 +77,7 @@
 ```powershell
 .\gradlew.bat compileJava compileTestJava --console=plain
 .\gradlew.bat test --console=plain                 # policyTest + villagePersistenceTest + POI selftest + nav contract
-.\gradlew.bat policyTest --console=plain            # 74 clases registradas
+.\gradlew.bat policyTest --console=plain            # 80 clases registradas
 .\gradlew.bat villagePersistenceTest --console=plain
 .\gradlew.bat navBaselineTest --console=plain
 .\gradlew.bat poiPersistenceSelftest --console=plain
@@ -102,3 +102,8 @@ Herramientas de evidencia:
 - Cobertura de `JOB_SITE` 12/12 (el contrato es **11/11 estaciones**; NITWIT no tiene puesto).
 - Multientidad/laberintos largos/agua/puertas en navegación; A2 no se reejecutó en esta campaña.
 - `GuardHarness` legado (no portado; ver `tools/av/LEEME.md`).
+- **Muerte/conversión real de un aldeano** (L1): la semántica del libro está cubierta por el bloque 11 de
+  `VillagePersistenceIntegrationTest`, pero el disparador `VillageAgentRegistry.onDeath/onConversion` no se
+  ha medido en runtime con una entidad muriendo. C4/POI no matan aldeanos.
+- **Skills**: 33/33 implementadas, pero sin test automático y con `ClientSkillBuilderFromJson` usando
+  `Minecraft` (cliente) desde código común; ver `2026-11-24-PENDING-AUDIT.md` §2.

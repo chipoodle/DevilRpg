@@ -1,3 +1,23 @@
+# L1 RESUELTO — LIBRO DE PUESTOS AL DESAPARECER EL TITULAR (2026-11-24)
+
+- **Auditoría de pendientes:** `2026-11-24-PENDING-AUDIT.md` (`2b32ba08`). Skills 33/33 implementadas
+  pero **0 tests** y con dependencia de cliente en código común; navegación A2/NAV aceptadas; único
+  criterio del Master Plan sin ejecutar: **soak multi-día**.
+- **Fallo L1 corregido:** el libro `VillageSavedData.JobSiteOwners` no se limpiaba al **morir** o
+  **convertirse** el titular, así que la estación quedaba libre en `PoiManager` pero reservada para
+  siempre (`claimJobSite` rechazaba al reemplazo).
+- **Código probado:** `7db821ea` (docs después). Hook en `VillageAgentRegistry.onDeath` y
+  `onConversion`; política pura `puestosDelTitular`; `releaseJobSitesOwnedBy`; log en `VillageManager`.
+  **No** se limpia en descarga de chunk ni se fuerza `release` (muerte: vanilla; conversión:
+  `soltarTicketsPerdidos`).
+- **Pruebas:** `VILLAGE_PERSISTENCE_INTEGRATION_TEST` **544** (525+19), `VILLAGE_JOB_SITE_OWNERSHIP_POLICY_TEST`
+  **39** (32+7); `test` + `compileJava -Pa2nDiagnostics=true -Pa2nProbeOnly=true` verdes; lint estricto OK;
+  `git diff --check` 0. Informe: `2026-11-24-L1-JOB-SITE-LEDGER-DEATH-CLEANUP.md`.
+- **Límite:** el disparador de muerte/conversión está verificado por compilación/revisión, **no** con una
+  corrida runtime de un aldeano muriendo; C4/POI no se reejecutaron (no matan aldeanos).
+- **Siguientes objetivos independientes:** (P1) skills sin tests + dependencia de cliente; (P2) L3/L2;
+  (P3) soak multi-día; decisión de ramas/A1 del dueño.
+
 # CAMPAÑA — CIERRE TÉCNICO 23/24-NOV-2026: C4 11/11, POI REAL, NAV 21/21 (2026-11-24)
 
 - **Checkpoint/protocolo:** `2026-11-24-CONTINUITY-CHECKPOINT.md`.

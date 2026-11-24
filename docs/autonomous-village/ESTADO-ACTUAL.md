@@ -1,5 +1,14 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — L1 CERRADO.** Código probado `7db821ea`. El libro de dueños de puestos
+> (`VillageSavedData.JobSiteOwners`) ahora se limpia al **morir** o **convertirse** el titular
+> (`VillageAgentRegistry.onDeath`/`onConversion` → `VillageManager.olvidarPuestosDeTitular`), en vez de
+> dejar la estación libre pero reservada para siempre. Pruebas: persistencia **544** aserciones
+> (525+19) y ownership **39** (32+7); `test`, lint y diff-check verdes. Informe:
+> `2026-11-24-L1-JOB-SITE-LEDGER-DEATH-CLEANUP.md`; auditoría de pendientes:
+> `2026-11-24-PENDING-AUDIT.md`. Siguiente objetivo independiente (P1): pruebas de skills y dependencia
+> de cliente en el árbol de skills. Límite: el disparador no se midió en runtime con un aldeano real.
+
 > **ACTUALIZACIÓN 24-nov-2026 — CIERRE TÉCNICO.** Código probado `1016a7cf`. C4 `c4n-20261124-0250` PASS 3/3 con
 > cobertura **11/11** (NITWIT sin estación), 12/12 profesionales, 4 fundadores y guardias/equipo; POI
 > `poi-final-20261124-0305` PASS 4/4 con `ServerLevel`/`PoiManager`, digest vivo==disco, tardío, F4 sin fantasma y

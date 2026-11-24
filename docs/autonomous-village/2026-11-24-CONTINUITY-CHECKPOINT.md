@@ -27,7 +27,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 
 | # | Limitación | Evidencia actual | Riesgo | Prueba futura posible |
 |---|---|---|---|---|
-| L1 | Sin limpieza automática del libro al morir el propietario; la estación puede quedar reservada hasta `forgetJobSite`. | `cargarDueniosDePuestos` no borra vivos; no hay hook de muerte; C4/POI no matan aldeanos. | Estación libre pero reservada; cobertura futura puede caer. | Test de muerte + recarga: el libro debe limpiarse y la estación reclamarse. |
+| L1 | Sin limpieza automática del libro al morir el propietario; la estación puede quedar reservada hasta `forgetJobSite`. **RESUELTO 24-nov (`7db821ea`)**: hooks de muerte y conversión + `releaseJobSitesOwnedBy`; ver `2026-11-24-L1-JOB-SITE-LEDGER-DEATH-CLEANUP.md`. | `cargarDueniosDePuestos` no borra vivos; ahora `VillageAgentRegistry.onDeath`/`onConversion` limpian el libro. C4/POI no matan aldeanos. | Estación libre pero reservada para datos históricos anteriores al fix; el runtime de muerte real no se midió. | Test de muerte + recarga: el libro debe limpiarse y la estación reclamarse (semántica cubierta por `VillagePersistenceIntegrationTest` bloque 11; falta runtime de entidad). |
 | L2 | Duplicado con keeper no cargado: se limpian memorias cargadas sin liberar ticket; F1 lo declara `NO_MEDIDO`. | `reconciliarPuestosDuplicados`, `poi-final-20261124-0305` F1. | Posible JOB sin ticket si el borrado era el titular. | Fixture F1 con keeper en chunk no cargado y comprobación de ticket/ghost. |
 | L3 | `restaurar` con `yaDeOtro` no restaura al dueño del libro si otro aldeano cargado tiene el JOB. | `restaurarDueniosDelLibro`. | El titular persistido puede quedarse sin estación hasta que el otro la suelte. | Test de dos aldeanos, uno con JOB no titular y ledger del otro. |
 | L4 | `OwnerPos` no se refresca al moverse el propietario. | `claimJobSite(..., ownerPos)` solo al reclamar. | La restauración puede esperar a que el dueño se cargue por otra vía; no hay pérdida por el no-forget. | Guardar posición periódica y test de dueño que se aleja antes de recargar. |
@@ -98,3 +98,13 @@ checkpoints, entregar informe y detenerse. No iniciar otra campaña automáticam
 - Este checkpoint — protocolo y deuda técnica.
 
 **Fin del checkpoint. No iniciar desarrollo desde este documento.**
+
+## 6. Actualización 24-nov-2026 (posterior al cierre)
+
+La auditoría `2026-11-24-PENDING-AUDIT.md` (`2b32ba08`) clasificó los pendientes y eligió **L1** como
+primer objetivo: el libro de puestos no se limpiaba al morir o convertirse el titular. Se corrigió en
+`7db821ea` con hooks en `VillageAgentRegistry` y pruebas headless (persistencia **544**, ownership
+**39**); `test`, lint y `git diff --check` verdes. El límite está declarado: **no hay corrida runtime de
+un aldeano muriendo**. L2, L3, L4, L5–L8 y el soak multi-día siguen abiertos; las skills siguen sin
+tests y con dependencia de cliente en código común. Informe:
+`2026-11-24-L1-JOB-SITE-LEDGER-DEATH-CLEANUP.md`.

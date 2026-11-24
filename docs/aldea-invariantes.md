@@ -11591,3 +11591,25 @@ El barrido de estaciones no puede conformarse con el cuadrado de `PoiManager.get
 puede colar una estación fuera del anillo (medido: farmer 688,68,591, 4/3). Producción (`soltarTicketsPerdidos`,
 `reclamar`) y arnés deben filtrar con `esDeDentroDelMuro`/radio circular de la valla. Evidencia:
 `poi-final-20261124-0305`, `pois_registrados 11/11`.
+
+### I400 · EL LIBRO DE PUESTOS OLVIDA AL TITULAR QUE YA NO EXISTE (24-nov-2026)
+
+**Regla:** cuando un aldeano **muere** o **se convierte** (aldeano zombi/bruja), el libro persistido
+`VillageSavedData.JobSiteOwners` debe eliminar **solo** sus entradas (POS → UUID) y sus `OwnerPos`. No se
+limpia en `EntityLeaveLevelEvent` (la descarga de chunk también lo dispara y el dueño sigue vivo), ni se
+fuerza `release` del ticket: en la muerte lo libera vanilla (`Villager.die → releaseAllPois`); en la
+conversión el ticket huérfano lo recupera `soltarTicketsPerdidos` una vez que el libro no lo bloquea.
+
+**Causa raíz:** `VillageSavedData.claimJobSite` rechaza a un titular distinto del persistido. Sin limpieza,
+la estación quedaba libre en `PoiManager` pero **reservada para siempre** para el reemplazo. Medido en
+código: no había ningún hook de muerte/conversión; `Mob.convertTo` hace `discard()` sin `Villager.die`.
+
+**Implementación:** `VillageJobSiteOwnershipPolicy.puestosDelTitular` (pura, ordenada, tolerante a null);
+`VillageSavedData.releaseJobSitesOwnedBy`; `VillageManager.olvidarPuestosDeTitular`;
+`VillageAgentRegistry.onDeath` y `VillageAgentRegistry.onConversion`.
+
+**Evidencia:** `VillagePersistenceIntegrationTest` bloque 11 (**544** aserciones, +19: solo el titular,
+`OwnerPos`, idempotencia, reclamación por otro, persistencia sin resurrección, otro titular intacto) y
+`VillageJobSiteOwnershipPolicyTest` (**39**, +7). Gates `test`, lint y `git diff --check` verdes en
+`7db821ea`. **Límite:** no hay corrida runtime de un aldeano muriendo; C4/POI no matan aldeanos. Datos
+históricos de muertos anteriores al fix siguen bloqueados hasta cargar al dueño o `forgetJobSite`.
