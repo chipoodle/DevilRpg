@@ -1,3 +1,20 @@
+# P1 RESUELTO — SKILLS: ÁRBOL SIN CLIENTE Y PRIMER GATE (2026-11-24)
+
+- **Fallo estructural corregido:** `PlayerSkillCapabilityImplementation` (común) construía
+  `ClientSkillBuilderFromJson`, que llamaba a `Minecraft.getInstance().getResourceManager()`. En un
+  servidor dedicado con jugador podía lanzar `NoClassDefFoundError`/NPE. Ahora el árbol se lee del
+  **classpath** del mod (`/assets/devilrpg/skills/root_complete.json`), sin `Minecraft`; los iconos se
+  resuelven contra `BuiltInRegistries.ITEM` (antes `DeferredHolder.get()`, que revienta sin mod cargado).
+- **Código probado:** `0a9f8670`. Nuevo `src/skillTest` + tarea `skillCapabilityTest` dentro de `test`:
+  **376 aserciones** (33/33 skills con coste/display, 36 nodos, 3 raíces, 6 `PowerEnum`, 3 loadouts,
+  mapas NBT completos, partida vieja sin `SOULVINE` que la recibe sin pisar `CHARGE=7`, iconos).
+- **Gates:** `test` + `compileJava -Pa2nDiagnostics=true -Pa2nProbeOnly=true` verdes (1m38s); lint
+  estricto OK; `git diff --cached --check` 0. Informe:
+  `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`.
+- **Límites:** **no** hay corrida de servidor dedicado con jugador ni UI de cliente reejecutada; el
+  resource pack ya no puede sobrescribir el árbol; la doble ejecución cliente/servidor sigue sin revisar.
+- **Siguientes:** (P2) L3/L2 del libro de puestos; (P3) soak multi-día; decisión de ramas/A1 del dueño.
+
 # L1 RESUELTO — LIBRO DE PUESTOS AL DESAPARECER EL TITULAR (2026-11-24)
 
 - **Auditoría de pendientes:** `2026-11-24-PENDING-AUDIT.md` (`2b32ba08`). Skills 33/33 implementadas

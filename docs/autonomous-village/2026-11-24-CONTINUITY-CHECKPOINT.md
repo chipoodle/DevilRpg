@@ -105,6 +105,12 @@ La auditoría `2026-11-24-PENDING-AUDIT.md` (`2b32ba08`) clasificó los pendient
 primer objetivo: el libro de puestos no se limpiaba al morir o convertirse el titular. Se corrigió en
 `7db821ea` con hooks en `VillageAgentRegistry` y pruebas headless (persistencia **544**, ownership
 **39**); `test`, lint y `git diff --check` verdes. El límite está declarado: **no hay corrida runtime de
-un aldeano muriendo**. L2, L3, L4, L5–L8 y el soak multi-día siguen abiertos; las skills siguen sin
-tests y con dependencia de cliente en código común. Informe:
+un aldeano muriendo**. L2, L3, L4, L5–L8 y el soak multi-día siguen abiertos. Informe:
 `2026-11-24-L1-JOB-SITE-LEDGER-DEATH-CLEANUP.md`.
+
+**P1 (skills) cerrado en su parte ejecutable (`0a9f8670`).** El árbol de skills ya no usa `Minecraft`
+(lectura por classpath) y los iconos se resuelven contra `BuiltInRegistries.ITEM`; nuevo
+`skillCapabilityTest` dentro de `test` (**376** aserciones: 33/33 skills, 36 nodos, NBT, compatibilidad
+de partidas viejas). Límites: **sin servidor dedicado con jugador ni UI de cliente reejecutada**; el
+resource pack ya no sobrescribe el árbol; la doble ejecución cliente/servidor sigue sin revisar. Informe:
+`2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`.

@@ -5,7 +5,8 @@
 **INITIAL_HEAD:** `2d687921cd9841c7a8a6afea3cbc792f3ce14aa7`
 **Auditoría:** `2b32ba086964b231622e941b4b723415cce23f40` (solo docs)
 **TESTED_HEAD (código y pruebas):** `7db821eabbbd7dc8ec25e8ff50617de7f601edbc`
-**FINAL_HEAD:** se registra al cerrar la documentación de este informe.
+**FINAL_HEAD:** `941ac75bef6ba2d2f4718525ad4e2f51bf8b8031` (commit de este informe; después se añadió
+P1 de skills, que no toca el código de L1).
 **Origen previo:** `origin/feature/autonomous-village`; rama local 53 commits por delante al empezar.
 **Árbol inicial:** limpio salvo untracked preservados (los mismos de la auditoría).
 

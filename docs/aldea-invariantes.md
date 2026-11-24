@@ -11613,3 +11613,29 @@ código: no había ningún hook de muerte/conversión; `Mob.convertTo` hace `dis
 `VillageJobSiteOwnershipPolicyTest` (**39**, +7). Gates `test`, lint y `git diff --check` verdes en
 `7db821ea`. **Límite:** no hay corrida runtime de un aldeano muriendo; C4/POI no matan aldeanos. Datos
 históricos de muertos anteriores al fix siguen bloqueados hasta cargar al dueño o `forgetJobSite`.
+
+### I401 · EL ÁRBOL DE SKILLS NO DEPENDE DEL CLIENTE NI DE `DeferredHolder` (24-nov-2026)
+
+**Regla:** `PlayerSkillCapabilityImplementation` es código **común** y se construye en el servidor
+dedicado al entrar un jugador. Su árbol de skills no puede leer con
+`Minecraft.getInstance().getResourceManager()` ni resolver iconos con `DeferredHolder.get()`:
+`Minecraft` no existe en el servidor y un `DeferredHolder` sin enlazar lanza
+`Trying to access unbound value`. El árbol se lee del **classpath**
+(`/assets/devilrpg/skills/root_complete.json`) y los iconos se resuelven contra
+`BuiltInRegistries.ITEM` (fallback `AIR`). Faltar el recurso o un JSON inválido debe fallar con un
+mensaje explícito, no continuar con `null`.
+
+**Causa raíz:** la capability común construía `ClientSkillBuilderFromJson`, que usaba `Minecraft`; y
+`JsonUtil.convertToItem` delegaba en `ModItems.getItemFromLocation`, que recorría `DeferredHolder.get()`.
+No se había medido porque C4/POI no conectan jugadores; es un riesgo estructural, no un fallo runtime
+confirmado.
+
+**Evidencia:** `SkillCapabilityIntegrationTest` (**376** aserciones, gate `skillCapabilityTest` dentro de
+`test`): construcción headless sin cliente, 33/33 skills con nodo/coste/display, 36 nodos y 3 raíces,
+mapas NBT completos, partida vieja sin `SOULVINE` que la recibe **sin pisar** `CHARGE=7`, iconos contra el
+registro real (`minecraft:stick` → `STICK`, id desconocido → `AIR`, sin `item` → `JsonSyntaxException`).
+Gates `test`, lint y `git diff --cached --check` verdes en `0a9f8670`.
+
+**Límites:** sin corrida de **servidor dedicado con jugador** ni UI de cliente reejecutada; el resource
+pack ya no puede sobrescribir el árbol; la doble ejecución cliente/servidor de `onKeyInput` sigue sin
+revisar.

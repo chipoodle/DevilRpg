@@ -10,6 +10,7 @@
 |---|---|---|---|
 | Unitario puro | Programa `main`, sin Minecraft | `src/test/java/**` (tarea `policyTest`) | No |
 | Integración NBT | `Bootstrap.bootStrap()` + `CompoundTag`/`SavedData`/`NbtIo`/entidad real | `src/villageTest/java/**` (tarea `villagePersistenceTest`) | No |
+| Integración Skills | `Bootstrap.bootStrap()` + árbol JSON + capability + NBT real | `src/skillTest/java/**` (tarea `skillCapabilityTest`) | No |
 | Integración Food | Contenedores/NBT reales | `src/foodTest/java/**` (`foodNbtTest`, `foodIntegrationTest`) | No |
 | Runtime C4 | Servidor NeoForge real, mundo desechable, 3 fases | `tools/c4n/C4StandaloneHarness.java` | **Sí** |
 | Runtime A2 | Servidor NeoForge real, asedio, mundo desechable | `tools/a2n/A2NavHarness.java` | **Sí** |
@@ -30,6 +31,7 @@
 | `WarehouseApproachPolicyTest` | Unitario | 8 | `policyTest` | Acceso al almacén |
 | `FoodHungerPolicyTest`, `PantryCreditPolicyTest` | Unitario | — | `policyTest` | Comida/crédito de despensa |
 | `FoodStateNbtTest`, `FoodIntegrationTest` | Integración NBT | — | `foodNbtTest`, `foodIntegrationTest` | NBT real de comida y `VillageSavedData` de despensa |
+| `SkillCapabilityIntegrationTest` | Integración Skills | **376** | `skillCapabilityTest` → `test` | I401: 33/33 skills con nodo/coste/display; 36 nodos y 3 raíces; mapas NBT completos; partida vieja recibe skills nuevas sin pisar valores; iconos contra el registro real |
 
 ### 2.2 Navegación y planner (Incremento 2/3 · C/D)
 
@@ -79,6 +81,7 @@
 .\gradlew.bat test --console=plain                 # policyTest + villagePersistenceTest + POI selftest + nav contract
 .\gradlew.bat policyTest --console=plain            # 80 clases registradas
 .\gradlew.bat villagePersistenceTest --console=plain
+.\gradlew.bat skillCapabilityTest --console=plain
 .\gradlew.bat navBaselineTest --console=plain
 .\gradlew.bat poiPersistenceSelftest --console=plain
 .\gradlew.bat navScenarioContractTest --console=plain
@@ -105,5 +108,6 @@ Herramientas de evidencia:
 - **Muerte/conversión real de un aldeano** (L1): la semántica del libro está cubierta por el bloque 11 de
   `VillagePersistenceIntegrationTest`, pero el disparador `VillageAgentRegistry.onDeath/onConversion` no se
   ha medido en runtime con una entidad muriendo. C4/POI no matan aldeanos.
-- **Skills**: 33/33 implementadas, pero sin test automático y con `ClientSkillBuilderFromJson` usando
-  `Minecraft` (cliente) desde código común; ver `2026-11-24-PENDING-AUDIT.md` §2.
+- **Skills**: cubiertas headless por `SkillCapabilityIntegrationTest` (376); **no** se ha ejecutado un
+  servidor dedicado con jugador ni la UI de cliente (`SkillScreen`/HUD). La doble ejecución
+  cliente/servidor de `onKeyInput` sigue sin revisar. Ver `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`.

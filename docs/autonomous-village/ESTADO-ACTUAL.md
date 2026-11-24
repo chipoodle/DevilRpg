@@ -1,5 +1,13 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — P1 SKILLS CERRADO EN SU PARTE EJECUTABLE.** Código probado `0a9f8670`.
+> El árbol de skills se lee del classpath (sin `Minecraft`) y los iconos se resuelven contra
+> `BuiltInRegistries.ITEM`, así que la capability común ya no depende del cliente. Nuevo gate
+> `skillCapabilityTest` dentro de `test`: **376 aserciones** (33/33 skills, 36 nodos, NBT completo,
+> compatibilidad de partidas viejas sin pisar valores). Informe:
+> `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`. Límites: sin servidor dedicado con jugador ni UI
+> de cliente reejecutada.
+
 > **ACTUALIZACIÓN 24-nov-2026 — L1 CERRADO.** Código probado `7db821ea`. El libro de dueños de puestos
 > (`VillageSavedData.JobSiteOwners`) ahora se limpia al **morir** o **convertirse** el titular
 > (`VillageAgentRegistry.onDeath`/`onConversion` → `VillageManager.olvidarPuestosDeTitular`), en vez de

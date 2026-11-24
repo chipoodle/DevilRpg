@@ -174,3 +174,19 @@ POI (15); aldea/terreno/comida/siege. **Skills: 0.**
 - Las **skills están completas** (33/33) pero sin tests y con una dependencia de cliente en código común.
 - La documentación histórica está preservada con banners; la cola viva sigue siendo `NEXT-SESSION.md`.
 - Se procede con **L1**; P1 (skills) queda como siguiente objetivo independiente.
+
+---
+
+## 10 · Actualización post-auditoría (misma fecha)
+
+- **L1 RESUELTO** en `7db821ea`: hooks de muerte/conversión, `releaseJobSitesOwnedBy`, política pura y
+  pruebas (persistencia **544**, ownership **39**). Informe:
+  `2026-11-24-L1-JOB-SITE-LEDGER-DEATH-CLEANUP.md`. Límite: sin runtime de aldeano muriendo.
+- **P1 (skills) RESUELTO en su parte ejecutable** en `0a9f8670`: el árbol se lee del classpath (sin
+  `Minecraft`), los iconos van contra `BuiltInRegistries.ITEM` y `skillCapabilityTest` aporta **376**
+  aserciones dentro de `test`. Informe:
+  `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`. Límites: sin servidor dedicado con jugador ni UI
+  de cliente; doble ejecución cliente/servidor sin revisar.
+- **Siguen abiertos:** L2, L3, L4, L5–L8, soak multi-día, §L/rendimiento, decisión de ramas/A1.
+- Las clasificaciones de §2 se mantienen como **foto de la auditoría**; esta sección registra qué se
+  corrigió después, sin reescribir los hallazgos.
