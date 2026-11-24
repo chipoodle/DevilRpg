@@ -11701,3 +11701,24 @@ corral` murió `suffocated in a wall` en `708,55,533`.
 **Límites:** no hay test headless del goal (necesita `ServerLevel`); la muerte es estocástica y la
 evidencia es runtime (soak). El fix no repuebla aldeanos: la reposición depende de `manageNearby`
 (jugador cerca) y no se ejecuta en el soak sin jugador.
+
+### I405 · LA RACIÓN DIARIA ALIMENTA Y LA TABERNA SE DESATASCA (24-nov-2026)
+
+**Regla:** `VillageManager.repartirRaciones` debe ordenar las bocas por **más tiempo sin comer**,
+repartir solo los puntos **realmente sacados** (`dados`), marcar como comidas **solo** a las que reciben
+ración y llamar a `reducirHambre(v, 25 * dar)` (misma equivalencia que la ración de la taberna). No basta
+con `marcarComida`: eso solo reinicia `ultimaComida`, no baja el hambre. Además, `VillagerTavernGoal.tick`
+debe llamar a `VillageManager.desatascarSiEstaEncajado(villager)` **cada tick**, como el resto de goals;
+el latido general cada 10 s llega tarde para el temporizador de muerte.
+
+**Causa raíz:** el soak 72k `soak-final-20261124-1120` midió 5 muertes por hambre; 4/5 en
+`630,63,530` con `VillagerTavernGoal` (`nav=34-37 nodos, anda=true, llega=false`) y una dentro de la
+puerta `628,66,529`. `repartirRaciones` sacaba comida y marcaba, pero no reducía el hambre; el goal de
+la taberna no se desatascaba al trabajar.
+
+**Evidencia:** `soak-f1-diag-20261124-1240` (12k, `0e57b569`): 0 bajas, comida 20→124, 11/11;
+`soak-f1-final-20261124-1245` (72k): **1 baja** en el mismo choke (5→1). Gates `test` 2m09s, lint y
+`git diff --check` verdes en `0e57b569`. Informe: `2026-11-24-F1-HUNGER-TAVERN-FIX.md`.
+
+**Límites:** **F1 no cerrado**: el acceso a la taberna en `630,63,530` sigue matando a un aldeano; el
+siguiente objetivo es ruta/puerta/tramo, no relajar el hambre. Sin test headless (necesita servidor).

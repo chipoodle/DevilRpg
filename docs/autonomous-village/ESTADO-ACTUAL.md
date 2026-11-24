@@ -1,5 +1,12 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — F1 PARCIAL.** Código probado `0e57b569`. La ración diaria ya **reduce el
+> hambre** (25/punto), reparte solo lo que saca y ordena por más tiempo sin comer; `VillagerTavernGoal`
+> se desatasca **cada tick**. El soak 72k bajó de **5 a 1 muerte** (Zenobia, granjero, en `630,63,530`,
+> misma ruta a la taberna), población 15, cobertura 10/11, 0 duplicados/huérfanos/inactivos, guardado OK.
+> **F1 no cerrado:** queda el choke de acceso a la taberna. Informe:
+> `2026-11-24-F1-HUNGER-TAVERN-FIX.md`. Siguiente: ruta/puerta de la taberna y repetir 72k con 0 bajas.
+
 > **ACTUALIZACIÓN 24-nov-2026 — SOAK MULTI-DÍA: HERRAMIENTA + HALLAZGOS; NO ACEPTADO.** Código probado
 > `552e9b57`. Nuevo arnés `tools/soak` (72.000 ticks, sprint, aldea desechable). Encontró y corrigió una
 > **asfixia real del ganadero** (`VillageAnimalFarmGoal` ahora se desatasca cada tick). El run oficial

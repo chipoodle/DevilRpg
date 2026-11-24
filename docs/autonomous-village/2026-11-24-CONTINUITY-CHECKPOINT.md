@@ -35,7 +35,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | L6 | Navegación runtime con una entidad por escenario. | `nav-final-20261124-0255`, 21 escenarios. | No cubre multientidad, laberintos largos, combate, agua ni puertas. | Matriz multientidad y escenarios compuestos. |
 | L7 | fastutil sin A/B runtime. | A/B sintético 750 rutas idénticas; campaña real sin baseline anterior. | Ganancia runtime no cuantificada; no se declara. | A/B de 6+ ejecuciones por brazo, mismo mundo y rutas. |
 | L8 | A2 no se reejecutó en el cierre. | Excluido expresamente por el usuario; C4/NAV cubren el camino actual. | Regresión A2 no medida. | Campaña A2 acotada solo si el análisis de dependencias la justifica. |
-| **F1** | **Hambre a 16 bocas en 3 días.** El soak oficial 72k dio 5 muertes por hambre; las trazas muestran a los cinco **yendo a la taberna** (4 atascados en `630,63,530`, uno en la puerta `628,66,529`), 4 camas para 16, y `repartirRaciones` no reduce el hambre personal. | `build/soak/soak-final-20261124-1120`; log `ha muerto de hambre`; `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` §4. | La aldea no es autosuficiente a 3 días; la cobertura cae con cada baja. | Medir ruta a la taberna, reparto y cadencia de hambre; corregir la causa demostrada y repetir 72k con **0 muertes por hambre**. |
+| **F1** | **Hambre a 16 bocas en 3 días.** El soak 72k dio 5 muertes; **parcialmente corregido (`0e57b569`)**: la ración diaria reduce hambre y el goal de taberna se desatasca; baja a **1 muerte**, pero el choke `630,63,530` sigue. | `build/soak/soak-f1-final-20261124-1245`; log `ha muerto de hambre`; `2026-11-24-F1-HUNGER-TAVERN-FIX.md`. | La aldea aún no es autosuficiente a 3 días; la cobertura cae con la baja. | Ruta/acceso a la taberna (destino, puerta, tramo) y repetir 72k con **0 muertes por hambre**. |
 
 ## 3. Protocolo de continuidad
 
@@ -134,3 +134,9 @@ duplicados, 0 huérfanos, 0 inactivos permanentes**, pero **5 muertes por hambre
 cobertura 8/11, comida 6–77, inicial 20). **No se acepta el soak**: la sostenibilidad alimentaria a 16
 bocas es el objetivo abierto **F1**; el arnés sin jugador no ejecuta `manageNearby` (reposición).
 Informes: `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` y `2026-11-24-ANIMAL-FARM-SUFFOCATION-FIX.md`.
+
+**F1 parcial (`0e57b569`).** La ración diaria ahora reduce el hambre (25/punto) y
+`VillagerTavernGoal` se desatasca cada tick. El 72k baja de **5 a 1 muerte** (Zenobia, granjero, en
+`630,63,530`), población 15, cobertura 10/11, 0 duplicados/huérfanos/inactivos, guardado OK. El choke de
+acceso a la taberna sigue: F1 **no cerrado**; siguiente objetivo, ruta/puerta de la taberna y 72k con 0
+bajas. Informe: `2026-11-24-F1-HUNGER-TAVERN-FIX.md`.

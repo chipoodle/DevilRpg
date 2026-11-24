@@ -1,3 +1,20 @@
+# F1 PARCIAL — RACIÓN Y DESATASCO DE TABERNA; QUEDA EL CHOKE DE `630,63,530` (2026-11-24)
+
+- **Código probado:** `0e57b569`. Dos correcciones: `repartirRaciones` ahora ordena por más tiempo sin
+  comer, reparte solo lo que saca y **reduce hambre 25 por punto** (antes marcaba `ultimaComida` sin
+  bajar el hambre); `VillagerTavernGoal.tick` llama a `desatascarSiEstaEncajado` **cada tick**.
+- **Resultado:** 72k `soak-f1-final-20261124-1245` → `SOAK_PASS_CON_BAJAS`: **5 → 1 muerte**, población
+  15, cobertura 10/11, comida 4–80 (final 20), 0 duplicados/huérfanos/inactivos, guardado OK. La única
+  baja, **Zenobia (Granjero)**, murió en `630,63,530` con `VillagerTavernGoal` y
+  `nav=[35 nodos, anda=true, llega=false]`: **el mismo choke**. 12k sí dio 0 bajas (food 20→124).
+- **F1 NO cerrado:** el hambre y el desatasco están corregidos, pero el **acceso a la taberna** en ese
+  punto sigue matando. No se declara el soak aceptado. Informe:
+  `2026-11-24-F1-HUNGER-TAVERN-FIX.md`.
+- **Siguiente objetivo:** ruta/acceso a la taberna (destino, puerta, tramo, `primerTramoDelPorton`/
+  `VillageErrands`) y repetir 72k con **0 muertes por hambre**. No tocar balance para ocultar el choke.
+- **Gates:** `test` + `compileJava -Pa2nDiagnostics=true` verdes (2m09s), lint OK, `git diff --check` 0;
+  persistencia 553, ownership 54, skills 376.
+
 # SOAK MULTI-DÍA — HERRAMIENTA Y HALLAZGOS; NO ACEPTADO (2026-11-24)
 
 - **Herramienta:** `tools/soak/SoakHarness.java` + `lanzar-soak.ps1` (opt-in `-PsoakHarness=true`,
