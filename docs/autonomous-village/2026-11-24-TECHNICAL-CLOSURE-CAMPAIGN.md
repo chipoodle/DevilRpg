@@ -100,7 +100,10 @@ Las tres fases: `censo_profesionales_12_12`, `profesionales_presentes_12_12`, `f
 `reconciliacion_manager_corrio`, `cobertura_estaciones_11_11` → **11/11**.
 `ownership_demostrado=false` y `cobertura_demostrada=true` (honesto: la titularidad del ticket se mide en POI).
 El prepare tuvo 6 reclamaciones y actividad 92; reload1/reload2 no necesitaron reclamar porque la cobertura ya era
-11/11, y el criterio lo acepta solo con esa cobertura, no con una pasada vacía.
+11/11. **Matiz de honestidad:** en `0250` reload2 la señal opcional `reconciliacion_actividad` es `false` (0
+acciones); `reconciliacion_manager_corrio` es `true` porque la estampa demuestra que el gestor cruzó la gracia y la
+cobertura obligatoria es 11/11. No se afirma que hiciera cambios en ese latido. El run `c4n-20261124-0050` sí tuvo
+actividad 1/2 en reload1/reload2, pero es de un SHA anterior y no se usa como evidencia final.
 
 Históricos preservados: `1550`/`1602` se clasifican `C4N_LEGACY_NO_MEDIDO` (no demuestran ownership/cobertura);
 `020` sigue `C4N_FAIL`. No se reescribieron sus JSON.
@@ -299,6 +302,15 @@ trabajo abierto, no como PASS silencioso.
 6. **La mejora fastutil no tiene A/B runtime.** Semántica idéntica (750 rutas), ganancia no cuantificada.
 7. **`reanudados` de C4** es una señal de goal activo/movimiento; no demuestra que el goal faltara al cargar. El
    `astar_reanudacion` de NAV sí mide reanudación real del GLOBAL incremental.
+8. **Dueño muerto en el libro.** No hay limpieza por muerte/remoção: una entrada de un aldeano muerto puede dejar la
+   estación libre pero reservada hasta una limpieza administrativa (`forgetJobSite`). No se midió en C4/POI.
+9. **Duplicado con keeper no cargado.** `reconciliarPuestosDuplicados` limpia las memorias cargadas sin liberar el
+   ticket; si el duplicado borrado era el titular, el keeper puede quedar con JOB sin ticket. F1 lo declara
+   `NO_MEDIDO` cuando el keeper no está cargado; es una limitación real, no un PASS.
+10. **`restaurar` con `yaDeOtro`.** Si el dueño del libro está cargado y otro aldeano cargado tiene ese JOB, el
+    dueño legítimo no se restaura (se evita el duplicado); puede perder la estación hasta que el otro la suelte.
+11. **`OwnerPos` no se refresca.** Es la posición del claim; si el dueño se movió, su chunk no se carga por ahí (la
+    entrada no se borra, pero la restauración puede esperar a que se cargue por otra vía).
 
 ---
 
