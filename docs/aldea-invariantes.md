@@ -11758,3 +11758,22 @@ población creció a 21. El acceso/ruta sigue abierto.
 
 **Límites:** 4 mesas para 16 aldeanos; la puerta sigue siendo un cuello de botella. Sin test headless;
 la validación es runtime.
+
+### I408 · LA ENTRADA A LA TABERNA ES POR LA PUERTA OESTE/PLAZA (24-nov-2026)
+
+**Regla:** `VillagerTavernGoal` debe entrar a la taberna por una **casilla exterior de la puerta
+oeste/plaza** (`VillageGenerator.entradaExteriorDeLaTaberna`, solo oeste) antes de ir a la mesa; al
+pisarla, `enEntrada=true`; no se come en la puerta. No se usa la puerta sur como primer tramo: el 72k
+`soak-f1-waypoint` (oeste+sur) movió las muertes al choke sur `701,63,581`.
+
+**Causa raíz:** las mesas (`dark_oak_fence`+`oak_pressure_plate`) no tenían casilla de pie alcanzable
+desde el este (`ruta=6 nodos … alcanza=NO`); el aldeano se quedaba en la puerta abierta. La entrada
+exterior oeste bajó de 13 a **8** muertes (población 22, comida 164, 11/11 final), pero el
+**terreno/ruta del este/sureste** sigue atascando en `709-728,63,541-578`.
+
+**Evidencia:** `build/soak/soak-f1-table-diag-20261124-1545` (13), `soak-f1-waypoint-20261124-1605`
+(10), `soak-f1-west-20261124-1630` (8); `test` 1m18s. Informe:
+`2026-11-24-F1-TAVERN-ENTRANCE-WAYPOINT.md`.
+
+**Límites:** F1 **no cerrado**; el siguiente objetivo es la ruta/terreno (plaza/road waypoints o
+navegación). Sin test headless.

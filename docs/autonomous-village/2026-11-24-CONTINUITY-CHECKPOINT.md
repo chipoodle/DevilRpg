@@ -35,7 +35,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | L6 | Navegación runtime con una entidad por escenario. | `nav-final-20261124-0255`, 21 escenarios. | No cubre multientidad, laberintos largos, combate, agua ni puertas. | Matriz multientidad y escenarios compuestos. |
 | L7 | fastutil sin A/B runtime. | A/B sintético 750 rutas idénticas; campaña real sin baseline anterior. | Ganancia runtime no cuantificada; no se declara. | A/B de 6+ ejecuciones por brazo, mismo mundo y rutas. |
 | L8 | A2 no se reejecutó en el cierre. | Excluido expresamente por el usuario; C4/NAV cubren el camino actual. | Regresión A2 no medida. | Campaña A2 acotada solo si el análisis de dependencias la justifica. |
-| **F1** | **Hambre/acceso a la taberna a 3 días.** Correcciones: ración con `reducirHambre`, desatasco por tick, **remesa inicial 256** y **mesa por aldeano**. El mundo que colapsó bajó de **29 → 16 → 9** (13 en el diagnóstico con `-Diag`); la comida ya no baja de 56–124, pero las bajas siguen en `630,63,530`/puerta. | `build/soak/soak-f1-table-diag-20261124-1545`; mesas `alcanza=NO`; `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md`, `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`. | La aldea aún no es autosuficiente a 3 días: la geometría/acceso a la comida mata. | Corregir mesa/tramo/puerta de la taberna y 72k con **0 muertes**; no relajar el hambre. |
+| **F1** | **Hambre/acceso a la taberna a 3 días.** Correcciones: ración con `reducirHambre`, desatasco por tick, **remesa 256**, **mesa por aldeano** y **entrada exterior por la puerta oeste**. El mundo que colapsó bajó de **29 → 16 → 9 → 8** (13 en el diagnóstico con `-Diag`); comida 164, 11/11 final, pero las bajas siguen en `709-728,63,541-578` `Yendo a la taberna`: **ruta/terreno del este**. | `build/soak/soak-f1-west-20261124-1630`; `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md`, `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`, `2026-11-24-F1-TAVERN-ENTRANCE-WAYPOINT.md`. | La aldea aún no es autosuficiente a 3 días: la ruta/terreno a la comida mata. | Ruta/terreno (plaza/road waypoints o navegación) y 72k con **0 muertes**; no relajar el hambre. |
 
 ## 3. Protocolo de continuidad
 
@@ -150,3 +150,10 @@ las mesas (`dark_oak_fence`+`oak_pressure_plate`) dan `ruta=6 nodos … alcanza=
 la puerta abierta `703,63,553` con comida 56. **Es geometría/acceso de la taberna**, no hambre. F1 **no
 cerrado**; siguiente: corregir ruta/mesa/puerta y 72k con 0 muertes. Informes:
 `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md` y `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`.
+
+**F1 abierto: entrada a la taberna (waypoint oeste) (`39b5bf53`/`2ebf8ef4`).** Las mesas no tenían
+casilla de pie alcanzable (`alcanza=NO`); se añadió una entrada exterior por la puerta oeste. El waypoint
+oeste+sur movió las muertes al sur (`701,581`, 10 bajas); solo oeste bajó a **8** (población 22, comida
+164, 11/11 final) pero las bajas siguen en `709-728,63,541-578`. **El choke es la ruta/terreno del este**,
+no la puerta ni la despensa. F1 **no cerrado**; siguiente: ruta/terreno (plaza/road waypoints o
+navegación). Informe: `2026-11-24-F1-TAVERN-ENTRANCE-WAYPOINT.md`.

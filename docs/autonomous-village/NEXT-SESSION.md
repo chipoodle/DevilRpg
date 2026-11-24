@@ -6,12 +6,14 @@
 - **Resultados 72k:** `soak-f1-stable` (mundo nuevo, 20 puntos) → **29 muertes**, comida 0;
   `soak-f1-remesa` (256) → **16 muertes**, comida 160–284 (ya no es hambre de despensa);
   `soak-f1-table` (256 + mesa) → **9 muertes**, población 21, comida 124–284;
-  `soak-f1-table-diag` (misma semilla, `-Diag`) → **13 muertes**, comida 56, cobertura final 11/11.
-  Las bajas siguen siendo **`Yendo a la taberna`** en `630,63,530` y `705-727,549-569`.
+  `soak-f1-table-diag` (misma semilla, `-Diag`) → **13 muertes**, comida 56, cobertura final 11/11;
+  `soak-f1-waypoint` (oeste+sur) → **10**; **`soak-f1-west` (solo oeste) → 8 muertes**, población 22,
+  comida 164, 11/11 final, 0 ausentes. Las bajas siguen `Yendo a la taberna` en
+  `709-728,63,541-578` (más una caída).
 - **Causa raíz capturada:** las mesas (`dark_oak_fence` + `oak_pressure_plate`) dan
-  `ruta=6 nodos … alcanza=NO`; el aldeano se queda en la puerta abierta `703,63,553`
-  (`nextBlock=dark_oak_door open=true`) y muere de hambre con comida 56. **No es hambre de despensa ni
-  destino único: es geometría/acceso de la taberna.** No se tapa con alimentación a distancia.
+  `ruta=6 nodos … alcanza=NO`; la entrada exterior oeste mejora 13→8, pero el **terreno/ruta del
+  este/sureste** sigue atascando. **No es hambre de despensa ni destino único: es ruta/terreno.** No se
+  tapa con alimentación a distancia.
 - **Conclusión:** la comida y la congregación están corregidas; **el acceso/ruta a la taberna sigue
   matando**. F1 **no cerrado**, soak **NO ACEPTADO**. Informes:
   `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md` y
