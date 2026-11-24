@@ -11503,7 +11503,7 @@ presente y ausencia de miembros nulos. `roster_invariantes_ok` debe ser `true` e
 Toda prueba de persistencia debe usar `VillageSavedData.save/load` y `CompoundTag` reales, y al menos un ciclo a
 fichero con `NbtIo.writeCompressed/readCompressed`. No se acepta una copia superficial de campos ni un doble de
 `CompoundTag`. La identidad de aldeano y `JOB_SITE` se prueban con un `Villager` real y `EntityType.create`, o se
-declara la limitación exacta. Evidencia: `VillagePersistenceIntegrationTest` (482 aserciones, bloques 1–10).
+declara la limitación exacta. Evidencia: `VillagePersistenceIntegrationTest` (525 aserciones, bloques 1–10).
 
 ### I389 · UN PLANO NBT CORRUPTO NO PUEDE TUMBAR LA CARGA NI EL OBRA
 

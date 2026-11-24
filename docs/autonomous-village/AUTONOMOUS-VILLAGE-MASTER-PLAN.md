@@ -1,5 +1,13 @@
 # Autonomous Village — Master Plan and Stabilization Roadmap
 
+> **Actualización 24-nov-2026 — CHECKPOINT ESTABLE.** Código probado `1016a7cf`; HEAD de referencia `18266502`
+> (este checkpoint de continuidad es un commit docs-only posterior).
+> C4 `c4n-20261124-0250` PASS 3/3 con cobertura **11/11**; POI `poi-final-20261124-0305` PASS 4/4 (F1 resuelto,
+> F4 sin fantasma, digest vivo==disco); NAV `nav-final-20261124-0255` PASS 21/21. Tests: 525 persistencia, 32
+> ownership, 39 BUILD, 253 contrato NAV, 15 autotest POI; `policyTest`, lint y `git diff --check` verdes.
+> La campaña de cierre está **COMPLETE para el alcance autorizado**; no se abre otra. Deuda técnica y protocolo:
+> `2026-11-24-CONTINUITY-CHECKPOINT.md`. A2/C4 siguen aceptados.
+>
 > **Actualización 23-nov-2026 — Incremento 3.** A (C4 runtime con invariantes obligatorios) revalidado;
 > B (NBT/save-reload real), D (instrumentación del planner + línea base), E (herramientas de diagnóstico) y F
 > (documentación) implementados. Informe: `2026-11-23-INCREMENT-3-RUNTIME-PERSISTENCE-INSTRUMENTATION.md`.

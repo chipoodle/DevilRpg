@@ -7,7 +7,8 @@
 > de 3/12 a 11/11; causa principal: cerebro generado con `NONE` sin `refreshBrain` (ValidateNearbyPoi borraba el
 > puesto). Nuevo libro persistido `VillageSavedData.JobSiteOwners` para no robar tickets de dueños no cargados.
 > F1 resuelto: el fixture imponía A, pero el dueño real/persistido era B; el arnés ahora lee el libro y declara
-> NO_MEDIDO si el keeper no está cargado. Informe: `2026-11-24-TECHNICAL-CLOSURE-CAMPAIGN.md`. Deudas: A2 no
+> NO_MEDIDO si el keeper no está cargado. Protocolo/deuda: `2026-11-24-CONTINUITY-CHECKPOINT.md`.
+> Informe: `2026-11-24-TECHNICAL-CLOSURE-CAMPAIGN.md`. Deudas: A2 no
 > reejecutado, mundos históricos sin libro, POI sin horas/jugador, navegación de una entidad. A2 sigue cerrado por
 > su campaña del 22-nov; este cierre no lo reabre ni lo sustituye.
 

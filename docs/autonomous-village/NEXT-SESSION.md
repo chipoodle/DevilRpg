@@ -1,5 +1,6 @@
 # CAMPAÑA — CIERRE TÉCNICO 23/24-NOV-2026: C4 11/11, POI REAL, NAV 21/21 (2026-11-24)
 
+- **Checkpoint/protocolo:** `2026-11-24-CONTINUITY-CHECKPOINT.md`.
 - **Código probado:** `1016a7cf` (docs-only después). Informe completo:
   `2026-11-24-TECHNICAL-CLOSURE-CAMPAIGN.md`.
 - **C4:** `c4n-20261124-0250` → `C4N_PASS` 3/3, `trabajoTicks=2400`, `-ExigirCobertura`; 12/12 profesionales,
