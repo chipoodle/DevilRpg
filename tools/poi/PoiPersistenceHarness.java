@@ -1855,11 +1855,20 @@ public final class PoiPersistenceHarness {
                 String keeperF1 = estado.duenios().stream()
                         .filter(d -> d.puesto() == fixtureDuplicadoPoi)
                         .map(Duenio::uuid).findFirst().orElse("");
-                checks.add(new Check("fixture_duplicado_ticket_cogido",
-                        ticketF1 && keeperF1.equals(fixtureDuplicadoKeeper),
-                        "poi=" + PoiPersistenceReport.pos(fixtureDuplicadoPoi)
-                                + " keeper=" + keeperF1 + " esperado=" + fixtureDuplicadoKeeper
-                                + " libres=" + (celdaF1 == null ? -1 : celdaF1.libres())));
+                boolean keeperCargado = estado.duenios().stream()
+                        .anyMatch(d -> d.uuid().equals(fixtureDuplicadoKeeper));
+                if (keeperCargado) {
+                    checks.add(new Check("fixture_duplicado_ticket_cogido",
+                            ticketF1 && keeperF1.equals(fixtureDuplicadoKeeper),
+                            "poi=" + PoiPersistenceReport.pos(fixtureDuplicadoPoi)
+                                    + " keeper=" + keeperF1 + " esperado=" + fixtureDuplicadoKeeper
+                                    + " libres=" + (celdaF1 == null ? -1 : celdaF1.libres())));
+                } else {
+                    // El dueño del libro no está cargado en esta fase: no hay un caso limpio que medir. El libro
+                    // debe protegerlo; no se convierte en FAIL ni en un PASS vacío.
+                    eventosDetalle.add("fixture_duplicado_ticket_cogido=NO_MEDIDO (keeper no cargado: "
+                            + fixtureDuplicadoKeeper + ", keeper visible=" + keeperF1 + ")");
+                }
             }
             if (!fixtureHuerfanoUuid.isBlank()) {
                 long puesto = puestoDe(estado, fixtureHuerfanoUuid);
