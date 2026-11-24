@@ -3122,12 +3122,9 @@ public final class VillageManager {
             if (!level.hasChunkAt(donde)) {
                 level.getChunkAt(donde); // carga (o genera) el chunk donde el dueño fue visto
             }
-            if (level.getEntity(entrada.getValue()) == null) {
-                // El chunk ya está cargado y el dueño no existe: entrada huérfana de una aldea vieja.
-                saved.forgetJobSite(entrada.getKey());
-                DevilRpg.LOGGER.info("[Village] libro de puestos: se olvida el dueño inexistente {} de {}",
-                        entrada.getValue(), BlockPos.of(entrada.getKey()).toShortString());
-            }
+            // Si el chunk carga y `getEntity` sigue nulo NO se borra el libro: `OwnerPos` es la última posición
+            // conocida y el aldeano pudo moverse a otro chunk. Se conserva y se reintenta; borrar aquí era una
+            // pérdida real de un dueño vivo.
         }
     }
 
@@ -5114,6 +5111,9 @@ public final class VillageManager {
             for (var registro : poi.getInSquare(profesion.heldJobSite(), center,
                     VillageGenerator.FENCE_RADIUS, PoiManager.Occupancy.IS_OCCUPIED).toList()) {
                 BlockPos pos = registro.getPos();
+                if (!esDeDentroDelMuro(center, pos)) {
+                    continue; // el cuadrado de getInSquare incluye esquinas/aldeas vecinas fuera del anillo
+                }
                 boolean existe = poi.getType(pos).isPresent();
                 boolean cogido = existe && poi.getFreeTickets(pos) == 0;
                 long clave = pos.asLong();
@@ -5175,9 +5175,19 @@ public final class VillageManager {
                 continue;
             }
             UUID keeper = saved.getJobSiteOwner(e.getKey());
-            Villager conservar = duenos.stream().filter(v -> v.getUUID().equals(keeper)).findFirst()
-                    .orElseGet(() -> duenos.stream().min(Comparator.comparing(Villager::getUUID)).orElse(null));
+            if (keeper == null) {
+                // Sin libro no se sabe quién tiene el ticket: no se borra una memoria que podría ser la titular.
+                continue;
+            }
+            Villager conservar = duenos.stream().filter(v -> v.getUUID().equals(keeper)).findFirst().orElse(null);
             if (conservar == null) {
+                // El dueño del libro no está cargado: no se le toca su JOB, pero las memorias duplicadas
+                // cargadas de ese POI sí se limpian para que no haya dos dueños visibles.
+                for (Villager v : duenos) {
+                    saved.releaseJobSite(e.getKey(), v.getUUID());
+                    v.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
+                    v.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                }
                 continue;
             }
             for (Villager v : duenos) {
@@ -5216,6 +5226,19 @@ public final class VillageManager {
             BlockPos pos = BlockPos.of(entrada.getKey());
             Optional<Holder<PoiType>> tipo = poi.getType(pos);
             if (tipo.isEmpty() || !profesion.heldJobSite().test(tipo.get()) || !esDeDentroDelMuro(center, pos)) {
+                continue;
+            }
+            // Un JOB sin ticket sería un fantasma: solo se restaura si el ticket sigue cogido.
+            if (poi.getFreeTickets(pos) != 0) {
+                continue;
+            }
+            // Y no se duplica el puesto si otro aldeano cargado ya lo tiene.
+            boolean yaDeOtro = level.getEntitiesOfClass(Villager.class,
+                            new AABB(center).inflate(VillageGenerator.FENCE_RADIUS)).stream()
+                    .anyMatch(otro -> !otro.getUUID().equals(v.getUUID())
+                            && otro.getBrain().getMemory(MemoryModuleType.JOB_SITE)
+                                    .map(sitio -> sitio.pos().equals(pos)).orElse(false));
+            if (yaDeOtro) {
                 continue;
             }
             v.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), pos));
@@ -5292,11 +5315,15 @@ public final class VillageManager {
             Set<Long> conEspacio = new HashSet<>();
             for (var registro : poi.getInSquare(vale, center, VillageGenerator.FENCE_RADIUS,
                     PoiManager.Occupancy.HAS_SPACE).toList()) {
-                conEspacio.add(registro.getPos().asLong());
+                if (esDeDentroDelMuro(center, registro.getPos())) {
+                    conEspacio.add(registro.getPos().asLong());
+                }
             }
             for (var registro : poi.getInSquare(vale, center, VillageGenerator.FENCE_RADIUS,
                     PoiManager.Occupancy.ANY).toList()) {
-                estaciones.add(registro.getPos());
+                if (esDeDentroDelMuro(center, registro.getPos())) {
+                    estaciones.add(registro.getPos());
+                }
             }
             estaciones.sort(Comparator.comparingDouble(p ->
                     villager.distanceToSqr(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D)));
@@ -5350,7 +5377,9 @@ public final class VillageManager {
                 // Si el libro dice que es de ESTE aldeano, no hay que soltar ni volver a coger: se le restaura.
                 UUID owner = saved.getJobSiteOwner(puesto.asLong());
                 if (owner == null) {
-                    poi.release(puesto); // ticket perdido: se suelta y se vuelve a coger (I23)
+                    // Sin dueño en el libro NO se libera un ticket cogido: podría ser de un aldeano no cargado.
+                    // Se espera a que su dueño se cargue/registe; el reparto lo reintenta en el siguiente latido.
+                    continue;
                 } else if (!owner.equals(villager.getUUID())) {
                     continue;
                 }

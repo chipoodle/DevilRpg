@@ -195,6 +195,8 @@ public final class PoiPersistenceHarness {
     private static long fixtureDuplicadoPoi;
     private static String fixtureDuplicadoA = "";
     private static String fixtureDuplicadoB = "";
+    /** Titular persistido que debe sobrevivir al duplicado (no se impone A artificialmente). */
+    private static String fixtureDuplicadoKeeper = "";
     private static String fixtureHuerfanoUuid = "";
     private static long fixtureHuerfanoSitio;
     private static String fixtureLibreUuid = "";
@@ -333,6 +335,7 @@ public final class PoiPersistenceHarness {
             }
             fixtureUuids.clear();
             fixtureUuids.addAll(leerFixturesUuids(PREPARE));
+            cargarFixtureF1DeDisco();
             if (FASE.equals(PARTIAL)) {
                 fixtureUuids.addAll(leerFixturesUuids(RELOAD1));
                 fixtureUuids.addAll(leerFixturesUuids(RELOAD2));
@@ -638,9 +641,15 @@ public final class PoiPersistenceHarness {
                             + "/" + PoiPersistenceReport.pos(latePuestoEsperado)
                             + " pot=" + PoiPersistenceReport.pos(potencialAhora)
                             + "/" + PoiPersistenceReport.pos(latePotencialEsperado)));
-            checks.add(new Check("tardio_carga_sin_cambios_ajenos", sinCambiosAjenos,
-                    "antes=" + (estadoCarga == null ? "?" : estadoCarga.propiedad().size())
-                            + " despues=" + antes.propiedad().size()));
+            if (!yaCargado) {
+                checks.add(new Check("tardio_carga_sin_cambios_ajenos", sinCambiosAjenos,
+                        "antes=" + (estadoCarga == null ? "?" : estadoCarga.propiedad().size())
+                                + " despues=" + antes.propiedad().size()));
+            } else {
+                // El tardío ya estaba cargado antes de forzarlo: no hay una carga limpia que medir. Se declara
+                // NO_MEDIDO y no se añade un check verde vacío; la memoria persistida sí se comprueba arriba.
+                eventosDetalle.add("tardio_carga_sin_cambios_ajenos=NO_MEDIDO (zona ya cargada)");
+            }
             log("reload1 zona_tardia cargada=" + todosCargadosDeLaZona() + " aldeanos="
                     + zonaTardiaUuids.size() + " duplicados="
                     + PoiPersistenceReport.duplicados(antes.duenios()).size());
@@ -1044,7 +1053,7 @@ public final class PoiPersistenceHarness {
         // --- F1 · duplicado: dos granjeros con el MISMO JOB_SITE (ticket único) ---
         List<Villager> granjeros = aldeanosConProfesion(VillagerProfession.FARMER);
         Celda farmerOcupada = null;
-        for (Celda c : estadoFeliz.celdas()) {
+        for (Celda c : celdasDeTrabajo(estadoFeliz)) {
             if ("farmer".equals(estadoFeliz.oficios().get(c.pos()))) {
                 if (farmerOcupada == null || c.libres() == 0) {
                     farmerOcupada = c;
@@ -1061,20 +1070,63 @@ public final class PoiPersistenceHarness {
             if (libres(BlockPos.of(fixtureDuplicadoPoi)) > 0) {
                 cogerTicket(BlockPos.of(fixtureDuplicadoPoi));
             }
-            // El ticket único pertenece a A en el libro: el duplicado de B es memoria transitoria, no propiedad.
-            VillageSavedData.get(nivel).claimJobSite(fixtureDuplicadoPoi, UUID.fromString(fixtureDuplicadoA));
-            liberarPuestoAnterior(a, fixtureDuplicadoPoi);
-            liberarPuestoAnterior(b, fixtureDuplicadoPoi);
-            fijarPuesto(a, fixtureDuplicadoPoi);
-            fijarPuesto(b, fixtureDuplicadoPoi);
-            // El POTENTIAL de A/B se convierte en JOB_SITE si apuntaba al mismo POI; si apuntaba a otro,
-            // se suelta su ticket antes de borrar la memoria (no se fabrica un ticket perdido nuevo).
-            soltarPotencialSiAplica(a, fixtureDuplicadoPoi);
-            soltarPotencialSiAplica(b, fixtureDuplicadoPoi);
-            fixtures.add("F1 DUPLICADO poi=" + PoiPersistenceReport.pos(fixtureDuplicadoPoi)
-                    + " uuidA=" + fixtureDuplicadoA + " uuidB=" + fixtureDuplicadoB
-                    + " ticket_libre=" + libres(BlockPos.of(fixtureDuplicadoPoi))
-                    + " (dos JOB_SITE, un solo ticket: el guardado capturó una reasignación transitoria)");
+            // F1 es READ-ONLY sobre el libro: nunca sustituye al dueño persistido por un duplicado cargado.
+            // Si el libro apunta a un dueño no cargado, no hay un caso limpio que medir y se declara NO_APLICADA.
+            VillageSavedData libro = VillageSavedData.get(nivel);
+            UUID ledger = libro.getJobSiteOwner(fixtureDuplicadoPoi);
+            Villager keeper = null;
+            boolean aplicable;
+            if (ledger != null) {
+                for (Villager v : granjeros) {
+                    if (v.getUUID().equals(ledger)) {
+                        keeper = v;
+                        break;
+                    }
+                }
+                aplicable = keeper != null;
+                if (!aplicable) {
+                    fixtures.add("F1 NO_APLICADA duenio_libro_no_cargado=" + ledger);
+                }
+            } else {
+                for (Villager v : granjeros) {
+                    if (memoria(v, MemoryModuleType.JOB_SITE) == fixtureDuplicadoPoi) {
+                        keeper = v;
+                        break;
+                    }
+                }
+                aplicable = keeper != null;
+                if (aplicable) {
+                    libro.claimJobSite(fixtureDuplicadoPoi, keeper.getUUID(), keeper.blockPosition());
+                } else {
+                    fixtures.add("F1 NO_APLICADA sin_libro_ni_job_real");
+                }
+            }
+            if (aplicable) {
+                // El keeper debe ser uno de los dos que se duplican; si el libro apunta a un tercer granjero,
+                // se usa ESE como A y se busca otro B. No se cambia el dueño persistido.
+                if (!keeper.equals(a)) {
+                    Villager otro = keeper.equals(b) ? a : b;
+                    a = keeper;
+                    b = otro;
+                }
+                fixtureDuplicadoA = a.getUUID().toString();
+                fixtureDuplicadoB = b.getUUID().toString();
+                fixtureDuplicadoKeeper = keeper.getUUID().toString();
+                libro.claimJobSite(fixtureDuplicadoPoi, keeper.getUUID(), keeper.blockPosition());
+                liberarPuestoAnterior(a, fixtureDuplicadoPoi);
+                liberarPuestoAnterior(b, fixtureDuplicadoPoi);
+                fijarPuesto(a, fixtureDuplicadoPoi);
+                fijarPuesto(b, fixtureDuplicadoPoi);
+                // El POTENTIAL de A/B se convierte en JOB_SITE si apuntaba al mismo POI; si apuntaba a otro,
+                // se suelta su ticket antes de borrar la memoria (no se fabrica un ticket perdido nuevo).
+                soltarPotencialSiAplica(a, fixtureDuplicadoPoi);
+                soltarPotencialSiAplica(b, fixtureDuplicadoPoi);
+                fixtures.add("F1 DUPLICADO poi=" + PoiPersistenceReport.pos(fixtureDuplicadoPoi)
+                        + " uuidA=" + fixtureDuplicadoA + " uuidB=" + fixtureDuplicadoB
+                        + " keeper=" + fixtureDuplicadoKeeper
+                        + " ticket_libre=" + libres(BlockPos.of(fixtureDuplicadoPoi))
+                        + " (dos JOB_SITE, un solo ticket: el guardado capturó una reasignación transitoria)");
+            }
         } else {
             fixtures.add("F1 NO_APLICADA granjeros=" + granjeros.size());
         }
@@ -1234,6 +1286,35 @@ public final class PoiPersistenceHarness {
             }
         }
         return null;
+    }
+
+    /**
+     * La fixture F1 se aplica en prepare, pero cada fase es un JVM nuevo: hay que releer su POI/UUIDs del fichero
+     * para poder comprobar que el superviviente conserva el ticket en reload1/reload2.
+     */
+    private static void cargarFixtureF1DeDisco() {
+        Path p = base.resolve("fixtures-prepare.txt");
+        if (!Files.exists(p)) {
+            return;
+        }
+        java.util.regex.Pattern patron = java.util.regex.Pattern.compile(
+                "F1[^\\n]*poi=(-?\\d+), (-?\\d+), (-?\\d+) uuidA=([0-9a-fA-F-]{36}) uuidB=([0-9a-fA-F-]{36})"
+                        + "(?: keeper=([0-9a-fA-F-]{36}))?");
+        try {
+            for (String linea : Files.readAllLines(p, StandardCharsets.UTF_8)) {
+                java.util.regex.Matcher m = patron.matcher(linea);
+                if (m.find()) {
+                    fixtureDuplicadoPoi = new BlockPos(Integer.parseInt(m.group(1)),
+                            Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3))).asLong();
+                    fixtureDuplicadoA = m.group(4);
+                    fixtureDuplicadoB = m.group(5);
+                    fixtureDuplicadoKeeper = m.group(6) == null ? fixtureDuplicadoA : m.group(6);
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            log("no pude releer F1 de fixtures-prepare: " + e);
+        }
     }
 
     /** POI de la fixture F1 leído de fixtures-prepare.txt (para no deshacerla con F4). */
@@ -1769,6 +1850,16 @@ public final class PoiPersistenceHarness {
                 checks.add(new Check("fixture_duplicado_reconciliado", dueniosDelPoi == 1,
                         "poi=" + PoiPersistenceReport.pos(fixtureDuplicadoPoi) + " duenios=" + dueniosDelPoi
                                 + " A=" + fixtureDuplicadoA + " B=" + fixtureDuplicadoB));
+                Celda celdaF1 = celdaDe(estado, fixtureDuplicadoPoi);
+                boolean ticketF1 = celdaF1 != null && celdaF1.libres() == 0;
+                String keeperF1 = estado.duenios().stream()
+                        .filter(d -> d.puesto() == fixtureDuplicadoPoi)
+                        .map(Duenio::uuid).findFirst().orElse("");
+                checks.add(new Check("fixture_duplicado_ticket_cogido",
+                        ticketF1 && keeperF1.equals(fixtureDuplicadoKeeper),
+                        "poi=" + PoiPersistenceReport.pos(fixtureDuplicadoPoi)
+                                + " keeper=" + keeperF1 + " esperado=" + fixtureDuplicadoKeeper
+                                + " libres=" + (celdaF1 == null ? -1 : celdaF1.libres())));
             }
             if (!fixtureHuerfanoUuid.isBlank()) {
                 long puesto = puestoDe(estado, fixtureHuerfanoUuid);
@@ -1833,9 +1924,19 @@ public final class PoiPersistenceHarness {
     private static List<Celda> celdasDeTrabajo(final Estado estado) {
         List<Celda> out = new ArrayList<>();
         for (Celda c : estado.celdas()) {
-            if (estado.oficios().containsKey(c.pos())) {
-                out.add(c);
+            if (!estado.oficios().containsKey(c.pos())) {
+                continue;
             }
+            // El barrido de POI es circular y más ancho que la valla (RADIO_POI = valla + margen): una aldea
+            // natural/ruina vecina puede colar una estación extra (medido: farmer 688,68,591 con 4/3). Para el
+            // contrato del pueblo solo cuentan las estaciones dentro de la valla, no todo lo que entra en el radio.
+            BlockPos p = BlockPos.of(c.pos());
+            int dx = p.getX() - centro.getX();
+            int dz = p.getZ() - centro.getZ();
+            if ((long) dx * dx + (long) dz * dz > (long) VillageGenerator.FENCE_RADIUS * VillageGenerator.FENCE_RADIUS) {
+                continue;
+            }
+            out.add(c);
         }
         return out;
     }

@@ -671,6 +671,10 @@ public final class C4StandaloneHarness {
                 reconciliacionEfectiva, true));
 
         List<Criterio> opcionales = new ArrayList<>();
+        // Señal explícita y NO obligatoria: un latido puede no tener nada que hacer (cobertura ya 11/11). Que sea
+        // false no invalida el PASS, pero queda en la evidencia en vez de esconderse.
+        opcionales.add(new Criterio("reconciliacion_actividad", true, estampaActividad,
+                estampaActividad > 0, false));
         Criterio coberturaCriterio = new Criterio("cobertura_estaciones_11_11", cobertura.esperados(),
                 cobertura.cubiertos(), cobertura.cubiertos() == cobertura.esperados(), EXIGIR_COBERTURA);
         if (EXIGIR_COBERTURA) {
