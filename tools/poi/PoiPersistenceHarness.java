@@ -1027,6 +1027,8 @@ public final class PoiPersistenceHarness {
         if (nivel.getPoiManager().getType(pos).isEmpty()) {
             return false;
         }
+        // Fixture: se recrea el estado, así que también se olvida el dueño persistido de ese puesto.
+        VillageSavedData.get(nivel).forgetJobSite(pos.asLong());
         return nivel.getPoiManager().release(pos);
     }
 
@@ -1059,6 +1061,8 @@ public final class PoiPersistenceHarness {
             if (libres(BlockPos.of(fixtureDuplicadoPoi)) > 0) {
                 cogerTicket(BlockPos.of(fixtureDuplicadoPoi));
             }
+            // El ticket único pertenece a A en el libro: el duplicado de B es memoria transitoria, no propiedad.
+            VillageSavedData.get(nivel).claimJobSite(fixtureDuplicadoPoi, UUID.fromString(fixtureDuplicadoA));
             liberarPuestoAnterior(a, fixtureDuplicadoPoi);
             liberarPuestoAnterior(b, fixtureDuplicadoPoi);
             fijarPuesto(a, fixtureDuplicadoPoi);
@@ -1196,6 +1200,9 @@ public final class PoiPersistenceHarness {
         if (libresAntes > 0) {
             cogerTicket(BlockPos.of(fixtureF4Poi));
         }
+        // El libro de dueños es la autoridad desde C4: se registra A como titular del único ticket. Sin esto,
+        // el manager (correctamente) no adivina de quién es un ticket cogido y F4 no podría medir la promoción.
+        VillageSavedData.get(nivel).claimJobSite(fixtureF4Poi, UUID.fromString(fixtureF4A));
         int libresDespues = libres(BlockPos.of(fixtureF4Poi));
         fixtures.add("F4 POTENTIAL_DUPLICADO poi=" + PoiPersistenceReport.pos(fixtureF4Poi)
                 + " uuidA=" + fixtureF4A + " uuidB=" + fixtureF4B
@@ -1315,6 +1322,7 @@ public final class PoiPersistenceHarness {
         if (nivel.getPoiManager().getType(viejo).isPresent()) {
             nivel.getPoiManager().release(viejo);
         }
+        VillageSavedData.get(nivel).forgetJobSite(viejo.asLong());
         v.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
     }
 

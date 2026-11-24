@@ -10,6 +10,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -78,6 +79,15 @@ public final class VillageSavedData extends SavedData {
     private final Map<Integer, Long> starvingSince = new HashMap<>();
     /** Dueño autoritativo por aldea+parcela: clave centro#plot, valor UUID. */
     private final FarmPlotOwners farmOwners = new FarmPlotOwners();
+    /**
+     * C4 · DUEÑO PERSISTIDO DEL PUESTO DE TRABAJO (POS → UUID). `PoiManager` solo lleva un contador de
+     * tickets: no sabe qué aldeano lo cogió. Sin este libro, la reconciliación solo ve a los aldeanos
+     * cargados y podría quitarle el ticket a un dueño en un chunk descargado. Se escribe al reclamar/promover
+     * y se limpia al soltar el puesto; sobrevive al guardado.
+     */
+    private final Map<Long, UUID> jobSiteOwners = new HashMap<>();
+    /** Posición conocida del dueño (para cargar su chunk antes de decidir; opcional en datos viejos). */
+    private final Map<Long, Long> jobSiteOwnerPositions = new HashMap<>();
 
     /**
      * Planos de las aldeas: qué bloque debería haber en cada sitio (fuera del suelo natural). Los usa el
@@ -214,6 +224,18 @@ public final class VillageSavedData extends SavedData {
             data.pressureSince.put(index, entry.getLong("Since"));
         }
         // Salud, repoblación y comida de cada aldea (una entrada por aldea).
+        for (Tag element : tag.getList("JobSiteOwners", Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) element;
+            try {
+                long poi = entry.getLong("Pos");
+                data.jobSiteOwners.put(poi, UUID.fromString(entry.getString("Owner")));
+                if (entry.contains("OwnerPos")) {
+                    data.jobSiteOwnerPositions.put(poi, entry.getLong("OwnerPos"));
+                }
+            } catch (IllegalArgumentException ignored) {
+                // entrada corrupta: se descarta; la reconciliación la reclamará cuando cargue el dueño
+            }
+        }
         for (Tag element : tag.getList("FarmOwners", Tag.TAG_COMPOUND)) {
             CompoundTag entry = (CompoundTag) element;
             try {
@@ -341,6 +363,18 @@ public final class VillageSavedData extends SavedData {
             farmOwnerTag.add(one);
         }
         tag.put("FarmOwners", farmOwnerTag);
+        ListTag jobSiteOwnerTag = new ListTag();
+        for (Map.Entry<Long, UUID> entry : jobSiteOwners.entrySet()) {
+            CompoundTag one = new CompoundTag();
+            one.putLong("Pos", entry.getKey());
+            one.putString("Owner", entry.getValue().toString());
+            Long pos = jobSiteOwnerPositions.get(entry.getKey());
+            if (pos != null) {
+                one.putLong("OwnerPos", pos);
+            }
+            jobSiteOwnerTag.add(one);
+        }
+        tag.put("JobSiteOwners", jobSiteOwnerTag);
         ListTag settlementTag = new ListTag();
         Set<Integer> villages = new HashSet<>(health.keySet());
         villages.addAll(repopulatedAt.keySet());
@@ -654,6 +688,98 @@ public final class VillageSavedData extends SavedData {
             farmOwners.release(key, owner);
             setDirty();
         }
+    }
+
+    /** Clave persistida: la posición exacta o, si la aldea se desplazó en Y, la misma X/Z. */
+    private Long encontrarClavePuesto(long poi) {
+        if (jobSiteOwners.containsKey(poi)) {
+            return poi;
+        }
+        BlockPos buscado = BlockPos.of(poi);
+        for (Long clave : jobSiteOwners.keySet()) {
+            BlockPos otro = BlockPos.of(clave);
+            if (otro.getX() == buscado.getX() && otro.getZ() == buscado.getZ()) {
+                return clave;
+            }
+        }
+        return null;
+    }
+
+    /** Dueño persistido de un puesto de trabajo, o {@code null} si no se conoce. */
+    public UUID getJobSiteOwner(long poi) {
+        Long clave = encontrarClavePuesto(poi);
+        return clave == null ? null : jobSiteOwners.get(clave);
+    }
+
+    /** Registra el dueño solo si el puesto está libre o ya es del mismo dueño. */
+    public boolean claimJobSite(long poi, UUID owner) {
+        return claimJobSite(poi, owner, null);
+    }
+
+    /** Como {@link #claimJobSite(long, UUID)}, recordando además la posición del dueño para poder cargarlo. */
+    public boolean claimJobSite(long poi, UUID owner, @Nullable BlockPos ownerPos) {
+        Long clave = encontrarClavePuesto(poi);
+        UUID actual = clave == null ? null : jobSiteOwners.get(clave);
+        if (actual != null && !actual.equals(owner)) {
+            return false;
+        }
+        if (actual == null) {
+            jobSiteOwners.put(poi, owner);
+            if (ownerPos != null) {
+                jobSiteOwnerPositions.put(poi, ownerPos.asLong());
+            }
+            setDirty();
+        } else if (clave != null) {
+            boolean cambio = false;
+            if (clave != poi) {
+                // La aldea se movió en Y: se migra la clave sin cambiar de dueño.
+                jobSiteOwners.remove(clave);
+                jobSiteOwners.put(poi, owner);
+                Long pos = jobSiteOwnerPositions.remove(clave);
+                if (pos != null) {
+                    jobSiteOwnerPositions.put(poi, pos);
+                }
+                cambio = true;
+            }
+            if (ownerPos != null && !Long.valueOf(ownerPos.asLong()).equals(jobSiteOwnerPositions.get(poi))) {
+                jobSiteOwnerPositions.put(poi, ownerPos.asLong());
+                cambio = true;
+            }
+            if (cambio) {
+                setDirty();
+            }
+        }
+        return true;
+    }
+
+    /** Posición conocida del dueño de un puesto, o {@code null}. */
+    public Long jobSiteOwnerPosition(long poi) {
+        Long clave = encontrarClavePuesto(poi);
+        return clave == null ? null : jobSiteOwnerPositions.get(clave);
+    }
+
+    /** Libera solo si el dueño coincide; nunca borra el puesto de otro. */
+    public void releaseJobSite(long poi, UUID owner) {
+        Long clave = encontrarClavePuesto(poi);
+        if (owner != null && clave != null && owner.equals(jobSiteOwners.get(clave))) {
+            jobSiteOwners.remove(clave);
+            jobSiteOwnerPositions.remove(clave);
+            setDirty();
+        }
+    }
+
+    /** Solo para fixtures/administración que recrean un mundo: olvida el dueño de un puesto. */
+    public void forgetJobSite(long poi) {
+        Long clave = encontrarClavePuesto(poi);
+        if (clave != null && jobSiteOwners.remove(clave) != null) {
+            jobSiteOwnerPositions.remove(clave);
+            setDirty();
+        }
+    }
+
+    /** Copia inmutable para diagnósticos. */
+    public Map<Long, UUID> jobSiteOwners() {
+        return Map.copyOf(jobSiteOwners);
     }
 
     public boolean hasCentre(int objectiveIndex) {

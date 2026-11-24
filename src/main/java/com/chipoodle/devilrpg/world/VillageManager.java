@@ -3109,7 +3109,33 @@ public final class VillageManager {
         }
     }
 
+    private static void cargarDueniosDePuestos(ServerLevel level, VillageSavedData saved) {
+        for (var entrada : saved.jobSiteOwners().entrySet()) {
+            if (level.getEntity(entrada.getValue()) != null) {
+                continue;
+            }
+            Long pos = saved.jobSiteOwnerPosition(entrada.getKey());
+            if (pos == null) {
+                continue; // dato viejo sin posición: se protege, no se puede cargar
+            }
+            BlockPos donde = BlockPos.of(pos);
+            if (!level.hasChunkAt(donde)) {
+                level.getChunkAt(donde); // carga (o genera) el chunk donde el dueño fue visto
+            }
+            if (level.getEntity(entrada.getValue()) == null) {
+                // El chunk ya está cargado y el dueño no existe: entrada huérfana de una aldea vieja.
+                saved.forgetJobSite(entrada.getKey());
+                DevilRpg.LOGGER.info("[Village] libro de puestos: se olvida el dueño inexistente {} de {}",
+                        entrada.getValue(), BlockPos.of(entrada.getKey()).toShortString());
+            }
+        }
+    }
+
     private static void tickVillageLife(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center) {
+        // C4 · ANTES DE VER A LOS ALDEANOS: los dueños del libro que no estén cargados se cargan por su última
+        // posición conocida. Así no se les quita el ticket por no estar en `getEntitiesOfClass`; si el chunk se
+        // carga y el UUID no existe, la entrada es basura de una aldea vieja y se olvida.
+        cargarDueniosDePuestos(level, saved);
         List<Villager> aldeanos = level.getEntitiesOfClass(Villager.class, new AABB(center).inflate(FALLEN_CHECK_RADIUS));
         // COMER, ALDEANO POR ALDEANO (etapa E): cada uno tiene SU hambre. Se reparte de uno en uno y primero al que
         // hace más tiempo que no come, para que la comida que hay se reparta de verdad (antes era un contador de
@@ -4689,10 +4715,15 @@ public final class VillageManager {
             return;
         }
         PoiManager poi = level.getPoiManager();
+        VillageSavedData saved = VillageSavedData.get(level);
         for (MemoryModuleType<GlobalPos> tipo : List.of(MemoryModuleType.JOB_SITE, MemoryModuleType.POTENTIAL_JOB_SITE)) {
             Optional<GlobalPos> sitio = villager.getBrain().getMemory(tipo);
             if (sitio.isEmpty()) {
                 continue;
+            }
+            // El libro de dueños solo se toca para JOB_SITE; un POTENTIAL no es propiedad del puesto.
+            if (tipo == MemoryModuleType.JOB_SITE) {
+                saved.releaseJobSite(sitio.get().pos().asLong(), villager.getUUID());
             }
             // OJO: `release` **revienta** si en esa celda ya no hay punto de interés —`IllegalStateException: POI never
             // registered at ...`, medido al mover el compostero de la parcela (migración 64): la memoria apuntaba al
@@ -4729,6 +4760,13 @@ public final class VillageManager {
             liberarPuesto(villager); // no se ha podido coger el nuevo: se suelta y el latido lo reintenta
             return;
         }
+        VillageSavedData saved = VillageSavedData.get(level);
+        if (!saved.claimJobSite(nuevo.asLong(), villager.getUUID(), villager.blockPosition())) {
+            // El libro dice que el puesto nuevo es de otro: no se le roba; se suelta el ticket recién cogido.
+            poi.release(nuevo);
+            return;
+        }
+        saved.releaseJobSite(viejo.asLong(), villager.getUUID());
         villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), nuevo));
         villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
         DevilRpg.LOGGER.info("[Village] {}: su estacion se muda con el compostero ({} -> {})", villager.getUUID(),
@@ -4797,13 +4835,17 @@ public final class VillageManager {
     private static void reconciliarPuestosInvalidos(ServerLevel level, List<Villager> aldeanos, BlockPos center,
                                                     int objectiveIndex) {
         PoiManager poi = level.getPoiManager();
+        VillageSavedData saved = VillageSavedData.get(level);
         Map<Long, List<Villager>> duenios = new HashMap<>();
         for (Villager villager : aldeanos) {
             if (villager.isBaby() || !villager.isAlive() || villager.isRemoved()) {
                 continue;
             }
-            villager.getBrain().getMemory(MemoryModuleType.JOB_SITE).ifPresent(sitio ->
-                    duenios.computeIfAbsent(sitio.pos().asLong(), k -> new ArrayList<>()).add(villager));
+            villager.getBrain().getMemory(MemoryModuleType.JOB_SITE).ifPresent(sitio -> {
+                duenios.computeIfAbsent(sitio.pos().asLong(), k -> new ArrayList<>()).add(villager);
+                // El libro aprende del JOB_SITE cargado. Si ya había otro dueño, no se pisa: manda el persistido.
+                saved.claimJobSite(sitio.pos().asLong(), villager.getUUID(), villager.blockPosition());
+            });
         }
         for (Map.Entry<Long, List<Villager>> entrada : duenios.entrySet()) {
             long clave = entrada.getKey();
@@ -4816,8 +4858,13 @@ public final class VillageManager {
             boolean hayValido = propietarios.stream()
                     .anyMatch(v -> !puestoDeTrabajoInvalido(v, center, poi));
             BlockPos pos = BlockPos.of(clave);
+            // Si el libro dice que el puesto es de un aldeano que NO está cargado, no se libera: podría ser su
+            // ticket real y el dueño volvería sin él. Se limpian solo las memorias inválidas cargadas.
+            UUID persistido = saved.getJobSiteOwner(clave);
+            boolean duenioPersistidoNoCargado = persistido != null
+                    && aldeanos.stream().noneMatch(v -> v.getUUID().equals(persistido));
             boolean sueltado = false;
-            if (!hayValido && poi.getType(pos).isPresent()) {
+            if (!hayValido && !duenioPersistidoNoCargado && poi.getType(pos).isPresent()) {
                 sueltado = poi.release(pos);
                 if (sueltado) {
                     ticketsPerdidosLiberados++;
@@ -4827,6 +4874,7 @@ public final class VillageManager {
                 if (!puestoDeTrabajoInvalido(villager, center, poi)) {
                     continue;
                 }
+                saved.releaseJobSite(clave, villager.getUUID());
                 villager.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
                 // OJO: el POTENTIAL no se borra aquí: lo reconcilia `reconciliarPuestosPotenciales`, que sí sabe si
                 // hay que soltar su ticket. Borrarlo a secas dejaría el ticket perdido.
@@ -4877,13 +4925,20 @@ public final class VillageManager {
     private static void reconciliarPuestosPotenciales(ServerLevel level, List<Villager> aldeanos, BlockPos center,
                                                       int objectiveIndex) {
         PoiManager poi = level.getPoiManager();
+        VillageSavedData saved = VillageSavedData.get(level);
         Map<Long, UUID> dueniosJob = new HashMap<>();
+        // Dueños persistidos primero: cubren a los que no están cargados. Los JOB_SITE cargados mandan.
+        for (Map.Entry<Long, UUID> e : saved.jobSiteOwners().entrySet()) {
+            dueniosJob.put(e.getKey(), e.getValue());
+        }
         for (Villager villager : aldeanos) {
             if (villager.isBaby() || !villager.isAlive() || villager.isRemoved()) {
                 continue;
             }
-            villager.getBrain().getMemory(MemoryModuleType.JOB_SITE)
-                    .ifPresent(sitio -> dueniosJob.putIfAbsent(sitio.pos().asLong(), villager.getUUID()));
+            villager.getBrain().getMemory(MemoryModuleType.JOB_SITE).ifPresent(sitio -> {
+                dueniosJob.put(sitio.pos().asLong(), villager.getUUID());
+                saved.claimJobSite(sitio.pos().asLong(), villager.getUUID(), villager.blockPosition());
+            });
         }
         List<VillageJobSiteReconciliationPolicy.Potencial> potenciales = new ArrayList<>();
         Map<UUID, Villager> porUuid = new HashMap<>();
@@ -4924,33 +4979,54 @@ public final class VillageManager {
             BlockPos pos = BlockPos.of(decision.poi());
             switch (decision.accion()) {
                 case PROMOVER -> {
-                    // C4 · NO SE CONFIA EN `free_tickets==0` PARA SABER QUIEN TIENE EL TICKET. Vanilla `AcquirePoi`
-                    // hace `take` e IGNORA el resultado, y siempre escribe POTENTIAL: puede haber dos POTENTIAL del
-                    // mismo POI con un solo ticket. Se suelta y se vuelve a tomar para el que se promueve: si no hay
-                    // ticket, no se crea un JOB_SITE fantasma. El resto de POTENTIAL del POI se limpia en sus
-                    // decisiones LIMPIAR, y el reparto normal lo reclamara en el siguiente latido si hiciera falta.
-                    java.util.function.BiPredicate<Holder<PoiType>, BlockPos> cual =
-                            (tipo, p) -> p.equals(pos);
-                    VillagerProfession profesion = villager.getVillagerData().getProfession();
-                    boolean liberado = poi.getType(pos).isPresent() && poi.release(pos);
-                    if (poi.take(profesion.heldJobSite(), cual, pos, 1).isEmpty()) {
+                    // C4 · EL LIBRO DE DUEÑOS ES LA AUTORIDAD. `PoiManager` solo cuenta tickets y no sabe de quién
+                    // son; `release`+`take` podía quitarle el ticket a un dueño en un chunk descargado. Ahora:
+                    //  - dueño persistido == este aldeano -> se promueve sin tocar el ticket;
+                    //  - dueño persistido de otro -> no se toca (solo se limpia la memoria);
+                    //  - sin dueño persistido y ticket cogido -> NO se adivina: no se libera ni se crea JOB (evita
+                    //    fantasma y evita robar); el dueño real lo registrará al cargar;
+                    //  - sin dueño persistido y ticket libre -> `take` normal (no hay a quién robar).
+                    UUID conocido = saved.getJobSiteOwner(pos.asLong());
+                    if (conocido != null && !conocido.equals(villager.getUUID())) {
                         villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
                         potencialesLimpiados++;
-                        DevilRpg.LOGGER.info("[Village] Aldea {}: el POTENTIAL de {} en {} no pudo confirmar el"
-                                        + " ticket (liberado={}): se limpia y se reintenta en el siguiente latido",
-                                objectiveIndex, villager.getUUID(), pos.toShortString(), liberado);
+                        DevilRpg.LOGGER.info("[Village] Aldea {}: POTENTIAL de {} en {} apunta a un puesto del libro"
+                                        + " de otro ({}); no se toca el ticket", objectiveIndex, villager.getUUID(),
+                                pos.toShortString(), conocido);
                         continue;
+                    }
+                    VillagerProfession profesion = villager.getVillagerData().getProfession();
+                    boolean ticketCogido = poi.getFreeTickets(pos) == 0;
+                    if (conocido == null && ticketCogido) {
+                        villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                        potencialesLimpiados++;
+                        DevilRpg.LOGGER.info("[Village] Aldea {}: POTENTIAL de {} en {} sin dueño en el libro y con"
+                                        + " ticket cogido; no se libera ni se promueve (no se adivina el titular)",
+                                objectiveIndex, villager.getUUID(), pos.toShortString());
+                        continue;
+                    }
+                    if (conocido == null) {
+                        java.util.function.BiPredicate<Holder<PoiType>, BlockPos> cual =
+                                (tipo, p) -> p.equals(pos);
+                        if (poi.take(profesion.heldJobSite(), cual, pos, 1).isEmpty()) {
+                            villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                            potencialesLimpiados++;
+                            continue;
+                        }
+                        saved.claimJobSite(pos.asLong(), villager.getUUID(), villager.blockPosition());
                     }
                     villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), pos));
                     villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
                     villager.setVillagerXp(Math.max(1, villager.getVillagerXp()));
                     promocionesDePotencial++;
                     DevilRpg.LOGGER.info("[Village] Aldea {}: el POTENTIAL de {} en {} es de su oficio:"
-                                    + " ticket confirmado (liberado={}) y PROMOVIDO a JOB_SITE",
-                            objectiveIndex, villager.getUUID(), pos.toShortString(), liberado);
+                                    + " PROMOVIDO a JOB_SITE (dueño del libro: {})",
+                            objectiveIndex, villager.getUUID(), pos.toShortString(), conocido != null);
                 }
                 case LIBERAR_Y_LIMPIAR -> {
-                    boolean soltado = poi.getType(pos).isPresent() && poi.release(pos);
+                    UUID duenioLibro = saved.getJobSiteOwner(pos.asLong());
+                    boolean soltado = (duenioLibro == null || duenioLibro.equals(villager.getUUID()))
+                            && poi.getType(pos).isPresent() && poi.release(pos);
                     if (soltado) {
                         ticketsPerdidosLiberados++;
                     }
@@ -4997,7 +5073,8 @@ public final class VillageManager {
     private static void soltarTicketsPerdidos(ServerLevel level, List<Villager> aldeanos, BlockPos center,
                                               int objectiveIndex) {
         PoiManager poi = level.getPoiManager();
-        Set<Long> conJobSite = new HashSet<>();
+        VillageSavedData saved = VillageSavedData.get(level);
+        Set<Long> conJobSite = new HashSet<>(saved.jobSiteOwners().keySet());
         Set<Long> conPotencialLegitimo = new HashSet<>();
         Map<VillagerProfession, Integer> demanda = new HashMap<>();
         for (Villager villager : aldeanos) {
@@ -5079,9 +5156,9 @@ public final class VillageManager {
      * su titular real lo conserva y la lógica existente («ocupada sin dueño» → se suelta y se vuelve a coger) la
      * reconcilia. Solo actúa cuando dos o más aldeanos comparten exactamente la misma celda.
      */
-    private static void reconciliarPuestosDuplicados(List<Villager> aldeanos) {
-        List<VillageJobSiteOwnershipPolicy.Registro> registros = new ArrayList<>();
-        Map<UUID, Villager> porUuid = new HashMap<>();
+    private static void reconciliarPuestosDuplicados(ServerLevel level, List<Villager> aldeanos) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        Map<Long, List<Villager>> porPoi = new HashMap<>();
         for (Villager v : aldeanos) {
             if (v.isBaby() || VillagerGuardGoal.esGuardia(v)) {
                 continue;
@@ -5090,20 +5167,64 @@ public final class VillageManager {
             if (mem.isEmpty()) {
                 continue;
             }
-            registros.add(new VillageJobSiteOwnershipPolicy.Registro(v.getUUID(), mem.get().pos().asLong()));
-            porUuid.put(v.getUUID(), v);
+            porPoi.computeIfAbsent(mem.get().pos().asLong(), k -> new ArrayList<>()).add(v);
         }
-        for (UUID sobrante : VillageJobSiteOwnershipPolicy.sobrantes(registros)) {
-            Villager v = porUuid.get(sobrante);
-            if (v == null) {
+        for (Map.Entry<Long, List<Villager>> e : porPoi.entrySet()) {
+            List<Villager> duenos = e.getValue();
+            if (duenos.size() < 2) {
                 continue;
             }
-            String poi = v.getBrain().getMemory(MemoryModuleType.JOB_SITE)
-                    .map(m -> m.pos().toShortString()).orElse("?");
-            v.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
+            UUID keeper = saved.getJobSiteOwner(e.getKey());
+            Villager conservar = duenos.stream().filter(v -> v.getUUID().equals(keeper)).findFirst()
+                    .orElseGet(() -> duenos.stream().min(Comparator.comparing(Villager::getUUID)).orElse(null));
+            if (conservar == null) {
+                continue;
+            }
+            for (Villager v : duenos) {
+                if (v == conservar) {
+                    continue;
+                }
+                String poi = v.getBrain().getMemory(MemoryModuleType.JOB_SITE)
+                        .map(m -> m.pos().toShortString()).orElse("?");
+                saved.releaseJobSite(e.getKey(), v.getUUID());
+                v.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
+                v.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                DevilRpg.LOGGER.info("[Village] {}: memoria de puesto DUPLICADA en {}; se limpia y el reparto le dara otra",
+                        v.getUUID(), poi);
+            }
+        }
+    }
+
+    /**
+     * Devuelve el JOB_SITE a los dueños persistidos que lo perdieron pero cuyo ticket sigue cogido. Solo actúa con
+     * un aldeano real, adulto, de oficio del pueblo, con el POI del tipo correcto dentro del muro y sin JOB_SITE.
+     * No toca tickets: el libro dice que ya es suyo.
+     */
+    private static void restaurarDueniosDelLibro(ServerLevel level, VillageSavedData saved, BlockPos center,
+                                                int objectiveIndex) {
+        PoiManager poi = level.getPoiManager();
+        for (var entrada : saved.jobSiteOwners().entrySet()) {
+            if (!(level.getEntity(entrada.getValue()) instanceof Villager v)
+                    || v.isBaby() || !v.isAlive() || v.isRemoved()
+                    || v.getBrain().hasMemoryValue(MemoryModuleType.JOB_SITE)) {
+                continue;
+            }
+            VillagerProfession profesion = v.getVillagerData().getProfession();
+            if (!VillageGenerator.esOficioDelPueblo(profesion)) {
+                continue;
+            }
+            BlockPos pos = BlockPos.of(entrada.getKey());
+            Optional<Holder<PoiType>> tipo = poi.getType(pos);
+            if (tipo.isEmpty() || !profesion.heldJobSite().test(tipo.get()) || !esDeDentroDelMuro(center, pos)) {
+                continue;
+            }
+            v.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), pos));
             v.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
-            DevilRpg.LOGGER.info("[Village] {}: memoria de puesto DUPLICADA en {}; se limpia y el reparto le dara otra",
-                    sobrante, poi);
+            v.setVillagerXp(Math.max(1, v.getVillagerXp()));
+            reclamacionesDeEstaciones++;
+            ultimaReclamacionTick = level.getGameTime();
+            DevilRpg.LOGGER.info("[Village] Aldea {}: el libro devuelve su puesto de {} a {} en {}",
+                    objectiveIndex, profesion, v.getUUID(), pos.toShortString());
         }
     }
 
@@ -5121,7 +5242,11 @@ public final class VillageManager {
         // C4 · estampa de que la reconciliación REALMENTE pasó la gracia, aunque no hubiera nada que reclamar.
         pasadasDeReconciliacion++;
         ultimaReconciliacionTick = level.getGameTime();
-        reconciliarPuestosDuplicados(aldeanos);
+        VillageSavedData saved = VillageSavedData.get(level);
+        // C4 · LOS DUEÑOS DEL LIBRO RECUPERAN SU PUESTO AUNQUE ESTÉN FUERA DEL AABB DE CARGA. No se adivina: el
+        // libro dice que el ticket es suyo; si el aldeano existe, está vivo y su oficio encaja, se le restaura.
+        restaurarDueniosDelLibro(level, saved, center, objectiveIndex);
+        reconciliarPuestosDuplicados(level, aldeanos);
         PoiManager poi = level.getPoiManager();
         for (Villager villager : aldeanos) {
             if (villager.isBaby()) {
@@ -5137,6 +5262,12 @@ public final class VillageManager {
                 Optional<GlobalPos> suyo = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
                 if (suyo.isEmpty() || poi.getType(suyo.get().pos()).isPresent()) {
                     continue; // su puesto sigue ahí: no se le toca
+                }
+                // El chunk del POI puede no estar cargado en este instante (getType vacío transitorio). Antes se
+                // liberaba y se perdía la memoria; con el libro de dueños eso dejaba la estación sin dueño. Se
+                // espera al siguiente latido en vez de soltar un puesto que puede existir.
+                if (!level.hasChunkAt(suyo.get().pos())) {
+                    continue;
                 }
                 liberarPuesto(villager);
             }
@@ -5197,6 +5328,10 @@ public final class VillageManager {
                 continue; // su oficio no tiene estación libre (todavía): se reintenta en el latido siguiente
             }
             boolean deOtro = false;
+            UUID duenioLibro = saved.getJobSiteOwner(puesto.asLong());
+            if (duenioLibro != null && !duenioLibro.equals(villager.getUUID())) {
+                deOtro = true; // dueño persistido, aunque no esté cargado: no se le roba
+            }
             for (Villager otro : aldeanos) {
                 if (otro == villager) {
                     continue;
@@ -5208,18 +5343,33 @@ public final class VillageManager {
                 }
             }
             if (deOtro) {
-                continue; // es de otro aldeano que está aquí: no se le quita
+                continue; // es de otro aldeano (cargado o del libro): no se le quita
             }
             if (!libre) {
-                poi.release(puesto); // ticket perdido: se suelta y se vuelve a coger (I23)
+                // Sin dueño en el libro no se libera un ticket cogido: podría ser de un aldeano no cargado.
+                // Si el libro dice que es de ESTE aldeano, no hay que soltar ni volver a coger: se le restaura.
+                UUID owner = saved.getJobSiteOwner(puesto.asLong());
+                if (owner == null) {
+                    poi.release(puesto); // ticket perdido: se suelta y se vuelve a coger (I23)
+                } else if (!owner.equals(villager.getUUID())) {
+                    continue;
+                }
             }
             final BlockPos elegido = puesto;
             java.util.function.BiPredicate<net.minecraft.core.Holder<
                     net.minecraft.world.entity.ai.village.poi.PoiType>, BlockPos> cual =
                     (tipo, pos) -> pos.equals(elegido);
-            if (poi.take(vale, cual, elegido, 1).isEmpty()) {
-                continue; // no se ha podido (el chunk no está cargado...): se reintenta en el latido siguiente
+            UUID ownerFinal = saved.getJobSiteOwner(elegido.asLong());
+            if (libre || ownerFinal == null) {
+                if (poi.take(vale, cual, elegido, 1).isEmpty()) {
+                    continue; // no se ha podido (el chunk no está cargado...): se reintenta en el latido siguiente
+                }
+                if (!saved.claimJobSite(elegido.asLong(), villager.getUUID(), villager.blockPosition())) {
+                    poi.release(elegido); // el libro dice que es de otro: no se le roba
+                    continue;
+                }
             }
+            // Si ownerFinal == villager, el ticket ya es suyo: no se toca.
             villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), elegido));
             villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
             villager.setVillagerXp(Math.max(1, villager.getVillagerXp()));

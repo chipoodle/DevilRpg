@@ -114,6 +114,8 @@ public final class VillagePersistenceIntegrationTest {
     private static final UUID BOB = UUID.fromString("00000000-0000-0000-0000-000000000002");
     private static final UUID CAROL = UUID.fromString("00000000-0000-0000-0000-000000000003");
     private static final BlockPos FARM_CENTER = new BlockPos(0, 64, 0);
+    private static final long JOB_POI_A = new BlockPos(20, 64, 20).asLong();
+    private static final long JOB_POI_B = new BlockPos(21, 64, 20).asLong();
     private static final BlockPos VILLAGE_CENTER = new BlockPos(100, 70, -200);
 
     public static void main(String[] args) {
@@ -223,6 +225,11 @@ public final class VillagePersistenceIntegrationTest {
         data.claimFarmPlot(FARM_CENTER, 1, BOB);
         data.releaseFarmPlot(FARM_CENTER, 1, ALICE);
         data.claimFarmPlot(FARM_CENTER, 0, ALICE); // idempotente
+        // Libro de dueños de puestos: ALICE en A; BOB no puede quitárselo; BOB en B.
+        data.claimJobSite(JOB_POI_A, ALICE);
+        data.claimJobSite(JOB_POI_A, ALICE); // idempotente
+        data.releaseJobSite(JOB_POI_A, BOB); // no debe borrar el de ALICE
+        data.claimJobSite(JOB_POI_B, BOB);
 
         data.setHealth(5, 7);
         data.markRepopulated(5, 12345L);
@@ -282,6 +289,11 @@ public final class VillagePersistenceIntegrationTest {
         check(ALICE.equals(d.getFarmOwner(FARM_CENTER, 0)), phase + ": parcela 0 de ALICE");
         check(BOB.equals(d.getFarmOwner(FARM_CENTER, 1)), phase + ": liberar con otro duenio no borra");
         check(d.getFarmOwner(FARM_CENTER, 2) == null, phase + ": parcela 2 libre");
+        check(ALICE.equals(d.getJobSiteOwner(JOB_POI_A)), phase + ": puesto A de ALICE");
+        check(BOB.equals(d.getJobSiteOwner(JOB_POI_B)), phase + ": puesto B de BOB");
+        check(d.getJobSiteOwner(JOB_POI_A).equals(ALICE), phase + ": liberar con otro duenio no borra el puesto");
+        check(d.claimJobSite(JOB_POI_A, BOB) == false, phase + ": no se puede robar el puesto A");
+        check(d.claimJobSite(JOB_POI_B, BOB), phase + ": claim idempotente del mismo duenio");
 
         check(d.getHealth(5) == 7, phase + ": salud 5");
         check(d.getRepopulatedAt(5) == 12345L, phase + ": repoblada 5");
@@ -505,7 +517,7 @@ public final class VillagePersistenceIntegrationTest {
         System.out.println("[6] Carga parcial (falta una seccion top-level)");
         CompoundTag complete = sampleState(registries).save(new CompoundTag(), registries);
         String[] keys = {"Generated", "Resolved", "Occupied", "Noticed", "Fallen",
-                "Pressure", "FarmOwners", "Settlement", "Blueprints"};
+                "Pressure", "FarmOwners", "JobSiteOwners", "Settlement", "Blueprints"};
 
         for (String key : keys) {
             CompoundTag partial = complete.copy();
@@ -557,6 +569,13 @@ public final class VillagePersistenceIntegrationTest {
                 check(data.getFarmOwner(FARM_CENTER, 0) == null, "parcial sin FarmOwners: default");
             } else {
                 check(ALICE.equals(data.getFarmOwner(FARM_CENTER, 0)), "parcial sin " + key + ": conserva FarmOwners");
+            }
+            if ("JobSiteOwners".equals(key)) {
+                check(data.getJobSiteOwner(JOB_POI_A) == null && data.getJobSiteOwner(JOB_POI_B) == null,
+                        "parcial sin JobSiteOwners: default");
+            } else {
+                check(ALICE.equals(data.getJobSiteOwner(JOB_POI_A)) && BOB.equals(data.getJobSiteOwner(JOB_POI_B)),
+                        "parcial sin " + key + ": conserva JobSiteOwners");
             }
             if ("Settlement".equals(key)) {
                 check(data.getHealth(5) == VillageSavedData.HEALTH_UNKNOWN, "parcial sin Settlement: salud default");

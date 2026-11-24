@@ -657,7 +657,11 @@ public final class C4StandaloneHarness {
                 reanudados == puestosContrato, true));
         boolean reconciliacionEfectiva = estampaDisponible
                 && (estampaActividad > 0
-                        || estampaReclamaciones > 0 || estampaUltimaTick > estampaInicioUltimaTick);
+                        || estampaReclamaciones > 0 || estampaUltimaTick > estampaInicioUltimaTick
+                        // Un latido sin acciones es legítimo si ya está todo bien: lo que no vale es `pasadas>0` a
+                        // secas. Se exige además cobertura 11/11 al cierre.
+                        || (estampaPasadasReconciliacion > 0
+                                && cobertura.cubiertos() == cobertura.esperados()));
         criterios.add(new Criterio("reconciliacion_manager_corrio", true,
                 "estampa=" + estampaDisponible + ", pasadas=" + estampaPasadasReconciliacion
                         + ", ultima_reconciliacion_tick=" + estampaUltimaReconciliacionTick
