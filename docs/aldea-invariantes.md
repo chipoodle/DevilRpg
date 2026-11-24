@@ -11722,3 +11722,39 @@ la taberna no se desatascaba al trabajar.
 
 **Límites:** **F1 no cerrado**: el acceso a la taberna en `630,63,530` sigue matando a un aldeano; el
 siguiente objetivo es ruta/puerta/tramo, no relajar el hambre. Sin test headless (necesita servidor).
+
+### I406 · LA ALDEA GENERADA NACE CON LA DOTACIÓN C1 (256 PUNTOS) (24-nov-2026)
+
+**Regla:** `VillagePantry.remesaInicial` debe dejar **64 panes = 256 puntos** de comida (más las
+semillas/zanahorias/patatas/harina de hueso), no 2 panes = 20. La aceptación Food 3.1/3.2 se hizo con la
+despensa en **256 puntos**; una aldea generada con 20 para 16 bocas moría antes de la primera cosecha.
+
+**Causa raíz:** el soak `soak-f1-stable-20261124-1420` (mundo nuevo) terminó con **29 muertes**,
+población 1 y comida **0** durante 85 muestras; la producción de ese mundo fue baja
+(`FARMER-GROW=8`, `cocin=11`) y el colchón de 20 no alcanzó. Con 256 (`soak-f1-remesa`) la comida quedó
+en **160–284** y desapareció el colapso alimentario; quedaron 16 muertes por otro motivo (taberna).
+
+**Evidencia:** `build/soak/soak-f1-stable-20261124-1420` (antes) y
+`soak-f1-remesa-20261124-1455` (después); gates `test` 3m35s. Informe:
+`2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md`.
+
+**Límites:** es un cambio de balance; si el 72k sigue cayendo, la producción de la granja es el
+siguiente objetivo. Sin test headless del contenedor; validación runtime.
+
+### I407 · EL HAMBRIENTO VA A SU MESA, NO TODOS AL MISMO PUNTO (24-nov-2026)
+
+**Regla:** `VillagerTavernGoal.canUse` debe elegir **la mesa de este aldeano** (`mesaDeEsteAldeano`, por
+UUID) y usar el punto de apoyo de la despensa **solo** si no hay mesa o la suya está aparcada. Al
+rendirse, `canContinueToUse` marca como fallido **el destino real** (mesa o despensa), no siempre `mesa`.
+`comer` retira la ración de la despensa de forma remota: no hace falta ir al cofre.
+
+**Causa raíz:** el goal ponía `usandoDespensa = true` **siempre**; los 16 hambrientos iban al mismo punto
+de apoyo y se atascaban en la puerta de la taberna. Medido en `soak-f1-remesa` (256 puntos de comida):
+**16 muertes**, 15 `Yendo a la taberna`; con mesa por aldeano (`soak-f1-table`) bajaron a **9** y la
+población creció a 21. El acceso/ruta sigue abierto.
+
+**Evidencia:** `build/soak/soak-f1-remesa-20261124-1455` y `soak-f1-table-20261124-1520`; gates `test`
+4m17s. Informe: `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`.
+
+**Límites:** 4 mesas para 16 aldeanos; la puerta sigue siendo un cuello de botella. Sin test headless;
+la validación es runtime.

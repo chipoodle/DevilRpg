@@ -67,10 +67,21 @@ El run de 72k bajó las muertes de **5 a 1**, pero **no las eliminó**: la víct
 12k no tuvo bajas; el de 72k sí. El fix de ración y desatasco mejora la supervivencia, pero **no
 resuelve el acceso a la taberna** en ese punto.
 
-**Conclusión:** F1 queda **PARCIALMENTE RESUELTO**. La ración diaria ya alimenta y el goal se
-desatasca, pero un aldeano sigue muriendo de hambre en la ruta a la taberna; el siguiente objetivo es
-la **ruta/acceso** (destino, puerta, tramo y `primerTramoDelPorton`/`VillageErrands`), no el hambre.
-No se declara el soak aceptado.
+**Conclusión:** F1 queda **ABIERTO**. La ración diaria ya alimenta y el goal se desatasca, pero las
+campañas posteriores destaparon dos problemas más: la **dotación inicial de 20 puntos** (corregida a 256)
+y el **destino único de la taberna** (corregido a la mesa por aldeano). Con ambas, el mundo que se hundía
+bajó de 16 a **9 muertes**, pero sigue muriendo gente **yendo a la taberna** en `630,63,530` y en la
+puerta; el acceso/ruta es el objetivo abierto. Informes:
+`2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md` y
+`2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`.
+
+### 3.1 Campañas de despensa y mesa
+
+| Run | Código | Ticks | Resultado | Población | Comida | Bajas |
+|---|---|---:|---|---:|---|---:|
+| `soak-f1-stable` (mundo nuevo) | `14bfeba9` | 72.000 | `SOAK_FAIL` | 1 | **0** | **29** (colapso alimentario) |
+| `soak-f1-remesa` (mismo mundo, 256) | `552ecfc2` | 72.000 | `SOAK_FAIL` | 14 | **160–284** | **16** (taberna) |
+| `soak-f1-table` (mesa por aldeano) | `80c0e76e` | 72.000 | `SOAK_FAIL` | 21 | **124–284** | **9** (taberna) |
 
 El diagnóstico de 12k: 0 duplicados, 0 huérfanos, 0 inactivos permanentes, guardado OK. La comida subió
 de 20 a 124 (antes bajaba a 4-19 en el mismo tipo de run), lo que confirma que la ración diaria estaba
@@ -113,6 +124,38 @@ VillagerGateGoal]`), pero se recuperan y no mueren. El choke `630,63,530` **no s
 es intermitente. El siguiente paso es repetir el 72k con `-Seed … -Diag` y usar el `SOAK_STUCK` del
 punto exacto para decidir entre puerta, valla o tramo de ruta.
 
+### 5.1 El 72k con mesa por aldeano y diagnóstico (`soak-f1-table-diag`, semilla 3188…)
+
+Resultado: **`SOAK_FAIL`**, 13 muertes, población 18, comida 56–? (final 56), cobertura final 11/11,
+1 huérfano, 1 sin puesto transitorio. Las muertes siguen siendo `Yendo a la taberna` en
+`705-727,63,549-569` (más una caída).
+
+`TAVERNDIAG` capturó el punto exacto:
+
+```text
+uuid=... pos=704,63,553 next=703,63,553
+nextBlock=dark_oak_door[facing=east,half=lower,hinge=left,open=true]
+pathNodes=8 idx=1 done=false reach=true stuck=20..40
+feet=air below=stone_bricks
+```
+
+Y el log del gestor:
+
+```text
+no consigue llegar a 699,63,551 desde 721,63,557
+(ruta=6 nodos hasta 717,63,561 alcanza=NO;
+ destino=dark_oak_fence encima=oak_pressure_plate)
+```
+
+**Causa raíz del acceso:** las **mesas** de la taberna (`dark_oak_fence` + `oak_pressure_plate`) no
+tienen una casilla de pie alcanzable desde el este; el planificador da `alcanza=NO`, el goal se rinde,
+descansa 40 ticks, reintenta y el aldeano se queda sin comer en la puerta abierta `703,63,553` (la
+puerta está abierta; el problema es la mesa/ruta, no la puerta). No es hambre de despensa (comida 56),
+ni el destino único (ya es la mesa): es **geometría/acceso de la taberna**.
+
+**No se aplica un “alimentar a distancia” para taparlo**: el siguiente objetivo es corregir la mesa/
+tramo/puerta y repetir el 72k con 0 muertes. El `-Seed`/`-Diag` queda listo.
+
 ---
 
 ## 6 · Riesgos y límites
@@ -132,4 +175,6 @@ punto exacto para decidir entre puerta, valla o tramo de ruta.
 
 ## 7 · Veredicto
 
-**F1 parcialmente resuelto:** la ración diaria ya alimenta y el goal de taberna se desatasca; el soak de 72k bajó de 5 a 1 muerte. **No está cerrado:** la muerte restante está en el choke de acceso a la taberna (630,63,530), y la instrumentación -Seed/-Diag queda lista para localizarlo en la siguiente campaña. No se declara el soak aceptado.
+**F1 abierto:** la ración diaria y el desatasco funcionan, y la dotación inicial/mesa redujeron el
+colapso (5→1→16→9), pero el **acceso a la taberna** sigue matando aldeanos con la despensa llena. No se
+declara el soak aceptado; el siguiente objetivo es la ruta/puertas de la taberna.

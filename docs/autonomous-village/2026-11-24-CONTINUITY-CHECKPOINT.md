@@ -35,7 +35,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | L6 | Navegación runtime con una entidad por escenario. | `nav-final-20261124-0255`, 21 escenarios. | No cubre multientidad, laberintos largos, combate, agua ni puertas. | Matriz multientidad y escenarios compuestos. |
 | L7 | fastutil sin A/B runtime. | A/B sintético 750 rutas idénticas; campaña real sin baseline anterior. | Ganancia runtime no cuantificada; no se declara. | A/B de 6+ ejecuciones por brazo, mismo mundo y rutas. |
 | L8 | A2 no se reejecutó en el cierre. | Excluido expresamente por el usuario; C4/NAV cubren el camino actual. | Regresión A2 no medida. | Campaña A2 acotada solo si el análisis de dependencias la justifica. |
-| **F1** | **Hambre a 16 bocas en 3 días.** El soak 72k dio 5 muertes; **parcialmente corregido (`0e57b569`)**: la ración diaria reduce hambre y el goal de taberna se desatasca; baja a **1 muerte**, pero el choke `630,63,530` sigue. | `build/soak/soak-f1-final-20261124-1245`; log `ha muerto de hambre`; `2026-11-24-F1-HUNGER-TAVERN-FIX.md`. | La aldea aún no es autosuficiente a 3 días; la cobertura cae con la baja. | Ruta/acceso a la taberna (destino, puerta, tramo) y repetir 72k con **0 muertes por hambre**. |
+| **F1** | **Hambre/acceso a la taberna a 3 días.** Correcciones: ración con `reducirHambre`, desatasco por tick, **remesa inicial 256** y **mesa por aldeano**. El mundo que colapsó bajó de **29 → 16 → 9** (13 en el diagnóstico con `-Diag`); la comida ya no baja de 56–124, pero las bajas siguen en `630,63,530`/puerta. | `build/soak/soak-f1-table-diag-20261124-1545`; mesas `alcanza=NO`; `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md`, `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`. | La aldea aún no es autosuficiente a 3 días: la geometría/acceso a la comida mata. | Corregir mesa/tramo/puerta de la taberna y 72k con **0 muertes**; no relajar el hambre. |
 
 ## 3. Protocolo de continuidad
 
@@ -140,3 +140,13 @@ Informes: `2026-11-24-SOAK-MULTIDAY-CAMPAIGN.md` y `2026-11-24-ANIMAL-FARM-SUFFO
 `630,63,530`), población 15, cobertura 10/11, 0 duplicados/huérfanos/inactivos, guardado OK. El choke de
 acceso a la taberna sigue: F1 **no cerrado**; siguiente objetivo, ruta/puerta de la taberna y 72k con 0
 bajas. Informe: `2026-11-24-F1-HUNGER-TAVERN-FIX.md`.
+
+**F1 abierto: despensa 256 y mesa por aldeano (`552ecfc2`/`80c0e76e`).** El segundo mundo se hundió con
+20 puntos (29 muertes, comida 0). La remesa de **64 panes = 256 puntos** eliminó el colapso alimentario
+(comida 160–284), pero seguían muriendo **16** `Yendo a la taberna`; la causa era que
+`usandoDespensa=true` mandaba a todos al mismo punto de apoyo. Con **mesa por aldeano** bajaron a **9**
+(población 21, comida 124–284); el diagnóstico con semilla y `-Diag` dio **13** y capturó la causa:
+las mesas (`dark_oak_fence`+`oak_pressure_plate`) dan `ruta=6 nodos … alcanza=NO` y el aldeano muere en
+la puerta abierta `703,63,553` con comida 56. **Es geometría/acceso de la taberna**, no hambre. F1 **no
+cerrado**; siguiente: corregir ruta/mesa/puerta y 72k con 0 muertes. Informes:
+`2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md` y `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`.

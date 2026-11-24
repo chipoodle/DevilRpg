@@ -1,3 +1,25 @@
+# F1 ABIERTO — DESPENSA 256 + MESA POR ALDEANO; QUEDA EL ACCESO A LA TABERNA (2026-11-24)
+
+- **Código actual:** `80c0e76e`. Tres correcciones acumuladas: ración diaria que reduce hambre, desatasco
+  por tick del goal de taberna, **remesa inicial 64 panes = 256 puntos** (antes 20, la aceptación C1 usaba
+  256) y **mesa por aldeano** (antes `usandoDespensa=true` mandaba a los 16 al mismo punto de apoyo).
+- **Resultados 72k:** `soak-f1-stable` (mundo nuevo, 20 puntos) → **29 muertes**, comida 0;
+  `soak-f1-remesa` (256) → **16 muertes**, comida 160–284 (ya no es hambre de despensa);
+  `soak-f1-table` (256 + mesa) → **9 muertes**, población 21, comida 124–284;
+  `soak-f1-table-diag` (misma semilla, `-Diag`) → **13 muertes**, comida 56, cobertura final 11/11.
+  Las bajas siguen siendo **`Yendo a la taberna`** en `630,63,530` y `705-727,549-569`.
+- **Causa raíz capturada:** las mesas (`dark_oak_fence` + `oak_pressure_plate`) dan
+  `ruta=6 nodos … alcanza=NO`; el aldeano se queda en la puerta abierta `703,63,553`
+  (`nextBlock=dark_oak_door open=true`) y muere de hambre con comida 56. **No es hambre de despensa ni
+  destino único: es geometría/acceso de la taberna.** No se tapa con alimentación a distancia.
+- **Conclusión:** la comida y la congregación están corregidas; **el acceso/ruta a la taberna sigue
+  matando**. F1 **no cerrado**, soak **NO ACEPTADO**. Informes:
+  `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md` y
+  `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`.
+- **Siguiente:** 72k `-Seed 3188456493687723571 -Diag` (en curso `soak-f1-table-diag-20261124-1545`)
+  para capturar nodo/bloque del choke; corregir puerta/tramo. No relajar hambre.
+- **Gates:** `test` 4m17s, lint, diff-check verdes; persistencia 553, ownership 54, skills 376.
+
 # F1 PARCIAL — RACIÓN Y DESATASCO DE TABERNA; QUEDA EL CHOKE DE `630,63,530` (2026-11-24)
 
 - **Código probado:** `0e57b569`. Dos correcciones: `repartirRaciones` ahora ordena por más tiempo sin

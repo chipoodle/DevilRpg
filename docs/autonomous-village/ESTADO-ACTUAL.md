@@ -1,5 +1,15 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — F1 ABIERTO: COMIDA Y MESA CORREGIDAS, ACCESO A LA TABERNA PENDIENTE.**
+> Código `80c0e76e`. Tres correcciones: ración que reduce hambre, desatasco por tick, **remesa inicial 256
+> puntos** y **mesa por aldeano** (antes todos al mismo punto de apoyo). El 72k del mundo que colapsaba
+> bajó de **29 → 16 → 9**; el diagnóstico con semilla y `-Diag` dio **13** y capturó la causa: las mesas
+> (`dark_oak_fence`+`oak_pressure_plate`) dan `ruta=6 nodos … alcanza=NO` y el aldeano muere en la
+> puerta abierta `703,63,553` con comida 56. Es **geometría/acceso de la taberna**, no hambre. F1 **no
+> cerrado**; soak **NO ACEPTADO**. Informes:
+> `2026-11-24-F1-FOOD-COLLAPSE-AND-INITIAL-STOCK.md` y
+> `2026-11-24-F1-TAVERN-TABLE-DESTINATION.md`. Siguiente: ruta/mesa/puerta de la taberna.
+
 > **ACTUALIZACIÓN 24-nov-2026 — F1 PARCIAL.** Código probado `0e57b569`. La ración diaria ya **reduce el
 > hambre** (25/punto), reparte solo lo que saca y ordena por más tiempo sin comer; `VillagerTavernGoal`
 > se desatasca **cada tick**. El soak 72k bajó de **5 a 1 muerte** (Zenobia, granjero, en `630,63,530`,
