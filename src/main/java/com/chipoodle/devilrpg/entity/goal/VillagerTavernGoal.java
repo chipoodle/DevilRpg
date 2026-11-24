@@ -61,7 +61,6 @@ public class VillagerTavernGoal extends Goal {
     private long diagTick;
     private boolean diag() { return Boolean.getBoolean("devilrpg.fooddiag"); }
     private boolean usandoDespensa;
-    private boolean enPlaza;
     private boolean enEntrada;
     private BlockPos destinoComida;
     private int stuckTicks;
@@ -158,7 +157,6 @@ public class VillagerTavernGoal extends Goal {
         espera = 0;
         stuckTicks = 0;
         mejorDistancia = Double.MAX_VALUE;
-        enPlaza = false;
         enEntrada = false;
         if (villager.level() instanceof ServerLevel level) {
             BlockPos destino = usandoDespensa && destinoComida != null ? destinoComida : mesaDeEsteAldeano(level);
@@ -199,28 +197,10 @@ public class VillagerTavernGoal extends Goal {
         }
         BlockPos destino = usandoDespensa && destinoComida != null ? destinoComida : mesaDeEsteAldeano(level);
         BlockPos objetivo = destino;
-        // SOAK 24-nov-2026 · Los que vienen del ESTE/sureste siguen atascándose aunque haya waypoint de
-        // puerta (`709-728,63,541-578`, 8 muertes en `soak-f1-west`). El centro de la plaza es el nudo de
-        // los caminos del pueblo: si el aldeano está lejos, primero va a una casilla de pie de la plaza y
-        // desde allí a la puerta oeste. Así no cruza el terreno abrupto del este en línea recta.
-        boolean tramoPlaza = false;
-        double dxPlaza = villager.getX() - center.getX();
-        double dzPlaza = villager.getZ() - center.getZ();
-        boolean lejosDeLaPlaza = dxPlaza * dxPlaza + dzPlaza * dzPlaza > 14.0D * 14.0D;
-        if (!enPlaza && lejosDeLaPlaza && !VillageGenerator.dentroDeLaTaberna(center, villager.blockPosition())) {
-            BlockPos plaza = VillageManager.casillaDePieCercaDe(level, center);
-            if (plaza != null && villager.distanceToSqr(plaza.getX() + 0.5D, plaza.getY() + 0.5D,
-                    plaza.getZ() + 0.5D) > REACH * REACH) {
-                destino = plaza;
-                tramoPlaza = true;
-            } else {
-                enPlaza = true;
-            }
-        }
         // SOAK 24-nov-2026 · El aldeano que viene del ESTE no encontraba ruta a la mesa (el planificador
         // se estrellaba contra el muro este: `ruta=6 nodos … alcanza=NO`). Se entra por la puerta oeste o
         // sur: primero una casilla EXTERIOR de la puerta y, ya allí, la mesa. No se come en la puerta.
-        if (!tramoPlaza && !enEntrada && !VillageGenerator.dentroDeLaTaberna(center, villager.blockPosition())) {
+        if (!enEntrada && !VillageGenerator.dentroDeLaTaberna(center, villager.blockPosition())) {
             BlockPos entrada = VillageGenerator.entradaExteriorDeLaTaberna(level, center, villager.blockPosition());
             if (entrada != null && villager.distanceToSqr(entrada.getX() + 0.5D, entrada.getY() + 0.5D,
                     entrada.getZ() + 0.5D) > REACH * REACH) {
@@ -281,12 +261,8 @@ public class VillagerTavernGoal extends Goal {
             return;
         }
         if (distancia <= REACH && !destino.equals(objetivo)) {
-            // Ya está en la casilla exterior de la puerta (o en la plaza): el siguiente tick sigue el tramo.
-            if (tramoPlaza) {
-                enPlaza = true;
-            } else {
-                enEntrada = true;
-            }
+            // Ya está en la casilla exterior de la puerta: el siguiente tick entra a la mesa.
+            enEntrada = true;
             VillageManager.parar(villager);
             return;
         }
