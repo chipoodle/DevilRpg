@@ -138,6 +138,7 @@ public final class VillagePersistenceIntegrationTest {
             reconciliation(registries);
             identityAndJobSite(level);
             rosterInvariants(level);
+            deadOwnerReleasesBook(registries);
         } catch (Throwable t) {
             fallos++;
             System.out.println("  EXCEPCION NO CONTROLADA: " + t);
@@ -1196,6 +1197,50 @@ public final class VillagePersistenceIntegrationTest {
                 "censo: detecta profesionales que faltan");
         check(!VillageRosterInvariants.comprobar(roster, 12, cupo, 5).ok(),
                 "censo: detecta fundadores que faltan");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 11 · C4/L1: la muerte/conversion del titular libera su estacion en el libro persistido
+    // ---------------------------------------------------------------------------------------------
+
+    private static void deadOwnerReleasesBook(RegistryAccess.Frozen registries) {
+        System.out.println("[11] Titular desaparecido: el libro de puestos libera la estacion");
+        VillageSavedData data = VillageSavedData.load(new CompoundTag(), registries);
+        BlockPos posA = new BlockPos(30, 64, 30);
+        BlockPos posB = new BlockPos(31, 64, 30);
+        long poiA = posA.asLong();
+        long poiB = posB.asLong();
+
+        check(data.claimJobSite(poiA, ALICE, posA), "libro: ALICE reclama A");
+        check(data.claimJobSite(poiB, ALICE, posB), "libro: ALICE reclama B");
+        check(ALICE.equals(data.getJobSiteOwner(poiA)), "libro: A es de ALICE");
+        check(Long.valueOf(posA.asLong()).equals(data.jobSiteOwnerPosition(poiA)),
+                "libro: A guarda OwnerPos de ALICE");
+        check(!data.claimJobSite(poiA, BOB), "libro: BOB no puede robar A mientras ALICE este en el libro");
+
+        // Muerte/conversion demostrada a nivel de datos: la autoridad persistida se limpia.
+        check(data.releaseJobSitesOwnedBy(ALICE) == 2, "libro: se olvidan los 2 puestos de ALICE");
+        check(data.getJobSiteOwner(poiA) == null && data.getJobSiteOwner(poiB) == null,
+                "libro: A y B quedan libres");
+        check(data.jobSiteOwnerPosition(poiA) == null && data.jobSiteOwnerPosition(poiB) == null,
+                "libro: las OwnerPos de ALICE tambien se olvidan");
+        check(data.releaseJobSitesOwnedBy(ALICE) == 0, "libro: olvidar dos veces es idempotente");
+        check(data.claimJobSite(poiA, BOB, posA), "libro: BOB puede reclamar A tras la muerte de ALICE");
+        check(BOB.equals(data.getJobSiteOwner(poiA)), "libro: A queda de BOB");
+
+        // El libro de otro titular no se toca, ni en memoria ni tras el NBT.
+        BlockPos posC = new BlockPos(32, 64, 30);
+        long poiC = posC.asLong();
+        check(data.claimJobSite(poiC, CAROL, posC), "libro: CAROL reclama C");
+        check(data.releaseJobSitesOwnedBy(ALICE) == 0, "libro: olvidar a ALICE no toca a CAROL");
+        check(CAROL.equals(data.getJobSiteOwner(poiC)), "libro: CAROL conserva C");
+        CompoundTag saved = data.save(new CompoundTag(), registries);
+        VillageSavedData reloaded = VillageSavedData.load(saved, registries);
+        check(BOB.equals(reloaded.getJobSiteOwner(poiA)), "libro: BOB persiste en A");
+        check(CAROL.equals(reloaded.getJobSiteOwner(poiC)), "libro: CAROL persiste en C");
+        check(reloaded.getJobSiteOwner(poiB) == null, "libro: la entrada muerta de ALICE no resucita");
+        check(reloaded.releaseJobSitesOwnedBy(BOB) == 1, "libro: tras recargar se puede olvidar a BOB");
+        check(CAROL.equals(reloaded.getJobSiteOwner(poiC)), "libro: olvidar a BOB no toca a CAROL");
     }
 
     // ---------------------------------------------------------------------------------------------

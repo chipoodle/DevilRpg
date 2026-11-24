@@ -777,6 +777,29 @@ public final class VillageSavedData extends SavedData {
         }
     }
 
+    /**
+     * C4/L1 · <b>olvida todos los puestos de un titular que ya no existe</b> (muerte o conversión).
+     * <p>
+     * Sin esto, el libro seguía diciendo que el puesto era de un aldeano muerto: vanilla libera su
+     * ticket ({@code Villager.die → releaseAllPois}), pero {@link #claimJobSite(long, UUID, BlockPos)}
+     * rechazaba a cualquier otro titular y la estación quedaba <b>libre pero reservada para siempre</b>
+     * hasta una limpieza administrativa. La consulta de qué entradas borrar está en la política pura
+     * {@link VillageJobSiteOwnershipPolicy#puestosDelTitular(Map, UUID)}.
+     *
+     * @return cuántos puestos se olvidaron (0 si el titular no tenía ninguno; idempotente)
+     */
+    public int releaseJobSitesOwnedBy(UUID owner) {
+        List<Long> puestos = VillageJobSiteOwnershipPolicy.puestosDelTitular(jobSiteOwners, owner);
+        for (Long poi : puestos) {
+            jobSiteOwners.remove(poi);
+            jobSiteOwnerPositions.remove(poi);
+        }
+        if (!puestos.isEmpty()) {
+            setDirty();
+        }
+        return puestos.size();
+    }
+
     /** Copia inmutable para diagnósticos. */
     public Map<Long, UUID> jobSiteOwners() {
         return Map.copyOf(jobSiteOwners);

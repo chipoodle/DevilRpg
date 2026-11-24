@@ -3128,6 +3128,28 @@ public final class VillageManager {
         }
     }
 
+    /**
+     * C4/L1 · <b>el libro de puestos olvida a un titular que ya no existe</b> (muerte o conversión en
+     * zombi/bruja). Lo llama {@code VillagerAgentRegistry}, que ya recibe esos dos eventos de entidad;
+     * no se limpia en {@code EntityLeaveLevelEvent} porque la descarga de un chunk también lo dispara y
+     * el dueño sigue vivo.
+     * <p>
+     * No suelta tickets: en la muerte los libera vanilla ({@code Villager.releaseAllPois}); en la
+     * conversión el ticket huérfano lo recupera la reconciliación normal del pueblo
+     * ({@code soltarTicketsPerdidos}). Aquí solo se corrige la autoridad persistida, que es la que
+     * bloqueaba el reclamar.
+     *
+     * @return cuántos puestos se olvidaron
+     */
+    public static int olvidarPuestosDeTitular(ServerLevel level, UUID titular) {
+        int liberados = VillageSavedData.get(level).releaseJobSitesOwnedBy(titular);
+        if (liberados > 0) {
+            DevilRpg.LOGGER.info("[Village] el aldeano {} ya no existe: el libro libera {} puesto(s)",
+                    titular, liberados);
+        }
+        return liberados;
+    }
+
     private static void tickVillageLife(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center) {
         // C4 · ANTES DE VER A LOS ALDEANOS: los dueños del libro que no estén cargados se cargan por su última
         // posición conocida. Así no se les quita el ticket por no estar en `getEntitiesOfClass`; si el chunk se

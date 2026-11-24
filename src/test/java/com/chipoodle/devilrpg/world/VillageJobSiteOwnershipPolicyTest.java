@@ -1,6 +1,8 @@
 package com.chipoodle.devilrpg.world;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -78,7 +80,40 @@ public final class VillageJobSiteOwnershipPolicyTest {
         check("dos ciclos sin duplicados", sobrantes(ciclo2).isEmpty());
         probarReconciliacionDePotenciales();
         probarTicketsPerdidos();
+        probarLibroAlDesaparecerTitular();
         System.out.println("VILLAGE_JOB_SITE_OWNERSHIP_POLICY_TEST: OK (" + assertions + " assertions)");
+    }
+
+    // ------------------------------------------------------------- C4/L1 · libro al desaparecer el titular
+
+    private static void probarLibroAlDesaparecerTitular() {
+        UUID alice = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID bob = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        UUID carol = UUID.fromString("00000000-0000-0000-0000-000000000003");
+
+        Map<Long, UUID> libro = new HashMap<>();
+        libro.put(2L, alice);
+        libro.put(1L, alice);
+        libro.put(3L, bob);
+
+        check("libro: el titular ausente devuelve solo sus puestos, ordenados",
+                VillageJobSiteOwnershipPolicy.puestosDelTitular(libro, alice).equals(List.of(1L, 2L)));
+        check("libro: no se tocan los puestos de otro titular",
+                VillageJobSiteOwnershipPolicy.puestosDelTitular(libro, bob).equals(List.of(3L)));
+        check("libro: un titular sin puestos devuelve vacio",
+                VillageJobSiteOwnershipPolicy.puestosDelTitular(libro, carol).isEmpty());
+        check("libro: titular nulo no revienta",
+                VillageJobSiteOwnershipPolicy.puestosDelTitular(libro, null).isEmpty());
+        check("libro: libro nulo no revienta",
+                VillageJobSiteOwnershipPolicy.puestosDelTitular(null, alice).isEmpty());
+
+        for (Long poi : VillageJobSiteOwnershipPolicy.puestosDelTitular(libro, alice)) {
+            libro.remove(poi);
+        }
+        check("libro: tras olvidar al titular la consulta es idempotente",
+                VillageJobSiteOwnershipPolicy.puestosDelTitular(libro, alice).isEmpty());
+        check("libro: el otro titular conserva su puesto", libro.size() == 1
+                && VillageJobSiteOwnershipPolicy.puestosDelTitular(libro, bob).equals(List.of(3L)));
     }
 
     // ------------------------------------------------------------------ C4 · reconciliación POTENTIAL/tickets

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -26,6 +27,28 @@ public final class VillageJobSiteOwnershipPolicy {
     }
 
     private VillageJobSiteOwnershipPolicy() {
+    }
+
+    /**
+     * C4/L1 · <b>puestos que el libro debe olvidar</b> porque su titular ya no existe (muerte o
+     * conversión). Es una consulta <b>pura</b>: no modifica el mapa. Devuelve los POI ordenados de
+     * forma determinista para que el log y las pruebas no dependan del orden del {@code HashMap}.
+     * <p>
+     * No toca los puestos de otros titulares ni inventa entradas: si el titular no aparece, devuelve
+     * una lista vacía (idempotente).
+     */
+    public static List<Long> puestosDelTitular(final Map<Long, UUID> libro, final UUID titular) {
+        List<Long> out = new ArrayList<>();
+        if (libro == null || titular == null) {
+            return out;
+        }
+        for (Map.Entry<Long, UUID> entrada : libro.entrySet()) {
+            if (titular.equals(entrada.getValue())) {
+                out.add(entrada.getKey());
+            }
+        }
+        out.sort(Comparator.naturalOrder());
+        return out;
     }
 
     /**

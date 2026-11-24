@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.agent;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -10,6 +11,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingConversionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -88,6 +90,28 @@ public final class VillagerAgentRegistry {
         if (releasedClaims > 0) {
             DevilRpg.LOGGER.info("[TREE-CLAIM] event=RELEASE-ALL uuid={} claims={} reason=death",
                     villager.getUUID(), releasedClaims);
+        }
+        // C4/L1 · el libro de dueños de puestos no puede seguir reservando la estación de un muerto:
+        // vanilla libera el ticket en `Villager.die`, pero el libro es autoridad persistida y rechazaba
+        // a cualquier otro titular (`claimJobSite`), dejando la estación libre pero reservada para siempre.
+        if (villager.level() instanceof ServerLevel level) {
+            VillageManager.olvidarPuestosDeTitular(level, villager.getUUID());
+        }
+    }
+
+    /**
+     * C4/L1 · <b>conversión</b> (aldeano → aldeano zombi o bruja). La entidad original se reemplaza con
+     * {@code Mob.convertTo}, que hace {@code discard()} <b>sin</b> pasar por {@code Villager.die}: no hay
+     * evento de muerte, ni vanilla libera sus POI. Se limpia el libro igual que en la muerte; el ticket
+     * huérfano lo recupera la reconciliación del pueblo, y así el nuevo titular puede reclamar la estación.
+     */
+    @SubscribeEvent
+    public static void onConversion(LivingConversionEvent.Post event) {
+        if (!(event.getEntity() instanceof Villager villager)) {
+            return;
+        }
+        if (villager.level() instanceof ServerLevel level) {
+            VillageManager.olvidarPuestosDeTitular(level, villager.getUUID());
         }
     }
 
