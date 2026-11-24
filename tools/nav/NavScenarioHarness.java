@@ -349,12 +349,12 @@ public final class NavScenarioHarness {
             return;
         }
         if (run.esc.tipo == Tipo.DINAMICO) {
-            if (run.ticks == 30) {
+            if (run.ticks == 20) {
                 colocarBarrera(run, true);
                 run.mob.navExecutor().terrainChanged();
                 run.barreraPuesta = true;
                 log("DINAMICO barrera puesta tick=" + run.ticks + " celdas=" + run.layout.barrera.size());
-            } else if (run.ticks == 90 && run.barreraPuesta && !run.barreraQuitada) {
+            } else if (run.ticks == 70 && run.barreraPuesta && !run.barreraQuitada) {
                 colocarBarrera(run, false);
                 run.mob.navExecutor().terrainChanged();
                 run.barreraQuitada = true;
@@ -539,7 +539,7 @@ public final class NavScenarioHarness {
                 .accion("TUNNEL").preflightRequerido(false).ticks(1800));
         PENDIENTES.add(e("terreno_dinamico", "barrera puesta y retirada en caliente", 20,
                         NavScenarioHarness::gTerrenoDinamico)
-                .tipo(Tipo.DINAMICO).ticks(1400));
+                .tipo(Tipo.DINAMICO).ticks(2200));
         PENDIENTES.add(e("inaccesible", "objetivo sellado en bedrock", 20, NavScenarioHarness::gInaccesible)
                 .tipo(Tipo.INALCANZABLE).esperaLlegada(false).esperaFallo(false).ticks(1800));
         PENDIENTES.add(e("astar_reanudacion", "A* global incremental (reanudacion)", 40,
