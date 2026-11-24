@@ -127,8 +127,16 @@ public final class VillagePantry {
 
     /**
      * Llena la despensa con la <b>remesa inicial</b>: semillas para que el granjero pueda sembrar (sin esto la
-     * aldea nueva no tendría de dónde sacar el primer trigo), un poco de abono y un par de panes para aguantar
-     * hasta la primera cosecha. Solo se llama al crear la despensa.
+     * aldea nueva no tendría de dónde sacar el primer trigo), abono y <b>64 panes = 256 puntos de comida</b>.
+     * <p>
+     * SOAK 24-nov-2026 · Antes eran <b>2 panes = 20 puntos</b> para 16 bocas. La aceptación C1
+     * (`FOOD-ECONOMY-BLOCK-3.1`) se hizo con la despensa en <b>256 puntos</b> y crecía a 411 en 24.000 ticks;
+     * la aldea generada, en cambio, nacía con 20 y en un mundo con la granja/ruta desfavorable se quedaba a 0
+     * y morían 29 aldeanos en 3 días (soak `soak-f1-stable-20261124-1420`). Se alinea la dotación inicial con
+     * la del fixture aceptado: 64 panes = 256 puntos, más las semillas y el abono de siempre. No se toca la
+     * producción ni el consumo; solo el colchón inicial que la aceptación ya daba por bueno.
+     * <p>
+     * Solo se llama al crear la despensa (si ya tiene cosas, no se añade nada).
      */
     public static void remesaInicial(@Nullable Container c) {
         if (c == null) {
@@ -141,7 +149,7 @@ public final class VillagePantry {
         guardar(c, new ItemStack(Items.CARROT, 3));
         guardar(c, new ItemStack(Items.POTATO, 3));
         guardar(c, new ItemStack(Items.BONE_MEAL, 4));
-        guardar(c, new ItemStack(Items.BREAD, 2));
+        guardar(c, new ItemStack(Items.BREAD, 64)); // 256 puntos, la dotación de la aceptación C1
     }
 
     /**
