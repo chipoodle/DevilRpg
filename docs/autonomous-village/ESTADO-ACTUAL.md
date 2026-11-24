@@ -1,5 +1,13 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — F1 (HAMBRE) CERRADO; F2 (CAÍDA) ABIERTA.** Código `fa6a63f4`. Al
+> rendirse el goal de taberna, el aldeano recibe una **ración real en el sitio** (1 punto de despensa,
+> -25 hambre, respeta los 3 min). El 72k del mundo que moría da **1 muerte y 0 de hambre** (antes 8,
+> 7 de hambre), población 29, comida 88, 11/11, 0 huérfanos/sin puesto/inactivos, guardado OK. La única
+> baja es una **caída** en `729,64,542` (“Volviendo al pueblo”): **F2**, siguiente objetivo. El soak
+> global sigue `SOAK_PASS_CON_BAJAS` y **NO ACEPTADO**. Informe:
+> `2026-11-24-F1-CLOSURE-FALLBACK-RATION.md`.
+
 > **ACTUALIZACIÓN 24-nov-2026 — F1 ABIERTO: COMIDA Y MESA CORREGIDAS, ACCESO A LA TABERNA PENDIENTE.**
 > Código `80c0e76e`. Tres correcciones: ración que reduce hambre, desatasco por tick, **remesa inicial 256
 > puntos** y **mesa por aldeano** (antes todos al mismo punto de apoyo) y **entrada exterior por la

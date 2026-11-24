@@ -1,3 +1,18 @@
+# F1 CERRADO (HAMBRE); F2 CAÍDA ABIERTA (2026-11-24)
+
+- **Código:** `fa6a63f4`. Al rendirse `VillagerTavernGoal` (`stuckTicks >= STUCK_LIMIT`), si hay comida
+  y el aldeano tiene hambre, se le da una **ración real en el sitio** (`comer(level,false)`): saca 1
+  punto de la despensa, marca comida y reduce 25, sujeto al `tieneHambre` de 3 min. Es la promesa que
+  ya estaba escrita en el comentario de la clase.
+- **Resultado 72k (mismo mundo):** `soak-f1-fallback` → **1 muerte, 0 de hambre**; población 29,
+  comida 88, 11/11, 0 duplicados/huérfanos/sin puesto/inactivos, guardado OK, 45 raciones de rendición.
+  Antes: 8 muertes (7 hambre). **F1 (hambre) CERRADO.**
+- **F2 abierta:** la única baja es una **caída** (`Zacarias, Volviendo al pueblo hit the ground too
+  hard`, `729,64,542`). El soak global sigue `SOAK_PASS_CON_BAJAS`, **NO ACEPTADO**; siguiente
+  objetivo: daño por caída/terreno en la vuelta al pueblo.
+- **Gates:** `test` 1m13s; persistencia 553, ownership 54, skills 376; lint/diff verdes.
+- Informe: `2026-11-24-F1-CLOSURE-FALLBACK-RATION.md`.
+
 # F1 ABIERTO — DESPENSA 256 + MESA POR ALDEANO; QUEDA EL ACCESO A LA TABERNA (2026-11-24)
 
 - **Código actual:** `80c0e76e`. Tres correcciones acumuladas: ración diaria que reduce hambre, desatasco

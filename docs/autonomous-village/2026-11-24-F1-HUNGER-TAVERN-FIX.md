@@ -1,5 +1,9 @@
 # F1 — Hambre y taberna: la ración diaria no alimentaba y el goal no se desatascaba (24-nov-2026)
 
+> **CIERRE (24-nov-2026):** F1 (hambre) queda **CERRADO** en `fa6a63f4` con la ración al rendirse;
+> 72k con **0 muertes por hambre**. La única baja es la caída **F2**. Ver
+> `2026-11-24-F1-CLOSURE-FALLBACK-RATION.md`.
+
 **RUN_ID:** `av-f1-20261124-1240` / `av-f1-20261124-1245`
 **Rama:** `feature/autonomous-village`
 **Código probado (72k oficial):** `0e57b5695ea83560bfc62cab0acdf5d1091fc23f`

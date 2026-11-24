@@ -11790,3 +11790,29 @@ El 12k con el mismo código dio 0 muertes: **no basta un 12k para aceptar una ru
 
 **Límites:** la entrada oeste sigue sin 0 muertes; F1 abierto. El fletcher `c7230316…` sin POI válido
 en `610,63,508` es un defecto aparte (job site).
+
+### I410 · SI NO LLEGA A LA TABERNA, COME SU RACIÓN EN EL SITIO (24-nov-2026)
+
+**Regla:** cuando `VillagerTavernGoal.canContinueToUse` alcanza `stuckTicks >= STUCK_LIMIT`, después de
+marcar el destino como fallido, si `VillagePantry.comida(level, center) >= COMIDA_MINIMA` y
+`VillageManager.tieneHambre(level, villager)`, debe llamar a `comer(level, false)`: ración **real** de
+la despensa (1 punto, `marcarComida`, `reducirHambre(25)`) **en el sitio**, sujeta al mismo
+`tieneHambre` de 3 min. No es comida gratis, no teletransporta y no ignora el `Comida_MINIMA`.
+
+**Causa raíz:** el comentario de la clase prometía que nadie moriría de hambre por no llegar a la mesa,
+pero el goal se rendía sin relevo; los aldeanos morían con la despensa llena (8-30 bajas). El 72k
+`soak-f1-fallback` pasó de 8 muertes (7 hambre) a **1 muerte y 0 de hambre** (población 29, comida 88,
+45 raciones), con la única baja por **caída F2** (`729,64,542`).
+
+**Evidencia:** `build/soak/soak-f1-fallback-20261124-1755`; `test` 1m13s; persistencia 553. Informe:
+`2026-11-24-F1-CLOSURE-FALLBACK-RATION.md`.
+
+**Límites:** F1 (hambre) **cerrado**; la caída F2 sigue abierta y el soak global no se acepta aún. La
+ruta/terreno a la taberna sigue siendo mejorable (el aldeano come donde está, no en la mesa).
+
+### I411 · F2 ABIERTA: LA CAÍDA AL VOLVER AL PUEBLO MATA (24-nov-2026)
+
+**Estado:** abierta. La única baja del 72k de cierre de F1 es
+`Zacarias (Sin oficio) Volviendo al pueblo hit the ground too hard` en `729,64,542`. No es hambre: es
+daño por caída/terreno. El soak global exige 0 bajas; se debe medir la caída y corregir la ruta o el
+daño, y repetir 72k.

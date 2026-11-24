@@ -35,7 +35,8 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | L6 | Navegación runtime con una entidad por escenario. | `nav-final-20261124-0255`, 21 escenarios. | No cubre multientidad, laberintos largos, combate, agua ni puertas. | Matriz multientidad y escenarios compuestos. |
 | L7 | fastutil sin A/B runtime. | A/B sintético 750 rutas idénticas; campaña real sin baseline anterior. | Ganancia runtime no cuantificada; no se declara. | A/B de 6+ ejecuciones por brazo, mismo mundo y rutas. |
 | L8 | A2 no se reejecutó en el cierre. | Excluido expresamente por el usuario; C4/NAV cubren el camino actual. | Regresión A2 no medida. | Campaña A2 acotada solo si el análisis de dependencias la justifica. |
-| **F1** | **Hambre/acceso a la taberna a 3 días.** Correcciones: ración con `reducirHambre`, desatasco por tick, **remesa 256**, **mesa por aldeano** y **entrada exterior por la puerta oeste**. El mundo que colapsó bajó de **29 → 16 → 9 → 8**; el waypoint de **plaza** posterior mató a **30** y se revirtió (`af711875`). Comida 164, 11/11 final, pero las bajas siguen en `709-728,63,541-578` `Yendo a la taberna`: **ruta/terreno del este**. | `build/soak/soak-f1-west-20261124-1630`; `soak-f1-plaza-20261124-1705` (regresión); `2026-11-24-F1-PLAZA-WAYPOINT-REGRESSION.md`. | La aldea aún no es autosuficiente a 3 días: la ruta/terreno a la comida mata; además el POI del fletcher queda inválido con población 30. | Ruta/terreno (sin plaza) y POI del fletcher; 72k con **0 muertes**. |
+| **F1** | **Hambre a 3 días.** **CERRADO (hambre)** en `fa6a63f4`: ración real al rendirse el goal de taberna; 72k del mismo mundo con **0 muertes por hambre** (antes 8, 7 de hambre), población 29, comida 88, 11/11, 0 huérfanos/sin puesto/inactivos. | `build/soak/soak-f1-fallback-20261124-1755`; `2026-11-24-F1-CLOSURE-FALLBACK-RATION.md`. | El criterio de hambre se cumple; queda la caída F2. | — (cerrado) |
+| **F2** | **Caída al volver al pueblo** (`Zacarias`, `Volviendo al pueblo hit the ground too hard`, `729,64,542`). Es la única baja del 72k de cierre de F1. | `build/soak/soak-f1-fallback-20261124-1755`; log `hit the ground too hard`. | El soak global sigue `SOAK_PASS_CON_BAJAS`; no aceptado. | Medir la caída/terreno en `729,64,542`, corregir el daño por caída o la ruta, y repetir 72k con 0 bajas. |
 
 ## 3. Protocolo de continuidad
 
@@ -164,3 +165,10 @@ mandó a los aldeanos al choke del oeste. Se revirtió. El mejor código vigente
 (`2ebf8ef4`, 8 muertes). El 12k con plaza también destapó un **fletcher** (`c7230316…`) sin POI válido
 en `610,63,508` (`sin_puesto=1`, 49 muestras) con población 30: defecto de **job site/POI**, no de
 hambre. Informe: `2026-11-24-F1-PLAZA-WAYPOINT-REGRESSION.md`.
+
+**F1 cerrado (hambre) con la ración al rendirse (`fa6a63f4`).** `VillagerTavernGoal`, al alcanzar
+`stuckTicks >= STUCK_LIMIT`, da una **ración real en el sitio** (`comer(level,false)`: 1 punto de
+despensa, -25 hambre, mismo `tieneHambre` de 3 min) si hay comida. `soak-f1-fallback` (72k, misma
+semilla): **0 muertes por hambre** (antes 8, 7 de hambre), población 29, comida 88, 11/11, 0
+huérfanos/sin puesto/inactivos, 45 raciones de rendición, guardado OK. La única baja es la **caída F2**
+(`729,64,542`). Informe: `2026-11-24-F1-CLOSURE-FALLBACK-RATION.md`.
