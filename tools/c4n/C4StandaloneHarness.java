@@ -2,12 +2,19 @@ package com.chipoodle.devilrpg.debug;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.village.poi.PoiType;
+import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.AxeItem;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.SwordItem;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -46,7 +53,17 @@ public final class C4StandaloneHarness {
     private static final Path RAIZ = Path.of(System.getProperty("c4n.raiz", "."));
     private static final BlockPos CENTRO_PEDIDO = new BlockPos(661, 71, 533);
     private static final int OBJETIVO = 0;
-    private static final int TRABAJO_TICKS = 600;
+    /**
+     * Ventana de trabajo por fase. Configurable con {@code -Dc4n.trabajoTicks} (campaña larga: 1800-2400 ticks,
+     * para superar la gracia de carga de 1200 del manager y ver la reconciliación de estaciones).
+     */
+    private static final int TRABAJO_TICKS = Math.max(1, Integer.getInteger("c4n.trabajoTicks", 600));
+    /**
+     * Cobertura 11/11 de estaciones: OPCIONAL en la campaña estándar (600 ticks < gracia 1200), FAIL duro cuando el
+     * operador pide la campaña larga con {@code -Dc4n.exigirCobertura=true} / {@code -ExigirCobertura}.
+     */
+    private static final boolean EXIGIR_COBERTURA =
+            Boolean.parseBoolean(System.getProperty("c4n.exigirCobertura", "false"));
     private static final int MAX_ESPERA_CARGA = 1600;
     private static final int MUESTREO_CADA = 5;
     /** A/B: mantenimiento del arnes en la carga (inicial y periodico). Produccion = poll de aldea. */
@@ -96,6 +113,43 @@ public final class C4StandaloneHarness {
     private static int jobSiteAlCargarHuerfanos = -1;
     private static final List<String> jobSiteDetalle = new ArrayList<>();
 
+    // --- C4 · cobertura de estaciones y reconciliación (campaña larga) --------------------------------
+    /** Foto de cobertura (JOB_SITE válido y con ticket cogido) en AL_CARGAR; -1 = no medida (prepare). */
+    private static int coberturaAlCargar = -1;
+    /** Cobertura al cierre; -1 = no medida. */
+    private static int coberturaCierre = -1;
+    /** Puestos CON estación del contrato (11: los 12 puestos menos el NITWIT, que no tiene estación). */
+    private static int estacionesEsperadas = 11;
+    private static final List<String> coberturaDetalle = new ArrayList<>();
+    private static final List<String> coberturaFaltantes = new ArrayList<>();
+    /** Evidencia de que el manager de reconciliación corrió: la invocación la hace este arnés. */
+    private static int mantPeriodicoTicks;
+    private static int mantInicialTick = -1;
+    /** Foto de la estampa read-only de reconciliación al empezar la fase y al cerrar (diferencia = lo del run). */
+    private static com.chipoodle.devilrpg.world.VillageManager.EstampaReconciliacion estampaInicio;
+    private static long estampaReclamaciones;
+    private static long estampaTicketsPerdidos;
+    private static long estampaPromocionesPotencial;
+    private static long estampaPotencialesLiberados;
+    private static long estampaPotencialesLimpiados;
+    private static long estampaPasadasReconciliacion;
+    private static long estampaUltimaReconciliacionTick = -1L;
+    private static long estampaInicioUltimaReconciliacionTick = -1L;
+    private static final Set<UUID> reanudadoAlgunaVez = new HashSet<>();
+    private static final Map<UUID, double[]> posMuestreo = new LinkedHashMap<>();
+    private static long estampaPuestosInvalidosLimpiados;
+    private static long estampaUltimaTick = -1L;
+    private static long estampaInicioUltimaTick = -1L;
+    private static long estampaActividad;
+    private static boolean estampaDisponible;
+    private static int reclamacionesLog;
+    private static int reclamacionesLogUuids;
+    private static int aplazosLog;
+    private static int ticketsPerdidosLog;
+    private static boolean logReclamacionesLeido;
+    private static String logReclamacionesError = "";
+    private static final List<String> reclamacionesLogDetalle = new ArrayList<>();
+
     private C4StandaloneHarness() {
     }
 
@@ -110,6 +164,8 @@ public final class C4StandaloneHarness {
             log("no pude crear " + base + ": " + e);
         }
         log("ARRANCADO fase=" + PHASE + " run=" + RUN);
+        log("CONFIG trabajoTicks=" + TRABAJO_TICKS + " exigirCobertura=" + EXIGIR_COBERTURA
+                + " mantInicial=" + MANT_INICIAL + " mantPeriodico=" + MANT_PERIODICO);
         if (!("prepare".equals(PHASE) || "reload1".equals(PHASE) || "reload2".equals(PHASE))) {
             fallar("fase_desconocida", "fase='" + PHASE + "'");
             return;
@@ -138,6 +194,8 @@ public final class C4StandaloneHarness {
             }
             try {
                 com.chipoodle.devilrpg.world.VillageManager.ejecutarMantenimientoParaArnes(nivel, OBJETIVO, centro);
+                mantInicialHecho = true;
+                mantInicialTick = ticksFase;
             } catch (RuntimeException ex) {
                 fallar("mantenimiento_prepare", ex.toString());
                 return;
@@ -153,6 +211,19 @@ public final class C4StandaloneHarness {
             leerRosterPrevio();
             log("reload centro=" + centro.toShortString() + " rosterPrevio=" + rosterPrev.size());
             preparado = true;
+        }
+        try {
+            estampaInicio = com.chipoodle.devilrpg.world.VillageManager.estampaDeReconciliacion();
+            estampaInicioUltimaTick = estampaInicio.ultimaReclamacionTick();
+            estampaInicioUltimaReconciliacionTick = estampaInicio.ultimaReconciliacionTick();
+            estampaDisponible = true;
+            log("ESTAMPAS inicio reclamaciones=" + estampaInicio.reclamaciones()
+                    + " pasadas=" + estampaInicio.pasadasDeReconciliacion()
+                    + " ultima_tick=" + estampaInicio.ultimaReclamacionTick()
+                    + " ultima_reconciliacion_tick=" + estampaInicio.ultimaReconciliacionTick());
+        } catch (RuntimeException | LinkageError ex) {
+            estampaDisponible = false;
+            log("ESTAMPAS no disponibles: " + ex);
         }
     }
 
@@ -197,6 +268,10 @@ public final class C4StandaloneHarness {
                 return;
             }
             iniciarVentana();
+        } else if (MANT_PERIODICO && ticksFase % 200 == 0) {
+            // La reconciliación de estaciones vive DENTRO del mantenimiento y respeta la gracia de 1200 ticks:
+            // sin llamarlo durante la ventana larga nunca se abriría el gate. Cadencia de producción (200 ticks).
+            mantenimientoPeriodico();
         }
         if (ticksFase >= 40 + TRABAJO_TICKS) {
             cerrarFase();
@@ -232,6 +307,7 @@ public final class C4StandaloneHarness {
                 mantInicialHecho = true;
                 try {
                     com.chipoodle.devilrpg.world.VillageManager.ejecutarMantenimientoParaArnes(nivel, OBJETIVO, centro);
+                    mantInicialTick = ticksFase;
                 } catch (RuntimeException ex) {
                     log("mantenimiento inicial aviso: " + ex);
                 }
@@ -253,6 +329,7 @@ public final class C4StandaloneHarness {
                     try {
                         com.chipoodle.devilrpg.world.VillageManager.ejecutarMantenimientoParaArnes(
                                 nivel, OBJETIVO, centro);
+                        mantPeriodicoTicks++;
                         log("mantenimiento reload t=" + ticksFase + " goals=" + instalados + "/" + esperados.size());
                         volcarTabla("TRAS_MANTENIMIENTO_PERIODICO");
                     } catch (RuntimeException ex) {
@@ -262,9 +339,26 @@ public final class C4StandaloneHarness {
                 return;
             }
             iniciarVentana();
+        } else if (MANT_PERIODICO && ticksFase % 200 == 0) {
+            // Reconciliación durante la ventana: el manager aplaza hasta la gracia de 1200 ticks, así que una
+            // campaña larga (>=1800) necesita seguir llamándolo para que el gate se abra y reparta las 11 estaciones.
+            mantenimientoPeriodico();
         }
         if (ticksFase >= primerTickTodoCargado + TRABAJO_TICKS) {
             cerrarFase();
+        }
+    }
+
+    /** Una pasada del mantenimiento de producción durante la ventana (misma ruta que el arnés ya usa). */
+    private static void mantenimientoPeriodico() {
+        try {
+            com.chipoodle.devilrpg.world.VillageManager.ejecutarMantenimientoParaArnes(nivel, OBJETIVO, centro);
+            mantPeriodicoTicks++;
+            log("MANT_PERIODICO tick=" + ticksFase + " total=" + mantPeriodicoTicks
+                    + " reclamaciones_estampa=" + com.chipoodle.devilrpg.world.VillageManager
+                    .estampaDeReconciliacion().reclamaciones());
+        } catch (RuntimeException ex) {
+            log("mantenimiento periodico aviso: " + ex);
         }
     }
 
@@ -353,10 +447,36 @@ public final class C4StandaloneHarness {
             for (var wrapped : v.goalSelector.getAvailableGoals()) {
                 if (wrapped.isRunning() && wrapped.getGoal().getClass().getSimpleName().equals(esperado)) {
                     activos.add(id);
+                    reanudadoAlgunaVez.add(id);
                     break;
                 }
             }
-            posFin.put(id, new double[]{v.getX(), v.getY(), v.getZ()});
+            double[] pos = new double[]{v.getX(), v.getY(), v.getZ()};
+            double[] previa = posMuestreo.put(id, pos);
+            if (previa != null
+                    && (Math.abs(previa[0] - pos[0]) + Math.abs(previa[2] - pos[2])) > 0.5D) {
+                // Se movió en algún muestreo: aunque al cierre esté quieto en su puesto, SÍ reanudó.
+                reanudadoAlgunaVez.add(id);
+            }
+            posFin.put(id, pos);
+        }
+        if ("prepare".equals(PHASE) && ticksFase >= Math.max(1, TRABAJO_TICKS - 120)
+                && ticksFase % 20 == 0) {
+            for (UUID id : esperados) {
+                if (nivel.getEntity(id) instanceof net.minecraft.world.entity.npc.Villager v) {
+                    var mem = v.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE);
+                    String check = "";
+                    if (mem.isPresent()) {
+                        BlockPos p = mem.get().pos();
+                        check = " poiExists=" + nivel.getPoiManager().exists(p,
+                                v.getVillagerData().getProfession().heldJobSite())
+                                + " poiType=" + nivel.getPoiManager().getType(p)
+                                + " dist=" + Math.sqrt(v.blockPosition().distSqr(p));
+                    }
+                    log("JOBTRACE t=" + ticksFase + " uuid=" + id + " prof="
+                            + v.getVillagerData().getProfession() + " jobSite=" + jobSiteDe(v) + check);
+                }
+            }
         }
     }
 
@@ -408,7 +528,7 @@ public final class C4StandaloneHarness {
             if (movido) {
                 movidos++;
             }
-            if (goalOk && (activo || movido)) {
+            if (goalOk && (activo || movido || reanudadoAlgunaVez.contains(id))) {
                 reanudados++;
             }
             log("WORKER uuid=" + id + " prof=" + prof + " profEsperada=" + profesEsperadas.get(id)
@@ -421,13 +541,24 @@ public final class C4StandaloneHarness {
         // C4 · invariantes del censo (12 puestos, 4 fundadores, un dueno por puesto, cupos). Se registra en la fase
         // y en el log; la red de seguridad ya se exige en `okFase` (invariantes.ok()).
         java.util.List<com.chipoodle.devilrpg.world.VillageRosterInvariants.Miembro> roster = new java.util.ArrayList<>();
+        Set<UUID> rosterUuids = new HashSet<>();
+        int uuidDuplicados = 0;
         for (var v : aldeanos()) {
             if (!v.isAlive() || v.isRemoved() || v.isBaby()) {
                 continue;
             }
+            boolean fund = com.chipoodle.devilrpg.world.VillageManager.esGuardiaFundadora(v);
+            // Los guardias NO fundadores (milicia adicional) no ocupan ninguno de los 12 puestos: incluirlos en el
+            // censo hacia que el roster viera "profesionales:20/12" y profesiones vacias. Solo se excluyen del
+            // roster; siguen contando en las metricas de guardias y en la proteccion del pueblo.
+            if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v) && !fund) {
+                continue;
+            }
+            if (!rosterUuids.add(v.getUUID())) {
+                uuidDuplicados++;
+            }
             long puesto = v.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE)
                     .map(m -> m.pos().asLong()).orElse(0L);
-            boolean fund = com.chipoodle.devilrpg.world.VillageManager.esGuardiaFundadora(v);
             if (fund) {
                 fundadoresObservados++;
             }
@@ -443,9 +574,17 @@ public final class C4StandaloneHarness {
         log("ROSTER_INVARIANTS ok=" + invariantes.ok() + " violaciones=" + invariantes.violaciones());
         chequeos.add("\"roster_invariantes_ok\":" + invariantes.ok());
 
-        // E · propiedad de puestos entre fases + foto AL_CARGAR, y metricas de guardias (solo observacion).
+        // E · propiedad de puestos entre fases + foto AL_CARGAR, metricas de guardias y cobertura de estaciones.
         compararYVolcarJobSites();
-        String guardias = guardiasJson();
+        MetricasGuardias guardias = medirGuardias();
+        Cobertura cobertura = medirCobertura("CIERRE");
+        coberturaCierre = cobertura.cubiertos();
+        coberturaDetalle.clear();
+        coberturaDetalle.addAll(cobertura.detalle());
+        coberturaFaltantes.clear();
+        coberturaFaltantes.addAll(cobertura.faltantes());
+        leerLogReclamaciones();
+        tomarEstampaCierre();
 
         int duplicados = jobSite[2];
         boolean registrados = presentes == esperadoTotal;
@@ -486,8 +625,82 @@ public final class C4StandaloneHarness {
             fallo = "save_fallido " + errorGuardado;
             conocidas.add(new Causa("GUARDADO_FALLIDO", "saveEverything lanzo: " + errorGuardado));
         }
-        boolean faseOkFinal = okFase && guardadoOk && fallo.isEmpty();
+
+        // BLOQUE DE ACEPTACION: cada criterio obligatorio es una asercion real; el veredicto se calcula de aqui.
+        int puestosContrato = com.chipoodle.devilrpg.world.VillageGenerator.puestosDelPueblo();
+        int fundadoresContrato = com.chipoodle.devilrpg.world.VillageManager.MILICIA_FUNDADORES;
+        List<Criterio> criterios = new ArrayList<>();
+        criterios.add(new Criterio("censo_profesionales_12_12", puestosContrato, esperados.size(),
+                esperados.size() == puestosContrato, true));
+        criterios.add(new Criterio("profesionales_presentes_12_12", puestosContrato, presentes,
+                presentes == puestosContrato, true));
+        criterios.add(new Criterio("fundadores_4_4", fundadoresContrato, fundadoresObservados,
+                fundadoresObservados == fundadoresContrato, true));
+        criterios.add(new Criterio("uuid_duplicados_0", 0, uuidDuplicados, uuidDuplicados == 0, true));
+        criterios.add(new Criterio("perdidas_aldeanos_0", 0, perdidos, perdidos == 0, true));
+        criterios.add(new Criterio("job_site_duplicados_0", 0, duplicados, duplicados == 0, true));
+        criterios.add(new Criterio("job_site_huerfanos_0", 0, jobSite[1], jobSite[1] == 0, true));
+        criterios.add(new Criterio("mascara_fundadores_0b1111", "0b1111",
+                "0b" + mascaraBinaria(guardias.mascaraBits()) + " (" + guardias.mascaraBits() + ")",
+                guardias.mascaraCompleta(), true));
+        criterios.add(new Criterio("fundadores_con_goal_4_4", fundadoresContrato, guardias.fundadoresConGoal(),
+                guardias.fundadoresConGoal() == fundadoresContrato, true));
+        criterios.add(new Criterio("fundadores_equipados_4_4", fundadoresContrato, guardias.fundadoresEquipados(),
+                guardias.fundadoresEquipados() == fundadoresContrato, true));
+        criterios.add(new Criterio("guardado_ok", true, guardadoOk, guardadoOk, true));
+        criterios.add(new Criterio("roster_invariantes_ok", true, invariantes.ok(), invariantes.ok(), true));
+        criterios.add(new Criterio("identidad_profesion_12_12", puestosContrato, profesionEstable,
+                profesionEstable == puestosContrato, true));
+        criterios.add(new Criterio("goals_profesionales_12_12", puestosContrato, goalsOk,
+                goalsOk == puestosContrato, true));
+        criterios.add(new Criterio("reanudados_12_12", puestosContrato, reanudados,
+                reanudados == puestosContrato, true));
+        boolean reconciliacionEfectiva = estampaDisponible
+                && (estampaActividad > 0
+                        || estampaReclamaciones > 0 || estampaUltimaTick > estampaInicioUltimaTick);
+        criterios.add(new Criterio("reconciliacion_manager_corrio", true,
+                "estampa=" + estampaDisponible + ", pasadas=" + estampaPasadasReconciliacion
+                        + ", ultima_reconciliacion_tick=" + estampaUltimaReconciliacionTick
+                        + ", reclamaciones=" + estampaReclamaciones
+                        + ", ultima_tick=" + estampaUltimaTick + ", inicio_tick=" + estampaInicioUltimaTick
+                        + ", actividad=" + estampaActividad + ", invocado=" + mantenimientoInvocado(),
+                reconciliacionEfectiva, true));
+
+        List<Criterio> opcionales = new ArrayList<>();
+        Criterio coberturaCriterio = new Criterio("cobertura_estaciones_11_11", cobertura.esperados(),
+                cobertura.cubiertos(), cobertura.cubiertos() == cobertura.esperados(), EXIGIR_COBERTURA);
+        if (EXIGIR_COBERTURA) {
+            criterios.add(coberturaCriterio);
+        } else {
+            opcionales.add(coberturaCriterio);
+        }
+        opcionales.add(new Criterio("reclamaciones_en_log", ">=1", reclamacionesLog, reclamacionesLog > 0, false));
+        opcionales.add(new Criterio("reclamaciones_contador", ">=1", estampaReclamaciones,
+                estampaReclamaciones > 0, false));
+        opcionales.add(new Criterio("guardias_total", fundadoresContrato, guardias.total(),
+                guardias.total() == fundadoresContrato, false));
+        opcionales.add(new Criterio("municion_arqueros", guardias.arqueros(), guardias.conMunicion(),
+                guardias.conMunicion() == guardias.arqueros(), false));
+        opcionales.add(new Criterio("job_site_al_cargar_duplicados_0", 0,
+                valorONoMedido(jobSiteAlCargarDuplicados), jobSiteAlCargarDuplicados == 0, false));
+        opcionales.add(new Criterio("job_site_al_cargar_huerfanos_0", 0,
+                valorONoMedido(jobSiteAlCargarHuerfanos), jobSiteAlCargarHuerfanos == 0, false));
+
+        boolean aceptacionOk = true;
+        for (Criterio criterio : criterios) {
+            if (!criterio.ok()) {
+                aceptacionOk = false;
+            }
+        }
+        String aceptacionJson = aceptacionJson(criterios, opcionales, aceptacionOk,
+                cobertura.cubiertos() == cobertura.esperados());
+        String coberturaJson = coberturaJson(cobertura);
+        String reconciliacionJson = reconciliacionJson();
+        boolean faseOkFinal = okFase && aceptacionOk && guardadoOk && fallo.isEmpty();
         String veredicto = faseOkFinal ? "PASS" : "FAIL";
+        log("ACEPTACION ok=" + aceptacionOk + " criterios=" + criterios.size()
+                + " opcionales=" + opcionales.size() + " cobertura=" + cobertura.cubiertos()
+                + "/" + cobertura.esperados() + " reclamaciones_log=" + reclamacionesLog);
 
         String esperadoJson = esperadoJson();
         StringBuilder obs = new StringBuilder("{\"profesionales\":").append(esperados.size())
@@ -517,6 +730,14 @@ public final class C4StandaloneHarness {
                 .append(",\"job_site_al_cargar_perdidos\":").append(numOrNull(jobSiteAlCargarPerdidos))
                 .append(",\"job_site_al_cargar_duplicados\":").append(numOrNull(jobSiteAlCargarDuplicados))
                 .append(",\"job_site_al_cargar_huerfanos\":").append(numOrNull(jobSiteAlCargarHuerfanos))
+                .append(",\"uuid_duplicados\":").append(uuidDuplicados)
+                .append(",\"mascara_bits\":").append(guardias.mascaraBits())
+                .append(",\"fundadores_con_goal\":").append(guardias.fundadoresConGoal())
+                .append(",\"fundadores_equipados\":").append(guardias.fundadoresEquipados())
+                .append(",\"cobertura_estaciones\":").append(cobertura.cubiertos())
+                .append(",\"cobertura_estaciones_esperadas\":").append(cobertura.esperados())
+                .append(",\"reclamaciones_log\":").append(reclamacionesLog)
+                .append(",\"reconciliacion_invocada\":").append(mantenimientoInvocado())
                 .append(",\"guardado_ok\":").append(guardadoOk)
                 .append('}');
         String observadoJson = obs.toString();
@@ -530,6 +751,16 @@ public final class C4StandaloneHarness {
                 .append(",\"identidades\":").append(identidades)
                 .append(",\"goals\":").append(goalsOk == esperadoTotal)
                 .append(",\"reanudados\":").append(reanudadosOk)
+                .append(",\"fundadores_ok\":").append(fundadoresObservados == fundadoresContrato)
+                .append(",\"mascara_fundadores_ok\":").append(guardias.mascaraCompleta())
+                .append(",\"fundadores_con_goal_ok\":")
+                .append(guardias.fundadoresConGoal() == fundadoresContrato)
+                .append(",\"fundadores_equipados_ok\":")
+                .append(guardias.fundadoresEquipados() == fundadoresContrato)
+                .append(",\"uuid_duplicados_ok\":").append(uuidDuplicados == 0)
+                .append(",\"reconciliacion_ok\":").append(mantenimientoInvocado())
+                .append(",\"cobertura_estaciones_ok\":" )
+                .append(cobertura.cubiertos() == cobertura.esperados())
                 .append(",\"fase_ok\":").append(faseOkFinal)
                 .append('}');
         String invariantesJson = inv.toString();
@@ -563,7 +794,21 @@ public final class C4StandaloneHarness {
         chequeos.add("\"job_site_al_cargar_duplicados\":" + numOrNull(jobSiteAlCargarDuplicados));
         chequeos.add("\"job_site_al_cargar_huerfanos\":" + numOrNull(jobSiteAlCargarHuerfanos));
         chequeos.add("\"job_site_detalle\":" + stringsJson(jobSiteDetalle));
-        chequeos.add("\"guardias\":" + guardias);
+        chequeos.add("\"guardias\":" + guardias.json());
+        chequeos.add("\"uuid_duplicados\":" + uuidDuplicados);
+        chequeos.add("\"mascara_bits\":" + guardias.mascaraBits());
+        chequeos.add("\"fundadores_con_goal\":" + guardias.fundadoresConGoal());
+        chequeos.add("\"fundadores_equipados\":" + guardias.fundadoresEquipados());
+        chequeos.add("\"cobertura_estaciones\":" + cobertura.cubiertos());
+        chequeos.add("\"cobertura_estaciones_esperadas\":" + cobertura.esperados());
+        chequeos.add("\"reclamaciones_log\":" + reclamacionesLog);
+        chequeos.add("\"reconciliacion_invocada\":" + mantenimientoInvocado());
+        chequeos.add("\"aceptacion_ok\":" + aceptacionOk);
+        chequeos.add("\"cobertura_demostrada\":" + (cobertura.cubiertos() == cobertura.esperados()));
+        chequeos.add("\"ownership_demostrado\":false");
+        chequeos.add("\"aceptacion\":" + aceptacionJson);
+        chequeos.add("\"cobertura\":" + coberturaJson);
+        chequeos.add("\"reconciliacion\":" + reconciliacionJson);
         chequeos.add("\"esperado\":" + esperadoJson);
         chequeos.add("\"observado\":" + observadoJson);
         chequeos.add("\"invariantes\":" + invariantesJson);
@@ -571,9 +816,16 @@ public final class C4StandaloneHarness {
         chequeos.add("\"causa_desconocida\":" + desconocidasJson);
         chequeos.add("\"notas\":" + stringsJson(List.of(
                 "job_site_presentes y job_site_estables/cambiados/perdidos/nuevos son OBSERVADOS: no hay umbral duro "
-                        + "porque las memorias JOB_SITE se reclaman durante la ventana (limitacion conocida).",
-                "Los FAIL duros siguen siendo los de siempre: duplicados de JOB_SITE, huerfanos, perdidas de aldeano, "
-                        + "identidad de profesion, goals, reanudados e invariantes del roster.")));
+                        + "de cobertura en la campana estandar (600 ticks < gracia de carga 1200).",
+                "cobertura_estaciones_11_11 es OPCIONAL por defecto; con -Dc4n.exigirCobertura=true / "
+                        + "-ExigirCobertura pasa a FAIL duro. El NITWIT no tiene estacion y NO cuenta como falta.",
+                "reconciliacion_manager_corrio es FAIL duro: el arnes invoca ejecutarMantenimientoParaArnes; "
+                        + "reclamaciones_log cuenta las lineas 'reclama su estacion de' del log (evidencia observada).",
+                "fundadores_equipados usa el criterio de produccion: 4 armaduras; espadachin arma+escudo; arquero arco. "
+                        + "Las flechas se registran aparte (municion_arqueros, opcional).",
+                "Los FAIL duros del contrato: 12/12 profesionales, 4/4 fundadores, 0 UUID duplicados, 0 perdidas, "
+                        + "0 duplicados/huerfanos de JOB_SITE, mascara 0b1111, 4/4 goal y equipo, guardado_ok, "
+                        + "roster_invariantes_ok, identidad, goals y reanudados.")));
         if (!fallo.isEmpty()) {
             chequeos.add("\"fallo\":\"" + escape(fallo) + "\"");
         }
@@ -584,12 +836,13 @@ public final class C4StandaloneHarness {
                 + String.join(",", chequeos) + "}");
         escribir("snapshot-" + PHASE + ".txt", snapshotTexto());
         escribirDiagnostico(veredicto, esperadoJson, observadoJson, invariantesJson, conocidasJson,
-                desconocidasJson, guardias);
+                desconocidasJson, guardias.json(), aceptacionJson, coberturaJson, reconciliacionJson, aceptacionOk);
         log("DIAG fase=" + PHASE + " result=" + veredicto + " guardado_ok=" + guardadoOk
                 + " roster_invariantes_ok=" + invariantes.ok()
                 + " job_site_ok=" + jobSiteOk + " causas_conocidas=" + conocidas.size()
                 + " causas_desconocidas=" + desconocidas.size() + " job_site_estables=" + jobSiteEstables
-                + " cambiados=" + jobSiteCambiados + " perdidos=" + jobSitePerdidos + " nuevos=" + jobSiteNuevos);
+                + " cambiados=" + jobSiteCambiados + " perdidos=" + jobSitePerdidos + " nuevos=" + jobSiteNuevos
+                + " aceptacion_ok=" + aceptacionOk);
         for (Causa c : conocidas) {
             log("DIAG causa_conocida=" + c.codigo() + " :: " + c.detalle());
         }
@@ -611,13 +864,14 @@ public final class C4StandaloneHarness {
         server.halt(false);
     }
 
-    /** Censo de JOB_SITE inmediatamente tras la carga, ANTES de cualquier mantenimiento: persistido vs creado. */
+    /** Censo de JOB_SITE/POTENTIAL_JOB_SITE y tickets libres al cargar, ANTES de cualquier mantenimiento. */
     private static void censoJobSitesAlCargar() {
         jobSitesAlCargar.clear();
         Map<Long, UUID> owners = new LinkedHashMap<>();
         int cargados = 0;
         int duplicados = 0;
         int huerfanos = 0;
+        int potenciales = 0;
         for (UUID id : rosterPrev.keySet()) {
             if (!(nivel.getEntity(id) instanceof net.minecraft.world.entity.npc.Villager v)
                     || !v.isAlive() || v.isRemoved()) {
@@ -626,6 +880,11 @@ public final class C4StandaloneHarness {
             }
             cargados++;
             var memory = v.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE);
+            var potencial = v.getBrain().getMemory(
+                    net.minecraft.world.entity.ai.memory.MemoryModuleType.POTENTIAL_JOB_SITE);
+            if (potencial.isPresent()) {
+                potenciales++;
+            }
             if (memory.isPresent()) {
                 BlockPos poi = memory.get().pos();
                 if (nivel.getPoiManager().getType(poi).isEmpty()) {
@@ -642,15 +901,195 @@ public final class C4StandaloneHarness {
                 }
             }
             log("AL_CARGAR uuid=" + id + " prof=" + v.getVillagerData().getProfession()
-                    + " jobSite=" + jobSiteDe(v) + " persistido=" + memory.isPresent()
+                    + " jobSite=" + jobSiteDe(v) + " tickets_libres=" + ticketsLibres(memory)
+                    + " potencial=" + globalPosDe(potencial) + " tickets_potencial=" + ticketsLibres(potencial)
+                    + " persistido=" + memory.isPresent()
                     + " pos=" + v.blockPosition().toShortString());
         }
         jobSitesAlCargarCargados = cargados;
         jobSiteAlCargarDuplicados = duplicados;
         jobSiteAlCargarHuerfanos = huerfanos;
+        Cobertura cobertura = medirCobertura("AL_CARGAR");
+        coberturaAlCargar = cobertura.cubiertos();
         log("AL_CARGAR cargados=" + cargados + "/" + rosterPrev.size()
                 + " con_jobSite=" + jobSitesAlCargar.size() + " duplicados=" + duplicados
-                + " huerfanos=" + huerfanos);
+                + " huerfanos=" + huerfanos + " potenciales=" + potenciales
+                + " cobertura=" + cobertura.cubiertos() + "/" + cobertura.esperados());
+    }
+
+    /** Posición de un POI en memoria; {@code none} si no hay. */
+    private static String globalPosDe(java.util.Optional<GlobalPos> sitio) {
+        return sitio.map(g -> g.pos().toShortString()).orElse("none");
+    }
+
+    /** Tickets libres del POI de esa memoria (-1 = sin POI, no medido o no aplica). */
+    private static int ticketsLibres(java.util.Optional<GlobalPos> sitio) {
+        if (sitio.isEmpty()) {
+            return -1;
+        }
+        try {
+            return nivel.getPoiManager().getFreeTickets(sitio.get().pos());
+        } catch (RuntimeException e) {
+            return -1;
+        }
+    }
+
+    /**
+     * C4 · <b>cobertura individual de los puestos CON estación</b> (11: los 12 del pueblo menos el NITWIT).
+     * <p>
+     * Un puesto cuenta si su aldeano tiene {@code JOB_SITE}, el POI sigue existiendo, es del tipo que su oficio puede
+     * reclamar ({@code heldJobSite}), el ticket está cogido ({@code free_tickets=0}) y ningún otro aldeano usa la misma
+     * celda. El <b>NITWIT no tiene estación</b>: se lista como {@code no_aplica} y <b>no</b> cuenta como falta.
+     */
+    private static Cobertura medirCobertura(String etiqueta) {
+        Map<VillagerProfession, Integer> cupo = com.chipoodle.devilrpg.world.VillageGenerator.puestosPorOficio();
+        int esperados = 0;
+        for (var e : cupo.entrySet()) {
+            if (e.getKey() != VillagerProfession.NITWIT) {
+                esperados += e.getValue();
+            }
+        }
+        estacionesEsperadas = esperados;
+        Set<Long> usados = new HashSet<>();
+        int cubiertos = 0;
+        List<String> detalle = new ArrayList<>();
+        List<String> faltantes = new ArrayList<>();
+        for (var v : aldeanos()) {
+            if (!v.isAlive() || v.isRemoved() || v.isBaby()
+                    || com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(v)) {
+                continue;
+            }
+            VillagerProfession profesion = v.getVillagerData().getProfession();
+            if (!com.chipoodle.devilrpg.world.VillageGenerator.esOficioDelPueblo(profesion)) {
+                continue;
+            }
+            var sitio = v.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE);
+            var potencial = v.getBrain().getMemory(
+                    net.minecraft.world.entity.ai.memory.MemoryModuleType.POTENTIAL_JOB_SITE);
+            if (profesion == VillagerProfession.NITWIT) {
+                detalle.add(etiqueta + " uuid=" + v.getUUID() + " prof=nitwit estacion=no_aplica"
+                        + " jobSite=" + jobSiteDe(v) + " tickets_libres=" + ticketsLibres(sitio)
+                        + " potencial=" + globalPosDe(potencial));
+                continue;
+            }
+            boolean tipoOk = false;
+            if (sitio.isPresent()) {
+                var tipo = nivel.getPoiManager().getType(sitio.get().pos());
+                tipoOk = tipo.map(t -> profesion.heldJobSite().test(t)).orElse(false);
+            }
+            long celda = sitio.map(g -> g.pos().asLong()).orElse(0L);
+            boolean duplicado = celda != 0L && !usados.add(celda);
+            boolean cubierto = sitio.isPresent() && tipoOk && !duplicado
+                    && ticketsLibres(sitio) == 0;
+            if (cubierto) {
+                cubiertos++;
+            } else {
+                faltantes.add("prof=" + profesion + " uuid=" + v.getUUID()
+                        + " motivo=" + (sitio.isEmpty() ? "sin_job_site"
+                        : !tipoOk ? "poi_no_corresponde"
+                        : duplicado ? "poi_duplicado"
+                        : "ticket_libre_o_ausente"));
+            }
+            detalle.add(etiqueta + " uuid=" + v.getUUID() + " prof=" + profesion
+                    + " estacion=si jobSite=" + jobSiteDe(v) + " tipo_ok=" + tipoOk
+                    + " tickets_libres=" + ticketsLibres(sitio)
+                    + " potencial=" + globalPosDe(potencial)
+                    + " cubierto=" + cubierto);
+        }
+        return new Cobertura(esperados, cubiertos, detalle, faltantes);
+    }
+
+    /**
+     * Foto de cierre de la estampa read-only: la DIFERENCIA con la de inicio es la evidencia dura de que
+     * {@code reclamarEstacionesDelPueblo} repartió puestos en esta fase (no los goals de oficio).
+     */
+    private static void tomarEstampaCierre() {
+        if (!estampaDisponible || estampaInicio == null) {
+            return;
+        }
+        try {
+            var fin = com.chipoodle.devilrpg.world.VillageManager.estampaDeReconciliacion();
+            estampaReclamaciones = fin.reclamaciones() - estampaInicio.reclamaciones();
+            estampaTicketsPerdidos = fin.ticketsPerdidosLiberados() - estampaInicio.ticketsPerdidosLiberados();
+            estampaPromocionesPotencial = fin.promocionesDePotencial() - estampaInicio.promocionesDePotencial();
+            estampaPotencialesLiberados = fin.potencialesLiberados() - estampaInicio.potencialesLiberados();
+            estampaPotencialesLimpiados = fin.potencialesLimpiados() - estampaInicio.potencialesLimpiados();
+            estampaPuestosInvalidosLimpiados = fin.puestosInvalidosLimpiados()
+                    - estampaInicio.puestosInvalidosLimpiados();
+            estampaPasadasReconciliacion = fin.pasadasDeReconciliacion()
+                    - estampaInicio.pasadasDeReconciliacion();
+            estampaUltimaReconciliacionTick = fin.ultimaReconciliacionTick();
+            estampaUltimaTick = fin.ultimaReclamacionTick();
+            estampaActividad = estampaReclamaciones + estampaTicketsPerdidos + estampaPromocionesPotencial
+                    + estampaPotencialesLiberados + estampaPotencialesLimpiados + estampaPuestosInvalidosLimpiados;
+            log("ESTAMPAS cierre reclamaciones=" + estampaReclamaciones
+                    + " pasadas=" + estampaPasadasReconciliacion
+                    + " ultima_reconciliacion_tick=" + estampaUltimaReconciliacionTick
+                    + " tickets_perdidos=" + estampaTicketsPerdidos
+                    + " promociones=" + estampaPromocionesPotencial
+                    + " potenciales_liberados=" + estampaPotencialesLiberados
+                    + " potenciales_limpiados=" + estampaPotencialesLimpiados
+                    + " puestos_invalidos_limpiados=" + estampaPuestosInvalidosLimpiados
+                    + " ultima_tick=" + estampaUltimaTick);
+        } catch (RuntimeException ex) {
+            log("ESTAMPAS cierre no disponibles: " + ex);
+        }
+    }
+    private static boolean mantenimientoInvocado() {
+        return mantInicialHecho || mantPeriodicoTicks > 0;
+    }
+
+    /**
+     * Lee el log de la fase (solo lectura) y cuenta las líneas de reconciliación del manager:
+     * {@code reclama su estacion de}, {@code estaba cogido SIN dueno} y {@code reparto de estaciones aplazado}.
+     * Es evidencia OBSERVADA: si el log no se puede leer, queda {@code log_leido=false} (no se inventa nada).
+     */
+    private static void leerLogReclamaciones() {
+        reclamacionesLog = 0;
+        reclamacionesLogUuids = 0;
+        aplazosLog = 0;
+        ticketsPerdidosLog = 0;
+        logReclamacionesLeido = false;
+        logReclamacionesError = "";
+        reclamacionesLogDetalle.clear();
+        Path log = base.resolve("srv-" + PHASE + ".log");
+        if (!Files.exists(log)) {
+            logReclamacionesError = "log_ausente";
+            return;
+        }
+        Set<String> uuids = new HashSet<>();
+        try {
+            for (String linea : Files.readAllLines(log, StandardCharsets.UTF_8)) {
+                if (linea.contains("reclama su estacion de")) {
+                    reclamacionesLog++;
+                    int fin = linea.indexOf(" reclama su estacion de");
+                    if (fin >= 36) {
+                        String candidato = linea.substring(fin - 36, fin);
+                        if (candidato.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+                                + "[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
+                            uuids.add(candidato.toLowerCase(Locale.ROOT));
+                        }
+                    }
+                    if (reclamacionesLogDetalle.size() < 40) {
+                        reclamacionesLogDetalle.add(linea.trim());
+                    }
+                }
+                if (linea.contains("estaba cogido SIN dueno")) {
+                    ticketsPerdidosLog++;
+                }
+                if (linea.contains("reparto de estaciones aplazado")) {
+                    aplazosLog++;
+                }
+            }
+            reclamacionesLogUuids = uuids.size();
+            logReclamacionesLeido = true;
+            log("RECLAMACIONES log_leido=true reclamaciones=" + reclamacionesLog
+                    + " uuids=" + reclamacionesLogUuids + " aplazos=" + aplazosLog
+                    + " tickets_perdidos=" + ticketsPerdidosLog);
+        } catch (Exception e) {
+            logReclamacionesError = e.toString();
+            log("RECLAMACIONES log_error=" + e);
+        }
     }
 
     // ------------------------------------------------------------------ E · propiedad de puestos y guardias
@@ -789,13 +1228,25 @@ public final class C4StandaloneHarness {
         return out;
     }
 
+    /** Métricas de guardias ya calculadas: se usan en el JSON y en el bloque de aceptación (una sola medida). */
+    private record MetricasGuardias(int total, int fundadores, int fundadoresConGoal, int fundadoresEquipados,
+                                    int arqueros, int conMunicion, int fundadoresConMunicion, int conGoal,
+                                    int armaduraCompleta, int conArma, int conEscudo, int mascaraBits,
+                                    boolean mascaraCompleta, boolean mascaraLeida, String json) {
+    }
+
     /**
      * Metricas de guardias: cuántos hay, cuántos fundadores, la máscara persistida por slot, si llevan goal de
      * guardia y qué equipo tienen. Solo se mide lo que se puede leer con seguridad; nada de esto altera la fase.
+     * <p>
+     * {@code fundadoresEquipados} aplica el criterio de producción {@code VillagerGuardGoal.equipado}: 4 piezas de
+     * armadura; espadachín con arma (espada/hacha) y escudo; arquero con arco. Las flechas se miden aparte
+     * ({@code fundadoresConMunicion}) y quedan como evidencia opcional: el contrato pedido es armadura/arma/escudo.
      */
-    private static String guardiasJson() {
+    private static MetricasGuardias medirGuardias() {
         boolean[] mascara = new boolean[SLOTS_FUNDADORES];
         int mascaraBits = 0;
+        boolean mascaraLeida = true;
         try {
             var saved = com.chipoodle.devilrpg.world.VillageSavedData.get(nivel);
             for (int slot = 0; slot < SLOTS_FUNDADORES; slot++) {
@@ -805,10 +1256,16 @@ public final class C4StandaloneHarness {
                 }
             }
         } catch (RuntimeException ex) {
+            mascaraLeida = false;
             log("guardias: no pude leer la mascara persistida: " + ex);
         }
         int total = 0;
         int fundadores = 0;
+        int fundadoresConGoal = 0;
+        int fundadoresEquipados = 0;
+        int arqueros = 0;
+        int conMunicion = 0;
+        int fundadoresConMunicion = 0;
         int conGoal = 0;
         int armaduraCompleta = 0;
         int conArma = 0;
@@ -829,6 +1286,9 @@ public final class C4StandaloneHarness {
             boolean goal = tieneGoalDeGuardia(v);
             if (goal) {
                 conGoal++;
+                if (fund) {
+                    fundadoresConGoal++;
+                }
             }
             int piezas = piezasDeArmadura(v);
             if (piezas == 4) {
@@ -844,12 +1304,27 @@ public final class C4StandaloneHarness {
             }
             int slot = v.getPersistentData().getInt(com.chipoodle.devilrpg.world.VillageManager.GUARD_INDEX_TAG);
             int tipo = v.getPersistentData().getInt(com.chipoodle.devilrpg.world.VillageManager.GUARD_TYPE_TAG);
+            int flechas = flechasDe(v);
+            boolean equipado = equipadoDeGuardia(v, piezas);
+            if (equipado && fund) {
+                fundadoresEquipados++;
+            }
+            if (tipo == com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.ARQUERO) {
+                arqueros++;
+                if (flechas > 0) {
+                    conMunicion++;
+                    if (fund) {
+                        fundadoresConMunicion++;
+                    }
+                }
+            }
             String mano = arma
                     ? String.valueOf(BuiltInRegistries.ITEM.getKey(v.getMainHandItem().getItem())) : "none";
             detalle.add("uuid=" + v.getUUID() + " slot=" + slot + " tipo=" + tipo + " fundador=" + fund
                     + " goal=" + goal + " armadura=" + piezas + "/4 mano=" + mano
-                    + " escudo=" + escudo);
+                    + " escudo=" + escudo + " flechas=" + flechas + " equipado=" + equipado);
         }
+        boolean mascaraCompleta = mascaraLeida && mascaraBits == (1 << SLOTS_FUNDADORES) - 1;
         StringBuilder sb = new StringBuilder("{\"total\":").append(total)
                 .append(",\"fundadores\":").append(fundadores)
                 .append(",\"fundadores_esperados\":")
@@ -862,14 +1337,22 @@ public final class C4StandaloneHarness {
             sb.append(mascara[i]);
         }
         sb.append(']').append(",\"mascara_bits\":").append(mascaraBits)
-                .append(",\"mascara_completa\":").append(mascaraBits == (1 << SLOTS_FUNDADORES) - 1)
+                .append(",\"mascara_completa\":").append(mascaraCompleta)
+                .append(",\"mascara_leida\":").append(mascaraLeida)
                 .append(",\"con_goal_guardia\":").append(conGoal)
+                .append(",\"fundadores_con_goal\":").append(fundadoresConGoal)
+                .append(",\"fundadores_equipados\":").append(fundadoresEquipados)
+                .append(",\"arqueros\":").append(arqueros)
+                .append(",\"con_municion\":").append(conMunicion)
+                .append(",\"fundadores_con_municion\":").append(fundadoresConMunicion)
                 .append(",\"armadura_completa\":").append(armaduraCompleta)
                 .append(",\"con_arma\":").append(conArma)
                 .append(",\"con_escudo\":").append(conEscudo)
                 .append(",\"detalle\":").append(stringsJson(detalle))
                 .append('}');
-        return sb.toString();
+        return new MetricasGuardias(total, fundadores, fundadoresConGoal, fundadoresEquipados, arqueros,
+                conMunicion, fundadoresConMunicion, conGoal, armaduraCompleta, conArma, conEscudo,
+                mascaraBits, mascaraCompleta, mascaraLeida, sb.toString());
     }
 
     private static int piezasDeArmadura(net.minecraft.world.entity.npc.Villager v) {
@@ -883,6 +1366,31 @@ public final class C4StandaloneHarness {
             }
         }
         return n;
+    }
+
+    /** Mismo criterio que la producción: 4 armaduras; espadachín con arma+escudo; arquero con arco. */
+    private static boolean equipadoDeGuardia(net.minecraft.world.entity.npc.Villager v, int piezas) {
+        if (piezas != 4) {
+            return false;
+        }
+        if (com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.tipoDe(v)
+                == com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.ARQUERO) {
+            return v.getMainHandItem().is(Items.BOW);
+        }
+        ItemStack mano = v.getMainHandItem();
+        boolean arma = mano.getItem() instanceof SwordItem || mano.getItem() instanceof AxeItem;
+        return arma && v.getOffhandItem().is(Items.SHIELD);
+    }
+
+    private static int flechasDe(net.minecraft.world.entity.npc.Villager v) {
+        int total = 0;
+        for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+            ItemStack s = v.getInventory().getItem(i);
+            if (s.is(Items.ARROW)) {
+                total += s.getCount();
+            }
+        }
+        return total;
     }
 
     private static boolean tieneGoalDeGuardia(net.minecraft.world.entity.npc.Villager v) {
@@ -1087,6 +1595,9 @@ public final class C4StandaloneHarness {
             log("JSON INVALIDO en " + nombre + ": " + ex);
             escribir(nombre + ".invalido.txt", contenido);
             valido = "{\"fase\":\"" + PHASE + "\",\"result\":\"FAIL\",\"fase_ok\":false,"
+                    + "\"aceptacion_ok\":false,"
+                    + "\"aceptacion\":{\"veredicto\":\"FAIL\",\"ok\":false,\"criterios\":[],\"opcionales\":[],"
+                    + "\"fallidos\":[\"json_invalido\"],\"cobertura_obligatoria\":" + EXIGIR_COBERTURA + "},"
                     + "\"roster_invariantes_ok\":null,\"fallo\":\"json_invalido:"
                     + escape(ex.toString()) + "\"}";
         }
@@ -1096,12 +1607,17 @@ public final class C4StandaloneHarness {
     /** Volcado final legible por máquina: bloque estructurado + comandos de reproducción. */
     private static void escribirDiagnostico(String veredicto, String esperadoJson, String observadoJson,
                                             String invariantesJson, String conocidasJson, String desconocidasJson,
-                                            String guardiasJson) {
+                                            String guardiasJson, String aceptacionJson, String coberturaJson,
+                                            String reconciliacionJson, boolean aceptacionOk) {
         StringBuilder sb = new StringBuilder("{\"run\":\"").append(escape(RUN)).append('"')
                 .append(",\"fase\":\"").append(PHASE).append('"')
                 .append(",\"sha\":\"").append(escape(leerSha())).append('"')
                 .append(",\"momento\":\"").append(escape(java.time.Instant.now().toString())).append('"')
                 .append(",\"result\":\"").append(veredicto).append('"')
+                .append(",\"aceptacion_ok\":").append(aceptacionOk)
+                .append(",\"aceptacion\":").append(aceptacionJson)
+                .append(",\"cobertura\":").append(coberturaJson)
+                .append(",\"reconciliacion\":").append(reconciliacionJson)
                 .append(",\"esperado\":").append(esperadoJson)
                 .append(",\"observado\":").append(observadoJson)
                 .append(",\"invariantes\":").append(invariantesJson)
@@ -1137,6 +1653,110 @@ public final class C4StandaloneHarness {
     }
 
     private record Causa(String codigo, String detalle) {
+    }
+
+    private record Cobertura(int esperados, int cubiertos, List<String> detalle, List<String> faltantes) {
+    }
+
+    /** Criterio de aceptación: obligatorio o documentado como opcional; el veredicto solo mira los obligatorios. */
+    private record Criterio(String nombre, Object esperado, Object observado, boolean ok, boolean obligatorio) {
+    }
+
+    private static String jsonValor(Object valor) {
+        if (valor == null) {
+            return "null";
+        }
+        if (valor instanceof Boolean b) {
+            return b.toString();
+        }
+        if (valor instanceof Number n) {
+            return n.toString();
+        }
+        return "\"" + escape(String.valueOf(valor)) + "\"";
+    }
+
+    private static String criteriosJson(List<Criterio> criterios) {
+        StringBuilder sb = new StringBuilder("[");
+        for (Criterio c : criterios) {
+            if (sb.length() > 1) {
+                sb.append(',');
+            }
+            sb.append("{\"nombre\":\"").append(escape(c.nombre()))
+                    .append("\",\"esperado\":").append(jsonValor(c.esperado()))
+                    .append(",\"observado\":").append(jsonValor(c.observado()))
+                    .append(",\"ok\":").append(c.ok())
+                    .append(",\"obligatorio\":").append(c.obligatorio())
+                    .append('}');
+        }
+        return sb.append(']').toString();
+    }
+
+    private static String aceptacionJson(List<Criterio> criterios, List<Criterio> opcionales, boolean ok,
+                                         boolean coberturaDemostrada) {
+        List<String> fallidos = new ArrayList<>();
+        for (Criterio c : criterios) {
+            if (!c.ok()) {
+                fallidos.add(c.nombre());
+            }
+        }
+        String notaCobertura = coberturaDemostrada
+                ? "cobertura 11/11 de estaciones (JOB_SITE valido + ticket cogido)"
+                : "cobertura < 11/11: el veredicto NO demuestra la cobertura de las 11 estaciones"
+                        + (EXIGIR_COBERTURA ? "" : " (cobertura opcional en la campana estandar; usar -ExigirCobertura)");
+        return "{\"veredicto\":\"" + (ok ? "PASS" : "FAIL") + "\",\"ok\":" + ok
+                // C4 mide COBERTURA, no titularidad del ticket: `free_tickets` es un contador del POI y no
+                // identifica al aldeano que lo cogio. El ownership real de tickets lo mide tools/poi.
+                + ",\"cobertura_demostrada\":" + coberturaDemostrada
+                + ",\"ownership_demostrado\":false"
+                + ",\"ownership_nota\":\"C4 mide cobertura, no titularidad de tickets; ownership real en tools/poi. "
+                + escape(notaCobertura) + "\""
+                + ",\"criterios\":" + criteriosJson(criterios)
+                + ",\"opcionales\":" + criteriosJson(opcionales)
+                + ",\"fallidos\":" + stringsJson(fallidos)
+                + ",\"cobertura_obligatoria\":" + EXIGIR_COBERTURA + "}";
+    }
+
+    private static String coberturaJson(Cobertura cobertura) {
+        return "{\"esperados\":" + cobertura.esperados()
+                + ",\"cubiertos\":" + cobertura.cubiertos()
+                + ",\"al_cargar\":" + numOrNull(coberturaAlCargar)
+                + ",\"al_cierre\":" + numOrNull(coberturaCierre)
+                + ",\"nitwit_sin_estacion\":true"
+                + ",\"obligatoria\":" + EXIGIR_COBERTURA
+                + ",\"faltantes\":" + stringsJson(cobertura.faltantes())
+                + ",\"detalle\":" + stringsJson(cobertura.detalle()) + "}";
+    }
+
+    private static String reconciliacionJson() {
+        return "{\"manager_invocado\":" + mantenimientoInvocado()
+                + ",\"estampa_disponible\":" + estampaDisponible
+                + ",\"estampa_reclamaciones\":" + estampaReclamaciones
+                + ",\"estampa_ultima_tick\":" + estampaUltimaTick
+                + ",\"estampa_inicio_ultima_tick\":" + estampaInicioUltimaTick
+                + ",\"estampa_tickets_perdidos\":" + estampaTicketsPerdidos
+                + ",\"estampa_promociones_potencial\":" + estampaPromocionesPotencial
+                + ",\"estampa_potenciales_liberados\":" + estampaPotencialesLiberados
+                + ",\"estampa_potenciales_limpiados\":" + estampaPotencialesLimpiados
+                + ",\"estampa_puestos_invalidos_limpiados\":" + estampaPuestosInvalidosLimpiados
+                + ",\"estampa_actividad\":" + estampaActividad
+                + ",\"mant_inicial_tick\":" + numOrNull(mantInicialTick)
+                + ",\"mant_periodico_ticks\":" + mantPeriodicoTicks
+                + ",\"reclamaciones_log\":" + reclamacionesLog
+                + ",\"reclamaciones_uuid\":" + reclamacionesLogUuids
+                + ",\"aplazos_log\":" + aplazosLog
+                + ",\"tickets_perdidos_log\":" + ticketsPerdidosLog
+                + ",\"log_leido\":" + logReclamacionesLeido
+                + ",\"log_error\":\"" + escape(logReclamacionesError) + "\""
+                + ",\"detalle\":" + stringsJson(reclamacionesLogDetalle) + "}";
+    }
+
+    private static String mascaraBinaria(int bits) {
+        String binario = Integer.toBinaryString(bits & ((1 << SLOTS_FUNDADORES) - 1));
+        return "0".repeat(Math.max(0, SLOTS_FUNDADORES - binario.length())) + binario;
+    }
+
+    private static Object valorONoMedido(int valor) {
+        return valor < 0 ? "NO_MEDIDO" : Integer.valueOf(valor);
     }
 
     private static int[] auditarJobSite() {
@@ -1292,13 +1912,28 @@ public final class C4StandaloneHarness {
         log("FALLO DE INSTRUMENTO: " + fallo);
         hecho = true;
         if (base != null) {
+            String aceptacionFallo = "{\"veredicto\":\"FAIL\",\"ok\":false,\"criterios\":[],\"opcionales\":[],"
+                    + "\"fallidos\":[\"fallo_de_instrumento\"],\"cobertura_obligatoria\":" + EXIGIR_COBERTURA + "}";
+            String coberturaFallo = "{\"esperados\":" + estacionesEsperadas
+                    + ",\"cubiertos\":null,\"al_cargar\":null,\"al_cierre\":null,\"nitwit_sin_estacion\":true,"
+                    + "\"obligatoria\":" + EXIGIR_COBERTURA + ",\"faltantes\":[],\"detalle\":[]}";
+            String reconciliacionFallo = "{\"manager_invocado\":false,\"mant_inicial_tick\":null,"
+                    + "\"mant_periodico_ticks\":0,\"reclamaciones_log\":0,\"reclamaciones_uuid\":0,"
+                    + "\"aplazos_log\":0,\"tickets_perdidos_log\":0,\"log_leido\":false,\"log_error\":\"\","
+                    + "\"detalle\":[]}";
             escribir("phase-" + PHASE + ".json",
                     "{\"fase\":\"" + PHASE + "\",\"result\":\"FAIL\",\"fase_ok\":false,"
-                            + "\"roster_invariantes_ok\":null,\"fallo\":\"" + escape(fallo) + "\"}");
+                            + "\"aceptacion_ok\":false,\"aceptacion\":" + aceptacionFallo
+                            + ",\"cobertura\":" + coberturaFallo
+                            + ",\"reconciliacion\":" + reconciliacionFallo
+                            + ",\"roster_invariantes_ok\":null,\"fallo\":\"" + escape(fallo) + "\"}");
             escribir("diagnostico-" + PHASE + ".json",
                     "{\"run\":\"" + escape(RUN) + "\",\"fase\":\"" + PHASE + "\",\"sha\":\""
                             + escape(leerSha()) + "\",\"momento\":\""
                             + escape(java.time.Instant.now().toString()) + "\",\"result\":\"FAIL\""
+                            + ",\"aceptacion_ok\":false,\"aceptacion\":" + aceptacionFallo
+                            + ",\"cobertura\":" + coberturaFallo
+                            + ",\"reconciliacion\":" + reconciliacionFallo
                             + ",\"fallo\":\"" + escape(fallo) + "\""
                             + ",\"esperado\":{},\"observado\":{}"
                             + ",\"invariantes\":{\"medido\":false,\"fase_ok\":false}"

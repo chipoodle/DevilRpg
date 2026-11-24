@@ -4,10 +4,13 @@
 
 .DESCRIPTION
     Lee los phase-<fase>.json / done-<fase>.txt de build/c4n y saca:
-      - una tabla por pantalla (run, fase, result, roster_invariantes_ok, presentes, duplicados,
-        huerfanos, fundadores, job_site_presentes...),
+      - una tabla por pantalla (run, fase, result, aceptacion, roster, presentes, duplicados,
+        huerfanos, fundadores, cobertura de estaciones...),
       - un CSV en build/av/colector-<fecha>.csv (y build/av/colector.csv como "ultimo"),
-      - un resumen de fallos por run/fase.
+      - un resumen de fases no PASS (result != PASS o aceptacion != PASS) y de evidencia ausente.
+
+    La aceptacion se evalua con el mismo modulo que diagnose.ps1 (tools/av/aceptacion.ps1). Una fase sin
+    `aceptacion` medible NO se cuenta como PASS: se marca NO_MEDIDO o LEGACY.
 
     Es tolerante: si falta un JSON, esta vacio o no parsea, la fila se emite con lo que haya y se marca
     la incidencia. NO ejecuta Minecraft y NO modifica build/c4n.
@@ -18,22 +21,36 @@
 .PARAMETER OutDir
     Carpeta de salida. Por defecto build/av.
 
+.PARAMETER C4nDir
+    Carpeta de runs (por defecto build\c4n); util para fixtures de test.
+
+.PARAMETER ExigirCobertura
+    Convierte la cobertura 11/11 en criterio obligatorio.
+
 .EXAMPLE
     .\tools\av\collect.ps1
 
 .EXAMPLE
-    .\tools\av\collect.ps1 -Run 024
+    .\tools\av\collect.ps1 -Run 1550
+
+.EXAMPLE
+    .\tools\av\collect.ps1 -Run c4n-20261123-1800 -ExigirCobertura
 #>
 param(
     [string]$Run = "",
-    [string]$OutDir = ""
+    [string]$OutDir = "",
+    [string]$C4nDir = "",
+    [switch]$ExigirCobertura
 )
 
 $ErrorActionPreference = 'Stop'
 $Raiz = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$C4nDir = Join-Path $Raiz 'build\c4n'
+if ([string]::IsNullOrWhiteSpace($C4nDir)) { $C4nDir = Join-Path $Raiz 'build\c4n' }
+elseif (-not [System.IO.Path]::IsPathRooted($C4nDir)) { $C4nDir = Join-Path $Raiz $C4nDir }
+$C4nDir = (Resolve-Path -LiteralPath $C4nDir -ErrorAction Stop).Path
 if ([string]::IsNullOrWhiteSpace($OutDir)) { $OutDir = Join-Path $Raiz 'build\av' }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+. (Join-Path $PSScriptRoot 'aceptacion.ps1')
 
 function Get-Field {
     param($Objeto, [string]$Nombre, $Defecto = $null)
@@ -141,18 +158,42 @@ foreach ($runDir in $runDirs) {
         $rosterOk = Get-Field $inv 'roster_invariantes_ok'
         if ($null -eq $rosterOk) { $rosterOk = Get-Field $data 'roster_invariantes_ok' }
 
+        $aceptacion = Get-AvAceptacion -Data $data -Fase $fase -RunDir $runDir.FullName -ExigirCobertura:$ExigirCobertura
+        $otrosFallos = @($aceptacion.criterios | Where-Object {
+                $_.obligatorio -and $_.nombre -ne 'reconciliacion_manager_corrio' -and $_.ok -ne $true })
+        $soloRecon = ($aceptacion.faltantes.Count -eq 1 -and $aceptacion.faltantes[0] -eq 'reconciliacion_manager_corrio' -and $otrosFallos.Count -eq 0)
+        $aceptEstado = if ($aceptacion.ok) { 'PASS' } elseif ($soloRecon) { 'LEGACY' } elseif (-not $aceptacion.medido) { 'NO_MEDIDO' } else { 'FAIL' }
+        $gDer = Get-AvGuardiasDerivado $guardias
+        $cob = $aceptacion.cobertura
+        $recon = $aceptacion.reconciliacion
+
         $fila = [pscustomobject][ordered]@{
             run                     = $nombre
             fase                    = $fase
             result                  = [string]$result
             result_origen           = $origenResult
+            aceptacion_estado       = $aceptEstado
+            aceptacion_ok           = $aceptacion.ok
+            aceptacion_medida       = $aceptacion.medido
+            aceptacion_origen       = $aceptacion.origen
+            aceptacion_faltantes    = (@($aceptacion.faltantes) -join ';')
+            ownership_demostrado    = $false
+            cobertura_demostrada   = $aceptacion.coberturaDemostrada
             guardado_ok             = Get-Field $data 'guardado_ok'
             roster_invariantes_ok   = $rosterOk
             esperados               = To-IntOrNull (Get-Field $data 'esperados')
             presentes               = To-IntOrNull (Get-Field $data 'presentes')
             duplicados              = To-IntOrNull (Get-Field $data 'job_site_duplicados')
             huerfanos               = To-IntOrNull (Get-Field $data 'job_site_huerfanos')
-            fundadores              = To-IntOrNull (Get-Field $guardias 'fundadores')
+            fundadores              = $gDer.fundadores
+            mascara_bits            = $gDer.mascaraBits
+            fundadores_con_goal     = $gDer.fundadoresConGoal
+            fundadores_equipados    = $gDer.fundadoresEquipados
+            cobertura_cubiertos     = To-IntOrNull $cob.cubiertos
+            cobertura_esperados     = To-IntOrNull $cob.esperados
+            reconciliacion_medida   = $recon.medido
+            reconciliacion_efectiva = $recon.efectiva
+            reclamaciones_estampa   = $recon.reclamaciones
             job_site_presentes      = To-IntOrNull (Get-Field $data 'job_site_presentes')
             job_site_estables       = To-IntOrNull (Get-Field $data 'job_site_estables')
             job_site_cambiados      = To-IntOrNull (Get-Field $data 'job_site_cambiados')
@@ -169,11 +210,13 @@ foreach ($runDir in $runDirs) {
         }
         $filas.Add($fila)
 
-        if ($fila.result -ne 'PASS' -or -not $lectura.ok) {
+        if ($fila.result -ne 'PASS' -or $aceptEstado -ne 'PASS' -or -not $lectura.ok) {
             $incidencias.Add([pscustomobject][ordered]@{
                     run        = $nombre
                     fase       = $fase
                     result     = $fila.result
+                    aceptacion = $aceptEstado
+                    faltan     = $fila.aceptacion_faltantes
                     json       = if ($lectura.ok) { 'ok' } else { $lectura.motivo }
                     roster_ok  = $rosterOk
                     presentes  = $fila.presentes
@@ -191,8 +234,13 @@ if ($filas.Count -eq 0) {
 }
 
 # ------------------------------------------------------------------ CSV
-$sello = Get-Date -Format 'yyyyMMdd-HHmmss'
+$sello = Get-Date -Format 'yyyyMMdd-HHmmssfff'
 $csvFecha = Join-Path $OutDir "colector-$sello.csv"
+$n = 1
+while (Test-Path -LiteralPath $csvFecha -PathType Leaf) {
+    $csvFecha = Join-Path $OutDir "colector-$sello-$n.csv"
+    $n++
+}
 $csvUltimo = Join-Path $OutDir 'colector.csv'
 $filas | Export-Csv -LiteralPath $csvFecha -NoTypeInformation -Encoding utf8
 $filas | Export-Csv -LiteralPath $csvUltimo -NoTypeInformation -Encoding utf8
@@ -204,35 +252,38 @@ function Format-Celda {
     if ($Valor -is [bool]) { if ($Valor) { return 'true' } else { return 'false' } }
     return [string]$Valor
 }
-Write-Output ("{0,-24} {1,-8} {2,-14} {3,-7} {4,-6} {5,-6} {6,-6} {7,-6} {8,-7} {9,-8}" -f
-    'run', 'fase', 'result', 'roster', 'pres', 'dup', 'huer', 'fund', 'js_pres', 'js_estab')
-Write-Output ("{0,-24} {1,-8} {2,-14} {3,-7} {4,-6} {5,-6} {6,-6} {7,-6} {8,-7} {9,-8}" -f
-    ('-' * 24), ('-' * 8), ('-' * 14), ('-' * 7), ('-' * 6), ('-' * 6), ('-' * 6), ('-' * 6), ('-' * 7), ('-' * 8))
+Write-Output ("{0,-24} {1,-8} {2,-7} {3,-12} {4,-7} {5,-6} {6,-6} {7,-6} {8,-6} {9,-7}" -f
+    'run', 'fase', 'result', 'acept', 'roster', 'pres', 'dup', 'huer', 'fund', 'cob')
+Write-Output ("{0,-24} {1,-8} {2,-7} {3,-12} {4,-7} {5,-6} {6,-6} {7,-6} {8,-6} {9,-7}" -f
+    ('-' * 24), ('-' * 8), ('-' * 7), ('-' * 12), ('-' * 7), ('-' * 6), ('-' * 6), ('-' * 6), ('-' * 6), ('-' * 7))
 foreach ($f in $filas) {
-    Write-Output ("{0,-24} {1,-8} {2,-14} {3,-7} {4,-6} {5,-6} {6,-6} {7,-6} {8,-7} {9,-8}" -f
-        $f.run, $f.fase, $f.result, (Format-Celda $f.roster_invariantes_ok), (Format-Celda $f.presentes),
-        (Format-Celda $f.duplicados), (Format-Celda $f.huerfanos), (Format-Celda $f.fundadores),
-        (Format-Celda $f.job_site_presentes), (Format-Celda $f.job_site_estables))
+    $cob = if ($null -ne $f.cobertura_cubiertos) { "$($f.cobertura_cubiertos)/$($f.cobertura_esperados)" } else { '-' }
+    Write-Output ("{0,-24} {1,-8} {2,-7} {3,-12} {4,-7} {5,-6} {6,-6} {7,-6} {8,-6} {9,-7}" -f
+        $f.run, $f.fase, $f.result, $f.aceptacion_estado, (Format-Celda $f.roster_invariantes_ok),
+        (Format-Celda $f.presentes), (Format-Celda $f.duplicados), (Format-Celda $f.huerfanos),
+        (Format-Celda $f.fundadores), $cob)
 }
 
 Write-Output "CSV: $csvFecha"
 Write-Output "CSV (ultimo): $csvUltimo"
 
 # ------------------------------------------------------------------ resumen de fallos
-$fallos = @($filas | Where-Object { $_.result -ne 'PASS' })
+$fallos = @($filas | Where-Object { $_.result -ne 'PASS' -or $_.aceptacion_estado -ne 'PASS' })
 Write-Output ''
-Write-Output "=== RESUMEN DE FALLOS (fases no PASS: $($fallos.Count)/$($filas.Count)) ==="
+Write-Output "=== RESUMEN DE FALLOS/NO-PASS (fases: $($fallos.Count)/$($filas.Count)) ==="
 if ($fallos.Count -eq 0) {
-    Write-Output '  Ninguna fase fallo.'
+    Write-Output '  Ninguna fase fallo y todas tienen aceptacion PASS.'
 } else {
-    $porResultado = $fallos | Group-Object result | Sort-Object Name
-    foreach ($g in $porResultado) { Write-Output "  $($g.Name): $($g.Count)" }
+    $porResultado = $fallos | Group-Object aceptacion_estado | Sort-Object Name
+    foreach ($g in $porResultado) { Write-Output "  aceptacion=$($g.Name): $($g.Count)" }
     foreach ($f in $fallos) {
-        $linea = "  - $($f.run) / $($f.fase): result=$($f.result)"
+        $linea = "  - $($f.run) / $($f.fase): result=$($f.result) aceptacion=$($f.aceptacion_estado)"
+        if ($null -ne $f.faltan -and $f.faltan -ne '') { $linea += " faltan=$($f.faltan)" }
         if ($null -ne $f.presentes) { $linea += " presentes=$($f.presentes)" }
         if ($null -ne $f.duplicados) { $linea += " duplicados=$($f.duplicados)" }
         if ($null -ne $f.huerfanos) { $linea += " huerfanos=$($f.huerfanos)" }
         if ($null -ne $f.roster_invariantes_ok) { $linea += " roster_ok=$($f.roster_invariantes_ok)" }
+        if ($null -ne $f.cobertura_cubiertos) { $linea += " cobertura=$($f.cobertura_cubiertos)/$($f.cobertura_esperados)" }
         Write-Output $linea
         if (-not $f.json_valido) { Write-Output "      json: $($f.json_motivo)" }
         # Si diagnose.ps1 ya corrio, se enganchan sus causas sin volver a calcularlas.
@@ -240,6 +291,10 @@ if ($fallos.Count -eq 0) {
         if (Test-Path -LiteralPath $diagPath -PathType Leaf) {
             try {
                 $diag = Get-Content -LiteralPath $diagPath -Raw | ConvertFrom-Json -ErrorAction Stop
+                if ([string](Get-Field $diag 'run' '') -ne $f.run) {
+                    Write-Output "      (diagnostico-$($f.run).json es de otro run: se ignora)"
+                    continue
+                }
                 $faseDiag = @($diag.fases | Where-Object { $_.fase -eq $f.fase } | Select-Object -First 1)
                 if ($faseDiag.Count -gt 0) {
                     foreach ($c in @($faseDiag[0].causa_conocida)) {

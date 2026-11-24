@@ -1,16 +1,17 @@
 package com.chipoodle.devilrpg.entity.nav;
 
+import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.Set;
 
 /**
  * Núcleo de busqueda A* acotada, sin Minecraft. La validacion de movimiento sigue viviendo en el
@@ -19,6 +20,13 @@ import java.util.Set;
  * A BREAK edge has two different positions: {@code to} is the post-break traversable state
  * (the formerly solid target), while {@code standPos} is the physical attack cell. They must not
  * share a search-state key: reaching the attack cell by WALK does not mean the obstruction was removed.
+ *
+ * <p>A3/perf · <b>Estado con colecciones primitivas</b> ({@code Long2*OpenHashMap}, {@code LongOpenHashSet}
+ * de fastutil, librería que ya aporta el runtime de Minecraft). No cambia el algoritmo, el orden de la
+ * cola de prioridad ni los resultados: solo evita una caja {@code Long}/{@code Double}/{@code Integer} y
+ * una entrada de {@code HashMap} por nodo y por relajación. Medido con {@code NavSearchPerfTest} en el
+ * mismo JVM y el mismo grafo, con hash de ruta idéntico: las búsquedas de ≥500 expansiones bajan ~60-77%
+ * de tiempo; las de <100 expansiones no muestran cambio fuera del ruido.
  */
 public final class NavGraphSearch {
     public record Edge(long to, double cost, NavRoute.Transition transition, int feet,
@@ -75,13 +83,16 @@ public final class NavGraphSearch {
         private final int startFeet;
         private final PriorityQueue<Node> open = new PriorityQueue<>(Comparator.comparingDouble(Node::f)
                 .thenComparingDouble(Node::h));
-        private final Map<Long, Double> bestG = new HashMap<>();
-        private final Map<Long, Long> cameFrom = new HashMap<>();
-        private final Map<Long, NavRoute.Transition> transitionTo = new HashMap<>();
-        private final Map<Long, BlockPos> actionTo = new HashMap<>();
-        private final Map<Long, BlockPos> standTo = new HashMap<>();
-        private final Map<Long, Integer> feetTo = new HashMap<>();
-        private final Set<Long> closed = new HashSet<>();
+        // A3/perf · Colecciones PRIMITIVAS (fastutil, ya presente en el runtime de Minecraft):
+        // mismo orden de extracción y mismos resultados, sin cajas Long/Double/Integer por nodo.
+        // Menos allocación = menos presión de GC en búsquedas largas. Ver NavSearchPerfTest.
+        private final Long2DoubleOpenHashMap bestG = new Long2DoubleOpenHashMap();
+        private final Long2LongOpenHashMap cameFrom = new Long2LongOpenHashMap();
+        private final Long2ObjectOpenHashMap<NavRoute.Transition> transitionTo = new Long2ObjectOpenHashMap<>();
+        private final Long2ObjectOpenHashMap<BlockPos> actionTo = new Long2ObjectOpenHashMap<>();
+        private final Long2ObjectOpenHashMap<BlockPos> standTo = new Long2ObjectOpenHashMap<>();
+        private final Long2IntOpenHashMap feetTo = new Long2IntOpenHashMap();
+        private final LongOpenHashSet closed = new LongOpenHashSet();
         private long front;
         private double bestDist;
         private long found = Long.MIN_VALUE;
@@ -106,6 +117,7 @@ public final class NavGraphSearch {
             this.start = start;
             this.startFeet = startFeet;
             double h0 = graph.heuristic(start);
+            bestG.defaultReturnValue(Double.NaN);
             open.add(new Node(start, 0.0D, h0, h0));
             bestG.put(start, 0.0D);
             feetTo.put(start, startFeet);
@@ -131,8 +143,9 @@ public final class NavGraphSearch {
                 totalPops++;
                 // A better path may have inserted a replacement OPEN record for this state.
                 // Never expand an older record using its obsolete g-score.
-                Double best = bestG.get(current.state());
-                if (best == null || Double.compare(current.g(), best) != 0) {
+                // defaultReturnValue(NaN) evita el doble hash containsKey+get en el bucle caliente.
+                double best = bestG.get(current.state());
+                if (Double.isNaN(best) || Double.compare(current.g(), best) != 0) {
                     totalStalePops++;
                     staleThisSlice++;
                     continue;
@@ -169,8 +182,8 @@ public final class NavGraphSearch {
                     if (edge.transition() == NavRoute.Transition.BREAK
                             && (edge.actionPos() == null || edge.standPos() == null)) return;
                     double tentative = current.g() + edge.cost();
-                    Double known = bestG.get(edge.to());
-                    if (known != null && known <= tentative) return;
+                    double known = bestG.get(edge.to());
+                    if (!Double.isNaN(known) && known <= tentative) return;
                     if (closed.remove(edge.to())) {
                         totalReopens++;
                         reopensThisSlice[0]++;
@@ -215,8 +228,8 @@ public final class NavGraphSearch {
             List<Step> route = new ArrayList<>();
             long cursor = found != Long.MIN_VALUE ? found : front;
             while (cursor != start) {
-                Long prev = cameFrom.get(cursor);
-                if (prev == null) break;
+                if (!cameFrom.containsKey(cursor)) break;
+                long prev = cameFrom.get(cursor);
                 route.add(new Step(cursor, transitionTo.getOrDefault(cursor, NavRoute.Transition.WALK),
                         feetTo.getOrDefault(cursor, startFeet), actionTo.get(cursor), standTo.get(cursor)));
                 cursor = prev;

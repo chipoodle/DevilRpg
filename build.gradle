@@ -94,6 +94,23 @@ neoForge {
             if (providers.gradleProperty('navMetrics').isPresent()) {
                 systemProperty 'devilrpg.nav.metrics', providers.gradleProperty('navMetrics').get()
             }
+            // AV · campana runtime de navegacion (NavScenarioHarness). El arnes lee estas propiedades.
+            if (providers.gradleProperty('navHarnessRun').isPresent()) {
+                systemProperty 'devilrpg.nav.harness.run', providers.gradleProperty('navHarnessRun').get()
+                // El proceso del juego corre con CWD en game/, asi que la raiz del repo se pasa explicita.
+                systemProperty 'a2n.raiz', project.projectDir.absolutePath
+            }
+            if (providers.gradleProperty('navHarnessRep').isPresent()) {
+                systemProperty 'devilrpg.nav.harness.rep', providers.gradleProperty('navHarnessRep').get()
+            }
+            if (providers.gradleProperty('navHarnessScenarios').isPresent()) {
+                systemProperty 'devilrpg.nav.harness.scenarios',
+                        providers.gradleProperty('navHarnessScenarios').get()
+            }
+            if (providers.gradleProperty('navHarnessEscala').isPresent()) {
+                systemProperty 'devilrpg.nav.harness.escala',
+                        providers.gradleProperty('navHarnessEscala').get()
+            }
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.
@@ -138,15 +155,44 @@ sourceSets.test {
 def includeA2Diagnostics = providers.gradleProperty('a2nDiagnostics').getOrElse('false') == 'true'
 def useA2PopulationQueryHarness = providers.gradleProperty('a2nPopulationQueryHarness').getOrElse('false') == 'true'
 def includeA2ProbeOnly = providers.gradleProperty('a2nProbeOnly').getOrElse('false') == 'true'
+// POI · ARNÉS DE PERSISTENCIA REAL (ServerLevel/PoiManager). Opt-in y aislado:
+//   - sin el flag, el build es EXACTAMENTE el de siempre (ninguna clase nueva compila en main);
+//   - con `-PpoiHarness=true` se excluye TODO `debug/**` y se compila `tools/poi`, donde viven
+//     PoiPersistenceHarness y PoiPersistenceReport. Así C4, OwnershipProbe, A2NavHarness o cualquier
+//     otro arnés de `debug/` NO se carga al arrancar el servidor del arnés POI (evita que compitan por
+//     ServerStartedEvent/tick, que fue el motivo de aislarlo).
+def includePoiHarness = providers.gradleProperty('poiHarness').getOrElse('false') == 'true'
+if (includePoiHarness && !includeA2Diagnostics) {
+    throw new GradleException('poiHarness requires -Pa2nDiagnostics=true')
+}
 
 if (useA2PopulationQueryHarness && !includeA2Diagnostics) {
     throw new GradleException('a2nPopulationQueryHarness requires -Pa2nDiagnostics=true')
 }
 def includeA4Lab = providers.gradleProperty('a4nLab').getOrElse('false') == 'true'
+// AV · Arnés de escenarios runtime de navegación. Opt-in: -PnavHarness=true. En ese build SOLO
+// NavScenarioHarness.java es un entry point de `debug/`; el resto se excluye para que ningún otro
+// suscriptor compita por ServerStartedEvent/ServerTickEvent ni detenga el servidor.
+def includeNavHarness = providers.gradleProperty('navHarness').getOrElse('false') == 'true'
 sourceSets.main {
     java {
-        if (!includeA2Diagnostics) {
+        if (!includeA2Diagnostics && !includeNavHarness) {
             exclude 'com/chipoodle/devilrpg/debug/**'
+        } else if (includeNavHarness) {
+            // Único entry point del run de navegación.
+            exclude 'com/chipoodle/devilrpg/debug/A2EntryProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/A2FoundationBootstrap.java'
+            exclude 'com/chipoodle/devilrpg/debug/A2NavHarness.java'
+            exclude 'com/chipoodle/devilrpg/debug/A2ProdNavProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/A2TerrainDump.java'
+            exclude 'com/chipoodle/devilrpg/debug/A4NavigationLab.java'
+            exclude 'com/chipoodle/devilrpg/debug/A5TestController.java'
+            exclude 'com/chipoodle/devilrpg/debug/ArenaFoundationProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/AsedioRunA2.java'
+            exclude 'com/chipoodle/devilrpg/debug/C4StandaloneHarness.java'
+            exclude 'com/chipoodle/devilrpg/debug/ForestryTaskBoundaryProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/N4GoalLab.java'
+            exclude 'com/chipoodle/devilrpg/debug/R3TerrainLab.java'
         } else {
             // The C4 server run loads only the selected A2NavHarness; other debug subscribers
             // must not compete for startup, ticks, worlds, or shutdown.
@@ -160,12 +206,15 @@ sourceSets.main {
             exclude 'com/chipoodle/devilrpg/debug/ForestryTaskBoundaryProbe.java'
             exclude 'com/chipoodle/devilrpg/debug/N4GoalLab.java'
             exclude 'com/chipoodle/devilrpg/debug/R3TerrainLab.java'
+            // AV: el arnés de navegación solo compila con -PnavHarness=true.
+            exclude 'com/chipoodle/devilrpg/debug/NavScenarioHarness.java'
         }
         if (useA2PopulationQueryHarness) {
             // Phase55 population-query diagnostic: compile the maintained canonical source from
             // tools/a2n, while preserving (and excluding only from this opt-in build) the older
             // tracked debug harness. Other diagnostic builds continue using the legacy source.
             exclude 'com/chipoodle/devilrpg/debug/A2NavHarness.java'
+            exclude 'com/chipoodle/devilrpg/debug/NavScenarioHarness.java'
             sourceSets.main.java.srcDir file('tools/a2n')
         }
         if (includeA2ProbeOnly) {
@@ -174,6 +223,7 @@ sourceSets.main {
             exclude 'com/chipoodle/devilrpg/debug/A2EntryProbe.java'
             exclude 'com/chipoodle/devilrpg/debug/AsedioRunA2.java'
             exclude 'com/chipoodle/devilrpg/debug/A2ProdNavProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/NavScenarioHarness.java'
         }
         if (includeA4Lab) {
             // A4 lab builds must not load the legacy A2 harnesses: A2NavHarness can halt the server and
@@ -181,6 +231,13 @@ sourceSets.main {
             exclude 'com/chipoodle/devilrpg/debug/A2NavHarness.java'
             exclude 'com/chipoodle/devilrpg/debug/AsedioRunA2.java'
             exclude 'com/chipoodle/devilrpg/debug/A2ProdNavProbe.java'
+            exclude 'com/chipoodle/devilrpg/debug/NavScenarioHarness.java'
+        }
+        if (includePoiHarness) {
+            // El arnés POI es el ÚNICO entry point de este build: fuera todo debug/ (C4, OwnershipProbe,
+            // A2NavHarness...) y dentro tools/poi, que es donde vive su fuente versionada.
+            exclude 'com/chipoodle/devilrpg/debug/**'
+            srcDir file('tools/poi')
         }
     }
 }
@@ -290,6 +347,12 @@ sourceSets {
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
     }
+    // POI · autotest PURO de la logica del arnes POI (comparacion, clasificacion y JSON). No importa
+    // Minecraft: compila y corre sin servidor, asi que es un gate barato que no depende del arnes real.
+    poiTest {
+        java.srcDir 'tools/poi'
+        java.include '**/PoiPersistenceReport.java'
+    }
 }
 
 tasks.register('foodTestSuite') {
@@ -322,6 +385,15 @@ tasks.register('villagePersistenceTest', JavaExec) {
     mainClass = 'com.chipoodle.devilrpg.world.VillagePersistenceIntegrationTest'
 }
 
+// POI · autotest PURO de la logica del arnes de POI/tickets. No lanza Minecraft ni el servidor.
+tasks.register('poiPersistenceSelftest', JavaExec) {
+    group = 'verification'
+    description = 'Autotest sin Minecraft de la logica POI: duplicados, huerfanos, tickets, JSON.'
+    dependsOn tasks.named('poiTestClasses')
+    classpath = sourceSets.poiTest.runtimeClasspath
+    mainClass = 'com.chipoodle.devilrpg.debug.PoiPersistenceReport'
+}
+
 // Incremento 3 · D: linea base reproducible del A* real con grafos sinteticos deterministas.
 tasks.register('navBaselineTest', JavaExec) {
     group = 'verification'
@@ -329,6 +401,17 @@ tasks.register('navBaselineTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'com.chipoodle.devilrpg.entity.nav.NavSearchBaselineTest'
+}
+
+// AV · Contrato headless del catalogo de escenarios runtime (sin servidor ni mundo).
+// Verifica que tools/nav/NavScenarioHarness.java declara los 21 escenarios exigidos, sin duplicados,
+// con transiciones/acciones/presupuestos coherentes, y que el lanzador y el flag Gradle existen.
+tasks.register('navScenarioContractTest', JavaExec) {
+    group = 'verification'
+    description = 'Valida el contrato del catalogo de escenarios de navegacion (headless).'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.chipoodle.devilrpg.entity.nav.NavScenarioContractTest'
 }
 
 tasks.register('policyTest') {
@@ -372,6 +455,7 @@ tasks.register('policyTest') {
                 'com.chipoodle.devilrpg.entity.nav.TunnelExecutionPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.TunnelPlanPolicyTest',
                 'com.chipoodle.devilrpg.entity.nav.NavTerrainMatrixTest',
+                'com.chipoodle.devilrpg.entity.nav.NavScenarioContractTest',
                 'com.chipoodle.devilrpg.world.VillageJobSiteOwnershipPolicyTest',
                 'com.chipoodle.devilrpg.world.VillagePopulationLoadPolicyTest',
                 'com.chipoodle.devilrpg.world.VillageRosterInvariantsTest',
@@ -428,4 +512,8 @@ tasks.named('test') {
     dependsOn tasks.named('policyTest')
     // Incremento 3 · B: el gate `test` incluye la serializacion/restauracion NBT real de la aldea.
     dependsOn tasks.named('villagePersistenceTest')
+    // POI · autotest puro de la logica del arnes de POI/tickets (sin Minecraft, barato).
+    dependsOn tasks.named('poiPersistenceSelftest')
+    // AV · contrato del catalogo runtime de navegacion (headless).
+    dependsOn tasks.named('navScenarioContractTest')
 }

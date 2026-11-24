@@ -54,8 +54,22 @@ public final class NavVerticalBuildPolicyTest {
                 !NavBuildTransitionPolicy.physicallyArrived(true, true, true, false, true));
         check("real AABB collision is rejected",
                 !NavBuildTransitionPolicy.physicallyArrived(true, true, true, true, false));
+        // Regresión del defecto medido en runtime `construir`: BUILD plano se quedaba a 1 celda del pie.
+        check("BUILD feet nudge allowed for adjacent verified feet",
+                NavBuildTransitionPolicy.shouldNudgeFeet(true, true, 1, true, true));
+        check("BUILD feet nudge rejected while navigation is still active",
+                !NavBuildTransitionPolicy.shouldNudgeFeet(true, false, 1, true, true));
+        check("BUILD feet nudge rejected without verified placement",
+                !NavBuildTransitionPolicy.shouldNudgeFeet(false, true, 1, true, true));
+        check("BUILD feet nudge rejected at the exact feet cell",
+                !NavBuildTransitionPolicy.shouldNudgeFeet(true, true, 0, true, true));
+        check("BUILD feet nudge rejected beyond max distance",
+                !NavBuildTransitionPolicy.shouldNudgeFeet(true, true, 3, true, true));
+        check("BUILD feet nudge rejected without fits or support",
+                !NavBuildTransitionPolicy.shouldNudgeFeet(true, true, 1, false, true)
+                        && !NavBuildTransitionPolicy.shouldNudgeFeet(true, true, 1, true, false));
 
-        System.out.println("NAV_VERTICAL_BUILD_POLICY_TEST: OK (32 assertions)");
+        System.out.println("NAV_VERTICAL_BUILD_POLICY_TEST: OK (39 assertions)");
     }
 
     private static NavGraphSearch.Result searchBuildChain(boolean secondStepPlaceable) {

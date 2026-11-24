@@ -12,11 +12,16 @@
     NO ejecuta Minecraft, NO toca build/c4n ni los mundos: solo lee y escribe en build/av.
 
     Estados que distingue por fase:
-      OK                                  -> result PASS y sin invariantes incumplidas.
+      OK                                  -> result PASS y bloque de aceptacion completo y verde.
+      LEGACY_NO_MEDIDO                    -> PASS historico sin estampa de reconciliacion; NO es PASS.
+      ACEPTACION_INCUMPLIDA               -> FAIL con criterios obligatorios medidos en false.
+      ACEPTACION_NO_MEDIDA                -> PASS/FAIL sin evidencia para algun criterio obligatorio.
+      EVIDENCIA_INCOMPLETA                -> falta phase-*.json, done-*.txt o un campo obligatorio.
       INVARIANTE_INCUMPLIDA               -> fallo con invariantes reales incumplidas.
       FALLO_CON_CAUSA_CONOCIDA            -> fallo sin invariante duro, con causa documentada.
       FALLO_CON_CAUSA_DESCONOCIDA         -> fallo sin causa documentada.
       SIN_EVIDENCIA / EVIDENCIA_INVALIDA  -> no hay fase o el JSON no parsea.
+      INCONSISTENTE_PASS_CON_*            -> el JSON dice PASS pero la aceptacion/invariantes lo desmienten.
 
 .PARAMETER Run
     Nombre o sufijo del run: c4n-20261123-024 o 024.
@@ -28,7 +33,13 @@
     Carpeta de salida. Por defecto build/av.
 
 .PARAMETER FailOnError
-    Sale con codigo 1 si algun run analizado no es C4N_PASS.
+    Sale con codigo 1 si algun run no es C4N_PASS (LEGACY tampoco es PASS).
+
+.PARAMETER C4nDir
+    Carpeta de runs (por defecto build\c4n). Se usa para tests con fixtures sinteticos.
+
+.PARAMETER ExigirCobertura
+    Convierte cobertura_estaciones_11_11 en criterio obligatorio (campaña larga >=1800 ticks).
 
 .EXAMPLE
     .\tools\av\diagnose.ps1 -Run 024
@@ -37,20 +48,25 @@
     .\tools\av\diagnose.ps1 -All
 
 .EXAMPLE
-    .\tools\av\diagnose.ps1 -Run 024 -FailOnError
+    .\tools\av\diagnose.ps1 -Run c4n-20261123-1800 -ExigirCobertura -FailOnError
 #>
 param(
     [string]$Run = "",
     [switch]$All,
     [string]$OutDir = "",
-    [switch]$FailOnError
+    [switch]$FailOnError,
+    [string]$C4nDir = "",
+    [switch]$ExigirCobertura
 )
 
 $ErrorActionPreference = 'Stop'
 $Raiz = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$C4nDir = Join-Path $Raiz 'build\c4n'
+if ([string]::IsNullOrWhiteSpace($C4nDir)) { $C4nDir = Join-Path $Raiz 'build\c4n' }
+elseif (-not [System.IO.Path]::IsPathRooted($C4nDir)) { $C4nDir = Join-Path $Raiz $C4nDir }
+$C4nDir = (Resolve-Path -LiteralPath $C4nDir -ErrorAction Stop).Path
 if ([string]::IsNullOrWhiteSpace($OutDir)) { $OutDir = Join-Path $Raiz 'build\av' }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+. (Join-Path $PSScriptRoot 'aceptacion.ps1')
 
 $PuestosEsperados = 12   # contrato del pueblo; si el phase trae `esperado`, manda ese valor
 $FundadoresEsperados = 4 # VillageManager.MILICIA_FUNDADORES
@@ -307,6 +323,7 @@ function New-FaseDiagnostico {
     $origenResult = 'phase-<fase>.json'
     if ([string]::IsNullOrWhiteSpace([string]$result)) {
         if (-not [string]::IsNullOrWhiteSpace([string]$done)) {
+            # El marcador NO es evidencia bastante para PASS: solo sirve para mostrar el resultado esperado.
             $result = [string]$done
             $origenResult = 'done-<fase>.txt'
         } else {
@@ -322,6 +339,7 @@ function New-FaseDiagnostico {
     $invariantes = Get-Field $data 'invariantes'
     if ($null -eq $invariantes) { $invariantes = New-InvariantesDerivados $data }
 
+    $aceptacion = Get-AvAceptacion -Data $data -Fase $Fase -RunDir $RunDir -ExigirCobertura:$ExigirCobertura
     $incumplidas = @(Get-InvariantesIncumplidas $invariantes)
     $conocidas = @(Get-Causas $data 'causa_conocida')
     $desconocidas = @(Get-Causas $data 'causa_desconocida')
@@ -335,21 +353,56 @@ function New-FaseDiagnostico {
         }
     }
 
-    $estado = 'SIN_RESULTADO'
+    $camposFaltantes = New-Object System.Collections.Generic.List[string]
+    foreach ($campo in @('result', 'fase_ok', 'guardado_ok', 'esperados', 'presentes', 'perdidos',
+            'profesion_estable', 'goals_instalados', 'reanudados', 'job_site_duplicados', 'job_site_huerfanos')) {
+        if ($null -eq (Get-Field $data $campo)) { $camposFaltantes.Add("campo:$campo") }
+    }
+    $faltantes = New-Object System.Collections.Generic.List[string]
+    foreach ($f in @("phase-$Fase.json", "snapshot-$Fase.txt", "jobsite-$Fase.txt", "srv-$Fase.log",
+            "saved-$Fase.txt", "done-$Fase.txt", "diagnostico-$Fase.json")) {
+        if (-not (Test-Path -LiteralPath (Join-Path $RunDir $f) -PathType Leaf)) { $faltantes.Add($f) }
+    }
+    if (-not $lectura.ok) { $faltantes.Add("json:$($lectura.motivo)") }
+
+    $faseOkField = To-BoolOrNull (Get-Field $data 'fase_ok')
+    $doneCoincide = ($null -ne $done -and $done.Trim() -eq $result)
     $phaseExiste = (Test-Path -LiteralPath $phasePath -PathType Leaf)
+
+    # Legacy: el run cumple todo lo medible del contrato pero NO demuestra reconciliacion efectiva
+    # (no habia estampa en el arnés historico). No es PASS; se etiqueta para no confundir falta de
+    # evidencia con fallo de la aldea.
+    $otrosFallos = @($aceptacion.criterios | Where-Object {
+            $_.obligatorio -and $_.nombre -ne 'reconciliacion_manager_corrio' -and $_.ok -ne $true })
+    $soloFaltaReconciliacion = ($aceptacion.faltantes.Count -eq 1 -and
+        $aceptacion.faltantes[0] -eq 'reconciliacion_manager_corrio' -and $otrosFallos.Count -eq 0)
+
+    $estado = 'SIN_RESULTADO'
     if (-not $lectura.ok -and $phaseExiste) {
         # El fichero existe pero no parsea: la evidencia es invalida, no "no hay evidencia".
         $estado = 'EVIDENCIA_INVALIDA'
     } elseif (-not $lectura.ok -and $null -eq $done) {
         $estado = 'SIN_EVIDENCIA'
+    } elseif (-not $lectura.ok) {
+        # Hay done-<fase>.txt pero no phase-<fase>.json: falta la evidencia principal, no es PASS.
+        $estado = 'EVIDENCIA_INCOMPLETA'
     } elseif ($result -eq 'PASS') {
-        if ($incumplidas.Count -gt 0) {
+        if (-not $aceptacion.medido) {
+            if ($soloFaltaReconciliacion) { $estado = 'LEGACY_NO_MEDIDO' }
+            else { $estado = 'ACEPTACION_NO_MEDIDA' }
+        } elseif (-not $aceptacion.ok) {
+            $estado = 'INCONSISTENTE_PASS_CON_ACEPTACION'
+        } elseif ($faseOkField -eq $false -or $incumplidas.Count -gt 0) {
             $estado = 'INCONSISTENTE_PASS_CON_INVARIANTE'
+        } elseif ($camposFaltantes.Count -gt 0 -or $faltantes.Count -gt 0 -or -not $doneCoincide) {
+            $estado = 'EVIDENCIA_INCOMPLETA'
         } else {
             $estado = 'OK'
         }
     } elseif ($incumplidas.Count -gt 0) {
         $estado = 'INVARIANTE_INCUMPLIDA'
+    } elseif ($aceptacion.medido -and -not $aceptacion.ok) {
+        $estado = 'ACEPTACION_INCUMPLIDA'
     } elseif ($conocidas.Count -gt 0) {
         $estado = 'FALLO_CON_CAUSA_CONOCIDA'
     } elseif ($desconocidas.Count -gt 0) {
@@ -358,38 +411,49 @@ function New-FaseDiagnostico {
         $estado = 'FALLO_SIN_CAUSA_CLASIFICADA'
     }
 
-    $faltantes = New-Object System.Collections.Generic.List[string]
-    foreach ($f in @("phase-$Fase.json", "snapshot-$Fase.txt", "jobsite-$Fase.txt", "srv-$Fase.log", "diagnostico-$Fase.json")) {
-        if (-not (Test-Path -LiteralPath (Join-Path $RunDir $f) -PathType Leaf)) { $faltantes.Add($f) }
-    }
-    if (-not $lectura.ok) { $faltantes.Add("json:$($lectura.motivo)") }
-
     return [pscustomobject][ordered]@{
         fase                    = $Fase
         result                  = [string]$result
         result_origen           = $origenResult
+        done                    = $done
+        done_coincide           = $doneCoincide
         estado                  = $estado
         guardado_ok             = To-BoolOrNull (Get-Field $data 'guardado_ok')
+        fase_ok_campo           = $faseOkField
         fallo                   = Get-Field $data 'fallo'
         save_failed             = (Test-Path -LiteralPath (Join-Path $RunDir "save-failed-$Fase.txt") -PathType Leaf)
         esperado                = $esperado
         observado               = $observado
         invariantes             = $invariantes
         invariantes_incumplidas = @($incumplidas)
+        aceptacion              = $aceptacion
+        aceptacion_ok           = $aceptacion.ok
+        aceptacion_medida       = $aceptacion.medido
+        aceptacion_origen       = $aceptacion.origen
+        aceptacion_faltantes    = @($aceptacion.faltantes)
+        aceptacion_inconsistente = $aceptacion.inconsistente
+        ownership_demostrado    = $false
+            cobertura_demostrada   = $aceptacion.coberturaDemostrada
+        cobertura               = $aceptacion.cobertura
+        reconciliacion          = $aceptacion.reconciliacion
+        campos_faltantes        = @($camposFaltantes)
         causa_conocida          = @($conocidas)
         causa_desconocida       = @($desconocidas)
         job_site_detalle        = @(Get-Field $data 'job_site_detalle' @())
         guardias                = Get-Field $data 'guardias'
         notas                   = @(Get-Field $data 'notas' @())
+        uuid_set                = @(Get-Field $data 'uuid_set' @())
         snapshot                = Get-SnapshotInfo $RunDir $Fase
         evidencia_log           = @(Get-EvidenciaLog $RunDir $Fase)
         stderr_ultimas          = @(Get-Stderr $RunDir $Fase)
         artefactos              = [pscustomobject][ordered]@{
-            phase     = "phase-$Fase.json"
-            snapshot  = "snapshot-$Fase.txt"
-            jobsite   = "jobsite-$Fase.txt"
+            phase       = "phase-$Fase.json"
+            snapshot    = "snapshot-$Fase.txt"
+            jobsite     = "jobsite-$Fase.txt"
             diagnostico = "diagnostico-$Fase.json"
-            log       = "srv-$Fase.log"
+            saved       = "saved-$Fase.txt"
+            done        = "done-$Fase.txt"
+            log         = "srv-$Fase.log"
         }
         faltantes               = @($faltantes)
         json_valido             = $lectura.ok
@@ -418,40 +482,115 @@ function New-RunDiagnostico {
         $fases += New-FaseDiagnostico $RunDir $fase
     }
 
-    $veredicto = $null
-    $veredictoOrigen = $null
-    if (-not [string]::IsNullOrWhiteSpace([string]$fin)) {
-        $veredicto = (([string]$fin) -split '\s+')[0]
-        $veredictoOrigen = 'fin.txt'
-    } else {
-        $resultados = @($fases | ForEach-Object { $_.result })
-        if (@($resultados | Where-Object { $_ -eq 'PASS' }).Count -eq 3) {
-            $veredicto = 'C4N_PASS'
-        } elseif (@($resultados | Where-Object { $_ -eq 'SIN_RESULTADO' }).Count -eq 3) {
-            $veredicto = 'SIN_EVIDENCIA'
+    # --- integridad del run: sin reutilizar evidencia de otro run ni dar PASS con JSON incompleto ----
+    $shaPath = Join-Path $RunDir 'sha.txt'
+    $shaMtime = $null
+    if (Test-Path -LiteralPath $shaPath -PathType Leaf) { $shaMtime = (Get-Item -LiteralPath $shaPath).LastWriteTimeUtc }
+    $evidenciaObsoleta = $false
+    $diagRunMismatch = $false
+    $uuidSets = New-Object System.Collections.Generic.List[string]
+    foreach ($f in $fases) {
+        $phasePath = Join-Path $RunDir "phase-$($f.fase).json"
+        if (Test-Path -LiteralPath $phasePath -PathType Leaf) {
+            if ($null -ne $shaMtime) {
+                $mtime = (Get-Item -LiteralPath $phasePath).LastWriteTimeUtc
+                if ($mtime -lt $shaMtime.AddSeconds(-2)) { $evidenciaObsoleta = $true; $f | Add-Member -NotePropertyName stale -NotePropertyValue $true -Force }
+            }
         } else {
-            $veredicto = 'C4N_FAIL'
+            $f | Add-Member -NotePropertyName stale -NotePropertyValue $false -Force
         }
-        $veredictoOrigen = 'derivado_de_fases'
+        $diagPath = Join-Path $RunDir "diagnostico-$($f.fase).json"
+        if (Test-Path -LiteralPath $diagPath -PathType Leaf) {
+            try {
+                $dj = Get-Content -LiteralPath $diagPath -Raw | ConvertFrom-Json -ErrorAction Stop
+                $runDelDiag = [string](Get-Field $dj 'run' '')
+                if (-not [string]::IsNullOrWhiteSpace($runDelDiag) -and $runDelDiag -ne $nombre) {
+                    $diagRunMismatch = $true
+                }
+            } catch { }
+        }
+        if (@($f.uuid_set).Count -gt 0) {
+            $uuidSets.Add((@($f.uuid_set | Sort-Object) -join ','))
+        }
+    }
+    $uuidSetsUnicos = @($uuidSets | Sort-Object -Unique)
+    $evidenciaMezclada = ($uuidSetsUnicos.Count -gt 1)
+
+    $finTokens = @{}
+    $finVeredicto = ''
+    if (-not [string]::IsNullOrWhiteSpace([string]$fin)) {
+        $partesFin = ([string]$fin) -split '\s+'
+        if ($partesFin.Count -gt 0) { $finVeredicto = $partesFin[0] }
+        foreach ($token in $partesFin) {
+            if ($token -match '^([a-zA-Z0-9_]+)=(.+)$') { $finTokens[$Matches[1]] = $Matches[2] }
+        }
+    }
+    $finInconsistente = $false
+    foreach ($f in $fases) {
+        if ($finTokens.ContainsKey($f.fase)) {
+            if ($finTokens[$f.fase] -ne $f.result) { $finInconsistente = $true }
+        } elseif (-not [string]::IsNullOrWhiteSpace([string]$fin)) {
+            $finInconsistente = $true
+        }
+    }
+    $integridadOk = (-not $evidenciaMezclada) -and (-not $evidenciaObsoleta) -and
+        (-not $diagRunMismatch) -and (-not $finInconsistente)
+
+    $todosOk = (@($fases | Where-Object { $_.estado -eq 'OK' }).Count -eq 3)
+    $legacy = @($fases | Where-Object { $_.estado -eq 'LEGACY_NO_MEDIDO' })
+    $todosOkOLegacy = (@($fases | Where-Object { $_.estado -eq 'OK' -or $_.estado -eq 'LEGACY_NO_MEDIDO' }).Count -eq 3) -and ($legacy.Count -gt 0)
+    $algunNoMedido = @($fases | Where-Object {
+            $_.estado -in @('SIN_EVIDENCIA', 'EVIDENCIA_INVALIDA', 'ACEPTACION_NO_MEDIDA', 'EVIDENCIA_INCOMPLETA') }).Count -gt 0
+
+    $veredicto = ''
+    $veredictoOrigen = 'fases+fin.txt+aceptacion'
+    if ([string]::IsNullOrWhiteSpace([string]$fin)) {
+        $veredicto = if ($todosOk) { 'C4N_INCOMPLETO' } else { 'C4N_FAIL' }
+    } elseif ($evidenciaMezclada -or $evidenciaObsoleta -or $diagRunMismatch) {
+        $veredicto = 'C4N_INCONSISTENTE'
+    } elseif ($finVeredicto -ne 'C4N_PASS') {
+        $veredicto = 'C4N_FAIL'
+    } elseif ($finInconsistente) {
+        $veredicto = 'C4N_INCONSISTENTE'
+    } elseif ($todosOk) {
+        $veredicto = 'C4N_PASS'
+    } elseif ($todosOkOLegacy) {
+        $veredicto = 'C4N_LEGACY_NO_MEDIDO'
+    } else {
+        $veredicto = 'C4N_FAIL'
     }
 
     $faltantes = New-Object System.Collections.Generic.List[string]
     foreach ($f in @('fin.txt', 'sha.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $RunDir $f) -PathType Leaf)) { $faltantes.Add($f) }
     }
+    if ($evidenciaMezclada) { $faltantes.Add('evidencia_mezclada:UUID') }
+    if ($evidenciaObsoleta) { $faltantes.Add('evidencia_obsoleta:phase_anterior_a_sha') }
+    if ($diagRunMismatch) { $faltantes.Add('diagnostico_de_otro_run') }
+    if ($finInconsistente) { $faltantes.Add('fin.txt_no_coincide_con_fases') }
 
+    $cobertura = (@($fases | Where-Object { $_.cobertura_demostrada -eq $true }).Count -eq 3)
     return [pscustomobject][ordered]@{
         run              = $nombre
         sha              = $sha
         veredicto        = $veredicto
         veredicto_origen = $veredictoOrigen
         fin              = $fin
+        fin_veredicto    = $finVeredicto
+        integridad_ok    = $integridadOk
+        evidencia_mezclada = $evidenciaMezclada
+        evidencia_obsoleta = $evidenciaObsoleta
+        diagnostico_de_otro_run = $diagRunMismatch
+        fin_inconsistente = $finInconsistente
+        ownership_demostrado = $false
+        cobertura_demostrada = $cobertura
+        fases_legacy     = @($legacy | ForEach-Object { $_.fase })
         generado         = (Get-Date).ToString('o')
         reproducir       = [pscustomobject][ordered]@{
-            comando    = '.\tools\c4n\lanzar-c4n.ps1 -Run <nuevo>'
+            comando     = '.\tools\c4n\lanzar-c4n.ps1 -Run <nuevo>'
             diagnostico = ".\tools\av\diagnose.ps1 -Run $nombre"
-            colector   = '.\tools\av\collect.ps1'
-            nota       = 'ejecutar desde la raiz del repo; el runtime del servidor lo lanza el operador'
+            colector    = '.\tools\av\collect.ps1'
+            nota        = 'ejecutar desde la raiz del repo; el runtime del servidor lo lanza el operador'
         }
         fases            = $fases
         faltantes        = @($faltantes)
@@ -474,7 +613,10 @@ function Write-Markdown {
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine("# Diagnostico $($Diagnostico.run)")
     [void]$sb.AppendLine()
-    [void]$sb.AppendLine("- **Veredicto:** $($Diagnostico.veredicto)  (origen: $($Diagnostico.veredicto_origen))")
+    [void]$sb.AppendLine("- **Veredicto:** $($Diagnostico.veredicto)  (origen: $($Diagnostico.veredicto_origen), integridad: $(Format-Valor $Diagnostico.integridad_ok), cobertura: $(Format-Valor $Diagnostico.cobertura_demostrada))")
+    if ($Diagnostico.veredicto -eq 'C4N_LEGACY_NO_MEDIDO') {
+        [void]$sb.AppendLine('- **LEGACY:** cumple los criterios medibles del contrato, pero el arnés histórico no dejó estampa de reconciliación efectiva. NO es PASS.')
+    }
     [void]$sb.AppendLine("- **SHA:** $($Diagnostico.sha)")
     [void]$sb.AppendLine("- **Generado:** $($Diagnostico.generado)")
     if ($Diagnostico.fin) { [void]$sb.AppendLine("- **fin.txt:** $($Diagnostico.fin)") }
@@ -507,6 +649,34 @@ function Write-Markdown {
         [void]$sb.AppendLine("- **Esperado:** $((ConvertTo-Json $f.esperado -Compress -Depth 5))")
         [void]$sb.AppendLine("- **Observado:** $((ConvertTo-Json $f.observado -Compress -Depth 5))")
         [void]$sb.AppendLine("- **Invariantes:** $((ConvertTo-Json $f.invariantes -Compress -Depth 6))")
+        [void]$sb.AppendLine("- **Aceptacion:** ok=$(Format-Valor $f.aceptacion_ok), medido=$(Format-Valor $f.aceptacion_medida), origen=$($f.aceptacion_origen), cobertura=$(Format-Valor $f.cobertura_demostrada)")
+        if ($null -ne $f.aceptacion) {
+            [void]$sb.AppendLine()
+            [void]$sb.AppendLine('| Criterio | Esperado | Observado | OK | Obligatorio |')
+            [void]$sb.AppendLine('|---|---|---|---|---|')
+            foreach ($c in @($f.aceptacion.criterios)) {
+                $ok = if ($c.ok -eq $true) { 'PASS' } elseif ($c.ok -eq $false) { 'FAIL' } else { 'NO_MEDIDO' }
+                [void]$sb.AppendLine("| $($c.nombre) | $(Format-Valor $c.esperado) | $(Format-Valor $c.observado) | $ok | $(Format-Valor $c.obligatorio) |")
+            }
+            if (@($f.aceptacion.opcionales).Count -gt 0) {
+                [void]$sb.AppendLine()
+                [void]$sb.AppendLine('| Opcional | Esperado | Observado | OK |')
+                [void]$sb.AppendLine('|---|---|---|---|')
+                foreach ($c in @($f.aceptacion.opcionales)) {
+                    $ok = if ($c.ok -eq $true) { 'PASS' } elseif ($c.ok -eq $false) { 'FAIL' } else { 'NO_MEDIDO' }
+                    [void]$sb.AppendLine("| $($c.nombre) | $(Format-Valor $c.esperado) | $(Format-Valor $c.observado) | $ok |")
+                }
+            }
+        }
+        if ($null -ne $f.cobertura) {
+            [void]$sb.AppendLine("- **Cobertura estaciones:** $($f.cobertura.cubiertos)/$($f.cobertura.esperados) (origen: $($f.cobertura.origen))")
+            if (@($f.cobertura.faltantes).Count -gt 0) {
+                foreach ($d in @($f.cobertura.faltantes)) { [void]$sb.AppendLine("  - falta: $d") }
+            }
+        }
+        if ($null -ne $f.reconciliacion) {
+            [void]$sb.AppendLine("- **Reconciliacion:** medida=$($f.reconciliacion.medido), efectiva=$($f.reconciliacion.efectiva), origen=$($f.reconciliacion.origen), reclamaciones=$($f.reconciliacion.reclamaciones), log=$($f.reconciliacion.reclamacionesLog)")
+        }
         if ($f.invariantes_incumplidas.Count -gt 0) {
             [void]$sb.AppendLine("- **Invariante incumplida:**")
             foreach ($i in $f.invariantes_incumplidas) { [void]$sb.AppendLine("  - $i") }
@@ -594,7 +764,10 @@ foreach ($nombre in $runs) {
     $fases = ($diag.fases | ForEach-Object { "$($_.fase)=$($_.result)/$($_.estado)" }) -join ' '
     $shaCorto = [string]$diag.sha
     if ([string]::IsNullOrEmpty($shaCorto)) { $shaCorto = '?' } else { $shaCorto = $shaCorto.Substring(0, [Math]::Min(8, $shaCorto.Length)) }
-    Write-Output "$($diag.run)  $($diag.veredicto)  sha=$shaCorto  $fases"
+    $fallosAcept = @($diag.fases | Where-Object { $_.aceptacion_ok -ne $true } | ForEach-Object {
+            "$($_.fase):" + $(if (@($_.aceptacion_faltantes).Count -gt 0) { 'NO_MEDIDO(' + (@($_.aceptacion_faltantes) -join ',') + ')' } else { 'FAIL' }) })
+    $textoFallos = if ($fallosAcept.Count -gt 0) { ' aceptacion=' + ($fallosAcept -join ' ') } else { ' aceptacion=OK' }
+    Write-Output "$($diag.run)  $($diag.veredicto)  sha=$shaCorto  $fases$textoFallos"
 }
 
 # resumen
@@ -606,8 +779,8 @@ $conFallos = @($resultados | Where-Object { $_.veredicto -notmatch 'C4N_PASS' })
 if ($conFallos.Count -gt 0) {
     Write-Output '  Runs con fallo o sin evidencia:'
     foreach ($d in $conFallos) {
-        $malas = @($d.fases | Where-Object { $_.result -ne 'PASS' } | ForEach-Object { $_.fase })
-        Write-Output "    - $($d.run): veredicto=$($d.veredicto) fases_no_pass=$($malas -join ',')"
+        $malas = @($d.fases | Where-Object { $_.estado -ne 'OK' } | ForEach-Object { "$($_.fase)=$($_.estado)" })
+        Write-Output "    - $($d.run): veredicto=$($d.veredicto) fases_no_ok=$($malas -join ',')"
     }
 }
 Write-Output "Salida: $OutDir"

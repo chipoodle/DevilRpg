@@ -187,6 +187,65 @@ public final class VillageManager {
      */
     private static final int CARGA_POBLACION_GRACIA_TICKS = 1200;
     private static long primerTickDeVida = -1L;
+
+    // --- C4 · ESTAMPA READ-ONLY DE LA RECONCILIACIÓN DE PUESTOS ------------------------------------
+    // Las lee el arnés/probe para DEMOSTRAR que la reconciliación corrió (no solo los goals de oficio) y cuántos
+    // tickets/potenciales tocó. Son solo contadores: no cambian ninguna decisión del reparto.
+    /** Reclamaciones que hizo {@link #reclamarEstacionesDelPueblo} (no cuenta los goals de oficio). */
+    private static long reclamacionesDeEstaciones;
+    /** {@code gameTime} de la última reclamación de {@link #reclamarEstacionesDelPueblo}; {@code -1} = ninguna. */
+    private static long ultimaReclamacionTick = -1L;
+    /** Pasadas de {@link #reclamarEstacionesDelPueblo} que han cruzado la gracia (aunque no reclamaran nada). */
+    private static long pasadasDeReconciliacion;
+    /** {@code gameTime} de la última pasada de reconciliación que cruzó la gracia; {@code -1} = ninguna. */
+    private static long ultimaReconciliacionTick = -1L;
+    /** Tickets perdidos liberados por {@link #soltarTicketsPerdidos} o por un POTENTIAL de tipo incorrecto. */
+    private static long ticketsPerdidosLiberados;
+    /** POTENTIAL correctos promovidos a {@code JOB_SITE} sin volver a tomar el ticket. */
+    private static long promocionesDePotencial;
+    /** POTENTIAL de tipo incorrecto cuyo ticket se liberó y cuya memoria se borró. */
+    private static long potencialesLiberados;
+    /** POTENTIAL obsoletos/de fuera/de otro dueño que solo perdieron la memoria (sin tocar el ticket). */
+    private static long potencialesLimpiados;
+    /** {@code JOB_SITE} inválidos (guardia, sin oficio, NITWIT o POI de otro oficio) que se limpiaron. */
+    private static long puestosInvalidosLimpiados;
+
+    /**
+     * Estampa read-only de la reconciliación de puestos para el arnés. No hay que reiniciarla: el arnés toma una
+     * foto antes y otra después y usa la <b>diferencia</b> (así vale también con varias aldeas en el mismo servidor).
+     */
+    public record EstampaReconciliacion(long reclamaciones, long ultimaReclamacionTick, long ticketsPerdidosLiberados,
+                                        long promocionesDePotencial, long potencialesLiberados,
+                                        long potencialesLimpiados, long puestosInvalidosLimpiados,
+                                        long pasadasDeReconciliacion, long ultimaReconciliacionTick) {
+    }
+
+    /** Foto de los contadores de reconciliación. Solo lectura: no altera el reparto. */
+    public static EstampaReconciliacion estampaDeReconciliacion() {
+        return new EstampaReconciliacion(reclamacionesDeEstaciones, ultimaReclamacionTick, ticketsPerdidosLiberados,
+                promocionesDePotencial, potencialesLiberados, potencialesLimpiados, puestosInvalidosLimpiados,
+                pasadasDeReconciliacion, ultimaReconciliacionTick);
+    }
+
+    /** Reclamaciones hechas por {@link #reclamarEstacionesDelPueblo} desde el arranque de esta JVM. */
+    public static int reclamacionesDeEstaciones() {
+        return (int) Math.min(Integer.MAX_VALUE, reclamacionesDeEstaciones);
+    }
+
+    /** {@code gameTime} de la última reclamación del gestor; {@code -1} si aún no ha habido ninguna. */
+    public static long ultimaReclamacionTick() {
+        return ultimaReclamacionTick;
+    }
+
+    /** Pasadas de reconciliación que cruzaron la gracia de carga (aunque no reclamaran ninguna estación). */
+    public static long pasadasDeReconciliacion() {
+        return pasadasDeReconciliacion;
+    }
+
+    /** {@code gameTime} de la última pasada de reconciliación que cruzó la gracia; {@code -1} si aún no ha habido. */
+    public static long ultimaReconciliacionTick() {
+        return ultimaReconciliacionTick;
+    }
     /**
      * Cuánta presión extra acumula la aldea por cada aldeano que le falta. Con 1 aldeano acumula el doble, y
      * vacía dos veces y media: <i>los monstruos huelen la debilidad</i>.
@@ -3674,7 +3733,19 @@ public final class VillageManager {
         // NOMBRES SIN REPETIR (lo vio el jugador: dos "Bibiana" en el mismo pueblo). Con 48 nombres y 11-18 aldeanos,
         // el nombre "al azar por UUID" se repite; aquí se le asigna a cada aldeano un nombre libre y se le guarda.
         repartirNombres(aldeanos);
-        // Y LOS TICKETS PERDIDOS: una estación de un oficio del pueblo con el ticket COGIDO pero sin dueño vivo. El
+        // C4 · RECONCILIAR JOB_SITE INVÁLIDOS. Una guardia o un aldeano sin oficio (NONE/NITWIT) no debe tener
+        // estación: si vanilla se la dio al reclamar un POI cercano, hay que soltarla o el puesto queda muerto y,
+        // además, la guardia puede acabar convertida en granjera/flechera (medido por el lead con 1800 ticks:
+        // `86ab6e15` y `a40eafca`, profesión none, con POTENTIAL a 630,63,567 y 610,63,508). Y un JOB_SITE de un
+        // oficio del pueblo que apunta a un POI de OTRO oficio tampoco vale.
+        reconciliarPuestosInvalidos(level, aldeanos, center, objectiveIndex);
+        // C4 · RECONCILIAR POTENTIAL_JOB_SITE. Vanilla deja el puesto en POTENTIAL (no en JOB_SITE) hasta que el
+        // aldeano se acerca a menos de 2 bloques, y mientras tanto el ticket está cogido: el puesto queda muerto y su
+        // titular sin `JOB_SITE`. Aquí se promueve el POTENTIAL correcto (sin volver a tomar el ticket), se limpia el
+        // que apunta a un POI de otro oficio (liberando su ticket) y se borra el obsoleto. Va ANTES de soltar los
+        // tickets perdidos para que estos vean el estado ya reconciliado.
+        reconciliarPuestosPotenciales(level, aldeanos, center, objectiveIndex);
+        // Y LOS TICKETS PERDIDOS: una estación de un oficio del pueblo con el ticket COGIDO pero sin dueño REAL. El
         // caso medido (aldea 2): el compostero del TERCER parcela tenía `free_tickets=0` y ningún aldeano con él en el
         // cerebro, así que el tercer granjero (su titular) no podía reclamarlo: la estación quedaba muerta y el
         // oficio sin su puesto de trabajo (sin `JOB_SITE` vanilla no le registra la actividad de trabajar).
@@ -4711,53 +4782,279 @@ public final class VillageManager {
     }
 
     /**
-     * <b>Soltar los tickets PERDIDOS</b> de las estaciones del pueblo: un puesto de trabajo con el ticket cogido
-     * ({@code free_tickets = 0}) pero <b>sin ningún aldeano que lo tenga en el cerebro</b>. El juego solo suelta el
-     * ticket al morir el aldeano (I23), así que un ticket perdido deja la estación <b>muerta para siempre</b>: su
-     * titular legítimo no puede reclamarla y el oficio se queda sin puesto de trabajo (sin {@code JOB_SITE} vanilla
-     * no le registra la actividad de trabajar y el aldeano cae a IDLE).
+     * C4 · <b>LIMPIAR {@code JOB_SITE} INVÁLIDOS</b>. Una <b>guardia</b> o un aldeano <b>sin oficio</b>
+     * ({@code NONE}/{@code NITWIT}, o de un oficio de fuera del pueblo) no debe tener estación: si vanilla se la dio
+     * al reclamar un POI cercano, el ticket queda cogido y el puesto muerto; peor aún, la guardia puede acabar
+     * convertida en granjera/flechera. Medido por el lead con 1800 ticks: los guardias {@code 86ab6e15} y
+     * {@code a40eafca} (profesión {@code none}) tenían POTENTIAL en 630,63,567 (farmer) y 610,63,508 (fletcher) y
+     * bloqueaban a los titulares. También se limpia un {@code JOB_SITE} de un oficio del pueblo que apunta a un POI
+     * de <b>otro</b> oficio dentro de la aldea (el granjero con el soporte de pociones del clérigo).
      * <p>
+     * Si el POI tiene <b>algún</b> dueño válido (duplicado), al inválido solo se le borra la memoria, <b>sin soltar</b>
+     * el ticket: no se le roba al dueño bueno. Si <b>todos</b> los dueños son inválidos, se suelta el ticket una sola
+     * vez. Sin POI no se llama a {@code release} (reventaría).
+     */
+    private static void reconciliarPuestosInvalidos(ServerLevel level, List<Villager> aldeanos, BlockPos center,
+                                                    int objectiveIndex) {
+        PoiManager poi = level.getPoiManager();
+        Map<Long, List<Villager>> duenios = new HashMap<>();
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || !villager.isAlive() || villager.isRemoved()) {
+                continue;
+            }
+            villager.getBrain().getMemory(MemoryModuleType.JOB_SITE).ifPresent(sitio ->
+                    duenios.computeIfAbsent(sitio.pos().asLong(), k -> new ArrayList<>()).add(villager));
+        }
+        for (Map.Entry<Long, List<Villager>> entrada : duenios.entrySet()) {
+            long clave = entrada.getKey();
+            List<Villager> propietarios = entrada.getValue();
+            boolean hayInvalido = propietarios.stream()
+                    .anyMatch(v -> puestoDeTrabajoInvalido(v, center, poi));
+            if (!hayInvalido) {
+                continue;
+            }
+            boolean hayValido = propietarios.stream()
+                    .anyMatch(v -> !puestoDeTrabajoInvalido(v, center, poi));
+            BlockPos pos = BlockPos.of(clave);
+            boolean sueltado = false;
+            if (!hayValido && poi.getType(pos).isPresent()) {
+                sueltado = poi.release(pos);
+                if (sueltado) {
+                    ticketsPerdidosLiberados++;
+                }
+            }
+            for (Villager villager : propietarios) {
+                if (!puestoDeTrabajoInvalido(villager, center, poi)) {
+                    continue;
+                }
+                villager.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
+                // OJO: el POTENTIAL no se borra aquí: lo reconcilia `reconciliarPuestosPotenciales`, que sí sabe si
+                // hay que soltar su ticket. Borrarlo a secas dejaría el ticket perdido.
+                villager.getBrain().eraseMemory(MemoryModuleType.SECONDARY_JOB_SITE);
+                puestosInvalidosLimpiados++;
+                DevilRpg.LOGGER.info("[Village] Aldea {}: {} tenia un JOB_SITE invalido en {} ({}); se limpia{}",
+                        objectiveIndex, villager.getUUID(), pos.toShortString(),
+                        villager.getVillagerData().getProfession(),
+                        sueltado ? " y se suelta el ticket" : " sin tocar el ticket");
+            }
+        }
+    }
+
+    /**
+     * ¿Ese {@code JOB_SITE} no debería existir? Guardia, sin oficio del pueblo (NONE/NITWIT/de fuera), o POI de otro
+     * oficio <b>dentro</b> del recinto. Un POI que ya no existe no se considera "inválido" aquí: lo limpia
+     * {@code reclamarEstacionesDelPueblo} (y ahí no se puede llamar a {@code release}).
+     */
+    private static boolean puestoDeTrabajoInvalido(Villager villager, BlockPos center, PoiManager poi) {
+        Optional<GlobalPos> job = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+        if (job.isEmpty()) {
+            return false;
+        }
+        if (VillagerGuardGoal.esGuardia(villager)) {
+            return true;
+        }
+        VillagerProfession profesion = villager.getVillagerData().getProfession();
+        if (profesion == VillagerProfession.NONE || profesion == VillagerProfession.NITWIT
+                || !VillageGenerator.esOficioDelPueblo(profesion)) {
+            return true;
+        }
+        BlockPos pos = job.get().pos();
+        Optional<Holder<PoiType>> tipo = poi.getType(pos);
+        return tipo.isPresent() && !profesion.heldJobSite().test(tipo.get()) && esDeDentroDelMuro(center, pos);
+    }
+
+    /**
+     * C4 · <b>POTENTIAL_JOB_SITE → JOB_SITE (y limpieza del POTENTIAL que no vale)</b>.
+     * <p>
+     * Vanilla deja el puesto en {@code POTENTIAL_JOB_SITE} y solo lo convierte en {@code JOB_SITE} cuando el aldeano
+     * está a menos de 2 bloques ({@code AssignProfessionFromJobSite}); si sus goals propios lo mantienen lejos, el
+     * POTENTIAL se queda para siempre y el ticket que cogió deja la estación muerta. Aquí se promueve el POTENTIAL
+     * <b>correcto</b> (mismo tipo de POI, dentro de la aldea, sin otro {@code JOB_SITE} y con el ticket ya cogido)
+     * <b>sin volver a tomar el ticket</b>; el de tipo incorrecto (el caso medido: un granjero con el soporte de
+     * pociones del clérigo) suelta su ticket para que lo reclame su titular; el obsoleto/de fuera/de otro dueño solo
+     * pierde la memoria. La decisión pura está en {@link VillageJobSiteReconciliationPolicy}.
+     */
+    private static void reconciliarPuestosPotenciales(ServerLevel level, List<Villager> aldeanos, BlockPos center,
+                                                      int objectiveIndex) {
+        PoiManager poi = level.getPoiManager();
+        Map<Long, UUID> dueniosJob = new HashMap<>();
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || !villager.isAlive() || villager.isRemoved()) {
+                continue;
+            }
+            villager.getBrain().getMemory(MemoryModuleType.JOB_SITE)
+                    .ifPresent(sitio -> dueniosJob.putIfAbsent(sitio.pos().asLong(), villager.getUUID()));
+        }
+        List<VillageJobSiteReconciliationPolicy.Potencial> potenciales = new ArrayList<>();
+        Map<UUID, Villager> porUuid = new HashMap<>();
+        for (Villager villager : aldeanos) {
+            if (villager.isBaby() || !villager.isAlive() || villager.isRemoved()) {
+                continue;
+            }
+            Optional<GlobalPos> potencial = villager.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+            if (potencial.isEmpty()) {
+                continue;
+            }
+            if (villager.getBrain().hasMemoryValue(MemoryModuleType.JOB_SITE)) {
+                // Un POTENTIAL junto a un JOB_SITE no puede ser el suyo: se borra la memoria SIN tocar el ticket
+                // (podría ser el de su JOB_SITE o el de otro aldeano).
+                villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                potencialesLimpiados++;
+                DevilRpg.LOGGER.debug("[Village] {}: POTENTIAL junto a JOB_SITE; se borra la memoria sin tocar tickets",
+                        villager.getUUID());
+                continue;
+            }
+            BlockPos pos = potencial.get().pos();
+            Optional<Holder<PoiType>> tipo = poi.getType(pos);
+            VillagerProfession profesion = villager.getVillagerData().getProfession();
+            boolean delOficio = tipo.isPresent() && profesion.heldJobSite().test(tipo.get());
+            UUID duenio = dueniosJob.get(pos.asLong());
+            boolean ajeno = duenio != null && !duenio.equals(villager.getUUID());
+            boolean ticketCogido = tipo.isPresent() && poi.getFreeTickets(pos) == 0;
+            potenciales.add(new VillageJobSiteReconciliationPolicy.Potencial(
+                    villager.getUUID(), pos.asLong(), tipo.isPresent(), delOficio,
+                    esDeDentroDelMuro(center, pos), ajeno, ticketCogido));
+            porUuid.put(villager.getUUID(), villager);
+        }
+        for (var decision : VillageJobSiteReconciliationPolicy.planificarPotenciales(potenciales)) {
+            Villager villager = porUuid.get(decision.uuid());
+            if (villager == null) {
+                continue;
+            }
+            BlockPos pos = BlockPos.of(decision.poi());
+            switch (decision.accion()) {
+                case PROMOVER -> {
+                    // C4 · NO SE CONFIA EN `free_tickets==0` PARA SABER QUIEN TIENE EL TICKET. Vanilla `AcquirePoi`
+                    // hace `take` e IGNORA el resultado, y siempre escribe POTENTIAL: puede haber dos POTENTIAL del
+                    // mismo POI con un solo ticket. Se suelta y se vuelve a tomar para el que se promueve: si no hay
+                    // ticket, no se crea un JOB_SITE fantasma. El resto de POTENTIAL del POI se limpia en sus
+                    // decisiones LIMPIAR, y el reparto normal lo reclamara en el siguiente latido si hiciera falta.
+                    java.util.function.BiPredicate<Holder<PoiType>, BlockPos> cual =
+                            (tipo, p) -> p.equals(pos);
+                    VillagerProfession profesion = villager.getVillagerData().getProfession();
+                    boolean liberado = poi.getType(pos).isPresent() && poi.release(pos);
+                    if (poi.take(profesion.heldJobSite(), cual, pos, 1).isEmpty()) {
+                        villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                        potencialesLimpiados++;
+                        DevilRpg.LOGGER.info("[Village] Aldea {}: el POTENTIAL de {} en {} no pudo confirmar el"
+                                        + " ticket (liberado={}): se limpia y se reintenta en el siguiente latido",
+                                objectiveIndex, villager.getUUID(), pos.toShortString(), liberado);
+                        continue;
+                    }
+                    villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), pos));
+                    villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                    villager.setVillagerXp(Math.max(1, villager.getVillagerXp()));
+                    promocionesDePotencial++;
+                    DevilRpg.LOGGER.info("[Village] Aldea {}: el POTENTIAL de {} en {} es de su oficio:"
+                                    + " ticket confirmado (liberado={}) y PROMOVIDO a JOB_SITE",
+                            objectiveIndex, villager.getUUID(), pos.toShortString(), liberado);
+                }
+                case LIBERAR_Y_LIMPIAR -> {
+                    boolean soltado = poi.getType(pos).isPresent() && poi.release(pos);
+                    if (soltado) {
+                        ticketsPerdidosLiberados++;
+                    }
+                    villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                    potencialesLiberados++;
+                    DevilRpg.LOGGER.info("[Village] Aldea {}: el POTENTIAL de {} en {} no es de su oficio ({}):"
+                                    + " ticket {} y memoria borrada para que lo reclame su titular",
+                            objectiveIndex, villager.getUUID(), pos.toShortString(), decision.motivo(),
+                            soltado ? "liberado" : "no se pudo liberar");
+                }
+                case LIMPIAR -> {
+                    villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+                    potencialesLimpiados++;
+                    DevilRpg.LOGGER.debug("[Village] Aldea {}: POTENTIAL de {} en {} borrado sin tocar el ticket: {}",
+                            objectiveIndex, villager.getUUID(), pos.toShortString(), decision.motivo());
+                }
+            }
+        }
+    }
+
+    /**
+     * <b>Soltar los tickets PERDIDOS</b> de las estaciones del pueblo: un puesto de trabajo con el ticket cogido
+     * ({@code free_tickets = 0}) pero <b>sin ningún dueño REAL</b>. El juego solo suelta el ticket al morir el aldeano
+     * (I23), así que un ticket perdido deja la estación <b>muerta para siempre</b>: su titular legítimo no puede
+     * reclamarla y el oficio se queda sin puesto de trabajo (sin {@code JOB_SITE} vanilla no le registra la actividad
+     * de trabajar y el aldeano cae a IDLE).
+     * <p>
+     * C4 · <b>SE CUENTAN {@code JOB_SITE} REALES, NO TITULARES POR PROFESIÓN</b>. La versión anterior saltaba el
+     * oficio entero cuando había tantos <b>titulares</b> como plazas; con 3 granjeros (aunque ninguno tuviera
+     * {@code JOB_SITE}) no soltaba ni un ticket perdido. Medido en {@code c4n-20261123-1550}: 4 estaciones con
+     * {@code free_tickets=0} y sin nadie en el cerebro (668,537; 718,534; 689,549; 682,572) y sin embargo
+     * {@code soltarTicketsPerdidos} no liberó ninguna. Ahora se suelta si:
+     * <ul>
+     *   <li>hay <b>demanda</b>: algún titular cargado de ese oficio <b>sin</b> {@code JOB_SITE} (si no, no se toca una
+     *       estación que puede ser de un aldeano en un chunk descargado),</li>
+     *   <li>ningún aldeano lo tiene como {@code JOB_SITE} (no se le roba a un dueño real),</li>
+     *   <li>ningún titular del oficio lo tiene como POTENTIAL <b>legítimo</b> (está a punto de promoverse).</li>
+     * </ul>
      * Medido en el guardado del jugador (aldea 2): el <b>compostero del tercer parcela</b> tenía {@code free_tickets=0}
      * y nadie con él en la memoria —ni {@code JOB_SITE} ni {@code POTENTIAL_JOB_SITE}—, así que el <b>tercer
      * granjero</b> (su titular) no podía reclamarlo. La consulta es general (por el tipo de puesto del oficio, con
      * {@code heldJobSite}), así que vale para cualquier oficio del pueblo, sin listas de coordenadas.
-     * <p>
-     * Y solo se sueltan los de los oficios a los que les <b>falta gente</b> (cupo contra titulares): si el oficio está
-     * cubierto, su estación se deja en paz —puede ser de un aldeano que ahora mismo está en un chunk descargado, y no
-     * se le quita el puesto a nadie por eso—.
      */
     private static void soltarTicketsPerdidos(ServerLevel level, List<Villager> aldeanos, BlockPos center,
                                               int objectiveIndex) {
-        Map<VillagerProfession, Integer> cupo = VillageGenerator.puestosPorOficio();
-        Map<VillagerProfession, Integer> titulares = new HashMap<>();
-        Set<Long> reclamados = new HashSet<>();
+        PoiManager poi = level.getPoiManager();
+        Set<Long> conJobSite = new HashSet<>();
+        Set<Long> conPotencialLegitimo = new HashSet<>();
+        Map<VillagerProfession, Integer> demanda = new HashMap<>();
         for (Villager villager : aldeanos) {
-            if (villager.isBaby()) {
+            if (villager.isBaby() || !villager.isAlive() || villager.isRemoved()) {
+                continue;
+            }
+            Optional<GlobalPos> job = villager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+            if (job.isPresent()) {
+                conJobSite.add(job.get().pos().asLong());
                 continue;
             }
             VillagerProfession profesion = villager.getVillagerData().getProfession();
-            if (VillageGenerator.esOficioDelPueblo(profesion)) {
-                titulares.merge(profesion, 1, Integer::sum);
+            if (profesion == VillagerProfession.NITWIT || !VillageGenerator.esOficioDelPueblo(profesion)) {
+                continue; // el recolector no tiene estación (por diseño) y los oficios de fuera no se reparten
             }
-            for (MemoryModuleType<GlobalPos> tipo : List.of(MemoryModuleType.JOB_SITE,
-                    MemoryModuleType.POTENTIAL_JOB_SITE)) {
-                villager.getBrain().getMemory(tipo).ifPresent(sitio -> reclamados.add(sitio.pos().asLong()));
+            demanda.merge(profesion, 1, Integer::sum);
+            Optional<GlobalPos> potencial = villager.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+            if (potencial.isPresent()) {
+                BlockPos pos = potencial.get().pos();
+                Optional<Holder<PoiType>> tipo = poi.getType(pos);
+                if (tipo.isPresent() && profesion.heldJobSite().test(tipo.get())
+                        && esDeDentroDelMuro(center, pos)) {
+                    conPotencialLegitimo.add(pos.asLong());
+                }
             }
         }
-        PoiManager poi = level.getPoiManager();
-        for (Map.Entry<VillagerProfession, Integer> entrada : cupo.entrySet()) {
-            if (titulares.getOrDefault(entrada.getKey(), 0) >= entrada.getValue()) {
-                continue; // ese oficio tiene toda su gente: su estación no se toca
+        for (Map.Entry<VillagerProfession, Integer> entrada : VillageGenerator.puestosPorOficio().entrySet()) {
+            VillagerProfession profesion = entrada.getKey();
+            if (profesion == VillagerProfession.NITWIT) {
+                continue; // NITWIT no tiene estación: no hay ticket que soltar
             }
-            for (var registro : poi.getInSquare(entrada.getKey().heldJobSite(), center,
+            if (demanda.getOrDefault(profesion, 0) <= 0) {
+                continue; // no hay nadie cargado de ese oficio sin puesto: no se toca (puede ser de un descargado)
+            }
+            List<VillageJobSiteReconciliationPolicy.Estacion> estaciones = new ArrayList<>();
+            Map<Long, BlockPos> porClave = new HashMap<>();
+            for (var registro : poi.getInSquare(profesion.heldJobSite(), center,
                     VillageGenerator.FENCE_RADIUS, PoiManager.Occupancy.IS_OCCUPIED).toList()) {
-                BlockPos puesto = registro.getPos();
-                if (reclamados.contains(puesto.asLong())) {
-                    continue; // alguien lo tiene de verdad en el cerebro
+                BlockPos pos = registro.getPos();
+                boolean existe = poi.getType(pos).isPresent();
+                boolean cogido = existe && poi.getFreeTickets(pos) == 0;
+                long clave = pos.asLong();
+                estaciones.add(new VillageJobSiteReconciliationPolicy.Estacion(
+                        clave, existe, cogido, conJobSite.contains(clave), conPotencialLegitimo.contains(clave)));
+                porClave.put(clave, pos);
+            }
+            for (long clave : VillageJobSiteReconciliationPolicy.ticketsPerdidos(estaciones)) {
+                BlockPos pos = porClave.get(clave);
+                if (pos == null || poi.getType(pos).isEmpty()) {
+                    continue;
                 }
-                poi.release(puesto);
-                DevilRpg.LOGGER.info("[Village] Aldea {}: el puesto de {} de {} estaba cogido SIN dueno: se suelta"
-                        + " para que lo reclame su titular", objectiveIndex, entrada.getKey(), puesto);
+                if (poi.release(pos)) {
+                    ticketsPerdidosLiberados++;
+                    DevilRpg.LOGGER.info("[Village] Aldea {}: el puesto de {} de {} estaba cogido SIN dueno real:"
+                                    + " se suelta para que lo reclame su titular",
+                            objectiveIndex, profesion, pos.toShortString());
+                }
             }
         }
     }
@@ -4821,6 +5118,9 @@ public final class VillageManager {
             DevilRpg.LOGGER.info("[Village] reparto de estaciones aplazado: la aldea aun esta cargando");
             return;
         }
+        // C4 · estampa de que la reconciliación REALMENTE pasó la gracia, aunque no hubiera nada que reclamar.
+        pasadasDeReconciliacion++;
+        ultimaReconciliacionTick = level.getGameTime();
         reconciliarPuestosDuplicados(aldeanos);
         PoiManager poi = level.getPoiManager();
         for (Villager villager : aldeanos) {
@@ -4879,7 +5179,7 @@ public final class VillageManager {
             boolean libre = puesto != null;
             if (puesto == null) {
                 for (BlockPos p : estaciones) {
-                    if (!reclamadoPorAlguien(aldeanos, p)) {
+                    if (!reclamadoPorAlguien(aldeanos, p, villager)) {
                         puesto = p; // ocupada SIN dueño (ticket perdido): se suelta y se coge
                         break;
                     }
@@ -4922,6 +5222,9 @@ public final class VillageManager {
             }
             villager.getBrain().setMemory(MemoryModuleType.JOB_SITE, GlobalPos.of(level.dimension(), elegido));
             villager.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+            villager.setVillagerXp(Math.max(1, villager.getVillagerXp()));
+            reclamacionesDeEstaciones++;
+            ultimaReclamacionTick = level.getGameTime();
             // El clérigo puede estar curando fuera del radio vanilla de JOB_SITE. Registra el puesto directamente
             // en su Goal antes de que el siguiente tick del Brain borre la memoria por distancia.
             if (villager.getVillagerData().getProfession() == VillagerProfession.CLERIC) {
@@ -4937,9 +5240,19 @@ public final class VillageManager {
         }
     }
 
-    /** ¿Ese puesto lo tiene alguien <b>en el cerebro</b> (de puesto o solo como posible)? Es el "ticket perdido". */
-    private static boolean reclamadoPorAlguien(List<Villager> aldeanos, BlockPos puesto) {
+    /**
+     * ¿Ese puesto lo tiene alguien <b>en el cerebro</b> (de puesto o solo como posible)? Es el "ticket perdido".
+     * <p>
+     * C4 · se excluye al <b>propio solicitante</b> ({@code excepto}): su POTENTIAL no puede bloquearle su propia
+     * reclamación (medido: el flechero de {@code c4n-20261123-1550} tenía su propio POTENTIAL en 610,508 y eso le
+     * impedía reclamar la única estación de su oficio). Los POTENTIAL de los <b>demás</b> sí cuentan: no se les roba
+     * el puesto a quien está a punto de promoverse.
+     */
+    private static boolean reclamadoPorAlguien(List<Villager> aldeanos, BlockPos puesto, @Nullable Villager excepto) {
         for (Villager v : aldeanos) {
+            if (v == excepto || v.isBaby() || !v.isAlive() || v.isRemoved()) {
+                continue;
+            }
             for (MemoryModuleType<GlobalPos> tipo : List.of(MemoryModuleType.JOB_SITE,
                     MemoryModuleType.POTENTIAL_JOB_SITE)) {
                 var suyo = v.getBrain().getMemory(tipo);

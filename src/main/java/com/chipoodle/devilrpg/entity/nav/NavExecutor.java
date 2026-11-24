@@ -6745,6 +6745,26 @@ public final class NavExecutor {
                 }
                 mob.getNavigation().moveTo(node.pos().getX() + 0.5D, node.pos().getY(),
                         node.pos().getZ() + 0.5D, 1.0D);
+                int manhattanPies = Math.abs(mob.blockPosition().getX() - node.pos().getX())
+                        + Math.abs(mob.blockPosition().getY() - node.pos().getY())
+                        + Math.abs(mob.blockPosition().getZ() - node.pos().getZ());
+                if (NavBuildTransitionPolicy.shouldNudgeFeet(placementVerified,
+                        mob.getNavigation().isDone(), manhattanPies,
+                        NavObstruction.fits(mob.level(), mob, node.pos()),
+                        NavObstruction.hasSupport(mob.level(), node.pos()))) {
+                    // La ruta vanilla da el nodo por alcanzado a ~1.0 y el executor exige ocupación EXACTA del
+                    // pie. Sin este nudge, un BUILD plano (delta 0) se queda a una celda para siempre.
+                    mob.getMoveControl().setWantedPosition(node.pos().getX() + 0.5D, node.pos().getY(),
+                            node.pos().getZ() + 0.5D, 1.0D);
+                    if (NavTrace.on()) {
+                        NavTrace.ev("BUILD_FEET_NUDGE", "uuid=" + mob.getUUID()
+                                + " tick=" + mob.level().getGameTime()
+                                + " feet=" + node.pos().toShortString()
+                                + " live=" + mob.blockPosition().toShortString()
+                                + " manhattan=" + manhattanPies
+                                + " placement=" + placementTarget.toShortString());
+                    }
+                }
                 traceActuatorCommand("BUILD_FEET_APPROACH", node.pos(), mob.level().getGameTime());
                 lastMoveTarget = node.pos().toShortString() + ":BUILD-ACERCAR-PIES";
                 return;
@@ -7571,6 +7591,18 @@ public final class NavExecutor {
         intentosObjetivoInvalido = 0;
         mejorDistObjetivoInvalido = Double.MAX_VALUE;
         budgetRetries = 0;
+        // Un cambio de terreno invalida la ruta y también la espera de recuperación que se armó para el
+        // terreno VIEJO. Sin esto, quitar una barrera dejaba al ente esperando hasta 400 ticks un cooldown
+        // que ya no aplicaba (medido en el escenario runtime `terreno_dinamico`).
+        nextRecoveryAt = 0L;
+        nodoDeRecuperacion = null;
+        nodoDeRecuperacionOverride = null;
+        if (NavTrace.on()) {
+            NavTrace.ev("TERRAIN_CHANGED_REARM", "uuid=" + mob.getUUID()
+                    + " tick=" + mob.level().getGameTime()
+                    + " pos=" + mob.blockPosition().toShortString()
+                    + " objective=" + (objective == null ? "-" : objective.toShortString()));
+        }
         state = objective == null ? NavState.IDLE : NavState.PLANNING;
         nextPlanAt = 0L;
     }

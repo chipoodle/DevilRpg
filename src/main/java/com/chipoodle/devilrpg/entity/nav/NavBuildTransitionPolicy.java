@@ -32,4 +32,16 @@ public final class NavBuildTransitionPolicy {
     public static boolean shouldPlace(boolean placementAlreadyVerified) {
         return !placementAlreadyVerified;
     }
+
+    /**
+     * BUILD_FEET_APPROACH puede quedarse a una celda del pie resultante: la navegación vanilla da el nodo por
+     * alcanzado a ~1.0 y no vuelve a emitir movimiento. Cuando la colocación ya está verificada, la navegación
+     * terminó y la celda de pie es adyacente, se permite el mismo nudge acotado que ya usan los nodos de
+     * movimiento normales ({@link NavAdjacentApproachPolicy}). No mueve a una celda sin soporte ni sin hueco.
+     */
+    public static boolean shouldNudgeFeet(boolean placementVerified, boolean navigationDone,
+                                           int manhattanDistance, boolean targetFits, boolean hasSupport) {
+        return placementVerified && NavAdjacentApproachPolicy.shouldNudge(
+                navigationDone, true, manhattanDistance, 2, targetFits, hasSupport);
+    }
 }

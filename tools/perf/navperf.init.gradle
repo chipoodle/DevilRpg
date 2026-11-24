@@ -1,0 +1,24 @@
+// Registra la tarea `navPerfTest` SIN editar build.gradle (que es compartido con otros agentes).
+// Uso:
+//   .\gradlew.bat -I tools\perf\navperf.init.gradle navPerfTest -PnavPerfReps=11 --console=plain
+//   (o, más cómodo, .\tools\perf\medir-nav.ps1)
+gradle.projectsEvaluated {
+    def proyecto = gradle.rootProject
+    if (!proyecto.plugins.hasPlugin('java')) {
+        return
+    }
+    proyecto.tasks.register('navPerfTest', JavaExec) {
+        group = 'verification'
+        description = 'Perfil A* reproducible (calentamiento, medianas, fases, A/B y sobrecarga de metricas).'
+        dependsOn proyecto.tasks.named('testClasses')
+        classpath = proyecto.sourceSets.test.runtimeClasspath
+        mainClass = 'com.chipoodle.devilrpg.entity.nav.NavSearchPerfTest'
+        def reps = proyecto.findProperty('navPerfReps')
+        if (reps != null) systemProperty 'navPerf.reps', reps
+        def warmup = proyecto.findProperty('navPerfWarmup')
+        if (warmup != null) systemProperty 'navPerf.warmup', warmup
+        def faseReps = proyecto.findProperty('navPerfFaseReps')
+        if (faseReps != null) systemProperty 'navPerf.faseReps', faseReps
+        jvmArgs '-Xms512m', '-Xmx1g'
+    }
+}

@@ -7812,6 +7812,12 @@ public final class VillageGenerator {
         if (!level.addFreshEntity(villager)) {
             return null;
         }
+        // El cerebro se construyó con la profesión NONE del constructor; `setVillagerData` NO lo reconstruye. Sin
+        // este refresh, `ValidateNearbyPoi` sigue usando el predicado de NONE y BORRA el JOB_SITE en cuanto el
+        // aldeano está a menos de 16 bloques de su estación (medido en la traza de prepare: los 7 puestos cercanos
+        // perdían la memoria 20 ticks después de reclamarla; los lejanos sobrevivían). No cambia memoria ni goals:
+        // `refreshBrain` copia los recuerdos y vuelve a registrar los comportamientos con la profesión correcta.
+        villager.refreshBrain(level);
         DevilRpg.LOGGER.debug("[Village] aldeano {} en {} (bebe: {})", profession, posicion, baby);
         return villager;
     }

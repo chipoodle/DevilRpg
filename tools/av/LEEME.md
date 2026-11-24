@@ -12,9 +12,66 @@ Esta carpeta (`tools/av/`) es **nueva y versionable**. No sustituye a `tools/c4n
 | Fichero | Qué hace |
 |---|---|
 | `diagnose.ps1` | Diagnóstico de un run (`-Run`) o de todos (`-All`). Escribe `build/av/diagnostico-<run>.json` y `.md`. |
-| `collect.ps1` | Tabla/CSV agregada de todos los runs y resumen de fallos. Escribe `build/av/colector-<fecha>.csv` y `colector.csv`. |
+| `collect.ps1` | Tabla/CSV agregada de todos los runs y resumen de fases no PASS. Escribe `build/av/colector-<fecha>.csv` y `colector.csv`. |
+| `aceptacion.ps1` | Módulo compartido de criterios de aceptación (mismo veredicto para `diagnose` y `collect`). |
+| `Test-Aceptacion.ps1` | Regresión de la aceptación sobre runs reales y fixtures sintéticos en `build/av/test-runs` (sin tocar `build/c4n`). |
 | `nav-baseline.ps1` | Lanza la tarea Gradle `navBaselineTest` **si existe** y guarda la salida en `build/av/nav-baseline-<fecha>.txt`. Si no existe, avisa y no falla. |
 | `LEEME.md` | Este documento. |
+
+## Aceptación C4 (nuevo)
+
+El arnés escribe un bloque **`aceptacion`** en `phase-<fase>.json` y `diagnostico-<fase>.json`:
+
+```json
+{
+  "aceptacion_ok": false,
+  "aceptacion": {
+    "veredicto": "FAIL",
+    "ok": false,
+    "ownership_demostrado": false,
+    "ownership_nota": "cobertura < 11/11: el veredicto NO demuestra ownership...",
+    "criterios": [
+      {"nombre": "profesionales_presentes_12_12", "esperado": 12, "observado": 12, "ok": true, "obligatorio": true},
+      {"nombre": "reconciliacion_manager_corrio", "esperado": true, "observado": "estampa=false...", "ok": false, "obligatorio": true}
+    ],
+    "opcionales": [ ... ],
+    "fallidos": ["reconciliacion_manager_corrio"],
+    "cobertura_obligatoria": true
+  },
+  "cobertura": { "esperados": 11, "cubiertos": 11, "al_cargar": 11, "al_cierre": 11, "nitwit_sin_estacion": true, "faltantes": [], "detalle": [ ... ] },
+  "reconciliacion": { "manager_invocado": true, "estampa_disponible": true, "estampa_reclamaciones": 11, "estampa_ultima_tick": 1300, "estampa_actividad": 11, "reclamaciones_log": 11, ... }
+}
+```
+
+Criterios **obligatorios** (FAIL duro): 12/12 profesionales censados y presentes, 4/4 fundadores,
+0 UUID duplicados, 0 pérdidas, 0 `JOB_SITE` duplicados, 0 huérfanos, máscara `0b1111`, 4/4 fundadores con
+goal de guardia, 4/4 equipados (armadura/arma/escudo según tipo), `guardado_ok`, `roster_invariantes_ok`,
+12/12 identidad de profesión, 12/12 goals, 12/12 reanudados y **`reconciliacion_manager_corrio`** (prueba
+efectiva con la estampa read-only de `VillageManager`: reclamaciones, `ultimaReclamacionTick` o actividad de
+reconciliación).
+
+`cobertura_estaciones_11_11` es **opcional** en la campaña estándar (600 ticks < gracia de carga 1200) y
+**obligatoria** con `-ExigirCobertura`. El NITWIT no tiene estación y no cuenta como falta. Si la cobertura
+no llega, el bloque declara `ownership_demostrado=false` aunque el resto esté verde.
+
+`-TrabajoTicks` (lanzador) → `-Dc4n.trabajoTicks` (arnés, default 600). Para la campaña larga: `2400` y
+`-ExigirCobertura`. El arnés llama al mantenimiento de producción cada 200 ticks durante la ventana; sin
+eso `reclamarEstacionesDelPueblo` seguiría aplazado por la gracia de 1200.
+
+Estados nuevos de `diagnose.ps1`: `LEGACY_NO_MEDIDO` (run histórico válido pero sin estampa; **no es
+PASS**), `ACEPTACION_NO_MEDIDA`, `ACEPTACION_INCUMPLIDA`, `EVIDENCIA_INCOMPLETA`,
+`INCONSISTENTE_PASS_CON_ACEPTACION`. `-FailOnError` solo devuelve 0 con `C4N_PASS`; `C4N_LEGACY_NO_MEDIDO`
+sale 1. `-C4nDir` permite apuntar a fixtures de test (`build/av/test-runs`), nunca a la evidencia real.
+
+Comandos:
+
+```powershell
+.\tools\av\Test-Aceptacion.ps1
+.\tools\av\diagnose.ps1 -Run c4n-20261123-1550
+.\tools\av\diagnose.ps1 -Run c4n-20261123-1800 -ExigirCobertura -FailOnError
+.\tools\av\collect.ps1 -Run c4n-20261123-1800 -ExigirCobertura
+```
+
 
 ## Qué cambió en el arnés C4 (`tools/c4n/C4StandaloneHarness.java`)
 
@@ -35,15 +92,21 @@ instrumentación:
    identidad de profesión, goals, reanudados e invariantes del roster.
 3. **Métricas de guardias** (`guardias:{...}`): total, fundadores, `fundadores_esperados`,
    `mascara_persistida[4]` (`saved.isGuardiaFundadoraCreada(0, slot)`), `mascara_bits`, `mascara_completa`,
-   `con_goal_guardia`, `armadura_completa`, `con_arma`, `con_escudo` y `detalle[]` por guardia. Se lee con
-   `VillagerGuardGoal.esGuardia`, `VillageManager.esGuardiaFundadora`, `getItemBySlot` + `ArmorItem` y
-   `Items.SHIELD`; no se inventa nada que no se pueda leer con seguridad. **No afecta al veredicto.**
+   `con_goal_guardia`, `fundadores_con_goal`, `fundadores_equipados`, `arqueros`, `con_municion`,
+   `fundadores_con_municion`, `armadura_completa`, `con_arma`, `con_escudo` y `detalle[]` por guardia. Se lee
+   con `VillagerGuardGoal.esGuardia`, `VillageManager.esGuardiaFundadora`, `getItemBySlot` + `ArmorItem`,
+   `Items.SHIELD` y el criterio de producción (`4 armaduras`; espadachín arma+escudo; arquero arco). Las
+   flechas se registran aparte (`municion_arqueros`, opcional). **Fundadores, máscara y equipo son FAIL duro
+   en el bloque `aceptacion`**; el resto de métricas es observado.
 4. **Bloque estructurado** en `phase-<fase>.json` y en `diagnostico-<fase>.json`:
    `esperado`, `observado`, `invariantes` (con `roster_invariantes_ok`, `roster_violaciones` y los flags duros),
-   `causa_conocida[]`, `causa_desconocida[]`, `notas[]` y `guardado_ok`. Se conservan `result`, `fase_ok`,
-   `roster_invariantes_ok` y los campos planos de siempre (compatibilidad con lanzadores/collector).
+   `aceptacion` (criterios obligatorios/opcionales), `cobertura` (11 puestos con estación, NITWIT aparte),
+   `reconciliacion` (estampa read-only y log), `causa_conocida[]`, `causa_desconocida[]`, `notas[]` y
+   `guardado_ok`. Se conservan `result`, `fase_ok`, `roster_invariantes_ok` y los campos planos de siempre
+   (compatibilidad con lanzadores/collector).
 5. **`diagnostico-<fase>.json`** se escribe al final de cada fase con el bloque anterior, los artefactos y
-   comandos de reproducción. El log deja líneas `DIAG fase=...` y `DIAG causa_*=` para `grep`.
+   comandos de reproducción. El log deja líneas `AL_CARGAR`, `ESTAMPAS`, `RECLAMACIONES`, `ACEPTACION`,
+   `MANT_*`, `ROSTER_INVARIANTS`, `DIAG fase=...` y `DIAG causa_*=` para `grep`.
 6. **Guardado antes del marcador de fin.** Antes `done-<fase>.txt` se escribía antes de `saveEverything`; el
    lanzador mataba el JVM al verlo y el log se cortaba en `Saving chunks...`. Ahora:
    `saveEverything` → `saved-<fase>.txt` → `phase-<fase>.json`/`diagnostico-<fase>.json` → `done-<fase>.txt`.
@@ -73,15 +136,21 @@ registra aparte (`AL_CARGAR` y campos `job_site_al_cargar_*`, incluidos `job_sit
 `job_site_al_cargar_huerfanos`): así no se confunde "memoria vacía al cargar, se reclama durante la ventana" con
 "el dueño cambió durante la ventana".
 
-**Validación runtime del formato nuevo:** `c4n-20261123-1550` (SHA `69d7e55a`) pasó las 3 fases con
-`guardado_ok=true`, `roster_invariantes_ok=true`, `JOB_SITE` 1→3→3 (3/3 estables en reload2, 0 cambiados/perdidos)
-y guardias 4/4 con máscara `0b1111`. `diagnose.ps1 -Run c4n-20261123-1550 -FailOnError` → exit 0.
+**Validación de los runs históricos:** `c4n-20261123-1550` y `1602` conservan 12/12, 4 fundadores, máscara
+`0b1111`, 4/4 goal, 4/4 equipados, `guardado_ok=true`, `roster_invariantes_ok=true`, 0 duplicados/huérfanos/
+pérdidas, pero **no tienen estampa de reconciliación**. `diagnose.ps1` los clasifica `C4N_LEGACY_NO_MEDIDO`
+(no PASS) y `-FailOnError` sale 1. El run nuevo debe demostrar la reconciliación con la campaña larga.
 
-## Los cinco estados que distingue el diagnóstico
+## Estados que distingue el diagnóstico
 
 | Estado | Cuándo se emite |
 |---|---|
-| `OK` | `result=PASS` y sin invariantes incumplidas. |
+| `OK` | `result=PASS`, bloque `aceptacion` completo y verde, `fase_ok=true` y evidencia completa. |
+| `LEGACY_NO_MEDIDO` | `result=PASS` histórico: todo el contrato medible verde salvo `reconciliacion_manager_corrio`, que no tiene estampa. **No es PASS.** |
+| `ACEPTACION_INCUMPLIDA` | `result=FAIL` con criterios obligatorios medidos en `false`. |
+| `ACEPTACION_NO_MEDIDA` | Falta evidencia para algún criterio obligatorio; no se inventa. |
+| `EVIDENCIA_INCOMPLETA` | Falta `phase-*.json`, `done-*.txt`, `saved-*.txt`, `diagnostico-*.json` o un campo obligatorio. |
+| `INCONSISTENTE_PASS_CON_ACEPTACION` / `INCONSISTENTE_PASS_CON_INVARIANTE` | El JSON dice PASS pero la aceptación o los invariantes lo desmienten. |
 | `INVARIANTE_INCUMPLIDA` | `result=FAIL` y algún flag duro del bloque `invariantes` está en `false` (o `roster_violaciones` no está vacía). |
 | `FALLO_CON_CAUSA_CONOCIDA` | `result=FAIL` sin invariante duro, pero con al menos una `causa_conocida` documentada (p. ej. `MEMORIA_JOB_SITE_INCOMPLETA`, `GOALS_NO_INSTALADOS_POR_CARGA_PARCIAL`, `ALDEA_REPUEBLA`, `JOB_SITE_NO_RECLAMADO_ENTRE_FASES`, `GUARDADO_FALLIDO`). |
 | `FALLO_CON_CAUSA_DESCONOCIDA` | `result=FAIL` y la única explicación disponible es `causa_desconocida` (p. ej. `DUPLICADO_POR_COLISION_DE_PROPIEDAD`, `CAMBIO_DE_DUENIO_SIN_EVIDENCIA`). |
@@ -90,7 +159,7 @@ y guardias 4/4 con máscara `0b1111`. `diagnose.ps1 -Run c4n-20261123-1550 -Fail
 Las causas **conocidas** no cambian el veredicto: explican una anomalía ya tolerada (memorias JOB_SITE que se
 reclaman durante la ventana, goals que no se persisten, aldeas que repueblan, guardado que falla). Las
 **desconocidas** tampoco convierten nada en FAIL por sí solas: se listan para que el operador sepa qué mirar.
-Los FAIL duros se deciden en `okFase` con los mismos números de siempre.
+Los FAIL duros se deciden en el bloque `aceptacion` (criterios `obligatorio=true`), no en los campos planos.
 
 ## Uso
 
@@ -99,23 +168,31 @@ Los FAIL duros se deciden en `okFase` con los mismos números de siempre.
 .\tools\av\diagnose.ps1 -Run 024
 .\tools\av\diagnose.ps1 -Run c4n-20261123-024
 
-# Todos los runs; sale con 1 si alguno no es C4N_PASS
+# Todos los runs; sale con 1 si alguno no es C4N_PASS (LEGACY tampoco es PASS)
 .\tools\av\diagnose.ps1 -All
 .\tools\av\diagnose.ps1 -All -FailOnError
 
-# Tabla + CSV + resumen de fallos
+# Campaña larga: cobertura 11/11 obligatoria
+.\tools\av\diagnose.ps1 -Run c4n-20261123-1800 -ExigirCobertura -FailOnError
+
+# Tabla + CSV + resumen de fases no PASS
 .\tools\av\collect.ps1
-.\tools\av\collect.ps1 -Run 024
+.\tools\av\collect.ps1 -Run 1550
+.\tools\av\collect.ps1 -Run c4n-20261123-1800 -ExigirCobertura
+
+# Regresión de la aceptación (fixtures en build/av; no toca build/c4n)
+.\tools\av\Test-Aceptacion.ps1
 
 # Línea base de navegación (si el planner ya añadió la tarea)
 .\tools\av\nav-baseline.ps1
 ```
 
 `diagnose.ps1` **no rompe** si faltan ficheros o el JSON es inválido: emite la fase con
-`SIN_EVIDENCIA`/`EVIDENCIA_INVALIDA`, `json_valido=false` y la lista de `faltantes`. Si el `phase-*.json` es de
-una versión anterior sin bloque estructurado, **deriva** `esperado`/`observado`/`invariantes` de los campos
-planos y lo marca con `origen=derivado_...`; `roster_invariantes_ok` queda en `null` (= **no medido**, no
-`false`).
+`SIN_EVIDENCIA`/`EVIDENCIA_INVALIDA`/`EVIDENCIA_INCOMPLETA`, `json_valido=false` y la lista de `faltantes`.
+Si el `phase-*.json` es de una versión anterior sin bloque estructurado, **deriva** `esperado`/`observado`/
+`invariantes`/`aceptacion` de los campos planos y lo marca con `origen=derivado`; **no inventa** la estampa
+de reconciliación, así que un run histórico sin ella queda `LEGACY_NO_MEDIDO` (no PASS).
+`-C4nDir` es solo para fixtures de test (`build/av/test-runs`); la evidencia real vive en `build/c4n`.
 
 Salida de `diagnose.ps1` por run:
 
@@ -124,22 +201,27 @@ build/av/diagnostico-c4n-20261123-024.json
 build/av/diagnostico-c4n-20261123-024.md
 ```
 
-El `.md` incluye: veredicto, SHA, tabla por fase (esperado / observado / invariante incumplida / causa
-conocida / causa desconocida), detalle de guardias, puestos, snapshot, evidencia del log y **cómo reproducir**:
+El `.md` incluye: veredicto, SHA, integridad, tabla por fase, **tabla de aceptación por criterio**,
+cobertura de estaciones, reconciliación, detalle de guardias, puestos, snapshot, evidencia del log y
+**cómo reproducir**:
 
 ```powershell
-.\tools\c4n\lanzar-c4n.ps1 -Run <nuevo>
+.\tools\c4n\lanzar-c4n.ps1 -Run <nuevo> -TrabajoTicks 2400 -ExigirCobertura
 ```
 
 ## `collect.ps1`
 
 Emite una fila por **run + fase** con:
-`run, fase, result, result_origen, guardado_ok, roster_invariantes_ok, esperados, presentes, duplicados,
-huerfanos, fundadores, job_site_presentes, job_site_estables, job_site_cambiados, job_site_perdidos,
-job_site_nuevos, goals_instalados, reanudados, activos, movidos, sha, fin, json_valido, json_motivo`.
+`run, fase, result, result_origen, aceptacion_estado, aceptacion_ok, aceptacion_medida, aceptacion_origen,
+aceptacion_faltantes, ownership_demostrado, guardado_ok, roster_invariantes_ok, esperados, presentes,
+duplicados, huerfanos, fundadores, mascara_bits, fundadores_con_goal, fundadores_equipados,
+cobertura_cubiertos, cobertura_esperados, reconciliacion_medida, reconciliacion_efectiva,
+reclamaciones_estampa, job_site_*, goals_instalados, reanudados, activos, movidos, sha, fin, json_valido,
+json_motivo`.
 
-Escribe el CSV con marca de tiempo y una copia `colector.csv` (el último). El resumen de fallos lista cada
-fase no-PASS y, si `diagnose.ps1` ya corrió para ese run, engancha sus códigos de causa conocida/desconocida.
+Escribe el CSV con marca de tiempo (sin reutilizar nombres) y una copia `colector.csv` (el último). El
+resumen lista cada fase no PASS: `result != PASS` **o** `aceptacion != PASS`; si `diagnose.ps1` ya corrió
+para ese run, engancha sus causas solo si el `run` del diagnóstico coincide.
 
 ## `nav-baseline.ps1`
 

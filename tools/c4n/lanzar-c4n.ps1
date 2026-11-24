@@ -1,6 +1,8 @@
 param(
     [string]$Run = "",
     [int]$TimeoutMinutes = 15,
+    [int]$TrabajoTicks = 600,
+    [switch]$ExigirCobertura,
     [switch]$SinMantenimiento
 )
 
@@ -8,6 +10,10 @@ $ErrorActionPreference = 'Stop'
 $raiz = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 if ([string]::IsNullOrWhiteSpace($Run)) {
     $Run = "c4n-" + (Get-Date -Format 'yyyyMMdd-HHmmss')
+}
+if ($TrabajoTicks -lt 1 -or $TrabajoTicks -gt 20000) {
+    Write-Output "ABORTO: -TrabajoTicks debe estar entre 1 y 20000 (recibido $TrabajoTicks)."
+    exit 4
 }
 $base = Join-Path $raiz "build/c4n/$Run"
 New-Item -ItemType Directory -Force -Path $base | Out-Null
@@ -18,6 +24,10 @@ Set-Content -Path (Join-Path $base 'sha.txt') -Value $sha -Encoding UTF8
 
 Write-Output "=== C4N run=$Run sha=$sha : $(Get-Date -Format 'HH:mm:ss') ==="
 Write-Output "  juego: $gameDir (desechable, mismo mundo para las 3 fases)"
+Write-Output "  trabajoTicks=$TrabajoTicks exigirCobertura=$([bool]$ExigirCobertura)"
+if ($TrabajoTicks -lt 1800 -and $ExigirCobertura) {
+    Write-Output "  AVISO: -ExigirCobertura con $TrabajoTicks ticks (<1800): la gracia de carga es 1200; la cobertura 11/11 puede ser inalcanzable."
+}
 
 # ------------------------------------------------------------------ arnes temporal
 $destinoArnes = Join-Path $raiz 'src/main/java/com/chipoodle/devilrpg/debug/C4StandaloneHarness.java'
@@ -111,11 +121,11 @@ $fases = @('prepare', 'reload1', 'reload2')
 foreach ($fase in $fases) {
     Assert-SinAjenos "antes de $fase"
     $log = Join-Path $base "srv-$fase.log"
-    $env:JDK_JAVA_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\Windows\Temp -Dc4n.run=$Run -Dc4n.phase=$fase -Dc4n.raiz=$raiz -Ddevilrpg.a2n.allowMaintenanceHook=true" + $(if($SinMantenimiento){" -Dc4n.mantInicial=false -Dc4n.mantPeriodico=false"}else{""})
+    $env:JDK_JAVA_OPTIONS = "-Djdk.net.unixdomain.tmpdir=C:\Windows\Temp -Dc4n.run=$Run -Dc4n.phase=$fase -Dc4n.raiz=$raiz -Dc4n.trabajoTicks=$TrabajoTicks -Ddevilrpg.a2n.allowMaintenanceHook=true" + $(if($SinMantenimiento){" -Dc4n.mantInicial=false -Dc4n.mantPeriodico=false"}else{""}) + $(if($ExigirCobertura){" -Dc4n.exigirCobertura=true"}else{""})
     Write-Output "[$(Get-Date -Format 'HH:mm:ss')] FASE ${fase}: lanzando runServer"
     $inicioFase = Get-Date
     $srv = Start-Process -FilePath (Join-Path $raiz 'gradlew.bat') `
-        -ArgumentList 'runServer', '--console=plain', '-Pa2nDiagnostics=true', '-Pa2nMaintenanceHook=true', '-Pa2nMode=raid', "-Pa2nGameDirectory=build/c4n/$Run/game" `
+        -ArgumentList 'runServer', '--console=plain', '-Pa2nDiagnostics=true', '-Pa2nMaintenanceHook=true', '-Pa2nMode=raid', '-Pa2nProbeOnly=true', "-Pa2nGameDirectory=build/c4n/$Run/game" `
         -WorkingDirectory $raiz -RedirectStandardOutput $log -RedirectStandardError "$log.err" `
         -PassThru -NoNewWindow
     $ok = Wait-Done $fase $TimeoutMinutes $srv $inicioFase

@@ -76,7 +76,133 @@ public final class VillageJobSiteOwnershipPolicyTest {
             ciclo2.add(new VillageJobSiteOwnershipPolicy.Registro(sobrante, libre++));
         }
         check("dos ciclos sin duplicados", sobrantes(ciclo2).isEmpty());
+        probarReconciliacionDePotenciales();
+        probarTicketsPerdidos();
         System.out.println("VILLAGE_JOB_SITE_OWNERSHIP_POLICY_TEST: OK (" + assertions + " assertions)");
+    }
+
+    // ------------------------------------------------------------------ C4 · reconciliación POTENTIAL/tickets
+
+    private static void probarReconciliacionDePotenciales() {
+        UUID a = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID b = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        UUID nitwit = UUID.fromString("00000000-0000-0000-0000-000000000003");
+
+        // PROMOCIÓN: POI del oficio, dentro de la aldea, sin JOB_SITE ajeno y con el ticket ya cogido.
+        var promovible = new VillageJobSiteReconciliationPolicy.Potencial(a, 100L, true, true, true, false, true);
+        check("POTENTIAL correcto se promueve",
+                accion(planificar(List.of(promovible)), a) == VillageJobSiteReconciliationPolicy.Accion.PROMOVER);
+        check("POTENTIAL correcto sin ticket cogido no se promueve",
+                accion(planificar(List.of(
+                        new VillageJobSiteReconciliationPolicy.Potencial(a, 100L, true, true, true, false, false))), a)
+                        == VillageJobSiteReconciliationPolicy.Accion.LIMPIAR);
+
+        // TIPO INCORRECTO: se libera el ticket (no hay JOB_SITE ajeno) para que lo reclame su titular.
+        var tipoIncorrecto = new VillageJobSiteReconciliationPolicy.Potencial(a, 101L, true, false, true, false, true);
+        check("POTENTIAL de tipo incorrecto libera el ticket",
+                accion(planificar(List.of(tipoIncorrecto)), a)
+                        == VillageJobSiteReconciliationPolicy.Accion.LIBERAR_Y_LIMPIAR);
+
+        // NO ROBAR: si otro aldeano lo tiene como JOB_SITE, solo se borra la memoria.
+        var deOtro = new VillageJobSiteReconciliationPolicy.Potencial(a, 102L, true, true, true, true, true);
+        check("POTENTIAL con JOB_SITE ajeno no se toca (solo LIMPIAR)",
+                accion(planificar(List.of(deOtro)), a) == VillageJobSiteReconciliationPolicy.Accion.LIMPIAR);
+        check("POTENTIAL de tipo incorrecto con JOB_SITE ajeno tampoco libera",
+                accion(planificar(List.of(
+                        new VillageJobSiteReconciliationPolicy.Potencial(a, 102L, true, false, true, true, true))), a)
+                        == VillageJobSiteReconciliationPolicy.Accion.LIMPIAR);
+
+        // OBSOLETO / FUERA: solo se borra la memoria; nunca se llama a release sobre un POI que no existe.
+        check("POTENTIAL de POI inexistente solo LIMPIA",
+                accion(planificar(List.of(
+                        new VillageJobSiteReconciliationPolicy.Potencial(a, 103L, false, true, true, false, true))), a)
+                        == VillageJobSiteReconciliationPolicy.Accion.LIMPIAR);
+        check("POTENTIAL fuera de la aldea con ticket cogido LIBERA y limpia",
+                accion(planificar(List.of(
+                        new VillageJobSiteReconciliationPolicy.Potencial(a, 104L, true, true, false, false, true))), a)
+                        == VillageJobSiteReconciliationPolicy.Accion.LIBERAR_Y_LIMPIAR);
+        check("POTENTIAL fuera de la aldea con ticket libre solo LIMPIA",
+                accion(planificar(List.of(
+                        new VillageJobSiteReconciliationPolicy.Potencial(a, 104L, true, true, false, false, false))), a)
+                        == VillageJobSiteReconciliationPolicy.Accion.LIMPIAR);
+
+        // NITWIT: no tiene estación. Si tuviera un POTENTIAL, se libera/limpia y NUNCA se promueve.
+        var nitwitPot = new VillageJobSiteReconciliationPolicy.Potencial(nitwit, 105L, true, false, true, false, true);
+        check("NITWIT no se promueve jamás",
+                accion(planificar(List.of(nitwitPot)), nitwit)
+                        == VillageJobSiteReconciliationPolicy.Accion.LIBERAR_Y_LIMPIAR);
+
+        // DOS POTENTIALS EN EL MISMO POI: promueve el UUID menor y el otro NO suelta el ticket que necesita el primero.
+        var primero = new VillageJobSiteReconciliationPolicy.Potencial(a, 106L, true, true, true, false, true);
+        var segundo = new VillageJobSiteReconciliationPolicy.Potencial(b, 106L, true, true, true, false, true);
+        var decisiones = planificar(List.of(segundo, primero)); // el orden de entrada no importa
+        check("dos POTENTIAL en el mismo POI: promueve el UUID menor",
+                accion(decisiones, a) == VillageJobSiteReconciliationPolicy.Accion.PROMOVER);
+        check("dos POTENTIAL en el mismo POI: el otro solo LIMPIA (el manager confirma el ticket del ganador)",
+                accion(decisiones, b) == VillageJobSiteReconciliationPolicy.Accion.LIMPIAR);
+
+        // IDEMPOTENCIA: tras aplicar las decisiones, un segundo pase no encuentra nada que hacer.
+        List<VillageJobSiteReconciliationPolicy.Potencial> estado = new java.util.ArrayList<>(List.of(promovible));
+        aplicar(estado, planificar(estado));
+        check("reconciliación de POTENTIAL idempotente", planificar(estado).isEmpty());
+
+        // DOS CICLOS: el segundo ciclo promueve otro POTENTIAL distinto y tampoco deja residuo.
+        estado.add(new VillageJobSiteReconciliationPolicy.Potencial(b, 200L, true, true, true, false, true));
+        var segundoCiclo = planificar(estado);
+        check("dos ciclos: el segundo POTENTIAL también se promueve",
+                accion(segundoCiclo, b) == VillageJobSiteReconciliationPolicy.Accion.PROMOVER);
+        aplicar(estado, segundoCiclo);
+        check("dos ciclos sin residuo", planificar(estado).isEmpty());
+    }
+
+    private static void probarTicketsPerdidos() {
+        check("ticket perdido se suelta",
+                VillageJobSiteReconciliationPolicy.debeSoltarTicket(
+                        new VillageJobSiteReconciliationPolicy.Estacion(1L, true, true, false, false)));
+        check("no se le roba el ticket a un JOB_SITE real",
+                !VillageJobSiteReconciliationPolicy.debeSoltarTicket(
+                        new VillageJobSiteReconciliationPolicy.Estacion(1L, true, true, true, false)));
+        check("no se le roba el ticket a un POTENTIAL legítimo",
+                !VillageJobSiteReconciliationPolicy.debeSoltarTicket(
+                        new VillageJobSiteReconciliationPolicy.Estacion(1L, true, true, false, true)));
+        check("un ticket libre no se suelta",
+                !VillageJobSiteReconciliationPolicy.debeSoltarTicket(
+                        new VillageJobSiteReconciliationPolicy.Estacion(1L, true, false, false, false)));
+        check("un POI inexistente no se suelta",
+                !VillageJobSiteReconciliationPolicy.debeSoltarTicket(
+                        new VillageJobSiteReconciliationPolicy.Estacion(1L, false, true, false, false)));
+        check("ticketsPerdidos filtra y conserva el orden",
+                VillageJobSiteReconciliationPolicy.ticketsPerdidos(List.of(
+                        new VillageJobSiteReconciliationPolicy.Estacion(1L, true, true, false, false),
+                        new VillageJobSiteReconciliationPolicy.Estacion(2L, true, true, true, false),
+                        new VillageJobSiteReconciliationPolicy.Estacion(3L, true, true, false, false),
+                        new VillageJobSiteReconciliationPolicy.Estacion(4L, true, true, false, true)))
+                        .equals(List.of(1L, 3L)));
+    }
+
+    private static List<VillageJobSiteReconciliationPolicy.Decision> planificar(
+            List<VillageJobSiteReconciliationPolicy.Potencial> potenciales) {
+        return VillageJobSiteReconciliationPolicy.planificarPotenciales(potenciales);
+    }
+
+    private static VillageJobSiteReconciliationPolicy.Accion accion(
+            List<VillageJobSiteReconciliationPolicy.Decision> decisiones, UUID uuid) {
+        for (var d : decisiones) {
+            if (d.uuid().equals(uuid)) {
+                return d.accion();
+            }
+        }
+        throw new AssertionError("sin decision para " + uuid);
+    }
+
+    /** Aplica las decisiones al estado: promover/limpiar quitan el POTENTIAL (el que se promueve pasa a JOB_SITE). */
+    private static void aplicar(List<VillageJobSiteReconciliationPolicy.Potencial> estado,
+                                List<VillageJobSiteReconciliationPolicy.Decision> decisiones) {
+        java.util.Set<UUID> quitados = new java.util.HashSet<>();
+        for (var d : decisiones) {
+            quitados.add(d.uuid());
+        }
+        estado.removeIf(p -> quitados.contains(p.uuid()));
     }
 
     private static Set<UUID> sobrantes(List<VillageJobSiteOwnershipPolicy.Registro> registros) {
