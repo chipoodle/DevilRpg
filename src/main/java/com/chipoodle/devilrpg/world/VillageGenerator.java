@@ -9621,9 +9621,7 @@ public final class VillageGenerator {
         BlockPos base = baseDeLaTaberna(center);
         BlockPos[] candidatos = {
                 new BlockPos(base.getX() - 1, nivel, base.getZ() + TABERNA_PUERTA),
-                new BlockPos(base.getX() + TABERNA_PUERTA_SUR, nivel, base.getZ() + TABERNA_FONDO),
-                new BlockPos(base.getX() - 1, nivel, base.getZ() + TABERNA_PUERTA + 1),
-                new BlockPos(base.getX() + TABERNA_PUERTA_SUR + 1, nivel, base.getZ() + TABERNA_FONDO)
+                new BlockPos(base.getX() - 1, nivel, base.getZ() + TABERNA_PUERTA + 1)
         };
         BlockPos mejor = null;
         double mejorDist = Double.MAX_VALUE;
