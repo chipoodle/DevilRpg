@@ -1,5 +1,16 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — CIERRE TÉCNICO.** Código probado `1016a7cf`. C4 `c4n-20261124-0250` PASS 3/3 con
+> cobertura **11/11** (NITWIT sin estación), 12/12 profesionales, 4 fundadores y guardias/equipo; POI
+> `poi-final-20261124-0305` PASS 4/4 con `ServerLevel`/`PoiManager`, digest vivo==disco, tardío, F4 sin fantasma y
+> parcial medido; NAV `nav-final-20261124-0255` PASS **21/21** con BUILD/terreno dinámico corregidos. JOB_SITE pasó
+> de 3/12 a 11/11; causa principal: cerebro generado con `NONE` sin `refreshBrain` (ValidateNearbyPoi borraba el
+> puesto). Nuevo libro persistido `VillageSavedData.JobSiteOwners` para no robar tickets de dueños no cargados.
+> F1 resuelto: el fixture imponía A, pero el dueño real/persistido era B; el arnés ahora lee el libro y declara
+> NO_MEDIDO si el keeper no está cargado. Informe: `2026-11-24-TECHNICAL-CLOSURE-CAMPAIGN.md`. Deudas: A2 no
+> reejecutado, mundos históricos sin libro, POI sin horas/jugador, navegación de una entidad. A2 sigue cerrado por
+> su campaña del 22-nov; este cierre no lo reabre ni lo sustituye.
+
 > **ACTUALIZACIÓN 23-nov-2026 (Incremento 3).** A revalidado en runtime con dos campañas consecutivas:
 > `c4n-20261123-1550` (SHA `69d7e55a`) y `c4n-20261123-1602` (SHA `5c427842`, docs-only) → `C4N_PASS` en las 6
 > fases con `roster_invariantes_ok=true`, `guardado_ok=true`, 12/12, 4 fundadores y 0 duplicados/huérfanos;

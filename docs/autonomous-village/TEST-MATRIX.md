@@ -1,4 +1,4 @@
-# MATRIZ DE PRUEBAS — AUTONOMOUS VILLAGE (actualizada 2026-11-23)
+# MATRIZ DE PRUEBAS — AUTONOMOUS VILLAGE (actualizada 2026-11-24)
 
 > Esta matriz clasifica **qué se prueba, con qué mecanismo, en qué gate y qué invariante protege**. No sustituye a
 > la evidencia runtime: una fila marcada `RUNTIME` solo se considera demostrada cuando existe un run concreto con
@@ -20,9 +20,9 @@
 
 | Prueba | Nivel | Aserciones | Gate | Invariante / qué protege |
 |---|---|---:|---|---|
-| `VillagePersistenceIntegrationTest` | Integración NBT | **484** | `villagePersistenceTest` → `test` | I388, I389: save/load real, dos ciclos, fichero, parcial, corrupción, identidad, JOB_SITE, fundadores, reconciliación |
+| `VillagePersistenceIntegrationTest` | Integración NBT | **525** | `villagePersistenceTest` → `test` | I388, I389: save/load real, dos ciclos, fichero, parcial, corrupción, identidad, JOB_SITE, fundadores, reconciliación |
 | `VillageRosterInvariantsTest` | Unitario | 12 | `policyTest` | I387: 12 puestos, 4 fundadores, UUID único, cupo, un dueño por puesto |
-| `VillageJobSiteOwnershipPolicyTest` | Unitario | 12 | `policyTest` | Un solo dueño por POI; idempotencia; no destruir titular |
+| `VillageJobSiteOwnershipPolicyTest` | Unitario | 32 | `policyTest` | Un solo dueño por POI; idempotencia; no destruir titular |
 | `VillagePopulationLoadPolicyTest` | Unitario | 7 | `policyTest` | Ventana de gracia de carga (no repoblar antes de cargar) |
 | `VillageFarmOwnershipTest` | Unitario | 6 | `policyTest` | Una parcela, un dueño; liberación segura |
 | `VillageTerrainPolicyTest` | Unitario | 11 | `policyTest` | Terreno/altura de aldea |
@@ -66,20 +66,23 @@
 
 | Escenario | Herramienta | Invariante / criterio | Evidencia aceptada |
 |---|---|---|---|
-| C4 standalone save/reload | `tools/c4n/lanzar-c4n.ps1` | I387 + 12/12, 4 fundadores, 0 duplicados/huérfanos, identidad, goals, reanudados, `guardado_ok`, invariantes del roster | `build/c4n/c4n-20261123-024` y campaña final |
+| C4 standalone save/reload | `tools/c4n/lanzar-c4n.ps1` | I387 + 12/12, 4 fundadores, 0 duplicados/huérfanos, identidad, goals, reanudados, `guardado_ok`, invariantes del roster | `build/c4n/c4n-20261124-0250` (**PASS 3/3, cobertura 11/11**) |
 | C4 puestos/guardias | mismo arnés | `jobsite-<fase>.txt`, `AL_CARGAR`, máscara de fundadores, equipo | JSON/log del run |
-| A2 asedio 8/8 estricto | `tools/a2n/A2NavHarness.java` | 8/8 `DENTRO-PARED` en 12000 ticks, C4 PASS | Runs `a2n-20261122-*` (cerrado) |
-| Navegación con métricas | `-PnavMetrics=true` + `NavPlannerMetrics.dump()` | Medir sin cambiar comportamiento | **Pendiente**: no requerido para cerrar D (línea base sintética) |
+| POI real `ServerLevel`/`PoiManager` | `tools/poi/lanzar-poi-harness.ps1` | 4 fases, tickets, digest vivo==disco, tardío, F1–F4, parcial medido | `build/av/poi-final-20261124-0305` (**POI_PASS 4/4**) |
+| Matriz navegación runtime | `tools/nav/lanzar-nav-harness.ps1` | 21 escenarios STEP_UP/DROP/BREAK/BUILD/túnel/terreno/A*/límites | `build/av/nav-final-20261124-0255` (**NAV_PASS 21/21**) |
+| Rendimiento real | `tools/perf/resumir-metricas.ps1` | Agregación literal, `NO_MEDIDO` fuera de medias | `build/av/perf-final/perf-resumen-final.md` |
 
 ## 3. Comandos de los gates
 
 ```powershell
 .\gradlew.bat compileJava compileTestJava --console=plain
-.\gradlew.bat test --console=plain                 # policyTest + villagePersistenceTest
+.\gradlew.bat test --console=plain                 # policyTest + villagePersistenceTest + POI selftest + nav contract
 .\gradlew.bat policyTest --console=plain            # 74 clases registradas
 .\gradlew.bat villagePersistenceTest --console=plain
 .\gradlew.bat navBaselineTest --console=plain
-.\gradlew.bat compileJava -Pa2nDiagnostics=true --console=plain
+.\gradlew.bat poiPersistenceSelftest --console=plain
+.\gradlew.bat navScenarioContractTest --console=plain
+.\gradlew.bat compileJava -Pa2nDiagnostics=true -Pa2nProbeOnly=true --console=plain
 python tools\lint_aldea.py --strict
 git diff --check
 ```
@@ -87,7 +90,7 @@ git diff --check
 Herramientas de evidencia:
 
 ```powershell
-.\tools\av\diagnose.ps1 -Run 024
+.\tools\av\diagnose.ps1 -Run c4n-20261124-0250 -ExigirCobertura -FailOnError
 .\tools\av\diagnose.ps1 -All
 .\tools\av\collect.ps1
 .\tools\av\nav-baseline.ps1
@@ -95,7 +98,7 @@ Herramientas de evidencia:
 
 ## 4. Qué NO está cubierto por tests automáticos
 
-- `ServerLevel`/`PoiManager` real en B (lo cubre C4 runtime).
-- Cobertura de `JOB_SITE` 12/12 (limitación conocida; el criterio es un dueño por POI presente).
-- Navegación real con métricas en runtime (la línea base es del A* real sobre grafos sintéticos).
+- `ServerLevel`/`PoiManager` real en B (lo cubre POI runtime; C4 también abre mundo real).
+- Cobertura de `JOB_SITE` 12/12 (el contrato es **11/11 estaciones**; NITWIT no tiene puesto).
+- Multientidad/laberintos largos/agua/puertas en navegación; A2 no se reejecutó en esta campaña.
 - `GuardHarness` legado (no portado; ver `tools/av/LEEME.md`).

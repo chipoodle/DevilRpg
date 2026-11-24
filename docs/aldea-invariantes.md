@@ -11516,10 +11516,12 @@ declara la limitación exacta. Evidencia: `VillagePersistenceIntegrationTest` (4
 ### I390 · LA INSTRUMENTACIÓN DEL PLANNER NO CAMBIA EL PLAN
 
 `NavPlannerMetrics` está **apagada por defecto** (`devilrpg.nav.metrics=false`); con el flag apagado no asigna ni
-formatea. `NavGraphSearch` no se modifica. El cuerpo de `NavPlanner.plan(...)` se conserva y solo se envuelve para
-medir. Las rutas, expansiones, `hitBudget` y `reason` deben ser idénticos con métricas ON y OFF. Memoria acotada
-(512 entidades / 4096 activas / 512 registros) y sin excepciones. Evidencia: `NavPlannerMetricsTest` (68),
-`NavSearchBaselineTest` (119, 6 escenarios ON/OFF `OK`).
+formatea. El cuerpo de `NavPlanner.plan(...)` se conserva y solo se envuelve para medir. Una optimización interna de
+`NavGraphSearch` (mapas primitivos fastutil) solo se acepta con A/B de rutas/hashes idénticos y sin cambiar la cola de
+prioridad; la mejora runtime no se extrapola (ver I397). Las rutas, expansiones, `hitBudget` y `reason` deben ser
+idénticos con métricas ON y OFF. Memoria acotada (512 entidades / 4096 activas / 512 registros) y sin excepciones.
+Evidencia: `NavPlannerMetricsTest` (68), `NavSearchBaselineTest` (119, 6 escenarios ON/OFF `OK`), A/B 750 rutas
+idénticas.
 
 ### I391 · EL DIAGNÓSTICO DISTINGUE ESTADO, INVARIANTE Y CAUSA
 
@@ -11529,3 +11531,63 @@ romper con JSON inválido o ficheros ausentes. Las causas conocidas no convierte
 siguen decidiéndose en el arnés. `GuardHarness` no se porta: su mundo, centro y mutaciones no son compatibles con la
 arquitectura actual; la instrumentación de guardias vive en C4. Evidencia: `c4n-20261123-020` diagnosticado como
 `INVARIANTE_INCUMPLIDA` y `LEEME.md` §5 estados.
+
+### I392 · UN ALDEANO GENERADO RECIBE SU CEREBRO CON SU PROFESIÓN
+
+`VillageGenerator.spawnVillagerAt` debe llamar a `Villager.refreshBrain(level)` después de fijar la profesión y añadir
+la entidad: el cerebro se construyó con `NONE` y `setVillagerData` no lo reconstruye. Sin ese refresh,
+`ValidateNearbyPoi` usa el predicado de `NONE` y borra el `JOB_SITE` en cuanto el aldeano está a menos de 16
+bloques de su estación. Evidencia: traza de prepare con 7 puestos que perdían la memoria 20 ticks después de
+reclamarla; tras el fix, `c4n-20261123-1900` y posteriores dan cobertura 11/11.
+
+### I393 · EL LIBRO DE DUEÑOS MANDA SOBRE `free_tickets`
+
+`VillageSavedData.JobSiteOwners` (POS → UUID) es la autoridad persistida del titular de un puesto. `PoiManager`
+solo cuenta tickets y no sabe de quién son; `AcquirePoi` ignora el resultado de `take`. La reconciliación **no**
+puede hacer `release`+`take` para adivinar: si el dueño del libro es este aldeano, se le restaura el `JOB_SITE` sin
+tocar el ticket; si es otro, no se toca; si no hay dueño y el ticket está cogido, no se libera (se espera a cargar
+al dueño). La posición conocida del dueño permite cargar su chunk; si el chunk carga y el UUID no existe, la entrada
+es basura y se olvida. Evidencia: `poi-final-20261124-0010` F1/F4 y digest vivo==disco; `VillagePersistenceIntegrationTest`
+525 aserciones.
+
+### I394 · COBERTURA NO ES TITULARIDAD
+
+C4 mide **cobertura** (`JOB_SITE` válido + POI del oficio + ticket cogido + sin duplicado), no que el aldeano sea el
+titular del ticket. El JSON de C4 debe declarar `cobertura_demostrada` y `ownership_demostrado=false`; la titularidad
+real se demuestra con `tools/poi` (ticket probe, F4, digest). No se puede usar “ownership” para un PASS de C4.
+
+### I395 · MATRIZ RUNTIME DE NAVEGACIÓN OBLIGATORIA
+
+Antes de cerrar navegación deben pasar, en un `ServerLevel` real: campo abierto, STEP_UP, DROP, BREAK, BUILD,
+combinaciones, escalera, columna, muro, túnel, terreno dinámico (barrera puesta/retirada), inalcanzable, A* global
+reanudado, presupuesto agotado, recuperación y límites local/global. El preflight usa el planner GLOBAL (sin el
+deadline de 30 ms del local) y C10 exige también el GLOBAL directo. Evidencia: `nav-final-20261123-2355` 21/21.
+
+### I396 · EL ARNÉS POI NO PUEDE EVALUAR UN `data` ENVOLVENTE NI UN TARDÍO MAL ATRIBUIDO
+
+`NbtIo.readCompressed` del `.dat` devuelve `{data: ...}`; el digest debe desenvolverlo. El “tardío” debe ser un
+aldeano no tocado por fixtures, con memoria única, cargado después de la foto y antes del mantenimiento; si su pareja
+coincide no es “nuevo”. La carga parcial se reporta `MEDIDO_OK`/`MEDIDO_VIOLADO`/`NO_MEDIDO`; `NO_MEDIDO` no es un
+PASS vacío. F4 debe tener dos `POTENTIAL` y un solo ticket y terminar con 1 `JOB_SITE`, 0 `POTENTIAL` y ticket cogido.
+Evidencia: `poi-final-20261124-0010` 4/4 fases PASS.
+
+### I397 · NO SE EXTRAPOLA UNA MICROOPTIMIZACIÓN AL RUNTIME
+
+Una optimización del planner solo se declara ganancia runtime si hay A/B con el mismo mundo, ruta y presupuesto. El
+cambio de `NavGraphSearch` a mapas primitivos (fastutil) se valida por semántica (A/B 750 rutas idénticas), pero la
+campaña real no cuantifica una mejora de pared: el 92–93 % del coste es validación de colisiones en el planner LOCAL,
+que no usa esa estructura. Se documenta como “no cuantificable en campaña”, no como mejora demostrada.
+
+### I398 · UN FIXTURE DE DUPLICADO NO PUEDE IMPONER EL DUEÑO
+
+El fixture F1 debe leer el dueño persistido del libro y usarlo como keeper; si el dueño no está cargado, se declara
+`NO_MEDIDO`, nunca se sustituye por el duplicado cargado ni se fuerza `forget + claim` a un UUID elegido por el
+arnés. La reconciliación conserva al keeper del libro. Evidencia: `poi-final-20261124-0305`, F1 keeper = dueño del
+libro, ticket cogido, 1 `JOB_SITE`, 0 `POTENTIAL`.
+
+### I399 · LA VALLA SE APLICA IGUAL EN PRODUCCIÓN Y EN EL ARNÉS
+
+El barrido de estaciones no puede conformarse con el cuadrado de `PoiManager.getInSquare`: una aldea/ruina vecina
+puede colar una estación fuera del anillo (medido: farmer 688,68,591, 4/3). Producción (`soltarTicketsPerdidos`,
+`reclamar`) y arnés deben filtrar con `esDeDentroDelMuro`/radio circular de la valla. Evidencia:
+`poi-final-20261124-0305`, `pois_registrados 11/11`.

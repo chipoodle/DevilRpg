@@ -1,3 +1,30 @@
+# CAMPAÑA — CIERRE TÉCNICO 23/24-NOV-2026: C4 11/11, POI REAL, NAV 21/21 (2026-11-24)
+
+- **Código probado:** `1016a7cf` (docs-only después). Informe completo:
+  `2026-11-24-TECHNICAL-CLOSURE-CAMPAIGN.md`.
+- **C4:** `c4n-20261124-0250` → `C4N_PASS` 3/3, `trabajoTicks=2400`, `-ExigirCobertura`; 12/12 profesionales,
+  4/4 fundadores, **cobertura 11/11** (NITWIT sin estación), 0 duplicados/huérfanos, guardias/máscara/equipo,
+  save/reload. `ownership_demostrado=false`, `cobertura_demostrada=true` (C4 no prueba el ticket).
+- **JOB_SITE:** causa principal = cerebro generado con `NONE` sin `refreshBrain`; `ValidateNearbyPoi` borraba el
+  JOB_SITE cerca de la estación. Además: gracia 1200 > ventana C4 600, `POTENTIAL` vanilla, conteo por profesión,
+  guardias contados como dueños. Fix: refreshBrain, reconciliación, libro persistido de dueños
+  (`VillageSavedData.JobSiteOwners`) y restauración sin `release`+`take`.
+- **F1 (`fixture_duplicado_ticket_cogido`):** el fixture forzaba el libro a A; el dueño real/persistido era B y
+  producción lo conservaba correctamente. Se corrigió el arnés (keeper = dueño del libro; NO_MEDIDO si no está
+  cargado) y se añadió filtro circular de valla también en producción. `poi-final-20261124-0305` PASS 4/4.
+- **POI:** `poi-final-20261124-0305` → `POI_PASS` 4/4 (ServerLevel/PoiManager, digest vivo==disco, tardío,
+  F1/F2/F3, **F4 dos POTENTIAL/1 ticket sin fantasma**, parcial `MEDIDO_OK` con 6 aldeanos/0 liberaciones ajenas).
+- **NAV:** `nav-final-20261124-0255` → `NAV_PASS` 21/21; 86 búsquedas, 75 completadas, 2.044 expansiones,
+  431 ms de planner, 3 presupuestos artificiales, 1 reanudada. Fixes reales: BUILD_FEET_NUDGE y
+  `terrainChanged` rearm; escenarios/geometría/preflight/C10 corregidos sin relajar seguridad.
+- **Rendimiento:** `build/av/perf-final/`; validación de colisiones domina; fastutil A/B 750 rutas idénticas,
+  **sin ganancia runtime declarada** (LOCAL no usa esa estructura).
+- **Gates:** `test` (village 525, ownership 32, build 39, nav contract 253, POI 15), `policyTest`,
+  `navScenarioContractTest`, `compileJava -Pa2nDiagnostics=true -Pa2nProbeOnly=true`, `lint_aldea --strict`,
+  `git diff --check` verdes.
+- **Deudas explícitas:** A2 no reejecutado; mundos históricos sin libro pueden bloquear una estación hasta cargar
+  al dueño; POI no mide horas/jugador; navegación de una entidad; `reanudados` de C4 es señal débil.
+
 # CAMPAÑA — INCREMENTO 3 COMPLETADO: C4 RUNTIME, NBT REAL, MÉTRICAS Y HERRAMIENTAS (2026-11-23)
 
 - **A · C4 runtime PASS (final, con el arnés enriquecido):** dos campañas consecutivas con mundos nuevos,
