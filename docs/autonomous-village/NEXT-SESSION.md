@@ -1,6 +1,6 @@
 # ACTUALIZACIÓN 25-nov-2026 — REGLAS DE SKILLS DINÁMICAS DESDE JSON
 
-- Implementación pendiente de validación Harness/DeepSeek; no declarar PASS hasta recibir reporte sobre el SHA exacto.
+- Implementación publicada en `361aab948117ed62a5b24dbc6f09d6af4e21ec39` (HEAD de rama al cierre de esta actualización); pendiente de validación Harness/DeepSeek. No declarar PASS hasta recibir reporte sobre este SHA exacto.
 - Los getters de máximos, costes y tipos de recurso ahora derivan sus mapas del árbol cargado desde `root_complete.json`, no de copias persistidas en el NBT del jugador. El NBT conserva progreso (niveles comprados); por tanto, cambiar `maxskilllevel` aplica a partidas nuevas y existentes sin borrar progreso.
 - Los setters de máximo/coste/tipo se conservan por compatibilidad de interfaz, pero registran advertencia y no alteran reglas: la fuente autoritativa es el JSON.
 - Se agregó `directexecution` a la definición Werewolf en `root_complete.json`. La regla declara trigger, recurso, umbral y requisito de transformación.
