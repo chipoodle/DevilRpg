@@ -1,7 +1,13 @@
 package com.chipoodle.devilrpg.network.payload;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
+import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityImplementation;
+import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.skillsystem.SkillTreeSpendPolicy;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.nbt.CompoundTag;
@@ -11,8 +17,10 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+import java.util.Map;
 
 public record PlayerSkillTreePayload(CompoundTag skillCompound) implements CustomPacketPayload {
 
@@ -33,7 +41,23 @@ public record PlayerSkillTreePayload(CompoundTag skillCompound) implements Custo
         ctx.enqueueWork(() -> {
             if (ctx.flow() == PacketFlow.SERVERBOUND) {
                 if (ctx.player() instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.getData(PlayerSkillCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.skillCompound());
+                    PlayerSkillCapabilityInterface actual = serverPlayer.getData(PlayerSkillCapability.INSTANCE);
+                    PlayerExperienceCapabilityInterface exp = serverPlayer.getData(PlayerExperienceCapability.INSTANCE);
+                    PlayerSkillCapabilityImplementation incoming = new PlayerSkillCapabilityImplementation();
+                    incoming.deserializeNBT(serverPlayer.level().registryAccess(), msg.skillCompound());
+                    int antes = totalPuntos(actual.getSkillsPoints());
+                    int despues = totalPuntos(incoming.getSkillsPoints());
+                    if (!SkillTreeSpendPolicy.permite(antes, despues, exp.getUnspentPoints())) {
+                        DevilRpg.LOGGER.warn("[SkillTree] arbol rechazado: puntos {} -> {} (sin gastar {})",
+                                antes, despues, exp.getUnspentPoints());
+                        reenviar(serverPlayer, actual, exp);
+                        return;
+                    }
+                    if (despues == antes + 1) {
+                        exp.consumePoint(serverPlayer); // autoridad: gasta un punto en el servidor
+                    }
+                    actual.deserializeNBT(serverPlayer.level().registryAccess(), msg.skillCompound());
+                    reenviar(serverPlayer, actual, exp);
                 }
             } else {
                 LocalPlayer clientPlayer = Minecraft.getInstance().player;
@@ -42,5 +66,25 @@ public record PlayerSkillTreePayload(CompoundTag skillCompound) implements Custo
                 }
             }
         });
+    }
+
+    private static int totalPuntos(Map<SkillEnum, Integer> puntos) {
+        int total = 0;
+        if (puntos != null) {
+            for (Integer n : puntos.values()) {
+                if (n != null && n > 0) {
+                    total += n;
+                }
+            }
+        }
+        return total;
+    }
+
+    private static void reenviar(ServerPlayer player, PlayerSkillCapabilityInterface arbol,
+                                 PlayerExperienceCapabilityInterface exp) {
+        PacketDistributor.sendToPlayer(player,
+                new PlayerSkillTreePayload(arbol.serializeNBT(player.level().registryAccess())));
+        PacketDistributor.sendToPlayer(player,
+                new PlayerExperiencePayload(exp.serializeNBT(player.level().registryAccess())));
     }
 }

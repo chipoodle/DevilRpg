@@ -40,15 +40,24 @@ public class PlayerExperienceCapabilityImplementation implements PlayerExperienc
         }
         if (!pe.level().isClientSide)
             sendExperienceChangesToClient((ServerPlayer) pe);
-        else
-            sendExperienceChangesToServer();
     }
 
     @Override
     public int consumePoint() {
         if (unspentPoints > 0) {
+            unspentPoints--; // predicción local; el servidor autoriza el gasto al validar el árbol
+            return 1;
+        }
+        return 0;
+    }
+
+    @Override
+    public int consumePoint(Player player) {
+        if (unspentPoints > 0) {
             unspentPoints--;
-            sendExperienceChangesToServer();
+            if (player != null && !player.level().isClientSide) {
+                sendExperienceChangesToClient((ServerPlayer) player);
+            }
             return 1;
         }
         return 0;
@@ -67,8 +76,6 @@ public class PlayerExperienceCapabilityImplementation implements PlayerExperienc
         this.unspentPoints += points;
         if (!pe.level().isClientSide) {
             sendExperienceChangesToClient((ServerPlayer) pe);
-        } else {
-            sendExperienceChangesToServer();
         }
     }
 
@@ -86,10 +93,6 @@ public class PlayerExperienceCapabilityImplementation implements PlayerExperienc
         currentLevel = nbt.getInt("currentLevel");
         maximumLevel = nbt.getInt("maximumLevel");
         unspentPoints = nbt.getInt("unspentPoints");
-    }
-
-    private void sendExperienceChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerExperiencePayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendExperienceChangesToClient(ServerPlayer pe) {

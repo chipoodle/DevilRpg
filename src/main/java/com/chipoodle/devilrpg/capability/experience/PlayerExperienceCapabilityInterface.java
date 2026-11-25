@@ -22,4 +22,11 @@ public interface PlayerExperienceCapabilityInterface extends IGenericCapability 
 
     int consumePoint();
 
+    /**
+     * Gasta un punto en el <b>servidor</b> (o en el lado que corresponda) y sincroniza al cliente si
+     * procede. El cliente ya no manda su NBT de experiencia; el gasto lo autoriza el servidor al validar
+     * el árbol de skills.
+     */
+    int consumePoint(Player player);
+
 }

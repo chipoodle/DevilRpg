@@ -25,7 +25,7 @@ public class ModNetwork {
         // Bidirectional (client <-> server)
         registrar.playToClient(PlayerManaPayload.TYPE, PlayerManaPayload.STREAM_CODEC, PlayerManaPayload::handle);
         registrar.playBidirectional(PlayerSkillTreePayload.TYPE, PlayerSkillTreePayload.STREAM_CODEC, PlayerSkillTreePayload::handle);
-        registrar.playBidirectional(PlayerExperiencePayload.TYPE, PlayerExperiencePayload.STREAM_CODEC, PlayerExperiencePayload::handle);
+        registrar.playToClient(PlayerExperiencePayload.TYPE, PlayerExperiencePayload.STREAM_CODEC, PlayerExperiencePayload::handle);
         registrar.playToClient(PlayerAuxiliarPayload.TYPE, PlayerAuxiliarPayload.STREAM_CODEC, PlayerAuxiliarPayload::handle);
         registrar.playToClient(PlayerMinionPayload.TYPE, PlayerMinionPayload.STREAM_CODEC, PlayerMinionPayload::handle);
         registrar.playToClient(PlayerStaminaPayload.TYPE, PlayerStaminaPayload.STREAM_CODEC, PlayerStaminaPayload::handle);

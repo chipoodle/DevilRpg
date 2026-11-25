@@ -453,6 +453,10 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         if (skillFromByteArray == SkillEnum.EMPTY || isChildOfActiveSkill(skillFromByteArray)) {
             return;
         }
+        Integer nivel = getSkillsPoints() == null ? null : getSkillsPoints().get(skillFromByteArray);
+        if (nivel == null || nivel <= 0) {
+            return; // el servidor solo ejecuta el pasivo si el árbol ya le dio nivel
+        }
         AbstractSkillExecutor skill = getLoadedSkillExecutor(skillFromByteArray);
         skill.execute(sender.level(), sender, new HashMap<>());
         //}

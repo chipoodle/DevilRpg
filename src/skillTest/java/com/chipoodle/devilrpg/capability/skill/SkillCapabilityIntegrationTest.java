@@ -54,6 +54,7 @@ public final class SkillCapabilityIntegrationTest {
             werewolfMana();
             directPayload();
             regenPolicy();
+            skillTreeSpend();
         } catch (Throwable t) {
             fallos++;
             System.out.println("  EXCEPCION NO CONTROLADA: " + t);
@@ -268,6 +269,19 @@ public final class SkillCapabilityIntegrationTest {
                 "regen: lobo con 20 puntos degenera 0.5");
         check(Math.abs(com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.manaDegeneration(false, 20)) < 1e-6,
                 "regen: humano no degenera");
+    }
+
+    private static void skillTreeSpend() {
+        check(com.chipoodle.devilrpg.skillsystem.SkillTreeSpendPolicy.permite(5, 6, 1),
+                "árbol: subir 1 con un punto sin gastar se permite");
+        check(!com.chipoodle.devilrpg.skillsystem.SkillTreeSpendPolicy.permite(5, 6, 0),
+                "árbol: subir 1 sin puntos sin gastar se rechaza");
+        check(!com.chipoodle.devilrpg.skillsystem.SkillTreeSpendPolicy.permite(5, 7, 5),
+                "árbol: subir 2 de golpe se rechaza");
+        check(com.chipoodle.devilrpg.skillsystem.SkillTreeSpendPolicy.permite(5, 5, 0),
+                "árbol: mismo total (recolocar poderes) se permite");
+        check(!com.chipoodle.devilrpg.skillsystem.SkillTreeSpendPolicy.permite(5, 4, 0),
+                "árbol: bajar el total se rechaza");
     }
 
     private static JsonObject icon(String id) {

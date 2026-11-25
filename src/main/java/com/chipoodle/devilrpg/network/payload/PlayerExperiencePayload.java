@@ -32,14 +32,13 @@ public record PlayerExperiencePayload(CompoundTag experienceCompound) implements
     public static void handle(PlayerExperiencePayload msg, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.flow() == PacketFlow.SERVERBOUND) {
-                if (ctx.player() instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.getData(PlayerExperienceCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.experienceCompound());
-                }
-            } else {
-                LocalPlayer clientPlayer = Minecraft.getInstance().player;
-                if (clientPlayer != null) {
-                    clientPlayer.getData(PlayerExperienceCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.experienceCompound());
-                }
+                // La experiencia y los puntos los autoriza el servidor; el gasto se valida en el árbol.
+                com.chipoodle.devilrpg.DevilRpg.LOGGER.warn("[Experience] payload C2S ignorado: el servidor es la autoridad");
+                return;
+            }
+            LocalPlayer clientPlayer = Minecraft.getInstance().player;
+            if (clientPlayer != null) {
+                clientPlayer.getData(PlayerExperienceCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.experienceCompound());
             }
         });
     }
