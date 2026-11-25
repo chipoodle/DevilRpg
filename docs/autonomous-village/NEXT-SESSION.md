@@ -10,12 +10,12 @@
   ya no ejecuta cualquier skill: `DirectSkillExecutionPolicy` solo permite `TRANSFORM_WEREWOLF` con
   nivel >0. **Skills 384 aserciones** (antes 376). El cliente real (UI/HUD/doble `onKeyInput`) sigue
   pendiente: no hay arnés de cliente.
-- **Recursos (autoridad):** maná/stamina ya **no** se aceptan del cliente (`playToClient`; SERVERBOUND
-  ignorado) y el servidor regenera con `PlayerResourceRegenPolicy`. **Skills 387**. Queda **L9**: los
-  otros 4 payloads (skill tree/experiencia/auxiliar/minion) siguen aceptando NBT del cliente y deben
-  pasar a **acciones validadas**.
-- **Gates:** `test` 1m21s; persistencia 553, ownership 59, skills 387; lint/diff verdes.
-- **Siguiente:** L9 (payloads de acción), L7, cliente real de skills y decisión de ramas/A1.
+- **Recursos (autoridad):** maná, stamina, **estado auxiliar** y **minions** ya son S→C (el cliente no
+  los escribe); el servidor regenera maná/stamina. **Skills 387**. **L9 reducida a 2 payloads de
+  acción** (experiencia y árbol de skills) que deben validar la acción (punto disponible, nodo, nivel),
+  no aceptar el NBT completo.
+- **Gates:** `test` 1m20s; persistencia 553, ownership 59, skills 387; lint/diff verdes.
+- **Siguiente:** L9 (2 payloads), L7, cliente real de skills y decisión de ramas/A1.
 - Informe: `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
 
 # SOAK ACEPTADO — F1/F2/F3 CERRADOS; PENDIENTES L2/L5–L8/SKILLS RUNTIME (2026-11-24)

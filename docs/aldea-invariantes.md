@@ -11924,10 +11924,11 @@ invocar lobo no; skill nula no. `test` 1m18s. Informe:
 `SERVERBOUND` se ignora y el cliente no envía su estado. El servidor regenera maná/stamina cada 10
 ticks con `PlayerResourceRegenPolicy` (base 0,7 maná / 0,05 stamina; −0,01 maná por punto de
 transformación), autoridad real. Sin la regeneración en servidor, al cerrar el C2S el maná se quedaría
-congelado.
+congelado. Igual para `PlayerAuxiliarPayload` (transformación) y `PlayerMinionPayload` (lista de
+minions): el servidor es la autoridad y el cliente solo recibe.
 
 **Evidencia:** `PlayerResourceRegenPolicy` 3 aserciones (lobo 0→0,7; lobo 20→0,5; humano→0); skills
-**387**; `test` 1m21s. Informe: `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
+**387**; `test` 1m20s. Informe: `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
 
-**Límites:** cliente real sin ejecutar; quedan 4 payloads de acción (**L9**) que aún aceptan NBT del
-cliente.
+**Límites:** cliente real sin ejecutar; quedan 2 payloads de acción (**L9**: experiencia/árbol) que
+aún aceptan NBT del cliente.

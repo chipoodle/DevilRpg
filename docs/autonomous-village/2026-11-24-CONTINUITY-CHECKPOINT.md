@@ -42,7 +42,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | **L2** | **Duplicado con el titular no cargado.** `limpiarDuplicados` + **59** aserciones de ownership: con el titular ausente se limpian las memorias cargadas y **NO se libera el ticket** (es suyo). | `VillageJobSiteOwnershipPolicyTest` 59; `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`. | Política cerrada; falta un fixture runtime con titular descargado (limitación declarada). | — (política) |
 | **L5/L6** | **Evidencia POI/navegación multi-entidad.** Soak de **30 aldeanos/72k** en dos semillas (0 muertes, 11/11, 0 inactivos permanentes) y **3 días de POI** sin duplicados/huérfanos. El arnés NAV sigue sin `multientidad_*` y el POI sin horas/jugador. | `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`. | Parcialmente cerradas; limitación de arnés declarada. | Implementar `multientidad_1/2/4/8` y la ventana horas+jugador si se quiere el contrato exacto. |
 | **SK** | **Skills runtime: humano→lobo a 0 maná, payload directo abierto y autoridad de maná/stamina.** (1) 0-maná ya no convierte humano en lobo (`WerewolfManaPolicy`); (2) el payload directo solo ejecuta `TRANSFORM_WEREWOLF` con nivel (`DirectSkillExecutionPolicy`); (3) maná/stamina son **autoridad del servidor** (`playToClient`, SERVERBOUND ignorado, regeneración propia con `PlayerResourceRegenPolicy`). **Skills 387.** | `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`, `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`, `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`; `SKILL_CAPABILITY_INTEGRATION_TEST` 387. | Defectos corregidos; cliente real (UI/HUD/`onKeyInput`) sigue pendiente. | Ejecutar servidor+cliente real y revisar la doble ejecución de `onKeyInput`. |
-| **L9** | **4 payloads de acción siguen aceptando NBT del cliente**: skill tree, experiencia, auxiliar (transformación) y minions. Deben pasar a **acciones validadas** (puntos/nivel/propiedad/cupo), no a `deserializeNBT` del estado completo. | `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md` §4. | Abierta; maná/stamina ya cerrados. | Diseñar payloads de acción validados en servidor y probar. |
+| **L9** | **2 payloads de acción aceptan NBT del cliente**: skill tree y experiencia (`consumePoint`). Deben pasar a **acciones validadas** (punto disponible, nodo, nivel), no a `deserializeNBT` del estado completo. Maná/stamina/auxiliar/minions ya son S→C. | `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md` §4. | Abierta; reducida de 4 a 2. | Diseñar payloads de acción validados en servidor y probar. |
 | **SOAK** | **Aceptación multi-día + estabilidad:** mismo SHA `bcf98f70` en dos semillas (`3188…` y `7454…`), ambas **PASS**: 0 muertes, 11/11, 0 duplicados/huérfanos/sin puesto/inactivos permanentes, guardado OK. | `soak-f4-confirm-20261124-2130`, `soak-f4-stability-20261124-2115`. | **`SOAK_PASS` estable en dos semillas** | Después L2/L5–L8/skills runtime. |
 
 ## 3. Protocolo de continuidad
@@ -229,9 +229,9 @@ cooldown ni precondiciones. `DirectSkillExecutionPolicy` solo permite `TRANSFORM
 **Recursos: maná/stamina pasan a autoridad del servidor (`f231923a`).** El cliente enviaba su NBT en
 cada `setMana`/regeneración; ahora solo el servidor manda S→C (`playToClient`), la rama SERVERBOUND se
 ignora y `PlayerCapabilityForgeEventSubscriber` regenera en servidor con `PlayerResourceRegenPolicy`.
-Skills **387**. **L9 abierta:** los otros 4 payloads (skill tree, experiencia, auxiliar, minions)
-siguen aceptando NBT del cliente; deben ser acciones validadas. Informe:
-`2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
+**Auxiliar y minions** también pasan a S→C (`9c79d20b`): el cliente no escribe transformación ni
+lista de minions. Skills **387**. **L9 reducida a 2 payloads** (experiencia/árbol) que aún aceptan NBT
+del cliente y deben ser acciones validadas. Informe: `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
 
 **L5/L6 parcialmente cerradas con el soak.** 30 aldeanos navegando 72k en dos semillas (0 muertes,
 11/11, 0 inactivos permanentes) y 3 días de POI sin duplicados/huérfanos: evidencia runtime fuerte de

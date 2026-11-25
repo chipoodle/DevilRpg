@@ -114,6 +114,8 @@ Herramientas de evidencia:
 - **Soak y hambre**: el run 72k `soak-final-20261124-1120` registró 5 muertes por hambre con comida en
   la despensa (F1 abierto). El arnés reporta `bajas` y `ausentes_fin`; no se declara PASS de
   sostenibilidad alimentaria.
+- **L9**: 2 payloads de acción (experiencia/árbol) aún aceptan NBT del cliente; maná/stamina/auxiliar/
+  minions ya son S→C. Ver `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
 - **L5/L6**: el arnés NAV no soporta `multientidad_*` (1 entidad por escenario) y el POI no mide
   horas/jugador; el soak cubre **30 aldeanos/3 días** y propiedad de POI sin duplicados. Limitación
   declarada en `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`.

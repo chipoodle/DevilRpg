@@ -44,24 +44,28 @@ servidor en cada `setMana`/regeneración. Consecuencias:
 
 Siguen **bidireccionales** y aceptando NBT del cliente:
 
-- `PlayerSkillTreePayload` (puntos/árbol),
-- `PlayerExperiencePayload`,
-- `PlayerAuxiliarPayload` (transformación),
-- `PlayerMinionPayload`.
+También se cerraron **auxiliar** (transformación) y **minions**, que son estado puro: el cliente ya no
+los envía (`playToClient`, SERVERBOUND ignorado). Los minions los crea el servidor y la transformación
+la disparan los payloads de skill; el cliente solo recibe el estado.
 
-Ahí sí hay acciones legítimas del cliente (asignar puntos, transformarse, gestionar minions), pero
-deben ser **acciones validadas por el servidor**, no un `deserializeNBT` del estado completo. **L9
-abierta**: diseñar payloads de acción con validación (puntos disponibles, nivel, propiedad, cupo) en
-vez de aceptar el NBT del cliente.
+Quedan **dos** payloads con acciones legítimas del cliente que aún aceptan NBT completo:
+
+- `PlayerSkillTreePayload` (asignar puntos al árbol),
+- `PlayerExperiencePayload` (`consumePoint` al gastar un punto).
+
+Ahí el cliente **sí** tiene una acción legítima, pero debe ser un **payload de acción** validado por el
+servidor (¿hay punto disponible?, ¿el nodo es válido?, ¿el nivel/prerrequisito se cumple?) en vez de
+un `deserializeNBT` del estado completo. **L9 abierta, reducida de 4 a 2.**
 
 ## 5 · Límites
 
 - No hay cliente real: la autoridad y la regeneración se verifican por código/prueba pura; el flujo
   cliente→servidor con HUD no se ejecuta.
 - La predicción local del cliente puede ir un instante por delante del servidor; el sync la corrige.
-- L9 (4 payloads de acción) sigue abierta.
+- L9 (2 payloads de acción: experiencia/árbol) sigue abierta.
 
 ## 6 · Veredicto
 
-**Maná y stamina pasan a ser autoridad del servidor**, con regeneración propia y payload C2S
-rechazado. **Skills 387**. Queda L9 (4 payloads de acción), L7, L8 (excluido) y cliente real.
+**Maná, stamina, estado auxiliar y minions son autoridad del servidor**, con regeneración propia y
+payloads C2S rechazados. **Skills 387**. Queda **L9 con 2 payloads de acción** (experiencia/árbol),
+L7, L8 (excluido) y cliente real.
