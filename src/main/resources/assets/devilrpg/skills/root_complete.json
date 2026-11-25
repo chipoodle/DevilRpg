@@ -311,6 +311,12 @@
             "resourcetype":"mana"
 		},
         "rewards": {},
+        "directexecution": {
+            "trigger": "resource_depleted",
+            "resource": "mana",
+            "threshold": 0.0001,
+            "requires_transformation": true
+        },
         "parent": "shapeshifting:root"
     },
     {

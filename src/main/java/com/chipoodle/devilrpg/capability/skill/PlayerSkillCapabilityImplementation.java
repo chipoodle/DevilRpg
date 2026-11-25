@@ -323,80 +323,65 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         return new HashMap<>();
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * Los máximos son reglas de diseño, no progreso del jugador: siempre se leen del árbol JSON
+     * cargado por el servidor. Así, cambiar maxskilllevel aplica también a partidas ya existentes
+     * sin tocar ni reiniciar los niveles que el jugador ya compró.
+     */
     @Override
     public HashMap<SkillEnum, Integer> getMaxSkillsPoints() {
-        try {
-            return (HashMap<SkillEnum, Integer>) BytesUtil.toObject(nbt.getByteArray(MAX_SKILLS_KEY));
-        } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getMaxSkillsPoints", e);
-            return null;
+        HashMap<SkillEnum, Integer> maximums = new HashMap<>();
+        for (SkillElement element : clientBuilder.getAll()) {
+            SkillEnum skill = element.getSkillCapability();
+            SkillResourceCost cost = element.getSkillManaCost();
+            if (skill != null && skill != SkillEnum.EMPTY && cost != null && cost.getMaxSkillLevel() != null) {
+                maximums.put(skill, cost.getMaxSkillLevel());
+            }
         }
+        return maximums;
     }
 
     @Override
     public void setMaxSkillsPoints(HashMap<SkillEnum, Integer> points, Player player) {
-        if (player.level().isClientSide) {
-            DevilRpg.LOGGER.warn("[SkillTree] el cliente no puede modificar niveles máximos");
-            return;
-        }
-        try {
-            nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(points));
-            sendSkillChangesToClient((ServerPlayer) player);
-        } catch (IOException e) {
-            DevilRpg.LOGGER.error("Error en setMaxSkillsPoints", e);
-        }
+        DevilRpg.LOGGER.warn("[SkillTree] maxskilllevel es autoritativo desde root_complete.json; se ignora la mutación runtime");
     }
 
-    @SuppressWarnings("unchecked")
+    /** Los costes se obtienen siempre de skillmanacost en root_complete.json. */
     @Override
     public HashMap<SkillEnum, Integer> getResourceCostPoints() {
-        try {
-            return (HashMap<SkillEnum, Integer>) BytesUtil
-                    .toObject(nbt.getByteArray(MANA_COST_KEY));
-        } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getResourceCostPoints", e);
-            return null;
+        HashMap<SkillEnum, Integer> costs = new HashMap<>();
+        for (SkillElement element : clientBuilder.getAll()) {
+            SkillEnum skill = element.getSkillCapability();
+            SkillResourceCost cost = element.getSkillManaCost();
+            if (skill != null && skill != SkillEnum.EMPTY && cost != null && cost.getManaCost() != null) {
+                costs.put(skill, cost.getManaCost());
+            }
         }
+        return costs;
     }
 
     @Override
     public void setResourceCostPoints(HashMap<SkillEnum, Integer> points, Player player) {
-        if (player.level().isClientSide) {
-            DevilRpg.LOGGER.warn("[SkillTree] el cliente no puede modificar costes de recursos");
-            return;
-        }
-        try {
-            nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(points));
-            sendSkillChangesToClient((ServerPlayer) player);
-        } catch (IOException e) {
-            DevilRpg.LOGGER.error("Error en setResourceCostPoints", e);
-        }
+        DevilRpg.LOGGER.warn("[SkillTree] manacost es autoritativo desde root_complete.json; se ignora la mutación runtime");
     }
 
-    @SuppressWarnings("unchecked")
+    /** Los tipos de recurso se obtienen siempre de skillmanacost en root_complete.json. */
     @Override
     public HashMap<SkillEnum, ResourceType> getResourceType() {
-        try {
-            return (HashMap<SkillEnum, ResourceType>) BytesUtil.toObject(nbt.getByteArray(RESOURCE_TYPE_KEY));
-        } catch (ClassNotFoundException | IOException e) {
-            DevilRpg.LOGGER.error("Error en getResourceType", e);
-            return null;
+        HashMap<SkillEnum, ResourceType> types = new HashMap<>();
+        for (SkillElement element : clientBuilder.getAll()) {
+            SkillEnum skill = element.getSkillCapability();
+            SkillResourceCost cost = element.getSkillManaCost();
+            if (skill != null && skill != SkillEnum.EMPTY && cost != null && cost.getResourceType() != null) {
+                types.put(skill, cost.getResourceType());
+            }
         }
+        return types;
     }
 
     @Override
     public void setResourceType(HashMap<SkillEnum, ResourceType> points, Player player) {
-        if (player.level().isClientSide) {
-            DevilRpg.LOGGER.warn("[SkillTree] el cliente no puede modificar tipos de recursos");
-            return;
-        }
-        try {
-            nbt.putByteArray(RESOURCE_TYPE_KEY, BytesUtil.toByteArray(points));
-            sendSkillChangesToClient((ServerPlayer) player);
-        } catch (IOException e) {
-            DevilRpg.LOGGER.error("Error en setResourceType", e);
-        }
+        DevilRpg.LOGGER.warn("[SkillTree] resourcetype es autoritativo desde root_complete.json; se ignora la mutación runtime");
     }
 
     @SuppressWarnings("unchecked")

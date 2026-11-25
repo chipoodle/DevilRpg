@@ -9,6 +9,7 @@ import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
+import com.chipoodle.devilrpg.skillsystem.server.SkillServerPolicy;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -18,7 +19,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import java.util.Objects;
 
 /**
  * Sends a message from the client to the server to execute the given Skill bypassing triggering functions
@@ -31,8 +31,16 @@ public record DirectSkillExecutionPayload(SkillEnum skill) implements CustomPack
 
     public static final StreamCodec<FriendlyByteBuf, DirectSkillExecutionPayload> STREAM_CODEC = StreamCodec.of(
             (buf, msg) -> buf.writeUtf(msg.skill().name()),
-            buf -> new DirectSkillExecutionPayload(SkillEnum.valueOf(buf.readUtf()))
+            buf -> new DirectSkillExecutionPayload(readSkill(buf))
     );
+
+    private static SkillEnum readSkill(FriendlyByteBuf buf) {
+        try {
+            return SkillEnum.valueOf(buf.readUtf(64));
+        } catch (IllegalArgumentException ignored) {
+            return SkillEnum.EMPTY;
+        }
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -43,7 +51,8 @@ public record DirectSkillExecutionPayload(SkillEnum skill) implements CustomPack
         ctx.enqueueWork(() -> {
             Player player = ctx.player();
             if (player instanceof ServerPlayer sender) {
-                PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(Objects.requireNonNull(sender), PlayerSkillCapability.INSTANCE);
+                if (msg.skill() == null || msg.skill() == SkillEnum.EMPTY) return;
+                PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(sender, PlayerSkillCapability.INSTANCE);
                 int nivel = unwrappedPlayerCapability.getSkillsPoints() == null ? 0
                         : unwrappedPlayerCapability.getSkillsPoints().getOrDefault(msg.skill(), 0);
                 PlayerAuxiliaryCapabilityInterface auxiliary =
@@ -52,8 +61,7 @@ public record DirectSkillExecutionPayload(SkillEnum skill) implements CustomPack
                         IGenericCapability.getUnwrappedPlayerCapability(sender, PlayerManaCapability.INSTANCE);
                 boolean transformed = auxiliary != null && auxiliary.isWerewolfTransformation();
                 float currentMana = mana == null ? Float.MAX_VALUE : mana.getMana();
-                if (!com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy
-                        .puedeEjecutar(msg.skill(), nivel, transformed, currentMana)) {
+                if (!SkillServerPolicy.canExecuteDirectSkill(msg.skill(), nivel, transformed, currentMana)) {
                     DevilRpg.LOGGER.warn("[Skill] reversión directa rechazada: skill={}, nivel={}, transformado={}, mana={}",
                             msg.skill(), nivel, transformed, currentMana);
                     return;

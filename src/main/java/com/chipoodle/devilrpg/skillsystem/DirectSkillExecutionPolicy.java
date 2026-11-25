@@ -1,31 +1,27 @@
 package com.chipoodle.devilrpg.skillsystem;
 
+import com.chipoodle.devilrpg.skillsystem.server.SkillServerPolicy;
 import com.chipoodle.devilrpg.util.SkillEnum;
 
 /**
- * <b>Skills runtime · payload directo.</b>
- * <p>
- * {@code DirectSkillExecutionPayload} ejecuta un {@link SkillEnum} en el servidor <b>sin</b> pasar por
- * {@code triggerAction} (nivel, coste, cooldown, precondiciones). El único uso legítimo es la
- * <b>reversión del hombre lobo</b> cuando el maná llega a 0 desde el cliente; cualquier otro skill
- * debe ir por el payload de teclado y sus comprobaciones. Si no se valida, un cliente modificado puede
- * ejecutar cualquier skill gratis.
+ * Compatibility facade for existing tests/callers.
+ *
+ * <p>The authoritative direct-execution rule is loaded and evaluated by SkillServerPolicy
+ * from root_complete.json. The two-argument method only reports rule eligibility; it does not
+ * authorize a network request by itself.
  */
 public final class DirectSkillExecutionPolicy {
 
     private DirectSkillExecutionPolicy() {
     }
 
-    /** Elegibilidad de la habilidad; no autoriza por sí sola el payload directo. */
+    /** Eligibility only; the server handler must use the full state-aware overload. */
     public static boolean puedeEjecutar(SkillEnum skill, int nivel) {
-        return skill == SkillEnum.TRANSFORM_WEREWOLF && nivel > 0;
+        return nivel > 0 && SkillServerPolicy.hasDirectExecutionRule(skill);
     }
 
-    /** Autoriza únicamente la reversión con el jugador transformado y el maná agotado. */
+    /** Evaluates the server-configured rule with state obtained from server capabilities. */
     public static boolean puedeEjecutar(SkillEnum skill, int nivel, boolean transformado, float mana) {
-        return puedeEjecutar(skill, nivel)
-                && transformado
-                && Float.isFinite(mana)
-                && mana <= 0.0001F;
+        return SkillServerPolicy.canExecuteDirectSkill(skill, nivel, transformado, mana);
     }
 }

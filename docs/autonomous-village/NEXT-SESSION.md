@@ -1,3 +1,18 @@
+# ACTUALIZACIÓN 25-nov-2026 — REGLAS DE SKILLS DINÁMICAS DESDE JSON
+
+- Implementación pendiente de validación Harness/DeepSeek; no declarar PASS hasta recibir reporte sobre el SHA exacto.
+- Los getters de máximos, costes y tipos de recurso ahora derivan sus mapas del árbol cargado desde `root_complete.json`, no de copias persistidas en el NBT del jugador. El NBT conserva progreso (niveles comprados); por tanto, cambiar `maxskilllevel` aplica a partidas nuevas y existentes sin borrar progreso.
+- Los setters de máximo/coste/tipo se conservan por compatibilidad de interfaz, pero registran advertencia y no alteran reglas: la fuente autoritativa es el JSON.
+- Se agregó `directexecution` a la definición Werewolf en `root_complete.json`. La regla declara trigger, recurso, umbral y requisito de transformación.
+- `SkillServerPolicy` carga esa regla desde el recurso del mod y la evalúa server-side usando nivel, estado de transformación y maná obtenidos de capabilities del servidor. Si no hay regla, el recurso/trigger no se soporta o los datos no son válidos, rechaza.
+- `DirectSkillExecutionPayload` usa exclusivamente `SkillServerPolicy`; el cliente solo propone el enum, nunca el estado ni el umbral. El decoder inválido se convierte en `EMPTY` y se rechaza.
+- La clase `DirectSkillExecutionPolicy` queda como fachada de compatibilidad para pruebas/callers; ya no contiene el enum ni el umbral.
+- Se mantiene la estructura de árbol/prerrequisitos en el builder común ya usado por la capability. Esta modificación separa la política de acciones directas del código de GUI; no se hizo una migración general de todas las clases SkillElement/GUI.
+- Validación pendiente: compile/test/skillCapabilityTest/lint strict/diff check; comprobar nuevo mundo y mundo existente tras cambiar máximos/costes; matriz de reglas directexecution (sin regla, skill errónea, nivel 0, transformado/no transformado, maná >, = y < umbral); cliente modificado; servidor dedicado y save/reload.
+- No se ejecutaron pruebas por ChatGPT.
+
+---
+
 # ACTUALIZACIÓN 25-nov-2026 — HARDENING DE SKILLS PUBLICADO, VALIDACIÓN PENDIENTE
 
 - Código de seguridad publicado en `2224c77a359434b23a8929a58e66e4fe60a34930`.
