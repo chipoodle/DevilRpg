@@ -157,6 +157,10 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
                 }
             }
             if (changes == 1 && changedPower != null && changedSkill != null) {
+                // Predicción local para que la pantalla actualice inmediatamente; el servidor valida
+                // la acción y su respuesta S2C reemplaza esta copia si la rechaza.
+                sets.set(idx, new HashMap<>(names));
+                saveSkillSets(sets);
                 PacketDistributor.sendToServer(new SkillLoadoutPayload(changedPower, changedSkill));
             } else {
                 DevilRpg.LOGGER.warn("[SkillTree] cambio de loadout local rechazado: {} ranuras modificadas", changes);
@@ -181,10 +185,6 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @Override
     public void rotateSkillSet(int delta, Player player) {
         if (delta != -1 && delta != 1) return;
-        if (player.level().isClientSide) {
-            PacketDistributor.sendToServer(new SkillSetRotatePayload(delta));
-            return;
-        }
         List<HashMap<PowerEnum, SkillEnum>> sets = loadSkillSets();
         // Crear conjuntos vacios de sobra hasta MAX_SKILL_SETS (3) para poder rotar entre ellos.
         boolean grew = false;
@@ -198,7 +198,11 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         int count = sets.size();
         int newIdx = ((getActiveSkillSetIndex() + delta) % count + count) % count;
         nbt.putInt(ACTIVE_SKILL_SET_KEY, newIdx);
-        sendSkillChangesToClient((ServerPlayer) player);
+        if (player.level().isClientSide) {
+            PacketDistributor.sendToServer(new SkillSetRotatePayload(delta));
+        } else {
+            sendSkillChangesToClient((ServerPlayer) player);
+        }
     }
 
     private int clampActiveIndex(int count) {
