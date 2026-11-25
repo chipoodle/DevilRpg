@@ -11855,3 +11855,20 @@ muertes**, **11/11 desde la primera muestra**, 0 huérfanos/sin puesto. Informe:
 
 **Límites:** el soak se acepta en `bfd5113b`; queda repetirlo en otra semilla para estabilidad
 multi-mundo. Los oficios/POI siguen administrados por el pueblo.
+
+### I414 · EL PROFESIONAL PARADO SIN FAENA RECIBE UN “DESPIERTA” (24-nov-2026)
+
+**Regla:** `VillageManager.despertarSiEstaParado`, en el latido, si un adulto de oficio del pueblo
+está despierto, sin descanso, sin target y **sin goal del mod**, lleva **30 s sin moverse** y no se le
+ha despertado en otros 30 s, le pide camino a su `JOB_SITE` (o al centro si el puesto es su propia
+celda) con `caminarHacia`. No teletransporta: solo vuelve a pedir navegación. El `empujarSiEstaPlantado`
+de I198 no sirve para este caso porque exige un goal activo.
+
+**Causa/evidencia:** `soak-stability` (semilla 7454, `bfd5113b`): 0 muertes y 11/11, pero **1
+inactivo permanente**, el granjero `3bce318d…` 12.000 ticks en `629,63,528` con `JOB_SITE 630,63,567`
+y sin goal. Con `bcf98f70`, `soak-f4-stability` (72k): **`SOAK_PASS`**, 0 muertes, 11/11, **0
+inactivos permanentes**, comida 164. La semilla 3188 también pasó en `bfd5113b`. Informe:
+`2026-11-24-F4-IDLE-RECOVERY.md`.
+
+**Límites:** F1/F2/F3/F4 cerrados; soak **estable en dos semillas con el mismo SHA `bcf98f70`**
+(`soak-f4-stability` y `soak-f4-confirm`, ambos PASS). Siguen L2/L5–L8/skills runtime.

@@ -1,3 +1,12 @@
+- **Estabilidad multi-mundo CONFIRMADA:** el mismo SHA `bcf98f70` da **`SOAK_PASS`** en la semilla
+  `3188…` (`soak-f4-confirm`: 0 muertes, 11/11, 0 inactivos permanentes, comida 108) y en la `7454…`
+  (`soak-f4-stability`: 0 muertes, 11/11, 0 inactivos, comida 164).
+- **F1/F2/F3/F4 cerrados**; el soak multi-día queda **aceptado y estable en dos semillas**.
+- **Gates:** `test` 1m18s; persistencia 553, ownership 54, skills 376; lint/diff verdes.
+- **Siguiente:** L2, L5–L8, **skills runtime** (servidor con jugador, UI cliente, doble `onKeyInput`) y
+  la decisión de ramas/A1.
+- Informes: `2026-11-24-SOAK-ACCEPTANCE.md` y `2026-11-24-F4-IDLE-RECOVERY.md`.
+
 # SOAK ACEPTADO — F1/F2/F3 CERRADOS; PENDIENTES L2/L5–L8/SKILLS RUNTIME (2026-11-24)
 
 - **SHA exacto:** `bfd5113b269ffa317c7e21d2acbf0c867e833a6b`. Run `soak-f3-outside-20261124-2030`:

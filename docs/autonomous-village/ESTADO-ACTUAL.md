@@ -1,5 +1,12 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE EN DOS SEMILLAS, MISMO SHA.** `bcf98f70` da
+> **`SOAK_PASS`** en `3188…` (`soak-f4-confirm`: 0 muertes, 11/11, 0 inactivos permanentes, comida 108)
+> y en `7454…` (`soak-f4-stability`: 0 muertes, 11/11, 0 inactivos, comida 164). **F1/F2/F3/F4
+> cerrados.** Siguiente: L2, L5–L8, skills runtime y ramas/A1. Informes:
+> `2026-11-24-SOAK-ACCEPTANCE.md` y `2026-11-24-F4-IDLE-RECOVERY.md`.
+
+
 > **ACTUALIZACIÓN 24-nov-2026 — SOAK ACEPTADO EN `bfd5113b`.** `soak-f3-outside` (72k): **`SOAK_PASS`**,
 > **0 muertes**, población 30, **11/11 desde la primera muestra**, 0 duplicados/huérfanos/sin
 > puesto/inactivos permanentes, comida 60, guardado OK. **F1 (hambre), F2 (caída) y F3 (JOB_SITE fuera

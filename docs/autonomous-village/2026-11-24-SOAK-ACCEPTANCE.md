@@ -1,29 +1,28 @@
-# SOAK ACEPTADO — 72k con 0 muertes y 11/11 (24-nov-2026)
+# SOAK ACEPTADO — 72k con 0 muertes y 11/11, en dos semillas (24-nov-2026)
 
-**RUN_ID:** `av-f3-20261124-2030`
+**RUN_ID:** `av-f3-20261124-2030`, `av-f4-20261124-2115`, `av-f4-20261124-2130`
 **Rama:** `feature/autonomous-village`
-**SHA exacto:** `bfd5113b269ffa317c7e21d2acbf0c867e833a6b`
-**Resultado:** **`SOAK_PASS`**
+**SHA exacto:** `bcf98f70c69d6a11abeb60506e21a275042d1b8e` (F4 incluida)
+**Resultado:** **`SOAK_PASS` en las semillas `3188…` y `7454…`** (mismo SHA)
 
 ---
 
 ## 1 · Resultado
 
-| Métrica | Valor |
-|---|---|
-| Ticks | 72.000 (3 días de juego) |
-| Resultado | **`SOAK_PASS`** |
-| Población final | 30 |
-| Profesionales con puesto | **11/11** |
-| Ausentes / duplicados / huérfanos / sin puesto | **0 / 0 / 0 / 0** |
-| Inactivos permanentes | **0** (pico 1, no permanente) |
-| Comida | 60 (mín. 60, sin muestras a 0) |
-| Leña / hierro / almacén | 106 / 0 / 350 |
-| Guardado | **OK**, sin excepciones no controladas |
+| Métrica | Semilla `3188…` (`soak-f4-confirm`) | Semilla `7454…` (`soak-f4-stability`) |
+|---|---|---|
+| Ticks | 72.000 | 72.000 |
+| Resultado | **`SOAK_PASS`** | **`SOAK_PASS`** |
+| Población final | 30 | 16 |
+| Profesionales con puesto | **11/11** | **11/11** |
+| Ausentes / duplicados / huérfanos / sin puesto | **0 / 0 / 0 / 0** | **0 / 0 / 0 / 0** |
+| Inactivos permanentes | **0** | **0** |
+| Comida | 108 | 164 |
+| Guardado | **OK** | **OK** |
 
-El `SOAK_PASS` exige todo esto **a la vez** durante 72.000 ticks; es el primer run que lo consigue.
-`sin_puesto_bajo_max=0` y `huerfanos_max=0` significan que la cobertura fue 11/11 **desde la primera
-muestra válida**, no solo al final.
+Dos mundos distintos, el **mismo SHA**, ambos con `SOAK_PASS` y sin ninguna baja. La aceptación
+multi-día queda **estable en dos semillas**.
+
 
 ## 2 · La causa raíz de F3
 
@@ -53,7 +52,8 @@ durante cientos de muestras.
 | Ración al rendirse (F1) | `fa6a63f4` | 1 muerte, **0 hambre**; F1 cerrado |
 | Caída + ración crítica (F2) | `ccee1943`/`7e2b4293` | **0 muertes**, F2 cerrado; F3 333→148 |
 | POI del taller (F3 parcial) | `743b81db`/`68741d29` | 0 muertes, 11/11 final, hueco inicial 148–241 |
-| **JOB_SITE fuera del muro (F3)** | **`bfd5113b`** | **`SOAK_PASS`: 0 muertes, 11/11 desde el inicio** |
+| **JOB_SITE fuera del muro (F3)** | **`bfd5113b`** | **`SOAK_PASS`** (semilla 3188) |
+| **Inactivo sin goal (F4)** | **`bcf98f70`** | **`SOAK_PASS` en las dos semillas** |
 
 Gates en `bfd5113b`: `test` 4m11s; persistencia **553**, ownership **54**, skills **376**; lint y
 `git diff --check` verdes.
@@ -71,8 +71,8 @@ Gates en `bfd5113b`: `test` 4m11s; persistencia **553**, ownership **54**, skill
 
 ## 5 · Límites
 
-- Es **un** run de aceptación; para “estable” conviene repetir el mismo SHA en otra semilla/mundo
-  (siguiente ronda). El criterio del soak es este run; la estabilidad multi-mundo se mide aparte.
-- F1/F2/F3 cerrados; **siguen abiertos** L2, L5–L8, skills runtime (servidor con jugador/UI/cliente) y
-  la decisión de ramas/A1 del dueño.
+- **Estabilidad multi-mundo:** confirmada en **dos semillas** con el mismo SHA `bcf98f70`
+  (`soak-f4-confirm` y `soak-f4-stability`), ambas `SOAK_PASS`.
+- F1/F2/F3/F4 cerrados; **siguen abiertos** L2, L5–L8, skills runtime (servidor con jugador/UI/cliente)
+  y la decisión de ramas/A1 del dueño.
 - La ruta/terreno y el POI siguen siendo mejorables; el aldeano come en el sitio si no llega.
