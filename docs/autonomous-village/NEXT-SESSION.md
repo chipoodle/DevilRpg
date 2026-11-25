@@ -10,13 +10,12 @@
   ya no ejecuta cualquier skill: `DirectSkillExecutionPolicy` solo permite `TRANSFORM_WEREWOLF` con
   nivel >0. **Skills 384 aserciones** (antes 376). El cliente real (UI/HUD/doble `onKeyInput`) sigue
   pendiente: no hay arnés de cliente.
-- **Recursos (autoridad):** maná, stamina, **estado auxiliar** y **minions** ya son S→C (el cliente no
-  los escribe); el servidor regenera maná/stamina. **Skills 387**. **L9 reducida a 2 payloads de
-  acción** (experiencia y árbol de skills) que deben validar la acción (punto disponible, nodo, nivel),
-  no aceptar el NBT completo.
-- **Gates:** `test` 1m20s; persistencia 553, ownership 59, skills 387; lint/diff verdes.
-- **Siguiente:** L9 (2 payloads), L7, cliente real de skills y decisión de ramas/A1.
-- Informe: `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
+- **L9 CERRADA:** experiencia S→C; el árbol C2S se valida con `SkillTreeSpendPolicy` (mismo total o
+  +1 con punto sin gastar), el servidor consume el punto y reenvía el estado autoritativo; el pasivo
+  exige nivel >0. **Skills 392**.
+- **Gates:** `test` 1m22s; persistencia 553, ownership 59, skills 392; lint/diff verdes.
+- **Siguiente:** L7 (fastutil A/B), L8 (excluido), cliente real de skills y decisión de ramas/A1.
+- Informe: `2026-11-24-L9-SKILL-TREE-VALIDATED.md`.
 
 # SOAK ACEPTADO — F1/F2/F3 CERRADOS; PENDIENTES L2/L5–L8/SKILLS RUNTIME (2026-11-24)
 

@@ -1,11 +1,10 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
-> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, SKILLS Y AUTORIDAD DE RECURSOS.** Soak `bcf98f70`:
-> **`SOAK_PASS`** en `3188…` y `7454…`. **F1–F4 cerrados; L2 política cerrada.** Skills: 0-maná,
-> payload directo y **maná/stamina/auxiliar/minions son autoridad del servidor** (el cliente no los
-> escribe; el servidor regenera). **Skills 387.** Queda **L9 con 2 payloads de acción**
-> (experiencia/árbol), L7, cliente real y ramas/A1. Informes:
-> `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`, `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
+> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, SKILLS Y L9 CERRADOS.** Soak `bcf98f70`: **`SOAK_PASS`**
+> en `3188…` y `7454…`. **F1–F4 cerrados; L2 política cerrada; L9 cerrada:** experiencia S→C y árbol de
+> skills validado en servidor (`SkillTreeSpendPolicy`), pasivo con nivel. Maná/stamina/auxiliar/minions
+> ya son autoridad del servidor. **Skills 392.** Queda L7, L8 (excluido), cliente real y ramas/A1.
+> Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-L9-SKILL-TREE-VALIDATED.md`.
 
 
 

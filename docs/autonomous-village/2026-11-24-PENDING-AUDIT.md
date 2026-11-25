@@ -201,7 +201,6 @@ POI (15); aldea/terreno/comida/siege. **Skills: 0.**
   baja a **1 muerte** (`630,63,530`), pero el acceso a la taberna sigue. Informe:
   `2026-11-24-F1-HUNGER-TAVERN-FIX.md`. El soak sigue **NO ACEPTADO**.
 - **Siguen abiertos:** L5/L6 (parciales con el soak), L7 (fastutil A/B), L8 (excluido por el usuario),
-  **L9** (2 payloads de acción: experiencia/árbol), skills runtime con cliente real y la decisión de
-  ramas/A1.
+  skills runtime con cliente real y la decisión de ramas/A1. L9 cerrada (árbol/experiencia validados).
 - Las clasificaciones de §2 se mantienen como **foto de la auditoría**; esta sección registra qué se
   corrigió después, sin reescribir los hallazgos.

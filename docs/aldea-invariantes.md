@@ -11932,3 +11932,19 @@ minions): el servidor es la autoridad y el cliente solo recibe.
 
 **Límites:** cliente real sin ejecutar; quedan 2 payloads de acción (**L9**: experiencia/árbol) que
 aún aceptan NBT del cliente.
+
+### I419 · EL ÁRBOL DE SKILLS SOLO GASTA UN PUNTO POR PAQUETE Y EL SERVIDOR LO CONSUME (24-nov-2026)
+
+**Regla:** `PlayerSkillTreePayload` C2S se valida con
+`SkillTreeSpendPolicy.permite(totalAntes, totalDespues, puntosSinGastar)`:
+`totalDespues == totalAntes` (recolocar) o `totalDespues == totalAntes + 1 && puntosSinGastar > 0`.
+Nunca se baja el total ni se sube más de 1. Si sube 1, **el servidor consume el punto**
+(`PlayerExperienceCapabilityInterface.consumePoint(ServerPlayer)`); si no pasa, rechaza y reenvía al
+cliente el árbol y la experiencia autoritativos. `PlayerExperiencePayload` es **S→C**. El pasivo solo
+se ejecuta si el árbol le dio nivel > 0.
+
+**Evidencia:** `SkillTreeSpendPolicy` 5 aserciones; skills **392**; `test` 1m22s. Informe:
+`2026-11-24-L9-SKILL-TREE-VALIDATED.md`.
+
+**Límites:** el árbol viaja como NBT completo validado por delta (no una acción por nodo); un cliente
+puede recolocar poderes (mismo total) pero no regalarse puntos. Cliente real sin ejecutar.

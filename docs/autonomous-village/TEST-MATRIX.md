@@ -31,7 +31,7 @@
 | `WarehouseApproachPolicyTest` | Unitario | 8 | `policyTest` | Acceso al almacén |
 | `FoodHungerPolicyTest`, `PantryCreditPolicyTest` | Unitario | — | `policyTest` | Comida/crédito de despensa |
 | `FoodStateNbtTest`, `FoodIntegrationTest` | Integración NBT | — | `foodNbtTest`, `foodIntegrationTest` | NBT real de comida y `VillageSavedData` de despensa |
-| `SkillCapabilityIntegrationTest` | Integración Skills | **387** | `skillCapabilityTest` → `test` | I401: 33/33 skills con nodo/coste/display; 36 nodos y 3 raíces; mapas NBT completos; partida vieja recibe skills nuevas sin pisar valores; iconos contra el registro real; **I416: reversión del lobo a 0 maná no fuerza humano→lobo**; **I417: payload directo solo TRANSFORM_WEREWOLF con nivel**; **I418: regen compartida** |
+| `SkillCapabilityIntegrationTest` | Integración Skills | **392** | `skillCapabilityTest` → `test` | I401: 33/33 skills con nodo/coste/display; 36 nodos y 3 raíces; mapas NBT completos; partida vieja recibe skills nuevas sin pisar valores; iconos contra el registro real; **I416: 0-maná no fuerza humano→lobo**; **I417: payload directo solo TRANSFORM_WEREWOLF con nivel**; **I418: regen compartida**; **I419: árbol solo mismo total o +1 con punto** |
 
 ### 2.2 Navegación y planner (Incremento 2/3 · C/D)
 
@@ -114,8 +114,8 @@ Herramientas de evidencia:
 - **Soak y hambre**: el run 72k `soak-final-20261124-1120` registró 5 muertes por hambre con comida en
   la despensa (F1 abierto). El arnés reporta `bajas` y `ausentes_fin`; no se declara PASS de
   sostenibilidad alimentaria.
-- **L9**: 2 payloads de acción (experiencia/árbol) aún aceptan NBT del cliente; maná/stamina/auxiliar/
-  minions ya son S→C. Ver `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
+- **L9 cerrada:** experiencia S→C y árbol validado por delta (servidor consume el punto). Ver
+  `2026-11-24-L9-SKILL-TREE-VALIDATED.md`.
 - **L5/L6**: el arnés NAV no soporta `multientidad_*` (1 entidad por escenario) y el POI no mide
   horas/jugador; el soak cubre **30 aldeanos/3 días** y propiedad de POI sin duplicados. Limitación
   declarada en `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`.
