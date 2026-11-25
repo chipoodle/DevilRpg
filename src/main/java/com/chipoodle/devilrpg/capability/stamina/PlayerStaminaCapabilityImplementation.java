@@ -26,8 +26,6 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
         this.stamina = stamina;
         if (!player.level().isClientSide)
             sendStaminaChangesToClient((ServerPlayer) player);
-        else
-            sendStaminaChangesToServer();
     }
 
     @Override
@@ -36,8 +34,6 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
         stamina = Math.max(Math.min(stamina, maxStamina),0.0f);
         if (!player.level().isClientSide)
             sendStaminaChangesToClient((ServerPlayer) player);
-        else
-            sendStaminaChangesToServer();
     }
 
     @Override
@@ -50,8 +46,6 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
         this.maxStamina = maxStamina;
         if (!player.level().isClientSide)
             sendStaminaChangesToClient((ServerPlayer) player);
-        else
-            sendStaminaChangesToServer();
     }
 
     @Override
@@ -64,8 +58,6 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
         this.regeneration = regeneration;
         if (!player.level().isClientSide)
             sendStaminaChangesToClient((ServerPlayer) player);
-        else
-            sendStaminaChangesToServer();
     }
 
     @Override
@@ -90,10 +82,6 @@ public class PlayerStaminaCapabilityImplementation implements PlayerStaminaCapab
         stamina = compound.getFloat("stamina");
         maxStamina = compound.getFloat("maxStamina");
         regeneration = compound.getFloat("regeneration");
-    }
-
-    private void sendStaminaChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerStaminaPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendStaminaChangesToClient(ServerPlayer pe) {

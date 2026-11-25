@@ -32,14 +32,13 @@ public record PlayerManaPayload(CompoundTag manaCompound) implements CustomPacke
     public static void handle(PlayerManaPayload msg, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.flow() == PacketFlow.SERVERBOUND) {
-                if (ctx.player() instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.getData(PlayerManaCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.manaCompound());
-                }
-            } else {
-                LocalPlayer clientPlayer = Minecraft.getInstance().player;
-                if (clientPlayer != null) {
-                    clientPlayer.getData(PlayerManaCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.manaCompound());
-                }
+                // El servidor es la autoridad del maná; un cliente no puede escribir su estado.
+                DevilRpg.LOGGER.warn("[Mana] payload C2S ignorado: el servidor es la autoridad");
+                return;
+            }
+            LocalPlayer clientPlayer = Minecraft.getInstance().player;
+            if (clientPlayer != null) {
+                clientPlayer.getData(PlayerManaCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.manaCompound());
             }
         });
     }

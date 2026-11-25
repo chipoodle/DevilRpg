@@ -299,6 +299,28 @@ public class PlayerCapabilityForgeEventSubscriber {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
+        // El servidor es la autoridad de maná/stamina: regenera por su cuenta con el mismo ritmo que el
+        // cliente (que ya no puede escribir su estado). Sin esto, al cerrar el payload C2S el maná del
+        // servidor se quedaría congelado.
+        if (player.tickCount % 10 == 0) {
+            PlayerAuxiliaryCapabilityInterface aux = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerAuxiliaryCapability.INSTANCE);
+            PlayerManaCapabilityInterface mana = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerManaCapability.INSTANCE);
+            PlayerStaminaCapabilityInterface stamina = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerStaminaCapability.INSTANCE);
+            float degeneracionMana = 0.0F;
+            if (aux != null && aux.isWerewolfTransformation()) {
+                PlayerSkillCapabilityInterface skills = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
+                int puntos = skills == null || skills.getSkillsPoints() == null ? 0
+                        : skills.getSkillsPoints().getOrDefault(SkillEnum.TRANSFORM_WEREWOLF, 0);
+                degeneracionMana = com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.manaDegeneration(true, puntos);
+                if (stamina != null) {
+                    stamina.onPlayerTickEventRegeneration(player,
+                            com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.BASE_STAMINA_DEGENERATION);
+                }
+            }
+            if (mana != null) {
+                mana.onPlayerTickEventRegeneration(player, degeneracionMana);
+            }
+        }
         // Objetivo de progresión: comprueba si el jugador alcanzó el objetivo y avanza al siguiente.
         ObjectiveManager.tick(player);
         // Copia de seguridad del estado de los minions cada MINION_CAPTURE_INTERVAL_TICKS (10 s). Es lo que

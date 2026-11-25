@@ -23,12 +23,12 @@ public class ModNetwork {
         registrar.playToServer(DirectSkillExecutionPayload.TYPE, DirectSkillExecutionPayload.STREAM_CODEC, DirectSkillExecutionPayload::handle);
 
         // Bidirectional (client <-> server)
-        registrar.playBidirectional(PlayerManaPayload.TYPE, PlayerManaPayload.STREAM_CODEC, PlayerManaPayload::handle);
+        registrar.playToClient(PlayerManaPayload.TYPE, PlayerManaPayload.STREAM_CODEC, PlayerManaPayload::handle);
         registrar.playBidirectional(PlayerSkillTreePayload.TYPE, PlayerSkillTreePayload.STREAM_CODEC, PlayerSkillTreePayload::handle);
         registrar.playBidirectional(PlayerExperiencePayload.TYPE, PlayerExperiencePayload.STREAM_CODEC, PlayerExperiencePayload::handle);
         registrar.playBidirectional(PlayerAuxiliarPayload.TYPE, PlayerAuxiliarPayload.STREAM_CODEC, PlayerAuxiliarPayload::handle);
         registrar.playBidirectional(PlayerMinionPayload.TYPE, PlayerMinionPayload.STREAM_CODEC, PlayerMinionPayload::handle);
-        registrar.playBidirectional(PlayerStaminaPayload.TYPE, PlayerStaminaPayload.STREAM_CODEC, PlayerStaminaPayload::handle);
+        registrar.playToClient(PlayerStaminaPayload.TYPE, PlayerStaminaPayload.STREAM_CODEC, PlayerStaminaPayload::handle);
 
         // Clientbound only
         registrar.playToClient(PotionPayload.TYPE, PotionPayload.STREAM_CODEC, PotionPayload::handle);

@@ -27,8 +27,8 @@ import java.util.Random;
 public final class ClientForgeResourceEventSubscriber {
 
     public static final int TICK_COUNT_REGENERATION = 10;
-    public static final float BASE_MANA_DEGENERATION = 0.7f;
-    public static final float BASE_STAMINA_DEGENERATION = 0.05f;
+    public static final float BASE_MANA_DEGENERATION = com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.BASE_MANA_DEGENERATION;
+    public static final float BASE_STAMINA_DEGENERATION = com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.BASE_STAMINA_DEGENERATION;
 
     @SubscribeEvent
     public static void onPlayerTickResource(PlayerTickEvent.Pre event) {
@@ -41,7 +41,8 @@ public final class ClientForgeResourceEventSubscriber {
 
                 float manaDegeneration = 0.0f;
                 if (unwrappedPlayerCapabilityAux.isWerewolfTransformation()) {
-                    manaDegeneration = BASE_MANA_DEGENERATION - (0.01f * unwrappedPlayerCapabilitySkill.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF));
+                    manaDegeneration = com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.manaDegeneration(true,
+                            unwrappedPlayerCapabilitySkill.getSkillsPoints().get(SkillEnum.TRANSFORM_WEREWOLF));
                     unwrappedPlayerCapabilityStamina.onPlayerTickEventRegeneration(event.getEntity(), BASE_STAMINA_DEGENERATION);
                 }
 

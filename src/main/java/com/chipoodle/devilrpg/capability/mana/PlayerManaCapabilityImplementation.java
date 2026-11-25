@@ -26,8 +26,6 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
         this.mana = mana;
         if (!player.level().isClientSide)
             sendManaChangesToClient((ServerPlayer) player);
-        else
-            sendManaChangesToServer();
     }
 
     @Override
@@ -40,8 +38,6 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
         this.maxMana = maxMana;
         if (!player.level().isClientSide)
             sendManaChangesToClient((ServerPlayer) player);
-        else
-            sendManaChangesToServer();
     }
 
     @Override
@@ -62,8 +58,6 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
         // Sincronizar los cambios con el cliente o el servidor según el lado
         if (!player.level().isClientSide) {
             sendManaChangesToClient((ServerPlayer) player);
-        } else {
-            sendManaChangesToServer();
         }
     }
 
@@ -77,8 +71,6 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
         this.regeneration = regeneration;
         if (!player.level().isClientSide)
             sendManaChangesToClient((ServerPlayer) player);
-        else
-            sendManaChangesToServer();
     }
 
     @Override
@@ -103,10 +95,6 @@ public class PlayerManaCapabilityImplementation implements PlayerManaCapabilityI
         mana = compound.getFloat("mana");
         maxMana = compound.getFloat("maxMana");
         regeneration = compound.getFloat("regeneration");
-    }
-
-    private void sendManaChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerManaPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendManaChangesToClient(ServerPlayer pe) {

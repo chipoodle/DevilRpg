@@ -32,14 +32,13 @@ public record PlayerStaminaPayload(CompoundTag staminaCompound) implements Custo
     public static void handle(PlayerStaminaPayload msg, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.flow() == PacketFlow.SERVERBOUND) {
-                if (ctx.player() instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.getData(PlayerStaminaCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.staminaCompound());
-                }
-            } else {
-                LocalPlayer clientPlayer = Minecraft.getInstance().player;
-                if (clientPlayer != null) {
-                    clientPlayer.getData(PlayerStaminaCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.staminaCompound());
-                }
+                // El servidor es la autoridad de la stamina; un cliente no puede escribir su estado.
+                DevilRpg.LOGGER.warn("[Stamina] payload C2S ignorado: el servidor es la autoridad");
+                return;
+            }
+            LocalPlayer clientPlayer = Minecraft.getInstance().player;
+            if (clientPlayer != null) {
+                clientPlayer.getData(PlayerStaminaCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.staminaCompound());
             }
         });
     }

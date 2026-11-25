@@ -53,6 +53,7 @@ public final class SkillCapabilityIntegrationTest {
             registroDeObjetos();
             werewolfMana();
             directPayload();
+            regenPolicy();
         } catch (Throwable t) {
             fallos++;
             System.out.println("  EXCEPCION NO CONTROLADA: " + t);
@@ -258,6 +259,15 @@ public final class SkillCapabilityIntegrationTest {
                 "payload directo: invocar lobo por la puerta trasera se rechaza");
         check(!com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy.puedeEjecutar(null, 5),
                 "payload directo: skill nula se rechaza");
+    }
+
+    private static void regenPolicy() {
+        check(Math.abs(com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.manaDegeneration(true, 0) - 0.7F) < 1e-6,
+                "regen: lobo sin puntos degenera 0.7");
+        check(Math.abs(com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.manaDegeneration(true, 20) - 0.5F) < 1e-6,
+                "regen: lobo con 20 puntos degenera 0.5");
+        check(Math.abs(com.chipoodle.devilrpg.util.PlayerResourceRegenPolicy.manaDegeneration(false, 20)) < 1e-6,
+                "regen: humano no degenera");
     }
 
     private static JsonObject icon(String id) {
