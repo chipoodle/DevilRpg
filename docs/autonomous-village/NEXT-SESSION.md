@@ -1,3 +1,17 @@
+# SOAK ACEPTADO — F1/F2/F3 CERRADOS; PENDIENTES L2/L5–L8/SKILLS RUNTIME (2026-11-24)
+
+- **SHA exacto:** `bfd5113b269ffa317c7e21d2acbf0c867e833a6b`. Run `soak-f3-outside-20261124-2030`:
+  **`SOAK_PASS`**, 72.000 ticks, **0 muertes**, población 30, **11/11 desde la primera muestra**,
+  0 duplicados / huérfanos / sin puesto / inactivos permanentes, comida 60, guardado OK.
+- **F1 (hambre)**, **F2 (caída)** y **F3 (JOB_SITE fuera del muro)** **CERRADOS**.
+- La causa de F3 era un **granjero** con el composter en `736,69,537`, **fuera de la muralla**; el
+  POI era del oficio y por eso se aceptaba. `bfd5113b` invalida todo `JOB_SITE` fuera del muro y lo
+  suelta; el granjero reclama una estación de dentro. `sin_puesto_bajo_max` 148–333 → **0**.
+- **Gates:** `test` 4m11s; persistencia 553, ownership 54, skills 376; lint/diff verdes.
+- **Siguiente:** repetir el 72k en otra semilla/mundo para estabilidad, y atacar **L2, L5–L8, skills
+  runtime** (servidor con jugador, UI cliente, doble `onKeyInput`) y la decisión de ramas/A1.
+- Informe: `2026-11-24-SOAK-ACCEPTANCE.md`.
+
 # F1 Y F2 CERRADOS; F3 (PUESTO DE FLETCHER) INTERMITENTE (2026-11-24)
 
 - **Código:** `7e2b4293`. F1 (hambre) con ración al rendirse y a hambre crítica; F2 (caída) con

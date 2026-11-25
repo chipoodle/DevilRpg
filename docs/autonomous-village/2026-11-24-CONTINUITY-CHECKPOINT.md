@@ -37,7 +37,8 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | L8 | A2 no se reejecutó en el cierre. | Excluido expresamente por el usuario; C4/NAV cubren el camino actual. | Regresión A2 no medida. | Campaña A2 acotada solo si el análisis de dependencias la justifica. |
 | **F1** | **Hambre a 3 días.** **CERRADO (hambre)** en `fa6a63f4`: ración real al rendirse el goal de taberna; 72k del mismo mundo con **0 muertes por hambre** (antes 8, 7 de hambre), población 29, comida 88, 11/11, 0 huérfanos/sin puesto/inactivos. | `build/soak/soak-f1-fallback-20261124-1755`; `2026-11-24-F1-CLOSURE-FALLBACK-RATION.md`. | El criterio de hambre se cumple; queda la caída F2. | — (cerrado) |
 | **F2** | **Caída al volver al pueblo** (`Zacarias`, `hit the ground too hard`, `729,64,542`). **CERRADO** con `VillageFallPolicy` (`ccee1943`): miembros del pueblo sin daño por caída fuera de asedio; ración a hambre crítica (`7e2b4293`). `soak-f2-final`: **0 muertes**. | `build/soak/soak-f2-final-20261124-1825`; `2026-11-24-F2-FALL-PROTECTION.md`. | El criterio de caída/hambre se cumple; queda F3. | — (cerrado) |
-| **F3** | **Fletcher sin POI** en `610,63,508`: `sin_puesto=1` durante **241 muestras iniciales** (148–333 según run) y 1 huérfano transitorio; final **11/11** y **0 muertes** en `soak-f3-periodic` (`68741d29`). El 12k de la misma semilla pasa limpio. | `build/soak/soak-f3-periodic-20261124-1915`; `2026-11-24-F3-JOB-SITE-POI.md`. | Solo falla la cobertura **inicial**; el soak no se acepta. | 72k `-Diag` para `SOAK_POI_INVALID` (UUID/profesión/JOB_SITE/POI/bloque) y corregir; 11/11 desde la primera muestra. |
+| **F3** | **JOB_SITE fuera del muro**: el diagnóstico `-PoiDiag` encontró un **granjero** (`a3dd7940…`) con su composter en `736,69,537`, **fuera de la muralla** (POI del oficio, por eso se aceptaba). **CERRADO** con `bfd5113b`: todo `JOB_SITE` fuera del muro es inválido y se suelta; `soak-f3-outside` da **`SOAK_PASS`**, **0 muertes**, **11/11 desde la primera muestra**, 0 huérfanos/sin puesto. | `build/soak/soak-f3-outside-20261124-2030`; `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-F3-JOB-SITE-POI.md`. | **Aceptado.** | — (cerrado) |
+| **SOAK** | **Aceptación multi-día:** 72.000 ticks, 0 muertes, 11/11 desde la primera muestra, 0 duplicados/huérfanos/sin puesto/inactivos permanentes, guardado OK, gates verdes. | `build/soak/soak-f3-outside-20261124-2030`, SHA `bfd5113b`. | **`SOAK_PASS`** | Repetir en otra semilla para estabilidad multi-mundo; después L2/L5–L8/skills runtime. |
 
 ## 3. Protocolo de continuidad
 
@@ -187,3 +188,10 @@ flechas (610,63,508) falta durante **241 muestras iniciales** (148–333 según 
 transitorio. El 12k de la misma semilla pasa limpio. El re-registro/reemplazo periódico deja el final
 en 11/11 y reduce el hueco, pero no lo cierra: siguiente, 72k `-Diag` para `SOAK_POI_INVALID` y
 corregir el `JOB_SITE`/censo. Informe: `2026-11-24-F3-JOB-SITE-POI.md`.
+
+**SOAK ACEPTADO en `bfd5113b`.** `soak-f3-outside-20261124-2030` (72k) da **`SOAK_PASS`**: **0
+muertes**, población 30, **11/11 desde la primera muestra**, 0 duplicados/huérfanos/sin puesto/
+inactivos permanentes, comida 60, guardado OK. La causa de F3 era un **granjero con el composter en
+`736,69,537`, fuera de la muralla**; el POI era del oficio y `puestoDeTrabajoInvalido` solo miraba el
+tipo dentro del muro. Ahora todo `JOB_SITE` fuera del muro es inválido y se suelta; el granjero
+reclama una estación de dentro. Informe: `2026-11-24-SOAK-ACCEPTANCE.md`.

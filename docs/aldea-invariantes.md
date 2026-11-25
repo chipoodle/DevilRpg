@@ -11838,3 +11838,20 @@ periódico no lo cierra.
 **Límites:** F3 **no cerrada**: falta que la cobertura sea 11/11 desde la primera muestra válida. El
 siguiente paso es 72k `-Diag` para `SOAK_POI_INVALID` (UUID, profesión, `JOB_SITE`, POI, bloque) y
 decidir si es un adulto nuevo con oficio sin estación o el fletcher. El soak global no se acepta aún.
+
+### I413 · UN JOB_SITE FUERA DEL MURO NO ES VÁLIDO AUNQUE EL POI SEA DEL OFICIO (24-nov-2026)
+
+**Regla:** `VillageManager.puestoDeTrabajoInvalido` debe devolver `true` para cualquier `JOB_SITE`
+cuya posición esté **fuera de la muralla** (`!esDeDentroDelMuro(center, pos)`), aunque el POI exista y
+sea del oficio correcto. El reconciliador lo suelta, el libro libera el ticket y el aldeano reclama una
+estación de dentro.
+
+**Causa/evidencia:** el `-PoiDiag` del 72k encontró a un **granjero** (`a3dd7940…`) con el composter en
+`736,69,537`, **75 bloques al este y fuera del radio 62**; el POI era `farmer` y el bloque composter,
+así que el chequeo de tipo (que solo se aplicaba dentro) lo aceptaba. El aldeano quedaba `sin_puesto`
+y el composter huérfano durante 148–333 muestras. Con `bfd5113b` el 72k da **`SOAK_PASS`**: **0
+muertes**, **11/11 desde la primera muestra**, 0 huérfanos/sin puesto. Informe:
+`2026-11-24-SOAK-ACCEPTANCE.md`.
+
+**Límites:** el soak se acepta en `bfd5113b`; queda repetirlo en otra semilla para estabilidad
+multi-mundo. Los oficios/POI siguen administrados por el pueblo.

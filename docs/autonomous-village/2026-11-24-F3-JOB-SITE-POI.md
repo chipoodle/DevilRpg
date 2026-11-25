@@ -18,6 +18,7 @@ fallan la cobertura:
 | `soak-f2-final` | 1 | **333** | 1 | 10/11 |
 | `soak-f3-poi` (`743b81db`) | 1 | **148** | 1 | **11/11** |
 | `soak-f3-periodic` (`68741d29`) | 1 | **241** | 1 | **11/11** |
+| `soak-f3-outside` (**`bfd5113b`**) | **0** | **0** | **0** | **11/11** |
 
 El POI de la **mesa de flechas** (`610,63,508`, fletcher `e49a2bbc…`) falta/está mal durante las
 primeras 148–241 muestras y luego se corrige solo; el 12k de la misma semilla pasa limpio. Es
@@ -57,5 +58,13 @@ No se declara el soak aceptado hasta un 72k con 11/11 desde la primera muestra v
 
 ## 5 · Veredicto
 
-**F1 y F2 cerrados. F3 abierta.** La cobertura final es 11/11 y no hay muertes; el único criterio
-pendiente es la **cobertura inicial**. No se declara el soak aceptado.
+**F3 CERRADA en `bfd5113b`.** El `-PoiDiag` identificó al profesional real: un **granjero**
+(`a3dd7940…`) con su composter en **`736,69,537`, fuera de la muralla**. El POI era del oficio, así que
+`puestoDeTrabajoInvalido` lo aceptaba (solo miraba el tipo dentro del muro). Ahora cualquier `JOB_SITE`
+**fuera del muro** es inválido y se suelta; el granjero reclama una estación de dentro.
+`soak-f3-outside` (72k, `bfd5113b`): **`SOAK_PASS`**, **0 muertes**, **11/11 desde la primera
+muestra**, 0 huérfanos/sin puesto. El soak multi-día queda **ACEPTADO** en ese SHA. Informe:
+`2026-11-24-SOAK-ACCEPTANCE.md`.
+
+**Límites:** un run de aceptación; repetir en otra semilla para estabilidad multi-mundo. Siguen
+abiertos L2, L5–L8, skills runtime y la decisión de ramas/A1.
