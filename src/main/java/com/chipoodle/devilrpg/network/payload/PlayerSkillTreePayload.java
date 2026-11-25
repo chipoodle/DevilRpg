@@ -56,7 +56,7 @@ public record PlayerSkillTreePayload(CompoundTag skillCompound) implements Custo
                     if (despues == antes + 1) {
                         exp.consumePoint(serverPlayer); // autoridad: gasta un punto en el servidor
                     }
-                    actual.deserializeNBT(serverPlayer.level().registryAccess(), msg.skillCompound());
+                    actual.applyClientTree(msg.skillCompound, serverPlayer.level().registryAccess());
                     reenviar(serverPlayer, actual, exp);
                 }
             } else {

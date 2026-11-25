@@ -445,8 +445,14 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
             if (skillCap != null) {
                 HashMap<SkillEnum, Integer> skillsPoints = skillCap.getSkillsPoints();
                 HashMap<SkillEnum, Integer> skillsMaxPoints = skillCap.getMaxSkillsPoints();
-                Integer points = skillsPoints.get(skillEnum);
+                if (skillsPoints == null || skillsMaxPoints == null) {
+                    return;
+                }
+                Integer points = skillsPoints.getOrDefault(skillEnum, 0);
                 Integer maxPoints = skillsMaxPoints.get(skillEnum);
+                if (maxPoints == null) {
+                    return;
+                }
                 if (points < maxPoints) {
                     points += expCap == null ? 0 : expCap.consumePoint();
                     skillsPoints.put(skillEnum, points);
@@ -518,6 +524,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                     && draggedSkillWidget.getSkillElement().getDisplay().getFrame() != null
                     && draggedSkillWidget.getSkillElement().getDisplay().getFrame().equals(SkillFrameType.TASK)
                     && !draggedSkillWidget.getSkillElement().getSkillCapability().isPassive()
+                    && com.chipoodle.devilrpg.skillsystem.SkillCastPolicy.esAsignableAPoder(
+                            draggedSkillWidget.getSkillElement().getSkillCapability())
                     && !draggedSkillWidget.isDisabled();
             if (draggableToPower) {
                 isDraggingToPowerButton = true;
@@ -546,7 +554,8 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
         // cualquier otra forma): los pasivos no se asignan, se aplican solos o los ejecuta su padre activo.
         if (state == ButtonMouse.RIGHT_BUTTON && draggedSkillWidget != null
                 && draggedSkillWidget.getSkillElement().getParent() != null
-                && !draggedSkillWidget.getSkillElement().getSkillCapability().isPassive()) { // botón derecho
+                && com.chipoodle.devilrpg.skillsystem.SkillCastPolicy.esAsignableAPoder(
+                        draggedSkillWidget.getSkillElement().getSkillCapability())) { // botón derecho
             DevilRpg.LOGGER.info("|----------- rightMouseReleases: {}, mousex: {}, mousey:{}", draggedSkillWidget.getSkillElement().getSkillCapability().getName(), mouseX, mouseY);
 
             CustomSkillButton copy = powerButtonList.stream().filter(x -> x.isInside(mouseX, mouseY)).findAny().orElse(null);

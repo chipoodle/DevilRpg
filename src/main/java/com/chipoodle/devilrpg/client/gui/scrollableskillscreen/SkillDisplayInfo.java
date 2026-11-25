@@ -17,8 +17,6 @@ import net.minecraft.util.GsonHelper;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 
@@ -117,20 +115,16 @@ public class SkillDisplayInfo {
     public Component getDescription() {
         return this.description;
     }
-
-    @OnlyIn(Dist.CLIENT)
     public ItemStack getIcon() {
         return this.icon;
     }
 
     @Nullable
-    @OnlyIn(Dist.CLIENT)
     public ResourceLocation getBackground() {
         return this.background;
     }
 
     @Nullable
-    @OnlyIn(Dist.CLIENT)
     public ResourceLocation getImage() {
         return this.image;
     }
@@ -138,18 +132,12 @@ public class SkillDisplayInfo {
     public SkillFrameType getFrame() {
         return this.frame;
     }
-
-    @OnlyIn(Dist.CLIENT)
     public float getX() {
         return this.x;
     }
-
-    @OnlyIn(Dist.CLIENT)
     public float getY() {
         return this.y;
     }
-
-    @OnlyIn(Dist.CLIENT)
     public boolean shouldShowToast() {
         return this.showToast;
     }

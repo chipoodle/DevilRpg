@@ -47,4 +47,11 @@ public interface PlayerSkillCapabilityInterface extends IGenericCapability {
     List<SkillEnum> getPassivesFromActiveSkill(SkillEnum skillEnum);
     SkillElement getSkillElementByEnum(SkillEnum skillEnum);
     int getSkillsPoints(SkillEnum skillEnum) ;
+
+    /**
+     * Aplica un árbol enviado por el cliente copiando <b>solo</b> las claves que el cliente posee
+     * (puntos, máximos, costes, tipos, iconos, poderes y loadouts). Las claves de servidor —minions y
+     * modificadores de atributos— se conservan tal cual.
+     */
+    void applyClientTree(CompoundTag incoming, net.minecraft.core.HolderLookup.Provider provider);
 }

@@ -429,6 +429,9 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         //DevilRpg.LOGGER.info("------ side: {} PlayerSkillCapability triggerAction(SPlayer, triggeredPower) {} {}", (playerIn.level().isClientSide ? "CLIENT" : "SERVER"), playerIn.getName().getString(), triggeredPower);
         if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
             AbstractSkillExecutor skill = getSkill(triggeredPower);
+            if (skill == null) {
+                return; // poder sin ejecutor (p. ej. skill de minion): no reventar
+            }
             if (skill.arePreconditionsMetBeforeConsumingResource(playerIn) && consumeResource(playerIn, skill)) {
                 skill.execute(playerIn.level(), playerIn, new HashMap<>());
             } else {
@@ -450,7 +453,8 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         // con sus parametros (executePassiveChildren). Solo los pasivos "raiz" (sin padre activo)
         // se aplican aqui al asignarles puntos. Esto evita ejecutar a KNOCKBACK_RESISTANCE etc. con
         // un mapa vacio.
-        if (skillFromByteArray == SkillEnum.EMPTY || isChildOfActiveSkill(skillFromByteArray)) {
+        if (skillFromByteArray == null || skillFromByteArray == SkillEnum.EMPTY
+                || skillFromByteArray.isForMinion() || isChildOfActiveSkill(skillFromByteArray)) {
             return;
         }
         Integer nivel = getSkillsPoints() == null ? null : getSkillsPoints().get(skillFromByteArray);
@@ -473,7 +477,11 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     private AbstractSkillExecutor getSkill(PowerEnum triggeredPower) {
-        SkillEnum skillEnum = getSkillsNameOfPowers().get(triggeredPower);
+        HashMap<PowerEnum, SkillEnum> nombres = getSkillsNameOfPowers();
+        SkillEnum skillEnum = nombres == null ? null : nombres.get(triggeredPower);
+        if (!com.chipoodle.devilrpg.skillsystem.SkillCastPolicy.esAsignableAPoder(skillEnum)) {
+            return null;
+        }
         return singletonSkillExecutorFactory.getOrCreate(skillEnum);
     }
 
@@ -491,8 +499,17 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     private boolean consumeResource(Player playerIn, AbstractSkillExecutor power) {
-        float resourceCost = getResourceCostPoints().get(power.getSkillEnum());
-        ResourceType type = getResourceType().get(power.getSkillEnum());
+        HashMap<SkillEnum, Integer> costes = getResourceCostPoints();
+        HashMap<SkillEnum, ResourceType> tipos = getResourceType();
+        if (costes == null || tipos == null) {
+            return false;
+        }
+        Integer coste = costes.get(power.getSkillEnum());
+        ResourceType type = tipos.get(power.getSkillEnum());
+        if (coste == null || type == null) {
+            return false;
+        }
+        float resourceCost = coste;
 
         if (playerIn.isCreative() || power.isResourceConsumptionBypassed(playerIn))
             return true;
@@ -534,6 +551,20 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         this.nbt = nbt;
         this.addMissingSkills(); // partidas viejas: agrega las skills nuevas del mod
         skillsCache = null; // el NBT cambia -> invalidar la cache de skill points
+    }
+
+    @Override
+    public void applyClientTree(CompoundTag incoming, HolderLookup.Provider provider) {
+        // El árbol del cliente puede traer Minions/AttributeModifier (estado del servidor). Se copian
+        // solo las claves que el cliente sí posee; lo demás se queda como lo tiene el servidor.
+        CompoundTag merged = nbt.copy();
+        for (String key : new String[]{POWERS_KEY, SKILLS_KEY, MAX_SKILLS_KEY, MANA_COST_KEY,
+                RESOURCE_TYPE_KEY, IMAGES_OF_SKILLS_KEY, SKILL_SETS_KEY, ACTIVE_SKILL_SET_KEY}) {
+            if (incoming.contains(key)) {
+                merged.put(key, incoming.get(key));
+            }
+        }
+        deserializeNBT(provider, merged);
     }
 
     /**
@@ -603,8 +634,13 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public List<SkillEnum> getPassivesFromActiveSkill(SkillEnum skillEnum) {
         SkillElement skillElementByEnum = clientBuilder.getSkillElementByEnum(skillEnum);
         List<SkillEnum> passiveChildren = new ArrayList<>();
-
+        if (skillElementByEnum == null) {
+            return passiveChildren;
+        }
         Iterable<SkillElement> children = skillElementByEnum.getChildren();
+        if (children == null) {
+            return passiveChildren;
+        }
         for (SkillElement child : children) {
             if (child.getSkillCapability().isPassive()) {
                 passiveChildren.add(child.getSkillCapability());

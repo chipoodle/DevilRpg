@@ -6,6 +6,8 @@ import com.chipoodle.devilrpg.util.BytesUtil;
 import com.chipoodle.devilrpg.util.JsonUtil;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
+import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
+import com.chipoodle.devilrpg.skillsystem.SkillCastPolicy;
 import com.google.gson.JsonObject;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.RegistryAccess;
@@ -18,6 +20,7 @@ import net.minecraft.world.item.Items;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
 /**
  * Skills · <b>primer gate automático del subsistema</b> (24-nov-2026).
@@ -55,6 +58,9 @@ public final class SkillCapabilityIntegrationTest {
             directPayload();
             regenPolicy();
             skillTreeSpend();
+            skillCastPolicy();
+            executorCoverage();
+            treeSanitization();
         } catch (Throwable t) {
             fallos++;
             System.out.println("  EXCEPCION NO CONTROLADA: " + t);
@@ -282,6 +288,63 @@ public final class SkillCapabilityIntegrationTest {
                 "árbol: mismo total (recolocar poderes) se permite");
         check(!com.chipoodle.devilrpg.skillsystem.SkillTreeSpendPolicy.permite(5, 4, 0),
                 "árbol: bajar el total se rechaza");
+    }
+
+    private static void skillCastPolicy() {
+        check(SkillCastPolicy.esAsignableAPoder(SkillEnum.TRANSFORM_WEREWOLF),
+                "cast: transformar se puede asignar a un poder");
+        check(!SkillCastPolicy.esAsignableAPoder(SkillEnum.WOLF_FROSTBITE),
+                "cast: una skill activa de minion no se asigna al jugador");
+        check(!SkillCastPolicy.esAsignableAPoder(SkillEnum.SKIN_ARMOR),
+                "cast: un pasivo no se asigna a un poder");
+        check(!SkillCastPolicy.esAsignableAPoder(SkillEnum.EMPTY), "cast: EMPTY no se asigna");
+        check(!SkillCastPolicy.esAsignableAPoder(null), "cast: null no se asigna");
+        check(SkillCastPolicy.esAsignableAPoder(SkillEnum.SUMMON_SOUL_WOLF),
+                "cast: invocar lobo se puede asignar a un poder");
+    }
+
+    private static void executorCoverage() {
+        PlayerSkillCapabilityImplementation capability = new PlayerSkillCapabilityImplementation();
+        int comprobadas = 0;
+        for (SkillEnum skill : SkillEnum.getActiveSkills()) {
+            if (!SkillCastPolicy.esAsignableAPoder(skill)) {
+                continue;
+            }
+            AbstractSkillExecutor executor = capability.getLoadedSkillExecutor(skill);
+            check(executor != null, "executor: " + skill + " tiene ejecutor");
+            comprobadas++;
+        }
+        check(comprobadas > 0, "executor: hay skills activas de jugador");
+    }
+
+    private static void treeSanitization() throws java.io.IOException {
+        PlayerSkillCapabilityImplementation capability = new PlayerSkillCapabilityImplementation();
+        CompoundTag server = capability.serializeNBT(RegistryAccess.EMPTY);
+        HashMap<String, String> attrs = new HashMap<>();
+        attrs.put("server", "1");
+        server.putByteArray(PlayerSkillCapabilityImplementation.ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(attrs));
+        byte[] minions = new byte[]{1, 2, 3};
+        server.putByteArray(PlayerSkillCapabilityImplementation.MINIONS_KEY, minions);
+
+        CompoundTag incoming = capability.serializeNBT(RegistryAccess.EMPTY).copy();
+        HashMap<String, String> evil = new HashMap<>();
+        evil.put("evil", "999");
+        incoming.putByteArray(PlayerSkillCapabilityImplementation.ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(evil));
+        incoming.putByteArray(PlayerSkillCapabilityImplementation.MINIONS_KEY, new byte[]{9, 9});
+        HashMap<SkillEnum, Integer> puntos = capability.getSkillsPoints();
+        puntos.put(SkillEnum.CHARGE, 42);
+        incoming.putByteArray(PlayerSkillCapabilityImplementation.SKILLS_KEY, BytesUtil.toByteArray(puntos));
+
+        capability.applyClientTree(incoming, RegistryAccess.EMPTY);
+
+        HashMap<String, String> attrsFinal = capability.getAttributeModifiers();
+        check(attrsFinal != null && "1".equals(attrsFinal.get("server")) && !attrsFinal.containsKey("evil"),
+                "árbol: el cliente no puede inyectar AttributeModifier");
+        check(Arrays.equals(capability.serializeNBT(RegistryAccess.EMPTY)
+                        .getByteArray(PlayerSkillCapabilityImplementation.MINIONS_KEY), minions),
+                "árbol: el cliente no puede inyectar Minions");
+        check(capability.getSkillsPoints().get(SkillEnum.CHARGE) == 42,
+                "árbol: las claves del cliente sí se aplican");
     }
 
     private static JsonObject icon(String id) {

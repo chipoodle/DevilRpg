@@ -56,6 +56,10 @@ neoForge {
             if (providers.gradleProperty('a2nGameDirectory').isPresent()) {
                 gameDirectory = project.file(providers.gradleProperty('a2nGameDirectory').get())
             }
+            // Skills server harness · dedicated server with a fake player, isolated game dir.
+            if (providers.gradleProperty('skillGameDirectory').isPresent()) {
+                gameDirectory = project.file(providers.gradleProperty('skillGameDirectory').get())
+            }
             if (providers.gradleProperty('a2nMode').isPresent()) {
                 systemProperty 'a2n.mode', providers.gradleProperty('a2nMode').get()
             }
@@ -177,11 +181,17 @@ def includeNavHarness = providers.gradleProperty('navHarness').getOrElse('false'
 // AV · Soak multi-día. Opt-in y aislado: -PsoakHarness=true excluye TODO debug/ y compila tools/soak,
 // que es el único entry point del run. Así C4/A2/POI no compiten por ServerStartedEvent ni por el tick.
 def includeSoakHarness = providers.gradleProperty('soakHarness').getOrElse('false') == 'true'
+// Skills · servidor dedicado con fake player (capability, árbol, ejecución). Opt-in y aislado:
+// -PskillHarness=true compila SOLO tools/skills y excluye todo debug/ (C4/A2/POI no compiten).
+def includeSkillHarness = providers.gradleProperty('skillHarness').getOrElse('false') == 'true'
 sourceSets.main {
     java {
         if (includeSoakHarness) {
             exclude 'com/chipoodle/devilrpg/debug/**'
             srcDir file('tools/soak')
+        } else if (includeSkillHarness) {
+            exclude 'com/chipoodle/devilrpg/debug/**'
+            srcDir file('tools/skills')
         } else if (!includeA2Diagnostics && !includeNavHarness) {
             exclude 'com/chipoodle/devilrpg/debug/**'
         } else if (includeNavHarness) {
