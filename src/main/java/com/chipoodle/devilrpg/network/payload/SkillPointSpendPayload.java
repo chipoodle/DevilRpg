@@ -81,7 +81,9 @@ public record SkillPointSpendPayload(SkillEnum skill) implements CustomPacketPay
         }
         if (parent == null) return true;
         SkillEnum parentSkill = parent.getSkillCapability();
-        if (parentSkill == null || parentSkill == SkillEnum.EMPTY) return false;
+        // Las tres raíces visibles del árbol no representan una habilidad y en la UI tienen
+        // progreso 0/0 (isDone=true), por lo que sus primeros nodos sí están desbloqueados.
+        if (parentSkill == null || parentSkill == SkillEnum.EMPTY) return true;
         int parentLevel = skills.getSkillsPoints(parentSkill);
         HashMap<SkillEnum, Integer> maximums = skills.getMaxSkillsPoints();
         Integer parentMaximum = maximums == null ? null : maximums.get(parentSkill);
