@@ -87,7 +87,12 @@ public record SkillPointSpendPayload(SkillEnum skill) implements CustomPacketPay
         int parentLevel = skills.getSkillsPoints(parentSkill);
         HashMap<SkillEnum, Integer> maximums = skills.getMaxSkillsPoints();
         Integer parentMaximum = maximums == null ? null : maximums.get(parentSkill);
-        return parentLevel > 0 || (parentMaximum != null && parentLevel >= parentMaximum);
+        // Una regla ausente o inválida nunca puede desbloquear descendientes.
+        // Solo un máximo positivo permite evaluar progreso/completitud del padre.
+        if (parentMaximum == null || parentMaximum <= 0 || parentLevel < 0) {
+            return false;
+        }
+        return parentLevel > 0 || parentLevel >= parentMaximum;
     }
 
     private static void resend(ServerPlayer player, PlayerSkillCapabilityInterface skills,
