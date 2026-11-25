@@ -1,5 +1,7 @@
 package com.chipoodle.devilrpg.world;
 
+import net.minecraft.world.entity.MobSpawnType;
+
 /**
  * A5.33 · pure target-position policy tests. These are not a substitute for Minecraft runtime collision,
  * navigation, or block-interaction validation.
@@ -33,6 +35,20 @@ public final class VillageTerrainPolicyTest {
         check(true, VillageTerrainPolicy.allowsModification(false, true, true, false, false, false));
         // 10. Active siege does not erase a saved+field denial.
         check(false, VillageTerrainPolicy.allowsModification(true, true, true, true, false, false));
+        // 11. El sello corta cualquier spawn hostil dentro, no solo una lista cerrada.
+        check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.NATURAL));
+        check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.EVENT));
+        check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.REINFORCEMENT));
+        check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.SPAWNER));
+        check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.STRUCTURE));
+        // 12. Lo que crea el jugador o el mod a propósito no se corta.
+        check(false, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.SPAWN_EGG));
+        check(false, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.COMMAND));
+        check(false, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.MOB_SUMMONED));
+        // 13. Fuera de aldea, sin monstruo o sin tipo no se corta.
+        check(false, VillageSpawnGuard.debeCancelar(true, false, MobSpawnType.NATURAL));
+        check(false, VillageSpawnGuard.debeCancelar(false, true, MobSpawnType.NATURAL));
+        check(false, VillageSpawnGuard.debeCancelar(true, true, null));
         System.out.println("VILLAGE_TERRAIN_POLICY_TEST: OK (" + checks + " aserciones)");
     }
 

@@ -225,8 +225,15 @@ public class PlayerCapabilityForgeEventSubscriber {
         if (event.getEntity().getType().getCategory() != net.minecraft.world.entity.MobCategory.MONSTER) {
             return;
         }
-        if (VillageManager.estaProtegida((net.minecraft.server.level.ServerLevel) event.getLevel(),
-                event.getEntity().blockPosition())) {
+        boolean protegida = VillageManager.estaProtegida((net.minecraft.server.level.ServerLevel) event.getLevel(),
+                event.getEntity().blockPosition());
+        if (com.chipoodle.devilrpg.world.VillageSpawnGuard.debeCancelar(true, protegida,
+                event.getSpawnType())) {
+            if (protegida) {
+                DevilRpg.LOGGER.info("[SpawnGuard] denegado {} en {} tipo={} (aldea protegida)",
+                        event.getEntity().getType(), event.getEntity().blockPosition(),
+                        event.getSpawnType());
+            }
             event.setResult(net.neoforged.neoforge.event.entity.living.MobSpawnEvent.PositionCheck.Result.FAIL);
         }
     }
@@ -239,10 +246,10 @@ public class PlayerCapabilityForgeEventSubscriber {
      * {@code EntityType.spawn} (que llama a {@code finalizeSpawn} pero no a las reglas de spawn). Aquí se cortan al
      * <b>entrar en el mundo</b>, que sí se dispara siempre.
      * <p>
-     * Solo se cortan los caminos que el aura debe cortar ({@link #esSpawnQueElSelloCorta}). Lo que elige el
-     * <b>jugador</b> (huevo de spawn, {@code /summon}) o el <b>mod</b> (los asediadores y el rebaño van con
-     * {@code MOB_SUMMONED}) pasa, y lo que se <b>carga del guardado</b> también: ésos ya estaban y de ellos se encarga
-     * la expulsión del latido (ver {@code VillageManager.expulsarHostilesDeLaAldea}).
+     * Solo se cortan los caminos que el aura debe cortar: {@link com.chipoodle.devilrpg.world.VillageSpawnGuard}
+     * cancela <b>todo</b> hostil dentro de la aldea protegida salvo el huevo de spawn, {@code /summon} y
+     * {@code MOB_SUMMONED} del mod. Lo que se <b>carga del guardado</b> no pasa por aquí: ésos ya estaban y de
+     * ellos se encarga la expulsión del latido (ver {@code VillageManager.expulsarHostilesDeLaAldea}).
      */
     @SubscribeEvent
     public static void onEntityJoinLevel(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) {
@@ -267,31 +274,13 @@ public class PlayerCapabilityForgeEventSubscriber {
         if (!VillageManager.estaProtegida(serverLevel, mob.blockPosition())) {
             return;
         }
-        if (esSpawnQueElSelloCorta(mob.getSpawnType())) {
+        if (com.chipoodle.devilrpg.world.VillageSpawnGuard.debeCancelar(
+                mob.getType().getCategory() == net.minecraft.world.entity.MobCategory.MONSTER,
+                true, mob.getSpawnType())) {
+            DevilRpg.LOGGER.info("[SpawnGuard] entrada cancelada {} en {} tipo={} (aldea protegida)",
+                    mob.getType(), mob.blockPosition(), mob.getSpawnType());
             event.setCanceled(true);
         }
-    }
-
-    /**
-     * Los caminos de spawn que el <b>sello</b> corta dentro de una aldea protegida (los demás son del jugador o del mod).
-     * <p>
-     * <b>Y EL SPAWN SIN TIPO NO ES UN SPAWN</b> (crash medido): {@code getSpawnType()} es {@code null} en todo lo que
-     * entra al mundo con {@code addFreshEntity} —lo que sueltan las mecánicas del mod, otros mods o un
-     * {@code /summon} de código—, y este método hacía {@code switch (tipo)} sobre él: <b>NullPointerException en el
-     * tick del servidor</b>, o sea el servidor entero al suelo. Medido con el arnés: al plantar un aldeano-zombi de
-     * prueba (sin tipo de spawn) dentro de una aldea protegida, el servidor murió con
-     * {@code Cannot invoke "MobSpawnType.ordinal()" because "tipo" is null} en
-     * {@code PlayerCapabilityForgeEventSubscriber.esSpawnQueElSelloCorta:221}. Sin tipo no se puede saber de dónde
-     * viene, y el sello solo corta lo que sí sabe que es natural: se deja pasar.
-     */
-    private static boolean esSpawnQueElSelloCorta(net.minecraft.world.entity.MobSpawnType tipo) {
-        if (tipo == null) {
-            return false; // entró con `addFreshEntity` (mod, mecánica o código): no es un spawn natural que cortar
-        }
-        return switch (tipo) {
-            case NATURAL, CHUNK_GENERATION, STRUCTURE, SPAWNER, EVENT, REINFORCEMENT, PATROL, TRIGGERED -> true;
-            default -> false;
-        };
     }
 
     @SubscribeEvent

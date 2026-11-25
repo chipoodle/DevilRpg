@@ -1,5 +1,10 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — CAMPO DE FUERZA.** El guardado tenía `Resolved [0,1]`; el campo
+> estaba activo. El agujero era la lista cerrada de `MobSpawnType` en `EntityJoinLevelEvent`.
+> `VillageSpawnGuard` cancela todo hostil dentro salvo huevo/`/summon`/`MOB_SUMMONED`; vanilla se
+> expulsa al siguiente latido. **Política 22 aserciones; runtime pendiente de noche de prueba.**
+
 > **ACTUALIZACIÓN 25-nov-2026 — SKILLS EN SERVIDOR DEDICADO.** `56454c63`: `SkillDisplayInfo` sin
 > `@OnlyIn(CLIENT)`; el servidor dedicado construye la capability y los ejecutores
 > (**`SKILL_SERVER_HARNESS OK checks=25`**). Árbol saneado (`Minions`/`AttributeModifier` del

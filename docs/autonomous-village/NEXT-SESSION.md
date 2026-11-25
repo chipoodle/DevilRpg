@@ -1,3 +1,15 @@
+# CAMPO DE FUERZA — SPAWN DE HOSTILES CERRADO (25-nov-2026)
+
+- **Diagnóstico:** el guardado tiene `Resolved [0,1]`; el campo **sí estaba activo**. El fallo era
+  `EntityJoinLevelEvent` con una **lista cerrada** de `MobSpawnType`; `VillageSiege` y tipos no
+  listados se colaban. `Dorotea` murió en `1023,63,964`, dentro del radio 62.
+- **Fix:** `VillageSpawnGuard` cancela **todo** hostil dentro salvo huevo/`/summon`/`MOB_SUMMONED`;
+  los handlers registran `[SpawnGuard]`. Los hostiles **vanilla** se expulsan en el siguiente latido
+  (los asediadores del mod conservan los 2 min de milicia).
+- **Evidencia:** `VILLAGE_TERRAIN_POLICY_TEST: OK (22 aserciones)`; gate 1m36s; skills 416;
+  persistencia 553. **Runtime pendiente de una noche de prueba.**
+- **Informe:** `2026-11-25-VILLAGE-SPAWN-GUARD.md`.
+
 # SKILLS SERVIDOR DEDICADO + PASIVOS (25-nov-2026)
 
 - **Código `56454c63`:** `SkillDisplayInfo` ya no tiene getters `@OnlyIn(CLIENT)`, que en servidor

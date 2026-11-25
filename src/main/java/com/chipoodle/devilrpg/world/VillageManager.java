@@ -1379,13 +1379,12 @@ public final class VillageManager {
      * <b>PERO EL SELLO NO ES LO PRIMERO: PRIMERO DEFIENDE EL PUEBLO.</b> Antes esto expulsaba <b>en el acto</b> (el
      * latido es cada 10 s), así que un agresivo que <b>entraba andando</b> de día desaparecía de la aldea antes de que
      * nadie lo tocara: el jugador lo vio y lo escribio como lo que es —*"llegaron unos zombies agresivos durante el día
-     * a la aldea, pero no pasó mucho tiempo y fueron teletransportados a fuera; esto se ve antinatural"*—. Ahora el
-     * sello <b>espera</b> {@link #SELLO_ANTES_DE_EXPULSAR_TICKS} (2 min) con el intruso dentro: en ese rato la
+     * a la aldea, pero no pasó mucho tiempo y fueron teletransportados a fuera; esto se ve antinatural"*—. Ahora los
+     * asediadores del mod esperan {@link #SELLO_ANTES_DE_EXPULSAR_TICKS} (2 min) con el intruso dentro: en ese rato la
      * <b>milicia</b> lo ve y va a por él (los guardias persiguen a cualquier monstruo que esté <b>dentro del
      * recinto</b>, aunque esté lejos: ver {@code VillagerGuardGoal.buscarEnemigo}) y el monstruo se muere como cualquier
-     * otro. Solo si <b>sigue dentro</b> pasado ese tiempo —nadie ha podido con él: está en un tejado, dentro de una
-     * casa, en un hueco— el sello lo <b>rechaza</b>, que es la red de seguridad que impide que un solo monstruo deje el
-     * pueblo congelado para siempre.
+     * otro. Los hostiles <b>vanilla</b> (zombi, esqueleto, araña...) no esperan: si el campo está activo y no hay
+     * asedio, se les rechaza en el siguiente latido; así no matan aldeanos mientras la milicia decide.
      * <p>
      * Se mira solo lo que está <b>a la altura del pueblo</b> (recinto en XZ + banda sobre la cota, como cualquier
      * recuento de I11): un monstruo en una cueva 20 bloques por debajo no está "dentro de la aldea" y no se toca. Se
@@ -1416,7 +1415,13 @@ public final class VillageManager {
             // ¿DESDE CUÁNDO ESTÁ DENTRO? Mientras no lleve aquí SELLO_ANTES_DE_EXPULSAR_TICKS, el que trabaja es el
             // pueblo (la milicia), no el sello: es lo que hace que la defensa se VEA.
             long desde = INTRUSOS_DENTRO.computeIfAbsent(new Intruso(objectiveIndex, monstruo.getUUID()), k -> ahora);
-            if (ahora - desde < SELLO_ANTES_DE_EXPULSAR_TICKS) {
+            // Los hostiles VANILLA no esperan los 2 min de la milicia: si el campo está activo y no hay
+            // asedio, se les rechaza en el siguiente latido. El margen de 2 min queda para los
+            // asediadores del mod, que sí son el enemigo que el pueblo debe ver pelear.
+            boolean vanilla = monstruo.getType().builtInRegistryHolder().key().location().getNamespace()
+                    .equals("minecraft");
+            long espera = vanilla ? 0L : SELLO_ANTES_DE_EXPULSAR_TICKS;
+            if (ahora - desde < espera) {
                 continue;
             }
             double dx = monstruo.getX() - (center.getX() + 0.5D);

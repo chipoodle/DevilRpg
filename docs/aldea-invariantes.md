@@ -11964,3 +11964,17 @@ del servidor. `PlayerSkillCapabilityInterface.consumePoint(Player)` consume en s
 
 **Límites:** la UI/HUD de cliente no se ejecutó en este arnés; el servidor dedicado usa un fake
 player, no un login de cliente real.
+
+### I421 · EL CAMPO DE FUERZA CORTA TODO SPAWN HOSTIL NO INTENCIONAL (25-nov-2026)
+
+**Regla:** `VillageSpawnGuard.debeCancelar(esMonstruo, dentroDeAldeaProtegida, tipo)` cancela todo
+`MobSpawnType` dentro de una aldea protegida salvo `SPAWN_EGG`, `COMMAND` y `MOB_SUMMONED`; un tipo
+`null` se deja pasar (mecánicas/mod con `addFreshEntity`). `onMobSpawnPositionCheck` y
+`onEntityJoinLevel` lo usan y registran `[SpawnGuard]`. Los hostiles vanilla dentro de una aldea
+protegida se expulsan en el siguiente latido; los asediadores del mod conservan los 2 min de milicia.
+
+**Evidencia:** `VILLAGE_TERRAIN_POLICY_TEST: OK (22 aserciones)`; `test` 1m36s (skills 416,
+persistencia 553). Informe: `2026-11-25-VILLAGE-SPAWN-GUARD.md`.
+
+**Límites:** falta una noche de prueba runtime; si no aparece `[SpawnGuard]` y hay hostiles dentro,
+el camino es entrada por portón/brecha, no spawn.
