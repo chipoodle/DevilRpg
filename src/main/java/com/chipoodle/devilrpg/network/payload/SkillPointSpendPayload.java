@@ -5,6 +5,7 @@ import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
+import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.SkillElement;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -49,7 +50,8 @@ public record SkillPointSpendPayload(SkillEnum skill) implements CustomPacketPay
             Integer maximum = skill == null || maximums == null ? null : maximums.get(skill);
 
             if (skill == null || skill == SkillEnum.EMPTY || current == null || maximum == null
-                    || current < 0 || current >= maximum || experience.getUnspentPoints() <= 0) {
+                    || current < 0 || current >= maximum || maximum <= 0
+                    || !prerequisitesMet(skills, skill) || experience.getUnspentPoints() <= 0) {
                 DevilRpg.LOGGER.warn("[SkillTree] compra rechazada: skill={}, current={}, max={}, unspent={}",
                         skill, current, maximum, experience.getUnspentPoints());
                 resend(player, skills, experience);
@@ -67,6 +69,23 @@ public record SkillPointSpendPayload(SkillEnum skill) implements CustomPacketPay
                 skills.triggerPassive(player, skill);
             }
         });
+    }
+
+    /** Replica la condición de desbloqueo de SkillWidget: el ancestro visible inmediato debe tener progreso. */
+    private static boolean prerequisitesMet(PlayerSkillCapabilityInterface skills, SkillEnum skill) {
+        SkillElement element = skills.getSkillElementByEnum(skill);
+        if (element == null) return false;
+        SkillElement parent = element.getParent();
+        while (parent != null && parent.getDisplay() == null) {
+            parent = parent.getParent();
+        }
+        if (parent == null) return true;
+        SkillEnum parentSkill = parent.getSkillCapability();
+        if (parentSkill == null || parentSkill == SkillEnum.EMPTY) return false;
+        int parentLevel = skills.getSkillsPoints(parentSkill);
+        HashMap<SkillEnum, Integer> maximums = skills.getMaxSkillsPoints();
+        Integer parentMaximum = maximums == null ? null : maximums.get(parentSkill);
+        return parentLevel > 0 || (parentMaximum != null && parentLevel >= parentMaximum);
     }
 
     private static void resend(ServerPlayer player, PlayerSkillCapabilityInterface skills,

@@ -332,13 +332,13 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void setMaxSkillsPoints(HashMap<SkillEnum, Integer> points, Player player) {
+        if (player.level().isClientSide) {
+            DevilRpg.LOGGER.warn("[SkillTree] el cliente no puede modificar niveles máximos");
+            return;
+        }
         try {
             nbt.putByteArray(MAX_SKILLS_KEY, BytesUtil.toByteArray(points));
-            if (!player.level().isClientSide) {
-                sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
-            }
+            sendSkillChangesToClient((ServerPlayer) player);
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setMaxSkillsPoints", e);
         }
@@ -358,17 +358,16 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void setResourceCostPoints(HashMap<SkillEnum, Integer> points, Player player) {
+        if (player.level().isClientSide) {
+            DevilRpg.LOGGER.warn("[SkillTree] el cliente no puede modificar costes de recursos");
+            return;
+        }
         try {
             nbt.putByteArray(MANA_COST_KEY, BytesUtil.toByteArray(points));
-            if (!player.level().isClientSide) {
-                sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
-            }
+            sendSkillChangesToClient((ServerPlayer) player);
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setResourceCostPoints", e);
         }
-
     }
 
     @SuppressWarnings("unchecked")
@@ -384,17 +383,16 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void setResourceType(HashMap<SkillEnum, ResourceType> points, Player player) {
+        if (player.level().isClientSide) {
+            DevilRpg.LOGGER.warn("[SkillTree] el cliente no puede modificar tipos de recursos");
+            return;
+        }
         try {
             nbt.putByteArray(RESOURCE_TYPE_KEY, BytesUtil.toByteArray(points));
-            if (!player.level().isClientSide) {
-                sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
-            }
+            sendSkillChangesToClient((ServerPlayer) player);
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setResourceType", e);
         }
-
     }
 
     @SuppressWarnings("unchecked")
@@ -411,17 +409,16 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void setAttributeModifiers(HashMap<String, String> modifiers, Player player) {
+        if (player.level().isClientSide) {
+            DevilRpg.LOGGER.warn("[SkillTree] el cliente no puede modificar modificadores de atributos");
+            return;
+        }
         try {
             nbt.putByteArray(ATTRIBUTE_MODIFIER_KEY, BytesUtil.toByteArray(modifiers));
-            if (!player.level().isClientSide) {
-                sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
-            }
+            sendSkillChangesToClient((ServerPlayer) player);
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setAttributeModifiers", e);
         }
-
     }
 
     @Override
@@ -467,6 +464,10 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void setImagesOfSkills(HashMap<SkillEnum, ResourceLocation> names, Player player) {
+        if (player.level().isClientSide) {
+            DevilRpg.LOGGER.warn("[SkillTree] el cliente no puede modificar los iconos de habilidades");
+            return;
+        }
         try {
             Map<SkillEnum, String> adaptedMap = names.entrySet()
                     .stream()
@@ -476,11 +477,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
                             (e1, e2) -> e1, HashMap::new
                     ));
             nbt.putByteArray(IMAGES_OF_SKILLS_KEY, BytesUtil.toByteArray(adaptedMap));
-            if (!player.level().isClientSide) {
-                sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
-            }
+            sendSkillChangesToClient((ServerPlayer) player);
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setImagesOfSkills", e);
         }
@@ -641,11 +638,6 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     @Override
     public ClientSkillBuilderFromJson getClientSkillBuilder() {
         return clientBuilder;
-    }
-
-    /** Las modificaciones C2S del árbol usan acciones tipadas, nunca el NBT completo. */
-    private void sendSkillChangesToServer() {
-        DevilRpg.LOGGER.warn("[SkillTree] intento de sincronización C2S del NBT completo bloqueado");
     }
 
     private void sendSkillChangesToClient(ServerPlayer pe) {
