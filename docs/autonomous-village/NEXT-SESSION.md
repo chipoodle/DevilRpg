@@ -1,3 +1,14 @@
+# ACTUALIZACIÓN 25-nov-2026 — FIX DE COMPILACIÓN POST-VALIDACIÓN
+
+- DeepSeek detectó que `PlayerCapabilityForgeEventSubscriber` conservaba un import y un uso de `PlayerPassiveSkillPayload`, clase eliminada en el hardening anterior.
+- Corregido en commit `eea975ca152d1068e95ba2e61c2122eed5bdee21`.
+- No se restauró el payload: el evento de cambio de dimensión reaplica pasivos directamente en servidor mediante `PlayerSkillCapabilityInterface.triggerPassive(player, skill)`, manteniendo el filtro de pasivos no-minion y la validación existente de niveles/tipo.
+- El evento retorna en cliente; la reaplicación de efectos queda server-side. Se conserva el traslado de minions al destino.
+- No se ejecutaron pruebas por ChatGPT. La compilación y toda la matriz anterior están pendientes de repetición sobre el nuevo HEAD.
+- HEAD esperado para la siguiente validación: `eea975ca152d1068e95ba2e61c2122eed5bdee21`.
+
+---
+
 # ACTUALIZACIÓN 25-nov-2026 — REGLAS DE SKILLS DINÁMICAS DESDE JSON
 
 - Implementación publicada en `361aab948117ed62a5b24dbc6f09d6af4e21ec39` (HEAD de rama al cierre de esta actualización); pendiente de validación Harness/DeepSeek. No declarar PASS hasta recibir reporte sobre este SHA exacto.
