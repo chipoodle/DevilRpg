@@ -477,6 +477,12 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         //DevilRpg.LOGGER.info("------ side: {} PlayerSkillCapability triggerAction(SPlayer, triggeredPower) {} {}", (playerIn.level().isClientSide ? "CLIENT" : "SERVER"), playerIn.getName().getString(), triggeredPower);
         if (getSkillLevelFromAssociatedPower(triggeredPower) != 0) {
             AbstractSkillExecutor skill = getSkill(triggeredPower);
+            // Las skills pasivas y las mejoras activas de minion pueden existir en el árbol,
+            // pero no son asignables a los poderes del jugador y no tienen ejecutor aquí.
+            // Un loadout antiguo o datos inválidos no deben provocar un NPE al pulsar la tecla.
+            if (skill == null) {
+                return;
+            }
             if (skill.arePreconditionsMetBeforeConsumingResource(playerIn) && consumeResource(playerIn, skill)) {
                 skill.execute(playerIn.level(), playerIn, new HashMap<>());
             } else {
