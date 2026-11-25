@@ -52,6 +52,7 @@ public final class SkillCapabilityIntegrationTest {
             persistenciaYCompatibilidad();
             registroDeObjetos();
             werewolfMana();
+            directPayload();
         } catch (Throwable t) {
             fallos++;
             System.out.println("  EXCEPCION NO CONTROLADA: " + t);
@@ -243,6 +244,20 @@ public final class SkillCapabilityIntegrationTest {
                 "maná: un humano con 0 maná NO se transforma (bug de alternancia)");
         check(!com.chipoodle.devilrpg.skillsystem.WerewolfManaPolicy.debePedirReversion(true, 1.0F, 20),
                 "maná: con maná no pide reversión");
+    }
+
+    private static void directPayload() {
+        check(com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy.puedeEjecutar(
+                        com.chipoodle.devilrpg.util.SkillEnum.TRANSFORM_WEREWOLF, 1),
+                "payload directo: transformar con nivel 1 se permite");
+        check(!com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy.puedeEjecutar(
+                        com.chipoodle.devilrpg.util.SkillEnum.TRANSFORM_WEREWOLF, 0),
+                "payload directo: transformar sin nivel se rechaza");
+        check(!com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy.puedeEjecutar(
+                        com.chipoodle.devilrpg.util.SkillEnum.SUMMON_SOUL_WOLF, 5),
+                "payload directo: invocar lobo por la puerta trasera se rechaza");
+        check(!com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy.puedeEjecutar(null, 5),
+                "payload directo: skill nula se rechaza");
     }
 
     private static JsonObject icon(String id) {

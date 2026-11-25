@@ -40,8 +40,16 @@ public record DirectSkillExecutionPayload(SkillEnum skill) implements CustomPack
             Player player = ctx.player();
             if (player instanceof ServerPlayer sender) {
                 PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(Objects.requireNonNull(sender), PlayerSkillCapability.INSTANCE);
+                int nivel = unwrappedPlayerCapability.getSkillsPoints() == null ? 0
+                        : unwrappedPlayerCapability.getSkillsPoints().getOrDefault(msg.skill(), 0);
+                if (!com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy.puedeEjecutar(msg.skill(), nivel)) {
+                    DevilRpg.LOGGER.warn("[Skill] payload directo rechazado: {} (nivel {})", msg.skill(), nivel);
+                    return;
+                }
                 AbstractSkillExecutor loadedSkillExecutor = unwrappedPlayerCapability.getLoadedSkillExecutor(msg.skill());
-                loadedSkillExecutor.execute(sender.level(), sender, null);
+                if (loadedSkillExecutor != null) {
+                    loadedSkillExecutor.execute(sender.level(), sender, null);
+                }
             }
         });
     }
