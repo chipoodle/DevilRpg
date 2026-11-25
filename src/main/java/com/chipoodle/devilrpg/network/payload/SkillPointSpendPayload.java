@@ -61,6 +61,11 @@ public record SkillPointSpendPayload(SkillEnum skill) implements CustomPacketPay
             }
             levels.put(skill, current + 1);
             skills.setSkillsPoints(levels, player);
+            // El pasivo se aplica en la misma operación validada que compra el nivel. No existe
+            // un segundo payload repetible para ejecutar pasivos ya desbloqueados.
+            if (skill.isPassive() && !skill.isForMinion()) {
+                skills.triggerPassive(player, skill);
+            }
         });
     }
 

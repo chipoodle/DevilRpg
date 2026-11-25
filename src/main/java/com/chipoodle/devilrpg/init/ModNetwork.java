@@ -19,7 +19,6 @@ public class ModNetwork {
         // Serverbound only
         registrar.playToServer(KeyboardSkillPayload.TYPE, KeyboardSkillPayload.STREAM_CODEC, KeyboardSkillPayload::handle);
         registrar.playToServer(WerewolfAttackPayload.TYPE, WerewolfAttackPayload.STREAM_CODEC, WerewolfAttackPayload::handle);
-        registrar.playToServer(PlayerPassiveSkillPayload.TYPE, PlayerPassiveSkillPayload.STREAM_CODEC, PlayerPassiveSkillPayload::handle);
         registrar.playToServer(DirectSkillExecutionPayload.TYPE, DirectSkillExecutionPayload.STREAM_CODEC, DirectSkillExecutionPayload::handle);
         registrar.playToServer(SkillPointSpendPayload.TYPE, SkillPointSpendPayload.STREAM_CODEC, SkillPointSpendPayload::handle);
         registrar.playToServer(SkillLoadoutPayload.TYPE, SkillLoadoutPayload.STREAM_CODEC, SkillLoadoutPayload::handle);

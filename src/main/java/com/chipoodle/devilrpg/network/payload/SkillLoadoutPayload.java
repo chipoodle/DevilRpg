@@ -51,7 +51,7 @@ public record SkillLoadoutPayload(PowerEnum power, SkillEnum skill) implements C
             }
             if (msg.skill() != SkillEnum.EMPTY) {
                 int level = skills.getSkillsPoints(msg.skill());
-                if (msg.skill().isPassive() || level <= 0) {
+                if (msg.skill().isPassive() || msg.skill().isForMinion() || level <= 0) {
                     DevilRpg.LOGGER.warn("[SkillTree] loadout rechazado: power={}, skill={}, level={}",
                             msg.power(), msg.skill(), level);
                     resend(player, skills);
