@@ -11901,3 +11901,19 @@ a un humano en lobo y repetía el paquete cada 10 ticks.
 `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`.
 
 **Límites:** probado headless; el cliente real (UI/HUD/doble `onKeyInput`) sigue sin ejecutarse.
+
+### I417 · EL PAYLOAD DIRECTO SOLO PUEDE REVERTIR AL LOBO (24-nov-2026)
+
+**Regla:** `DirectSkillExecutionPayload.handle` debe comprobar
+`DirectSkillExecutionPolicy.puedeEjecutar(skill, nivel)` antes de ejecutar:
+`skill == TRANSFORM_WEREWOLF && nivel > 0`. El payload directo existe solo para la reversión del lobo
+a 0 maná; cualquier otro skill debe ir por `KeyboardSkillPayload`/`triggerAction` con sus costes y
+precondiciones. Un `SkillEnum` nulo o sin nivel se rechaza.
+
+**Causa/evidencia:** el handler ejecutaba **cualquier** skill que mandara el cliente, sin nivel, coste
+ni cooldown (puerta trasera). Con la política, 4 aserciones nuevas en
+`SKILL_CAPABILITY_INTEGRATION_TEST` (skills **384**): transformar con nivel 1 sí; sin nivel no;
+invocar lobo no; skill nula no. `test` 1m18s. Informe:
+`2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`.
+
+**Límites:** probado headless; el flujo cliente→servidor real sigue pendiente de cliente.

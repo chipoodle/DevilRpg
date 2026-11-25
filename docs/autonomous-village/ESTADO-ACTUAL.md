@@ -1,12 +1,12 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
-> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, L2 Y SKILLS 0-MANÁ, L5/L6 PARCIALES.** Soak `bcf98f70`:
+> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, L2, SKILLS 0-MANÁ Y PAYLOAD DIRECTO.** Soak `bcf98f70`:
 > **`SOAK_PASS`** en `3188…` y `7454…` (0 muertes, 11/11, 0 inactivos). **F1–F4 cerrados; L2 política
-> cerrada;** corregido el humano con 0 maná que se convertía en lobo (`WerewolfManaPolicy`; skills
-> **380**). **L5/L6 parcialmente cerradas** con 30 aldeanos/3 días y POI sin duplicados; faltan
-> `multientidad_*` en el arnés NAV y horas/jugador en el POI. Siguiente: L7, cliente real y ramas/A1.
-> Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`,
-> `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`.
+> cerrada;** skills: humano 0-maná ya no se convierte en lobo (`WerewolfManaPolicy`) y el payload
+> directo ya no ejecuta cualquier skill (`DirectSkillExecutionPolicy`: solo TRANSFORM_WEREWOLF con
+> nivel). **Skills 384.** L5/L6 parciales con el soak. Siguiente: L7, cliente real y ramas/A1.
+> Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`,
+> `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`.
 
 
 
