@@ -3871,6 +3871,7 @@ public final class VillageManager {
             // tick recalcula y sale del estancamiento. No se toca a las crías, ni al que duerme o descansa, ni al que
             // no tiene faena del mod (su paseo es suyo), y se le da uno cada 3 s como mucho.
             empujarSiEstaPlantado(villager, level);
+            despertarSiEstaParado(villager, level, center);
             // I179 · EL CENTRO DEL PUEBLO, APUNTADO EN EL ALDEANO (30-sep-2026). Es lo que permite abrir sus portones
             // CONOCIDOS (el del corral y los de las tres parcelas) cuando le separan de su recado, sin adivinar ni
             // barrer medio pueblo: medido, el minero puede quedarse DENTRO del corral (628, 78, 566) con su destino en el
@@ -6237,6 +6238,8 @@ public final class VillageManager {
      * 2 s sin moverse con su faena en marcha). Se le da uno cada 3 s como mucho, para no marearlo.
      */
     private static final java.util.Map<UUID, Long> EMPUJADOS_DEL_LATIDO = new java.util.concurrent.ConcurrentHashMap<>();
+    /** F4 · Cuándo se le dio el último "despierta" a un profesional parado sin faena (máx. uno cada 30 s). */
+    private static final java.util.Map<UUID, Long> DESPERTADOS_DEL_LATIDO = new java.util.concurrent.ConcurrentHashMap<>();
     /**
      * I202 · Última vez que se le sacó la <b>ficha del plantado</b> a un aldeano (ver {@link #empujarSiEstaPlantado}).
      * Es solo para el registro: el residuo que queda son aldeanos parados con la ruta viva y hay que saber **por qué**
@@ -6277,8 +6280,50 @@ public final class VillageManager {
     }
 
     /**
-     * I198 · <b>EL EMPUJÓN DEL LATIDO</b>: si el aldeano lleva 2 s sin moverse de verdad y tiene una faena del mod en
-     * marcha, se le para la navegación para que el goal vuelva a pedir el camino (los goals lo piden cada tick, así que
+     * F4 · <b>EL PROFESIONAL PARADO SIN FAENA</b> (24-nov-2026). El empujón de I198 solo actúa si hay un goal
+     * del mod activo; medido en `soak-stability` (semilla 7454), un granjero quedó **12.000 ticks** quieto en
+     * `629,63,528` con su JOB_SITE en `630,63,567` y **ningún goal**. Aquí, si es adulto, no duerme/descansa,
+     * no tiene target, no tiene faena y no se ha movido en **30 s**, se le pide camino a su puesto (o al
+     * centro si el puesto es su propia celda). No teletransporta: solo vuelve a pedir navegación.
+     */
+    private static void despertarSiEstaParado(Villager villager, ServerLevel level, BlockPos center) {
+        if (villager.isBaby() || villager.isSleeping() || estaDescansando(villager)) {
+            return;
+        }
+        if (villager.getTarget() != null || tieneUnGoalDelModActivo(villager)) {
+            return;
+        }
+        VillagerProfession profesion = villager.getVillagerData().getProfession();
+        if (profesion == VillagerProfession.NONE || profesion == VillagerProfession.NITWIT
+                || !VillageGenerator.esOficioDelPueblo(profesion)) {
+            return;
+        }
+        long ahora = level.getGameTime();
+        long visto = villager.getPersistentData().getLong("DevilRpgUltimoMovimiento");
+        if (visto == 0L) {
+            villager.getPersistentData().putLong("DevilRpgUltimoMovimiento", ahora); // primera vez: dar 30 s
+            return;
+        }
+        if (ahora - visto < 600L) {
+            return;
+        }
+        Long ultimo = DESPERTADOS_DEL_LATIDO.get(villager.getUUID());
+        if (ultimo != null && ahora - ultimo < 600L) {
+            return;
+        }
+        DESPERTADOS_DEL_LATIDO.put(villager.getUUID(), ahora);
+        BlockPos destino = villager.getBrain().getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.JOB_SITE)
+                .map(net.minecraft.core.GlobalPos::pos).orElse(center);
+        if (destino.distSqr(villager.blockPosition()) < 9.0D) {
+            destino = center;
+        }
+        caminarHacia(villager, destino, 0.6F);
+        DevilRpg.LOGGER.info("[Village] {} lleva {} s parado sin faena: se le pide camino a {}",
+                villager.getUUID(), (ahora - visto) / 20L, destino.toShortString());
+    }
+
+    /**
+     * I198 · <b>EL EMPUJÓN DEL LATIDO</b>: si el aldeano lleva 2 s sin moverse de verdad y tiene una faena del mod en     * marcha, se le para la navegación para que el goal vuelva a pedir el camino (los goals lo piden cada tick, así que
      * el recálculo es inmediato). Es la red que faltaba: la misma idea de I190/I192, pero en el latido, que es el único
      * sitio que se ejecuta (el despachador donde vivían **no está cableado**).
      */
