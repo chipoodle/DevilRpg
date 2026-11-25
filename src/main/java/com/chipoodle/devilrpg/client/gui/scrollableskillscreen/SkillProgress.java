@@ -49,7 +49,8 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	}*/
 
 	public boolean isDone() {
-		return skillPoint >= maxSkillPoint;
+		// Un máximo ausente/inválido no representa una habilidad completada.
+		return maxSkillPoint > 0 && skillPoint >= maxSkillPoint;
 		/*
 		 * if (this.requirements.length == 0) { return false; } else { for (String[]
 		 * astring : this.requirements) { boolean flag = false;
@@ -123,7 +124,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	@OnlyIn(Dist.CLIENT)
 	public float getPercent() {
 
-		if (maxSkillPoint == 0)
+		if (maxSkillPoint <= 0)
 			return 0.0f;
 
 		return skillPoint / (float) maxSkillPoint;
@@ -138,7 +139,7 @@ public class SkillProgress implements Comparable<SkillProgress> {
 	@Nullable
 	@OnlyIn(Dist.CLIENT)
 	public String getSkillPointText() {
-		if (maxSkillPoint == 0)
+		if (maxSkillPoint <= 0)
 			return null;
 		return skillPoint + "/" + maxSkillPoint;
 		

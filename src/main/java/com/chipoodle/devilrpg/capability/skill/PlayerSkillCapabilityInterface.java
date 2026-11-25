@@ -41,7 +41,7 @@ public interface PlayerSkillCapabilityInterface extends IGenericCapability {
     HashMap<SkillEnum, ResourceLocation> getImagesOfSkills();
     void setImagesOfSkills(HashMap<SkillEnum, ResourceLocation> names, Player player);
     void triggerAction(Player playerIn, PowerEnum triggeredPower);
-    void triggerPassive(Player sender, CompoundTag triggeredPassive);
+    void triggerPassive(Player sender, SkillEnum triggeredPassive);
     AbstractSkillExecutor getLoadedSkillExecutor(SkillEnum skillEnum);
     ClientSkillBuilderFromJson getClientSkillBuilder();
     List<SkillEnum> getPassivesFromActiveSkill(SkillEnum skillEnum);

@@ -1,6 +1,5 @@
 package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
-import net.neoforged.neoforge.network.PacketDistributor;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
@@ -9,7 +8,6 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkillBuilderFromJson;
 import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.CustomSkillButton;
 import com.chipoodle.devilrpg.eventsubscriber.client.ClientModKeyInputEventSubscriber;
-import com.chipoodle.devilrpg.network.payload.PlayerPassiveSkillPayload;
 import com.chipoodle.devilrpg.util.PowerEnum;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Maps;
@@ -25,7 +23,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -460,11 +457,6 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
                     skillEntryGui.updateFormattedLevelString(points, maxPoints);
 
 
-                    if (skillEnum.isPassive() && !skillEnum.isForMinion()) {
-                        //Para pasivos
-                        CompoundTag compoundTag = skillCap.setSkillToByteArray(skillEnum);
-                        PacketDistributor.sendToServer(new PlayerPassiveSkillPayload(compoundTag));
-                    }
                 }
             }
         }

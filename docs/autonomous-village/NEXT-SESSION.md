@@ -92,6 +92,59 @@
   asignables a teclas del jugador; siguen comprables y aplicándose a lobo/oso.
 - **Brecha del zombie:** candidato `ensancharBrecha` (2 columnas) **sin commit**; falta runtime.
 - **Informe:** `2026-11-25-SKILLS-SERVER-AUTHORITY-AND-PASSIVES.md`.
+---
+# ACTUALIZACIÓN 25-nov-2026 — FAIL-CLOSED EN PRERREQUISITOS DE SKILLS
+
+- DeepSeek validó el SHA `47c2f72e20c54f223dfbd34a0ea193cd94d3de09`: compilación, tests (392), integración de skills (392 assertions), lint y diff-check PASS; no hubo runtime con jugador real.
+- Defecto confirmado: `SkillPointSpendPayload.prerequisitesMet` podía considerar desbloqueado un padre cuyo máximo era 0/negativo, porque `parentLevel >= parentMaximum` resultaba verdadero.
+- Corregido en `66f5964643128aafb2dd0a3b36719b63b39ed093`: para padres que representan skills, máximo ausente/no positivo o nivel negativo ahora rechaza el prerrequisito antes de evaluar progreso.
+- Corregido también el reflejo visual en `SkillProgress` (commit `30020a4e37c0f52e38a4d8cd80c54d469d3957e8`): `isDone()` solo devuelve true con máximo positivo; porcentaje/texto no intentan representar máximos negativos como progreso válido.
+- Las raíces visuales sin `SkillEnum` siguen desbloqueando sus primeros nodos, como antes; la validación fail-closed aplica a padres que sí representan una skill.
+- **HEAD esperado para Harness:** `30020a4e37c0f52e38a4d8cd80c54d469d3957e8`.
+- ChatGPT no ejecutó Gradle ni runtime. Validar primero compilación/tests/lint/diff en ese SHA exacto.
+- Añadir pruebas explícitas: padre con máximo null/ausente, 0 y negativo debe rechazar; máximo positivo con padre sin progreso debe rechazar; padre con progreso positivo debe permitir; padre completado con máximo positivo debe permitir; raíces sin skill deben conservar comportamiento. Confirmar también UI `isDone=false` para máximo <=0.
+- Repetir después la matriz dinámica 20/30/5, costes/tipos, nueva/existente, compra hasta máximo y rechazo del siguiente nivel, directexecution y save/reload descrita en `2026-11-25-SKILL-DATA-DRIVEN-RULES.md`.
+- El reporte anterior no ejecutó jugador real, cliente modificado, consumo de recurso, ni save/reload; siguen PENDIENTES. Servidor dedicado solo llegó a `Done`, sin conexión de jugador. No declarar PASS global hasta cubrir esos escenarios.
+- Harness no modifica producción. Preservar mundo/logs existentes; usar mundo de validación separado y documentar SHA, configuración JSON efectiva y evidencia de cada caso.
+
+---
+
+# ACTUALIZACIÓN 25-nov-2026 — FIX DE COMPILACIÓN POST-VALIDACIÓN
+
+- DeepSeek detectó que `PlayerCapabilityForgeEventSubscriber` conservaba un import y un uso de `PlayerPassiveSkillPayload`, clase eliminada en el hardening anterior.
+- Corregido en commit `eea975ca152d1068e95ba2e61c2122eed5bdee21`.
+- No se restauró el payload: el evento de cambio de dimensión reaplica pasivos directamente en servidor mediante `PlayerSkillCapabilityInterface.triggerPassive(player, skill)`, manteniendo el filtro de pasivos no-minion y la validación existente de niveles/tipo.
+- El evento retorna en cliente; la reaplicación de efectos queda server-side. Se conserva el traslado de minions al destino.
+- No se ejecutaron pruebas por ChatGPT. La compilación y toda la matriz anterior están pendientes de repetición sobre el nuevo HEAD.
+- HEAD esperado para la siguiente validación: `eea975ca152d1068e95ba2e61c2122eed5bdee21`.
+
+---
+
+# ACTUALIZACIÓN 25-nov-2026 — REGLAS DE SKILLS DINÁMICAS DESDE JSON
+
+- Implementación publicada en `361aab948117ed62a5b24dbc6f09d6af4e21ec39` (HEAD de rama al cierre de esta actualización); pendiente de validación Harness/DeepSeek. No declarar PASS hasta recibir reporte sobre este SHA exacto.
+- Los getters de máximos, costes y tipos de recurso ahora derivan sus mapas del árbol cargado desde `root_complete.json`, no de copias persistidas en el NBT del jugador. El NBT conserva progreso (niveles comprados); por tanto, cambiar `maxskilllevel` aplica a partidas nuevas y existentes sin borrar progreso.
+- Los setters de máximo/coste/tipo se conservan por compatibilidad de interfaz, pero registran advertencia y no alteran reglas: la fuente autoritativa es el JSON.
+- Se agregó `directexecution` a la definición Werewolf en `root_complete.json`. La regla declara trigger, recurso, umbral y requisito de transformación.
+- `SkillServerPolicy` carga esa regla desde el recurso del mod y la evalúa server-side usando nivel, estado de transformación y maná obtenidos de capabilities del servidor. Si no hay regla, el recurso/trigger no se soporta o los datos no son válidos, rechaza.
+- `DirectSkillExecutionPayload` usa exclusivamente `SkillServerPolicy`; el cliente solo propone el enum, nunca el estado ni el umbral. El decoder inválido se convierte en `EMPTY` y se rechaza.
+- La clase `DirectSkillExecutionPolicy` queda como fachada de compatibilidad para pruebas/callers; ya no contiene el enum ni el umbral.
+- Se mantiene la estructura de árbol/prerrequisitos en el builder común ya usado por la capability. Esta modificación separa la política de acciones directas del código de GUI; no se hizo una migración general de todas las clases SkillElement/GUI.
+- Validación pendiente: compile/test/skillCapabilityTest/lint strict/diff check; comprobar nuevo mundo y mundo existente tras cambiar máximos/costes; matriz de reglas directexecution (sin regla, skill errónea, nivel 0, transformado/no transformado, maná >, = y < umbral); cliente modificado; servidor dedicado y save/reload.
+- No se ejecutaron pruebas por ChatGPT.
+
+---
+
+# ACTUALIZACIÓN 25-nov-2026 — HARDENING DE SKILLS PUBLICADO, VALIDACIÓN PENDIENTE
+
+- Código de seguridad publicado en `2224c77a359434b23a8929a58e66e4fe60a34930`.
+- El árbol completo ya no acepta NBT C2S; compras, loadouts y rotación usan acciones tipadas.
+- Pasivos ejecutados dentro de la compra validada; payload independiente retirado.
+- Payload directo de transformación exige hombre lobo activo y maná agotado.
+- **No hay PASS nuevo:** DeepSeek debe ejecutar build, tests, lint, UI cliente y servidor dedicado sobre el HEAD actual.
+- Informe: `2026-11-25-SKILLS-SECURITY-HARDENING.md`.
+
+---
 
 # OBJETIVO CERRADO — SOAK FINAL PASS EN `43afe1e6` (24-nov-2026)
 

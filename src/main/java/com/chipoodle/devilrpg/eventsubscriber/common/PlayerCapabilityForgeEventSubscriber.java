@@ -29,7 +29,6 @@ import com.chipoodle.devilrpg.network.payload.PlayerAuxiliarPayload;
 import com.chipoodle.devilrpg.network.payload.PlayerExperiencePayload;
 import com.chipoodle.devilrpg.network.payload.PlayerManaPayload;
 import com.chipoodle.devilrpg.network.payload.PlayerMinionPayload;
-import com.chipoodle.devilrpg.network.payload.PlayerPassiveSkillPayload;
 import com.chipoodle.devilrpg.network.payload.PlayerSkillTreePayload;
 import com.chipoodle.devilrpg.network.payload.PlayerStaminaPayload;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
@@ -427,12 +426,18 @@ public class PlayerCapabilityForgeEventSubscriber {
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         Player player = event.getEntity();
 
-        PlayerSkillCapabilityInterface aSkillCap = IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
-        //Es necesrio enviar nuevamente la activación de todos los pasivos del Player que no se guardan en un Attribute
-        SkillEnum.getPassiveSkills().stream().filter(x -> !x.isForMinion()).forEach(skillEnum -> {
-            CompoundTag compoundTag = aSkillCap.setSkillToByteArray(skillEnum);
-            PacketDistributor.sendToServer(new PlayerPassiveSkillPayload(compoundTag));
-        });
+        // Los efectos pasivos se reaplican directamente en el servidor. No se envía un payload C2S:
+        // la activación pasiva ya no tiene un canal de red independiente.
+        if (player.level().isClientSide) {
+            return;
+        }
+        PlayerSkillCapabilityInterface aSkillCap =
+                IGenericCapability.getUnwrappedPlayerCapability(player, PlayerSkillCapability.INSTANCE);
+        if (aSkillCap != null) {
+            SkillEnum.getPassiveSkills().stream()
+                    .filter(skill -> !skill.isForMinion())
+                    .forEach(skill -> aSkillCap.triggerPassive(player, skill));
+        }
 
         // Los minions persistentes (lobo, oso, wisp) siguen al jugador de dimensión. Se hace en el siguiente
         // tick del servidor para asegurar que el jugador ya está en el nivel destino (el evento puede llegar
