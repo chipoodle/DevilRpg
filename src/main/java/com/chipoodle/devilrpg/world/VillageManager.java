@@ -1269,6 +1269,9 @@ public final class VillageManager {
                 }
                 int vivos = observeVillagers(level, saved, i, target);
                 MAINTENANCE_RECOVERY_PENDING.remove(i);
+                // F3 · SOAK 24-nov-2026: el POI de la mesa de flechas podía faltar/estar cambiado al
+                // empezar; se re-registra en cada latido (200 ticks), no solo al generar/migrar.
+                VillageGenerator.asegurarPoiDelTallerDelLenador(level, target);
                 if (vivos > 0 && !vidaLejanaEjecutada) {
                     tickVillageLife(level, saved, i, target);
                 }

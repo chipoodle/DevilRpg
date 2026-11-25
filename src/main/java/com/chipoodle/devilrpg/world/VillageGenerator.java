@@ -3881,13 +3881,37 @@ public final class VillageGenerator {
      */
     /**
      * Re-registra el POI de una estación de trabajo si el bloque sigue siendo válido pero `PoiManager`
-     * lo perdió (F3, 24-nov-2026). Es idempotente: si ya existe, no hace nada.
+     * lo perdió **o tiene otro tipo** (F3, 24-nov-2026): la mesa de flechas puede haber quedado con el
+     * POI viejo de la estructura anterior. Es idempotente.
      */
     private static void asegurarPoiDeTrabajo(ServerLevel level, BlockPos pos) {
+        var esperado = net.minecraft.world.entity.ai.village.poi.PoiTypes.forState(level.getBlockState(pos));
+        if (esperado.isEmpty()) {
+            return;
+        }
         var poi = level.getPoiManager();
-        if (poi.getType(pos).isEmpty()) {
-            net.minecraft.world.entity.ai.village.poi.PoiTypes.forState(level.getBlockState(pos))
-                    .ifPresent(t -> poi.add(pos.immutable(), t));
+        var actual = poi.getType(pos);
+        if (actual.isEmpty()) {
+            poi.add(pos.immutable(), esperado.get());
+        } else if (!actual.get().value().equals(esperado.get().value())) {
+            poi.remove(pos.immutable());
+            poi.add(pos.immutable(), esperado.get());
+        }
+    }
+
+    /**
+     * El POI de la mesa de flechas del taller, si la mesa ya está puesta. Se llama al generar y en el
+     * latido periódico (F3: el hueco de cobertura inicial del fletcher).
+     */
+    public static void asegurarPoiDelTallerDelLenador(ServerLevel level, BlockPos center) {
+        int nivel = cotaDeLaPlaza(level, center);
+        if (nivel <= level.getMinBuildHeight() + 1) {
+            return;
+        }
+        BlockPos mesa = new BlockPos(center.getX() + TALLER_LENADOR_X + 1, nivel,
+                center.getZ() + TALLER_LENADOR_Z + 1);
+        if (level.getBlockState(mesa).is(Blocks.FLETCHING_TABLE)) {
+            asegurarPoiDeTrabajo(level, mesa);
         }
     }
 
