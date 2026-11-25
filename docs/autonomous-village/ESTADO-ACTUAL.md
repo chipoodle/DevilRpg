@@ -1,10 +1,12 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
-> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE EN DOS SEMILLAS, MISMO SHA.** `bcf98f70` da
-> **`SOAK_PASS`** en `3188…` (`soak-f4-confirm`: 0 muertes, 11/11, 0 inactivos permanentes, comida 108)
-> y en `7454…` (`soak-f4-stability`: 0 muertes, 11/11, 0 inactivos, comida 164). **F1/F2/F3/F4
-> cerrados.** Siguiente: L2, L5–L8, skills runtime y ramas/A1. Informes:
-> `2026-11-24-SOAK-ACCEPTANCE.md` y `2026-11-24-F4-IDLE-RECOVERY.md`.
+> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE Y L2 CERRADA (POLÍTICA).** Soak: `bcf98f70` da
+> **`SOAK_PASS`** en `3188…` y `7454…` (0 muertes, 11/11, 0 inactivos permanentes). **F1–F4 cerrados.**
+> **L2:** `limpiarDuplicados` con titular no cargado limpia a los duplicados y **no libera el ticket**;
+> ownership **59** aserciones. Limitación runtime declarada. Siguiente: L5–L8, skills runtime y
+> ramas/A1. Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-F4-IDLE-RECOVERY.md` y
+> `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`.
+
 
 
 > **ACTUALIZACIÓN 24-nov-2026 — SOAK ACEPTADO EN `bfd5113b`.** `soak-f3-outside` (72k): **`SOAK_PASS`**,

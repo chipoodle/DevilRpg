@@ -39,6 +39,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | **F2** | **Caída al volver al pueblo** (`Zacarias`, `hit the ground too hard`, `729,64,542`). **CERRADO** con `VillageFallPolicy` (`ccee1943`): miembros del pueblo sin daño por caída fuera de asedio; ración a hambre crítica (`7e2b4293`). `soak-f2-final`: **0 muertes**. | `build/soak/soak-f2-final-20261124-1825`; `2026-11-24-F2-FALL-PROTECTION.md`. | El criterio de caída/hambre se cumple; queda F3. | — (cerrado) |
 | **F3** | **JOB_SITE fuera del muro**: el diagnóstico `-PoiDiag` encontró un **granjero** (`a3dd7940…`) con su composter en `736,69,537`, **fuera de la muralla** (POI del oficio, por eso se aceptaba). **CERRADO** con `bfd5113b`: todo `JOB_SITE` fuera del muro es inválido y se suelta; `soak-f3-outside` da **`SOAK_PASS`**, **0 muertes**, **11/11 desde la primera muestra**, 0 huérfanos/sin puesto. | `build/soak/soak-f3-outside-20261124-2030`; `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-F3-JOB-SITE-POI.md`. | **Aceptado.** | — (cerrado) |
 | **F4** | **Inactivo permanente sin goal**: en la semilla `7454…`, un granjero (`3bce318d…`) quedó **12.000 ticks** parado en `629,63,528` sin faena; el empujón I198 solo cubría a quien ya tenía goal. **CERRADO** con `bcf98f70` (`despertarSiEstaParado`): `soak-f4-stability` da **`SOAK_PASS`**, 0 inactivos permanentes. | `build/soak/soak-f4-stability-20261124-2115`; `2026-11-24-F4-IDLE-RECOVERY.md`. | Estable en dos semillas. | — (cerrado) |
+| **L2** | **Duplicado con el titular no cargado.** `limpiarDuplicados` + **59** aserciones de ownership: con el titular ausente se limpian las memorias cargadas y **NO se libera el ticket** (es suyo). | `VillageJobSiteOwnershipPolicyTest` 59; `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`. | Política cerrada; falta un fixture runtime con titular descargado (limitación declarada). | — (política) |
 | **SOAK** | **Aceptación multi-día + estabilidad:** mismo SHA `bcf98f70` en dos semillas (`3188…` y `7454…`), ambas **PASS**: 0 muertes, 11/11, 0 duplicados/huérfanos/sin puesto/inactivos permanentes, guardado OK. | `soak-f4-confirm-20261124-2130`, `soak-f4-stability-20261124-2115`. | **`SOAK_PASS` estable en dos semillas** | Después L2/L5–L8/skills runtime. |
 
 ## 3. Protocolo de continuidad
@@ -203,3 +204,8 @@ le pide camino a su puesto. `soak-f4-stability` (72k): **`SOAK_PASS`**, 0 muerte
 permanentes, comida 164. La semilla `3188…` ya era PASS en `bfd5113b`; `soak-f4-confirm` comprueba el
 mismo SHA en esa semilla y también da **`SOAK_PASS`** (0 muertes, 11/11, 0 inactivos, comida 108).
 Informe: `2026-11-24-F4-IDLE-RECOVERY.md`. **Soak estable en dos semillas con `bcf98f70`.**
+
+**L2 cerrada (política).** `limpiarDuplicados` (ownership **59** aserciones) fija que, con el titular
+no cargado, se limpian las memorias duplicadas cargadas y **NO se libera el ticket** (pertenece al
+ausente). `reconciliarPuestosDuplicados` usa la decisión y lo registra. Falta un fixture runtime con
+titular descargado; limitación declarada. Informe: `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`.

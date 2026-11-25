@@ -11872,3 +11872,18 @@ inactivos permanentes**, comida 164. La semilla 3188 también pasó en `bfd5113b
 
 **Límites:** F1/F2/F3/F4 cerrados; soak **estable en dos semillas con el mismo SHA `bcf98f70`**
 (`soak-f4-stability` y `soak-f4-confirm`, ambos PASS). Siguen L2/L5–L8/skills runtime.
+
+### I415 · DUPLICADO CON TITULAR NO CARGADO: NO SE LIBERA EL TICKET (24-nov-2026)
+
+**Regla:** `VillageJobSiteOwnershipPolicy.limpiarDuplicados` decide qué aldeanos cargados pierden su
+memoria `JOB_SITE` por compartir POI. Sin titular en el libro no limpia nada; con titular cargado
+conserva al titular y limpia al resto; con titular **no cargado** limpia a todos los cargados pero
+**nunca libera el ticket**, porque pertenece al titular ausente y soltarlo dejaría que otro se llevara
+su estación. `reconciliarPuestosDuplicados` usa la decisión y lo registra.
+
+**Evidencia:** `VillageJobSiteOwnershipPolicyTest` **59** aserciones (54 + 5 de L2), incluidas titular
+no cargado, titular cargado, sin libro, lista vacía y UUID nulo. `test` 1m26s. Informe:
+`2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`.
+
+**Límites:** no hay fixture runtime con el titular realmente descargado; la limitación de evidencia se
+declara. L2 queda cerrada en política.

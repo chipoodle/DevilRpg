@@ -2,10 +2,14 @@
   `3188…` (`soak-f4-confirm`: 0 muertes, 11/11, 0 inactivos permanentes, comida 108) y en la `7454…`
   (`soak-f4-stability`: 0 muertes, 11/11, 0 inactivos, comida 164).
 - **F1/F2/F3/F4 cerrados**; el soak multi-día queda **aceptado y estable en dos semillas**.
-- **Gates:** `test` 1m18s; persistencia 553, ownership 54, skills 376; lint/diff verdes.
-- **Siguiente:** L2, L5–L8, **skills runtime** (servidor con jugador, UI cliente, doble `onKeyInput`) y
-  la decisión de ramas/A1.
-- Informes: `2026-11-24-SOAK-ACCEPTANCE.md` y `2026-11-24-F4-IDLE-RECOVERY.md`.
+- **L2 CERRADA (política):** `limpiarDuplicados` + 5 aserciones nuevas (ownership **59**). Con el
+  titular no cargado se limpian las memorias duplicadas cargadas y **NO se libera el ticket** (es del
+  ausente). El fixture runtime con titular descargado sigue declarado como limitación.
+- **Gates:** `test` 1m26s; persistencia 553, ownership 59, skills 376; lint/diff verdes.
+- **Siguiente:** L5–L8, **skills runtime** (servidor con jugador, UI cliente, doble `onKeyInput`) y la
+  decisión de ramas/A1.
+- Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-F4-IDLE-RECOVERY.md`,
+  `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`.
 
 # SOAK ACEPTADO — F1/F2/F3 CERRADOS; PENDIENTES L2/L5–L8/SKILLS RUNTIME (2026-11-24)
 
