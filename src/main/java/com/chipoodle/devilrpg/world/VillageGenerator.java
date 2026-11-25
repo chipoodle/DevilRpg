@@ -3879,10 +3879,30 @@ public final class VillageGenerator {
      * idempotente (su testigo es la propia mesa: si ya está, no escribe ni una celda) y todo entra en el
      * <b>plano</b> por {@code colocar} (I8), así que el obrero lo repone.
      */
+    /**
+     * Re-registra el POI de una estación de trabajo si el bloque sigue siendo válido pero `PoiManager`
+     * lo perdió (F3, 24-nov-2026). Es idempotente: si ya existe, no hace nada.
+     */
+    private static void asegurarPoiDeTrabajo(ServerLevel level, BlockPos pos) {
+        var poi = level.getPoiManager();
+        if (poi.getType(pos).isEmpty()) {
+            net.minecraft.world.entity.ai.village.poi.PoiTypes.forState(level.getBlockState(pos))
+                    .ifPresent(t -> poi.add(pos.immutable(), t));
+        }
+    }
+
     public static void asegurarElTallerDelLenador(ServerLevel level, BlockPos center) {
         int nivel = cotaDeLaPlaza(level, center);
         if (nivel <= level.getMinBuildHeight() + 1) {
             return;
+        }
+        // F3 · SOAK 24-nov-2026: la mesa de flechas existía en 610,63,508 y el libro/ticket del fletcher
+        // también, pero `PoiManager` no tenía el POI: el aldeano quedaba `sin_puesto` todo el 72k. Si el
+        // bloque ya es la mesa, se re-registra el POI aunque el taller esté "hecho" (idempotente).
+        BlockPos mesaFlechas = new BlockPos(center.getX() + TALLER_LENADOR_X + 1, nivel,
+                center.getZ() + TALLER_LENADOR_Z + 1);
+        if (level.getBlockState(mesaFlechas).is(Blocks.FLETCHING_TABLE)) {
+            asegurarPoiDeTrabajo(level, mesaFlechas);
         }
         if (tallerDelLenadorHecho(level, center, nivel)) {
             return;
@@ -3913,6 +3933,7 @@ public final class VillageGenerator {
                 Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true), 3);
         // SU PUESTO DE TRABAJO: la mesa de flechas (lo que le da el oficio de flechero = LEÑADOR).
         colocar(level, new BlockPos(x0 + 1, nivel, z0 + 1), Blocks.FLETCHING_TABLE.defaultBlockState(), 3);
+        asegurarPoiDeTrabajo(level, new BlockPos(x0 + 1, nivel, z0 + 1));
         // Y la madera a medio trabajar: una pila de troncos y un tocón, que es lo que hace un leñador.
         colocar(level, new BlockPos(x1 - 1, nivel, z0 + 1), Blocks.OAK_LOG.defaultBlockState(), 3);
         colocar(level, new BlockPos(x1 - 1, nivel + 1, z0 + 1), Blocks.OAK_LOG.defaultBlockState(), 3);
