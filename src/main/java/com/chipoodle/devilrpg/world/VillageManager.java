@@ -4953,8 +4953,15 @@ public final class VillageManager {
             return true;
         }
         BlockPos pos = job.get().pos();
+        // F3 · SOAK 24-nov-2026: un JOB_SITE FUERA del muro no es válido aunque el POI sea del oficio.
+        // Medido: un granjero (a3dd7940…) tenía su composter en 736,69,537 (75 bloques al este), fuera
+        // de la muralla; el POI era farmer y el aldeano quedaba `sin_puesto` + huérfano durante todo el
+        // 72k. Se marca inválido para que el reconciliador lo suelte y reclame una estación del pueblo.
+        if (!esDeDentroDelMuro(center, pos)) {
+            return true;
+        }
         Optional<Holder<PoiType>> tipo = poi.getType(pos);
-        return tipo.isPresent() && !profesion.heldJobSite().test(tipo.get()) && esDeDentroDelMuro(center, pos);
+        return tipo.isPresent() && !profesion.heldJobSite().test(tipo.get());
     }
 
     /**
