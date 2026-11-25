@@ -31,8 +31,8 @@ import java.util.UUID;
  * Así:
  * <ul>
  *   <li>Dentro de la zona protegida (&lt; minDistance): probabilidad 0 → no spawnea ninguno.</li>
- *   <li>De minDistance a maxDistance: spawnea una fracción según la curva.</li>
- *   <li>A maxDistance o más: probabilidad 1 → spawnean todos los de la horda.</li>
+ *   <li>De minDistance a maxSpawnDistance: spawnea una fracción según la curva.</li>
+ *   <li>A maxSpawnDistance o más: probabilidad 1 → spawnean todos los de la horda.</li>
  * </ul>
  * La horda ataca al jugador que esté <b>más lejos</b> de su spawn (el más "aventurero"); si todos están
  * en la zona protegida, el evento no spawnea nada (el jugador está a salvo cerca de su base).

@@ -2803,7 +2803,7 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     public static boolean checkSpawnRules(EntityType<AggressiveZombieEntity> entityType, ServerLevelAccessor world, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
-        Player nearestPlayer = world.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), SPAWN_PROFILE.maxDistance(), false);
+        Player nearestPlayer = world.getNearestPlayer(pos.getX(), pos.getY(), pos.getZ(), SPAWN_PROFILE.maxPowerDistance(), false);
 
         if (nearestPlayer == null) {
             return false; // No hay jugadores cercanos, no spawnea

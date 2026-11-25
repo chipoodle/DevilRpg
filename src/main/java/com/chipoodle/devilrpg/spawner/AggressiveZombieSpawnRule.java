@@ -89,7 +89,7 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
                     player.getGameProfile().getName(), Math.round(distance), Math.round(min));
             return 0.0F;
         }
-        if (distance > PROFILE.maxDistance()) {
+        if (distance > PROFILE.maxSpawnDistance()) {
             return 1.0F;
         }
         float chance = (float) PROFILE.probability(distance, threat);

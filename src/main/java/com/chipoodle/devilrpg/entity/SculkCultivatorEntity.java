@@ -491,7 +491,7 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
     public void setPos(double x, double y, double z) {
         super.setPos(x, y, z);
         if (spawnDistance == 0) { // Solo se calcula al momento del spawn
-            Player nearestPlayer = this.level().getNearestPlayer(this, SPAWN_PROFILE.maxDistance());
+            Player nearestPlayer = this.level().getNearestPlayer(this, SPAWN_PROFILE.maxPowerDistance());
             if (nearestPlayer != null) {
                 PlayerAuxiliaryCapabilityInterface playerCapability = IGenericCapability.getUnwrappedPlayerCapability(nearestPlayer, PlayerAuxiliaryCapability.INSTANCE);
                 Vec3 playerSpawn = playerCapability.getAnchorPoint();

@@ -19,9 +19,10 @@ import net.minecraft.world.level.Level;
  * hordas y el resto del mundo; cada mob puede encoger su zona protegida a su propio ritmo.
  *
  * @param minDistance       distancia por debajo de la cual la probabilidad es 0 (zona protegida / sin spawn)
- * @param maxDistance       distancia a partir de la cual la probabilidad es 1 (máxima intensidad)
+ * @param maxSpawnDistance  distancia a partir de la cual la <b>probabilidad de spawn</b> es 1
+ * @param maxPowerDistance  distancia a partir de la cual el <b>escalado de atributos/XP</b> es 1
  * @param minHardDistance   a lo que se reduce la zona protegida con la amenaza máxima
- * @param maxScaleMultiplier incremento del factor de escala en la distancia máxima (ej. 1.3 = +30%)
+ * @param maxScaleMultiplier incremento del factor de escala en la distancia máxima
  * @param baseHealth        vida base sobre la que se aplica el factor de escala
  * @param baseSpeed         velocidad base sobre la que se aplica el factor de escala
  * @param baseDamage        daño base sobre el que se aplica el factor de escala
@@ -32,8 +33,10 @@ import net.minecraft.world.level.Level;
 public record SpawnScaleProfile(
         /** Distancia por debajo de la cual la probabilidad es 0 (zona protegida / sin spawn). */
         int minDistance,
-        /** Distancia a partir de la cual la probabilidad es 1 (máxima intensidad). */
-        int maxDistance,
+        /** Distancia a partir de la cual la PROBABILIDAD DE SPAWN es 1. */
+        int maxSpawnDistance,
+        /** Distancia a partir de la cual el ESCALADO DE PODER/XP es 1. */
+        int maxPowerDistance,
         /** Valor al que se reduce {@code minDistance} con la amenaza máxima (la zona protegida se encoge). */
         int minHardDistance,
         /** Incremento del factor de escala en la distancia máxima (ej. 1.5 = +50%). */
@@ -72,27 +75,44 @@ public record SpawnScaleProfile(
     }
 
     /**
-     * Normaliza la distancia al intervalo [0, 1] teniendo en cuenta el mínimo efectivo (que depende de
-     * la amenaza). Devuelve 0 en o por debajo del mínimo y 1 en o por encima de maxDistance.
+     * Normaliza la distancia para la <b>probabilidad de spawn</b> en [0, 1], usando
+     * {@link #maxSpawnDistance}. Devuelve 0 en o por debajo del mínimo efectivo y 1 a partir de
+     * {@code maxSpawnDistance}.
      */
-    public double normalize(double distance, double threat) {
+    public double normalizeSpawn(double distance, double threat) {
         double min = effectiveMinDistance(threat);
         if (distance <= min) return 0.0;
-        if (distance >= maxDistance) return 1.0;
-        return (distance - min) / (double) (maxDistance - min);
+        if (distance >= maxSpawnDistance) return 1.0;
+        return (distance - min) / (double) (maxSpawnDistance - min);
     }
 
-    /** {@link #normalize(double, double)} con amenaza 0 (mínimo sin encoger). */
-    public double normalize(double distance) {
-        return normalize(distance, 0.0);
+    /** {@link #normalizeSpawn(double, double)} con amenaza 0. */
+    public double normalizeSpawn(double distance) {
+        return normalizeSpawn(distance, 0.0);
+    }
+
+    /**
+     * Normaliza la distancia para el <b>escalado de poder/XP</b> en [0, 1], usando
+     * {@link #maxPowerDistance}. Es independiente de {@link #maxSpawnDistance}.
+     */
+    public double normalizePower(double distance, double threat) {
+        double min = effectiveMinDistance(threat);
+        if (distance <= min) return 0.0;
+        if (distance >= maxPowerDistance) return 1.0;
+        return (distance - min) / (double) (maxPowerDistance - min);
+    }
+
+    /** {@link #normalizePower(double, double)} con amenaza 0. */
+    public double normalizePower(double distance) {
+        return normalizePower(distance, 0.0);
     }
 
     /**
      * Probabilidad de spawn teniendo en cuenta la amenaza (la zona protegida se encoge con el tiempo).
-     * 0 en la zona protegida, 1 a maxDistance, lineal en el tramo intermedio.
+     * 0 en la zona protegida, 1 a {@code maxSpawnDistance}, lineal en el tramo intermedio.
      */
     public double probability(double distance, double threat) {
-        return normalize(distance, threat);
+        return normalizeSpawn(distance, threat);
     }
 
     /** {@link #probability(double, double)} con amenaza 0. */
@@ -102,10 +122,10 @@ public record SpawnScaleProfile(
 
     /**
      * Factor de escala de atributos teniendo en cuenta la amenaza: 1.0 en la zona protegida (efectiva) y
-     * {@code 1.0 + maxScaleMultiplier} en la distancia máxima.
+     * {@code 1.0 + maxScaleMultiplier} a partir de {@code maxPowerDistance}.
      */
     public double scaleFactor(double distance, double threat) {
-        return 1.0 + normalize(distance, threat) * maxScaleMultiplier;
+        return 1.0 + normalizePower(distance, threat) * maxScaleMultiplier;
     }
 
     /** {@link #scaleFactor(double, double)} con amenaza 0. */
@@ -115,10 +135,10 @@ public record SpawnScaleProfile(
 
     /**
      * Experiencia que da la entidad según la distancia y la amenaza: {@code baseXp} en la zona protegida y
-     * {@code baseXp * (1 + maxXpMultiplier)} a la distancia máxima (0 = sin aumento por distancia).
+     * {@code baseXp * (1 + maxXpMultiplier)} a partir de {@code maxPowerDistance} (0 = sin aumento).
      */
     public int experienceReward(double distance, double threat) {
-        return (int) Math.round(baseXp * (1.0 + normalize(distance, threat) * maxXpMultiplier));
+        return (int) Math.round(baseXp * (1.0 + normalizePower(distance, threat) * maxXpMultiplier));
     }
 
     /** {@link #experienceReward(double, double)} con amenaza 0. */

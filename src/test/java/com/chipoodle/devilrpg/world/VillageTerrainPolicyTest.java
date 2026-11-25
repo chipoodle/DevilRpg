@@ -53,6 +53,13 @@ public final class VillageTerrainPolicyTest {
         check(true, VillageSiegeBellPolicy.laAldeaCaePorCampana(true, false));
         check(false, VillageSiegeBellPolicy.laAldeaCaePorCampana(true, true));
         check(false, VillageSiegeBellPolicy.laAldeaCaePorCampana(false, false));
+        // 15. Probabilidad y poder usan distancias máximas independientes.
+        com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile perfil =
+                new com.chipoodle.devilrpg.spawnprofile.SpawnScaleProfile(
+                        10, 100, 1000, 5, 2.0, 10, 0.2, 1.0, 5, 1.0, 3.0);
+        check(true, perfil.probability(100, 0.0) >= 1.0);
+        check(true, perfil.scaleFactor(100, 0.0) < 3.0);
+        check(true, perfil.scaleFactor(1000, 0.0) >= 3.0);
         System.out.println("VILLAGE_TERRAIN_POLICY_TEST: OK (" + checks + " aserciones)");
     }
 

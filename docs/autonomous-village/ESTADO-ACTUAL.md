@@ -1,5 +1,9 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — SPAWN/PODER.** `maxDistance` se separó en **`maxSpawnDistance`**
+> (probabilidad) y **`maxPowerDistance`** (atributos/XP); ambos 3000 por ahora. El `minDistance`
+> 67→40 del usuario quedó commiteado en `21fea398`.
+
 > **ACTUALIZACIÓN 25-nov-2026 — LOGS.** INFO solo para estado/medición; el ruido periódico
 > (guardias, portones, huerta, camas, casas, cosecha, árboles, diagnósticos de asedio y minions)
 > pasa a DEBUG. WARN/ERROR intactos. Requiere reiniciar.

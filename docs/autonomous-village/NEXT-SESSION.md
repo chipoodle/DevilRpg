@@ -1,3 +1,12 @@
+# SPAWN — PROBABILIDAD Y PODER SEPARADOS (25-nov-2026)
+
+- `SpawnScaleProfile` ahora tiene **`maxSpawnDistance`** (probabilidad de spawn) y
+  **`maxPowerDistance`** (atributos/XP) independientes; `normalizeSpawn`/`normalizePower`.
+- Valores actuales: **3000 / 3000** en agresivo y vex (mismo balance; ajustables por separado).
+- Tu cambio de `minDistance` **67→40** quedó commiteado aparte (`21fea398`).
+- **Evidencia:** `VILLAGE_TERRAIN_POLICY_TEST: OK (28 aserciones)`; gate 1m26s.
+- **Informe:** `2026-11-25-SPAWN-POWER-DISTANCE-SPLIT.md`.
+
 # LOGS — LIMPIEZA A ESTADO/MEDICIÓN (25-nov-2026)
 
 - INFO solo para transiciones/estado (aldea, asedio, oleada, campana, ocupación, caída, hambre,

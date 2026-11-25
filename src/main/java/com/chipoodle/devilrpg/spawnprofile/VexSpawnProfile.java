@@ -13,7 +13,8 @@ public final class VexSpawnProfile {
 
     public static final SpawnScaleProfile INSTANCE = new SpawnScaleProfile(
             67,      // minDistance: zona protegida pequeña (antes 0): no spawnea pegado a la base
-            3000,    // maxDistance: amenaza local cerca de la base
+            3000,    // maxSpawnDistance: probabilidad de spawn 1 a partir de 3000
+            3000,    // maxPowerDistance: atributos/XP máximos a partir de 3000
             17,      // minHardDistance: no hay minimo que encoger
             2.5,    // maxScaleMultiplier: escala mas leve que el agresivo (+250%)
             2.5,   // baseHealth (un tercio de la base del vex)
