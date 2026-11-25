@@ -11831,7 +11831,10 @@ existir mientras el POI falta: el aldeano queda `sin_puesto` y el soak falla por
 
 **Causa/evidencia:** `soak-f2-final` (`7e2b4293`): `sin_puesto=1` durante 333 muestras, 1 huérfano,
 10/11, **0 muertes**. Con `asegurarPoiDeTrabajo` (`743b81db`): `soak-f3-poi` baja a **148 muestras**,
-**final 11/11**, **0 muertes**; el hueco es **inicial** y el 12k pasa limpio.
+**final 11/11**, **0 muertes**; con reemplazo + latido (`68741d29`): `soak-f3-periodic` **241
+muestras**, **final 11/11**, **0 muertes**. El hueco es **inicial** y el 12k pasa limpio; el reemplazo
+periódico no lo cierra.
 
-**Límites:** F3 **no cerrada**: falta que la cobertura sea 11/11 desde la primera muestra válida
-(re-registro periódico/antes de asignar `JOB_SITE`). El soak global no se acepta aún.
+**Límites:** F3 **no cerrada**: falta que la cobertura sea 11/11 desde la primera muestra válida. El
+siguiente paso es 72k `-Diag` para `SOAK_POI_INVALID` (UUID, profesión, `JOB_SITE`, POI, bloque) y
+decidir si es un adulto nuevo con oficio sin estación o el fletcher. El soak global no se acepta aún.

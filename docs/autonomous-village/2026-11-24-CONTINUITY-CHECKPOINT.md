@@ -37,7 +37,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | L8 | A2 no se reejecutó en el cierre. | Excluido expresamente por el usuario; C4/NAV cubren el camino actual. | Regresión A2 no medida. | Campaña A2 acotada solo si el análisis de dependencias la justifica. |
 | **F1** | **Hambre a 3 días.** **CERRADO (hambre)** en `fa6a63f4`: ración real al rendirse el goal de taberna; 72k del mismo mundo con **0 muertes por hambre** (antes 8, 7 de hambre), población 29, comida 88, 11/11, 0 huérfanos/sin puesto/inactivos. | `build/soak/soak-f1-fallback-20261124-1755`; `2026-11-24-F1-CLOSURE-FALLBACK-RATION.md`. | El criterio de hambre se cumple; queda la caída F2. | — (cerrado) |
 | **F2** | **Caída al volver al pueblo** (`Zacarias`, `hit the ground too hard`, `729,64,542`). **CERRADO** con `VillageFallPolicy` (`ccee1943`): miembros del pueblo sin daño por caída fuera de asedio; ración a hambre crítica (`7e2b4293`). `soak-f2-final`: **0 muertes**. | `build/soak/soak-f2-final-20261124-1825`; `2026-11-24-F2-FALL-PROTECTION.md`. | El criterio de caída/hambre se cumple; queda F3. | — (cerrado) |
-| **F3** | **Fletcher sin POI** en `610,63,508`: `sin_puesto=1` durante 148 muestras iniciales (antes 333) y 1 huérfano transitorio; final **11/11** y **0 muertes** en `soak-f3-poi` (`743b81db`). El 12k de la misma semilla pasa limpio. | `build/soak/soak-f3-poi-20261124-1835`; `2026-11-24-F3-JOB-SITE-POI.md`. | Solo falla la cobertura **inicial**; el soak no se acepta. | Re-registrar el POI en el latido periódico/antes de asignar `JOB_SITE`; repetir 72k con `huerfanos_max=0` y `sin_puesto_bajo_max<=30`. |
+| **F3** | **Fletcher sin POI** en `610,63,508`: `sin_puesto=1` durante **241 muestras iniciales** (148–333 según run) y 1 huérfano transitorio; final **11/11** y **0 muertes** en `soak-f3-periodic` (`68741d29`). El 12k de la misma semilla pasa limpio. | `build/soak/soak-f3-periodic-20261124-1915`; `2026-11-24-F3-JOB-SITE-POI.md`. | Solo falla la cobertura **inicial**; el soak no se acepta. | 72k `-Diag` para `SOAK_POI_INVALID` (UUID/profesión/JOB_SITE/POI/bloque) y corregir; 11/11 desde la primera muestra. |
 
 ## 3. Protocolo de continuidad
 
@@ -181,9 +181,9 @@ totales** (0 hambre, 0 caída), población 30, comida 72; el único fallo es **F
 333 muestras). El 12k de la misma semilla pasa 11/11. Informe:
 `2026-11-24-F2-FALL-PROTECTION.md`.
 
-**F3 abierta: POI del fletcher (`743b81db`).** El 72k `soak-f3-poi` tiene **0 muertes** (0 hambre/0
-caída), población 30, comida 64 y **11/11 al final**; el POI de la mesa de flechas (610,63,508) falta
-durante **148 muestras iniciales** (antes 333) y hay 1 huérfano transitorio. El 12k de la misma semilla
-pasa limpio. Se re-registra el POI al generar/colocar la mesa, pero no basta para la cobertura desde la
-primera muestra: siguiente, hacerlo en el latido periódico/antes de asignar `JOB_SITE`. Informe:
-`2026-11-24-F3-JOB-SITE-POI.md`.
+**F3 abierta: POI del fletcher (`743b81db`/`68741d29`).** El 72k `soak-f3-periodic` tiene **0
+muertes** (0 hambre/0 caída), población 30, comida 100 y **11/11 al final**; el POI de la mesa de
+flechas (610,63,508) falta durante **241 muestras iniciales** (148–333 según run) y hay 1 huérfano
+transitorio. El 12k de la misma semilla pasa limpio. El re-registro/reemplazo periódico deja el final
+en 11/11 y reduce el hueco, pero no lo cierra: siguiente, 72k `-Diag` para `SOAK_POI_INVALID` y
+corregir el `JOB_SITE`/censo. Informe: `2026-11-24-F3-JOB-SITE-POI.md`.
