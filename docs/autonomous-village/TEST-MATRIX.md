@@ -31,7 +31,7 @@
 | `WarehouseApproachPolicyTest` | Unitario | 8 | `policyTest` | Acceso al almacén |
 | `FoodHungerPolicyTest`, `PantryCreditPolicyTest` | Unitario | — | `policyTest` | Comida/crédito de despensa |
 | `FoodStateNbtTest`, `FoodIntegrationTest` | Integración NBT | — | `foodNbtTest`, `foodIntegrationTest` | NBT real de comida y `VillageSavedData` de despensa |
-| `SkillCapabilityIntegrationTest` | Integración Skills | **376** | `skillCapabilityTest` → `test` | I401: 33/33 skills con nodo/coste/display; 36 nodos y 3 raíces; mapas NBT completos; partida vieja recibe skills nuevas sin pisar valores; iconos contra el registro real |
+| `SkillCapabilityIntegrationTest` | Integración Skills | **380** | `skillCapabilityTest` → `test` | I401: 33/33 skills con nodo/coste/display; 36 nodos y 3 raíces; mapas NBT completos; partida vieja recibe skills nuevas sin pisar valores; iconos contra el registro real; **I416: reversión del lobo a 0 maná no fuerza humano→lobo** |
 
 ### 2.2 Navegación y planner (Incremento 2/3 · C/D)
 
@@ -114,6 +114,8 @@ Herramientas de evidencia:
 - **Soak y hambre**: el run 72k `soak-final-20261124-1120` registró 5 muertes por hambre con comida en
   la despensa (F1 abierto). El arnés reporta `bajas` y `ausentes_fin`; no se declara PASS de
   sostenibilidad alimentaria.
-- **Skills**: cubiertas headless por `SkillCapabilityIntegrationTest` (376); **no** se ha ejecutado un
-  servidor dedicado con jugador ni la UI de cliente (`SkillScreen`/HUD). La doble ejecución
-  cliente/servidor de `onKeyInput` sigue sin revisar. Ver `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`.
+- **Skills**: cubiertas headless por `SkillCapabilityIntegrationTest` (**380**); corregido el humano
+  con 0 maná que se convertía en lobo (`WerewolfManaPolicy`), pero **no** se ha ejecutado un servidor
+  dedicado con jugador ni la UI de cliente (`SkillScreen`/HUD). La doble ejecución cliente/servidor de
+  `onKeyInput` sigue sin revisar en cliente real. Ver
+  `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md` y `2026-11-24-P1-SKILLS-SERVER-SAFE-TREE-AND-TESTS.md`.

@@ -5,11 +5,14 @@
 - **L2 CERRADA (política):** `limpiarDuplicados` + 5 aserciones nuevas (ownership **59**). Con el
   titular no cargado se limpian las memorias duplicadas cargadas y **NO se libera el ticket** (es del
   ausente). El fixture runtime con titular descargado sigue declarado como limitación.
-- **Gates:** `test` 1m26s; persistencia 553, ownership 59, skills 376; lint/diff verdes.
-- **Siguiente:** L5–L8, **skills runtime** (servidor con jugador, UI cliente, doble `onKeyInput`) y la
-  decisión de ramas/A1.
+- **Skills runtime (avance):** corregido el **humano con 0 de maná** que se convertía en hombre lobo
+  (`WerewolfManaPolicy`: solo revierte si `transformado && mana<=0 && tick%20==0`; antes se enviaba
+  `TRANSFORM_WEREWOLF` a ciegas cada 10 ticks). **Skills 380 aserciones** (antes 376). El cliente real
+  (UI/HUD/doble `onKeyInput`) sigue pendiente: no hay arnés de cliente.
+- **Gates:** `test` 1m19s; persistencia 553, ownership 59, skills 380; lint/diff verdes.
+- **Siguiente:** L5–L8, resto de skills runtime con cliente real y la decisión de ramas/A1.
 - Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-F4-IDLE-RECOVERY.md`,
-  `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`.
+  `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`, `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`.
 
 # SOAK ACEPTADO — F1/F2/F3 CERRADOS; PENDIENTES L2/L5–L8/SKILLS RUNTIME (2026-11-24)
 

@@ -11887,3 +11887,17 @@ no cargado, titular cargado, sin libro, lista vacía y UUID nulo. `test` 1m26s. 
 
 **Límites:** no hay fixture runtime con el titular realmente descargado; la limitación de evidencia se
 declara. L2 queda cerrada en política.
+
+### I416 · EL HOMBRE LOBO SOLO SE REVIERTE SI YA ESTÁ TRANSFORMADO (24-nov-2026)
+
+**Regla:** el cliente solo puede pedir `TRANSFORM_WEREWOLF` (payload directo, sin coste) si
+`WerewolfManaPolicy.debePedirReversion(transformado, mana, tickCount)` devuelve `true`:
+`transformado && mana<=0 && tickCount%20==0`. Nunca se envía con el jugador **humano**: el skill
+`SkillShapeshiftWerewolf` alterna y el payload directo no consume recursos, así que a 0 maná convertía
+a un humano en lobo y repetía el paquete cada 10 ticks.
+
+**Evidencia:** 4 aserciones en `SKILL_CAPABILITY_INTEGRATION_TEST` (380 total), incluido
+“humano + 0 maná → NO pide”. `test` 1m19s. Informe:
+`2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`.
+
+**Límites:** probado headless; el cliente real (UI/HUD/doble `onKeyInput`) sigue sin ejecutarse.
