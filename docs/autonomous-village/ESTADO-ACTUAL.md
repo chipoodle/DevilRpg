@@ -1,5 +1,11 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — SKILLS EN SERVIDOR DEDICADO.** `56454c63`: `SkillDisplayInfo` sin
+> `@OnlyIn(CLIENT)`; el servidor dedicado construye la capability y los ejecutores
+> (**`SKILL_SERVER_HARNESS OK checks=25`**). Árbol saneado (`Minions`/`AttributeModifier` del
+> servidor), `SkillCastPolicy` excluye las 4 activas de minion de la barra del jugador, pasivos
+> siguen fuera de la barra. **Skills 416**. La brecha del zombie tiene un candidato sin commit.
+
 > **OBJETIVO CERRADO (24-nov-2026).** Soak final en `43afe1e6`:
 > **`SOAK_PASS`** (72k, 0 muertes, 11/11, 0 huérfanos, 0 inactivos permanentes, guardado OK).
 > **F1–F4, L2 y L9 cerrados**; skills **392**; soak previamente estable en dos semillas con

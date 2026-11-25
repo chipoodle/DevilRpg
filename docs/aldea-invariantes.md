@@ -11948,3 +11948,19 @@ se ejecuta si el árbol le dio nivel > 0.
 
 **Límites:** el árbol viaja como NBT completo validado por delta (no una acción por nodo); un cliente
 puede recolocar poderes (mismo total) pero no regalarse puntos. Cliente real sin ejecutar.
+
+### I420 · PASIVOS Y SKILLS DE MINION NO SE ASIGNAN A LA BARRA DEL JUGADOR; EL ÁRBOL NO INYECTA ESTADO DE SERVIDOR (25-nov-2026)
+
+**Regla:** `SkillCastPolicy.esAsignableAPoder(skill)` exige `skill != null && skill != EMPTY &&
+!skill.isPassive() && !skill.isForMinion()`. `SkillScreen` lo usa para arrastrar/soltar; los pasivos
+se aplican solos (raíz con payload, hijos con su activo padre) y las skills de minion se aplican desde
+`MinionPassiveAttributes`. `PlayerSkillTreePayload` C2S aplica **solo** las claves del cliente
+(puntos, máximos, costes, tipos, iconos, poderes y loadouts) y conserva `Minions`/`AttributeModifier`
+del servidor. `PlayerSkillCapabilityInterface.consumePoint(Player)` consume en servidor.
+
+**Evidencia:** skills **416** (6 de asignación, 14 ejecutores, 3 de saneado); servidor dedicado
+`SKILL_SERVER_HARNESS OK checks=25`; `test` 1m45s. Informe:
+`2026-11-25-SKILLS-SERVER-AUTHORITY-AND-PASSIVES.md`.
+
+**Límites:** la UI/HUD de cliente no se ejecutó en este arnés; el servidor dedicado usa un fake
+player, no un login de cliente real.

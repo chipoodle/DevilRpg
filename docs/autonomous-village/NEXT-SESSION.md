@@ -1,3 +1,17 @@
+# SKILLS SERVIDOR DEDICADO + PASIVOS (25-nov-2026)
+
+- **Código `56454c63`:** `SkillDisplayInfo` ya no tiene getters `@OnlyIn(CLIENT)`, que en servidor
+  dedicado lanzaban `NoSuchMethodError` al construir la capability/ejecutores. **Servidor dedicado:
+  `SKILL_SERVER_HARNESS OK checks=25`.**
+- **Árbol:** `applyClientTree` conserva `Minions`/`AttributeModifier` del servidor; el cliente solo
+  aplica sus claves. **Skills 416 aserciones** (5 gasto, 6 asignación, 14 ejecutores, 3 sanitización).
+- **Pasivos:** no se asignan a la barra (por diseño); se aplican solos o los ejecuta su activo padre;
+  los de minion los aplica `MinionPassiveAttributes`. **No se tocó esa lógica.**
+- **Skills activas de minion** (`WOLF_FROSTBITE`, `WOLF_ICE_ARMOR`, `WAR_BEAR`, `MOUNT_BEAR`): no
+  asignables a teclas del jugador; siguen comprables y aplicándose a lobo/oso.
+- **Brecha del zombie:** candidato `ensancharBrecha` (2 columnas) **sin commit**; falta runtime.
+- **Informe:** `2026-11-25-SKILLS-SERVER-AUTHORITY-AND-PASSIVES.md`.
+
 # OBJETIVO CERRADO — SOAK FINAL PASS EN `43afe1e6` (24-nov-2026)
 
 - **Soak final:** `soak-final-head-20261124-2200` → **`SOAK_PASS`**: 72k, **0 muertes**, 11/11,

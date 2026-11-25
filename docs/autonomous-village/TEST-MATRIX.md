@@ -31,7 +31,8 @@
 | `WarehouseApproachPolicyTest` | Unitario | 8 | `policyTest` | Acceso al almacén |
 | `FoodHungerPolicyTest`, `PantryCreditPolicyTest` | Unitario | — | `policyTest` | Comida/crédito de despensa |
 | `FoodStateNbtTest`, `FoodIntegrationTest` | Integración NBT | — | `foodNbtTest`, `foodIntegrationTest` | NBT real de comida y `VillageSavedData` de despensa |
-| `SkillCapabilityIntegrationTest` | Integración Skills | **392** | `skillCapabilityTest` → `test` | I401: 33/33 skills con nodo/coste/display; 36 nodos y 3 raíces; mapas NBT completos; partida vieja recibe skills nuevas sin pisar valores; iconos contra el registro real; **I416: 0-maná no fuerza humano→lobo**; **I417: payload directo solo TRANSFORM_WEREWOLF con nivel**; **I418: regen compartida**; **I419: árbol solo mismo total o +1 con punto** |
+| `SkillCapabilityIntegrationTest` | Integración Skills | **416** | `skillCapabilityTest` → `test` | I401: 33/33 skills con nodo/coste/display; 36 nodos y 3 raíces; mapas NBT completos; partida vieja recibe skills nuevas sin pisar valores; iconos contra el registro real; **I416: 0-maná no fuerza humano→lobo**; **I417: payload directo solo TRANSFORM_WEREWOLF con nivel**; **I418: regen compartida**; **I419: árbol solo mismo total o +1 con punto**; **I420: asignación de minion/pasivo vetada y árbol saneado** |
+| Skills · servidor dedicado | `runServer -PskillHarness=true` (fake player) | **25 checks** | `SKILL_SERVER_HARNESS` | S1: capability/árbol/ejecutores en servidor real, transformación/reversión, maná, skill de minion sin crash y NBT; **no sustituye SkillScreen/HUD** |
 
 ### 2.2 Navegación y planner (Incremento 2/3 · C/D)
 
