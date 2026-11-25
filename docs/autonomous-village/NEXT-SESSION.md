@@ -1,3 +1,14 @@
+# OBJETIVO CERRADO — SOAK FINAL PASS EN `43afe1e6` (24-nov-2026)
+
+- **Soak final:** `soak-final-head-20261124-2200` → **`SOAK_PASS`**: 72k, **0 muertes**, 11/11,
+  0 huérfanos, 0 inactivos permanentes, comida 66, guardado OK. `sin_puesto` máximo 1 transitorio
+  (1 muestra, umbral 30).
+- **F1–F4, L2 y L9 cerrados**; skills **392**; maná/stamina/auxiliar/minions/árbol/experiencia bajo
+  autoridad del servidor; el soak ya estaba aceptado y estable en dos semillas con `bcf98f70`.
+- **Límites declarados:** L5/L6 (arnés exacto), L7 (fastutil A/B), L8 (excluido por el usuario), cliente
+  real de skills, y la decisión A1/ramas del dueño. No son defectos del código auditado.
+- **Informe final:** `2026-11-24-AUTONOMOUS-OBJECTIVE-CLOSURE.md`.
+
 - **Estabilidad multi-mundo CONFIRMADA:** el mismo SHA `bcf98f70` da **`SOAK_PASS`** en la semilla
   `3188…` (`soak-f4-confirm`: 0 muertes, 11/11, 0 inactivos permanentes, comida 108) y en la `7454…`
   (`soak-f4-stability`: 0 muertes, 11/11, 0 inactivos, comida 164).

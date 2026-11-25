@@ -43,7 +43,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | **L5/L6** | **Evidencia POI/navegación multi-entidad.** Soak de **30 aldeanos/72k** en dos semillas (0 muertes, 11/11, 0 inactivos permanentes) y **3 días de POI** sin duplicados/huérfanos. El arnés NAV sigue sin `multientidad_*` y el POI sin horas/jugador. | `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`. | Parcialmente cerradas; limitación de arnés declarada. | Implementar `multientidad_1/2/4/8` y la ventana horas+jugador si se quiere el contrato exacto. |
 | **SK** | **Skills runtime:** 0-maná, payload directo, maná/stamina, auxiliar/minions y **L9 (árbol/experiencia)** cerrados; **Skills 392**. | `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`, `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`, `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`, `2026-11-24-L9-SKILL-TREE-VALIDATED.md`. | Cliente real (UI/HUD/`onKeyInput`) pendiente. | Ejecutar servidor+cliente real. |
 | **L9** | **Árbol/experiencia validados en servidor.** Experiencia S→C; árbol C2S validado con `SkillTreeSpendPolicy` (mismo total o +1 con punto sin gastar), el servidor consume el punto y reenvía el estado; pasivo exige nivel>0. **Skills 392.** | `2026-11-24-L9-SKILL-TREE-VALIDATED.md`; `SKILL_CAPABILITY_INTEGRATION_TEST` 392. | Cerrada en política/handler; cliente real pendiente. | Ejecutar UI de cliente real; acción por nodo sería más estricta. |
-| **SOAK** | **Aceptación multi-día + estabilidad:** mismo SHA `bcf98f70` en dos semillas (`3188…` y `7454…`), ambas **PASS**: 0 muertes, 11/11, 0 duplicados/huérfanos/sin puesto/inactivos permanentes, guardado OK. | `soak-f4-confirm-20261124-2130`, `soak-f4-stability-20261124-2115`. | **`SOAK_PASS` estable en dos semillas** | Después L2/L5–L8/skills runtime. |
+| **SOAK** | **Aceptación multi-día + estabilidad:** dos semillas con `bcf98f70` **PASS**; **HEAD final `43afe1e6`** `soak-final-head-20261124-2200` **`SOAK_PASS`** (0 muertes, 11/11, 0 huérfanos, 0 inactivos permanentes, comida 66, guardado OK; `sin_puesto` 1 transitorio). | `soak-f4-confirm-20261124-2130`, `soak-f4-stability-20261124-2115`, `soak-final-head-20261124-2200`. | **`SOAK_PASS` estable** | Objetivo cerrado; límites L5/L6/L7/L8/cliente/A1 declarados. |
 
 ## 3. Protocolo de continuidad
 
@@ -238,3 +238,13 @@ del cliente y deben ser acciones validadas. Informe: `2026-11-24-MANA-STAMINA-SE
 multi-entidad y propiedad. El arnés NAV sigue marcando `multientidad_1/2/4/8` como no soportados y el
 POI no mide horas/jugador; la limitación se declara. Informe:
 `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`.
+
+**L9 cerrada (`20d9c517`).** La experiencia pasa a S→C y el árbol C2S se valida con
+`SkillTreeSpendPolicy` (mismo total o +1 con punto sin gastar); el servidor consume el punto y
+reenvía el estado autoritativo; el pasivo exige nivel >0. Skills **392**. Informe:
+`2026-11-24-L9-SKILL-TREE-VALIDATED.md`.
+
+**OBJETIVO CERRADO — soak final en el HEAD (`43afe1e6`).** `soak-final-head-20261124-2200`:
+**`SOAK_PASS`**, 0 muertes, 11/11, 0 huérfanos, 0 inactivos permanentes, comida 66, guardado OK (un
+`sin_puesto` transitorio dentro del umbral). F1–F4, L2 y L9 cerrados; el resto son límites/decisiones
+declaradas. Informe: `2026-11-24-AUTONOMOUS-OBJECTIVE-CLOSURE.md`.

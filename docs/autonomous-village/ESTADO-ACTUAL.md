@@ -1,5 +1,12 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **OBJETIVO CERRADO (24-nov-2026).** Soak final en `43afe1e6`:
+> **`SOAK_PASS`** (72k, 0 muertes, 11/11, 0 huérfanos, 0 inactivos permanentes, guardado OK).
+> **F1–F4, L2 y L9 cerrados**; skills **392**; soak previamente estable en dos semillas con
+> `bcf98f70`. Quedan como **límites declarados** L5/L6 (arnés exacto), L7 (A/B), L8 (excluido por el
+> usuario), cliente real de skills y la decisión A1/ramas del dueño. Informe:
+> `2026-11-24-AUTONOMOUS-OBJECTIVE-CLOSURE.md`.
+
 > **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, SKILLS Y L9 CERRADOS.** Soak `bcf98f70`: **`SOAK_PASS`**
 > en `3188…` y `7454…`. **F1–F4 cerrados; L2 política cerrada; L9 cerrada:** experiencia S→C y árbol de
 > skills validado en servidor (`SkillTreeSpendPolicy`), pasivo con nivel. Maná/stamina/auxiliar/minions

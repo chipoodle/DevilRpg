@@ -200,7 +200,9 @@ POI (15); aldea/terreno/comida/siege. **Skills: 0.**
 - **F1 PARCIAL** en `0e57b569`: la ración diaria reduce hambre y el goal de taberna se desatasca; el 72k
   baja a **1 muerte** (`630,63,530`), pero el acceso a la taberna sigue. Informe:
   `2026-11-24-F1-HUNGER-TAVERN-FIX.md`. El soak sigue **NO ACEPTADO**.
-- **Siguen abiertos:** L5/L6 (parciales con el soak), L7 (fastutil A/B), L8 (excluido por el usuario),
-  skills runtime con cliente real y la decisión de ramas/A1. L9 cerrada (árbol/experiencia validados).
+- **CIERRE 24-nov-2026:** auditoría completada; F1–F4, L1–L4, L9 y defectos de skills corregidos;
+  **soak final `SOAK_PASS` en `43afe1e6`**. Siguen como límites/decisiones L5/L6 (arnés exacto), L7
+  (fastutil A/B), L8 (excluido por el usuario), cliente real de skills y A1/ramas del dueño. Informe:
+  `2026-11-24-AUTONOMOUS-OBJECTIVE-CLOSURE.md`.
 - Las clasificaciones de §2 se mantienen como **foto de la auditoría**; esta sección registra qué se
   corrigió después, sin reescribir los hallazgos.
