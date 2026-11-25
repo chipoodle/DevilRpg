@@ -522,7 +522,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 entity.discard();
             }
             if (removeFromWorld) {
-                DevilRpg.LOGGER.info("[Minion] guardado {} {} dim={} pos={} (salud {}/{})",
+                DevilRpg.LOGGER.debug("[Minion] guardado {} {} dim={} pos={} (salud {}/{})",
                         EntityType.getKey(entity.getType()), id,
                         entity.level().dimension().location(),
                         entity.blockPosition(),
@@ -532,7 +532,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             count++;
         }
         if (removeFromWorld) {
-            DevilRpg.LOGGER.info("[Minion] {} minion(es) guardados para {} (vuelven al entrar)",
+            DevilRpg.LOGGER.debug("[Minion] {} minion(es) guardados para {} (vuelven al entrar)",
                     count, player.getName().getString());
         } else {
             // Copia periódica: a nivel debug para no llenar el log cada 10 s.
@@ -673,7 +673,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 bringToPlayer(minion, player, playerLevel);
                 stored.remove(i);
                 restored++;
-                DevilRpg.LOGGER.info("[Minion] devuelto RECREADO {} ({}), dim {} pos {}",
+                DevilRpg.LOGGER.debug("[Minion] devuelto RECREADO {} ({}), dim {} pos {}",
                         id, typeId.isEmpty() ? "sin tipo en la copia" : typeId, dimension, pos);
                 continue;
             }
@@ -759,7 +759,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         if (wolves.size() <= SOUL_WOLF_CAPACITY) {
             return;
         }
-        DevilRpg.LOGGER.info("[Minion] cupo de lobos: tienes {} y el cupo es {}; se van los mas viejos",
+        DevilRpg.LOGGER.debug("[Minion] cupo de lobos: tienes {} y el cupo es {}; se van los mas viejos",
                 wolves.size(), SOUL_WOLF_CAPACITY);
         int guard = 0;
         while (wolves.size() > SOUL_WOLF_CAPACITY && guard++ < SOUL_WOLF_CAPACITY + 8) {
@@ -777,7 +777,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
                 break;
             }
         }
-        DevilRpg.LOGGER.info("[Minion] cupo de lobos: quedan {}", wolves.size());
+        DevilRpg.LOGGER.debug("[Minion] cupo de lobos: quedan {}", wolves.size());
     }
 
     /** Busca una entidad por UUID en todos los niveles del servidor (solo encuentra las cargadas). */
@@ -856,7 +856,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             }
             data.putString("id", inferred);
             entry.put("Data", data);
-            DevilRpg.LOGGER.info("[Minion] copia antigua sin 'id': deduzco que {} es un {}", entry.getUUID("Id"), inferred);
+            DevilRpg.LOGGER.debug("[Minion] copia antigua sin 'id': deduzco que {} es un {}", entry.getUUID("Id"), inferred);
         }
         return EntityType.create(data, level)
                 .map(entity -> {
@@ -935,7 +935,7 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         try {
             if (minion.getOwnerUUID() == null || !minion.isTame()) {
                 minion.tame(player);
-                DevilRpg.LOGGER.info("[Minion] {} no tenia dueno guardado (NBT antiguo): se lo reasigno a {}",
+                DevilRpg.LOGGER.debug("[Minion] {} no tenia dueno guardado (NBT antiguo): se lo reasigno a {}",
                         minion.getEntity() != null ? minion.getEntity().getUUID() : "(minion)", player.getName().getString());
             }
             boolean conocido = true;

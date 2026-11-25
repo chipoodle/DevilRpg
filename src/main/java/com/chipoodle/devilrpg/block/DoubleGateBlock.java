@@ -250,7 +250,7 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
         // línea del click dice «paso a ABIERTO» SIEMPRE, así que no distingue «abre entero» de «abre sólo la hoja que
         // pulsas». Esto sí: cuántas celdas ha encontrado alrededor, cuántas ha movido, y cuáles tienen OTRO `FACING`
         // (que es lo que dejaría hojas quietas y daría esa sensación de que se vuelve a cerrar ✗).
-        DevilRpg.LOGGER.info("[Porton] abatir en {}: encontradas={} cambiadas={} {} (facing de la pulsada={})",
+        DevilRpg.LOGGER.debug("[Porton] abatir en {}: encontradas={} cambiadas={} {} (facing de la pulsada={})",
                 pos.toShortString(), encontradas, cambiadas,
                 donde.length() == 0 ? "" : "CON OTRO FACING: " + donde.toString().trim(), facing);
         if (cambiadas == 0) {
@@ -316,7 +316,7 @@ public class DoubleGateBlock extends HorizontalDirectionalBlock implements Entit
             // TRAZA (6-oct-2026): el jugador reportó que «cuando le doy click no se abre», y desde fuera no hay forma de
             // saber si el golpe llega al bloque o no. Esta línea lo dice: si sale cada vez que se pulsa, el click SÍ
             // llega y el problema está en el estado; si no sale NUNCA, el click no está llegando a este bloque.
-            DevilRpg.LOGGER.info("[Porton] click en {} ({}): paso a {}", pos.toShortString(),
+            DevilRpg.LOGGER.debug("[Porton] click en {} ({}): paso a {}", pos.toShortString(),
                     player.getName().getString(), abierto ? "ABIERTO" : "CERRADO");
             level.playSound(null, pos, abierto ? SoundEvents.IRON_DOOR_OPEN : SoundEvents.IRON_DOOR_CLOSE,
                     SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.1F + 0.9F);

@@ -1,5 +1,9 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — LOGS.** INFO solo para estado/medición; el ruido periódico
+> (guardias, portones, huerta, camas, casas, cosecha, árboles, diagnósticos de asedio y minions)
+> pasa a DEBUG. WARN/ERROR intactos. Requiere reiniciar.
+
 > **ACTUALIZACIÓN 25-nov-2026 — RENDIMIENTO.** Tres picos de ~2 s: login/generación, oleada de 8
 > asediadores en un tick y guardado. No es un bucle. Se eliminó el escaneo/log por tick del leñador
 > sin faena y se espació la remesa de harina; el pico de la oleada queda pendiente de repartir.

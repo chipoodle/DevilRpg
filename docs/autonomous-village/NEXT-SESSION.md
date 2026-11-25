@@ -1,3 +1,11 @@
+# LOGS — LIMPIEZA A ESTADO/MEDICIÓN (25-nov-2026)
+
+- INFO solo para transiciones/estado (aldea, asedio, oleada, campana, ocupación, caída, hambre,
+  errores); DEBUG para `PARAR`, portones, huerta, camas, casas, `FARMER-GROW`, `TREE-CLAIM`,
+  diagnósticos de asedio (`CADENA`, `JUMPUP`), `NAV`, `A2N`, `Sculk Sacrificio` y copias de minions.
+- WARN/ERROR intactos. **Requiere reiniciar** para notarse.
+- **Informe:** `2026-11-25-LOG-CLEANUP.md`; gate 1m28s.
+
 # RENDIMIENTO — PICOS DE 2 s Y RUIDO DE LOG (25-nov-2026)
 
 - Tres `Can't keep up` (~2 s) en **login/generación**, **nacimiento de 8 asediadores en un tick** y

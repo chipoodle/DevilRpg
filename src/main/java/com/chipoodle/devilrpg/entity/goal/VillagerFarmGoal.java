@@ -1003,7 +1003,7 @@ public class VillagerFarmGoal extends Goal {
         if (net.minecraft.world.item.BoneMealItem.growCrop(harina, level, target)) {
             level.playSound(null, target, net.minecraft.sounds.SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 0.8F, 1.0F);
             VillageManager.ponerSuceso(villager, "Abono la huerta");
-            DevilRpg.LOGGER.info("[FARMER-GROW] uuid={} target={} antes={} despues={} harina={}",
+            DevilRpg.LOGGER.debug("[FARMER-GROW] uuid={} target={} antes={} despues={} harina={}",
                     villager.getUUID(), target.toShortString(), antes, level.getBlockState(target), harina.getCount());
         }
     }

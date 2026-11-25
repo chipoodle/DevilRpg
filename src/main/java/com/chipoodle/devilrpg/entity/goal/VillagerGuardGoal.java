@@ -328,7 +328,7 @@ public class VillagerGuardGoal extends Goal {
         // empujando a dormir) salían diez líneas por segundo con el mismo BlockPos (medido con el arnés, modo noche).
         if (destino != null && !destino.equals(ultimoPuesto)) {
             ultimoPuesto = destino;
-            DevilRpg.LOGGER.info("[Village] Guardia {}: nuevo puesto {} (paso {}, aldea {}){}", villager.getUUID(),
+            DevilRpg.LOGGER.debug("[Village] Guardia {}: nuevo puesto {} (paso {}, aldea {}){}", villager.getUUID(),
                     destino, paso, objectiveIndex, equipando ? " yendo antes al almacen a equiparse" : "");
         }
     }
@@ -362,7 +362,7 @@ public class VillagerGuardGoal extends Goal {
             // los DOS avisos de guardia patrullando tenían `cerebro=` apuntando a un sitio DISTINTO del `destino=`
             // (`cerebro=419,63,621` con `destino=466,63,642`) y con la ruta alcanzando.
             if (VillageManager.elCerebroVaA(villager, destino)) {
-                DevilRpg.LOGGER.info("[Village] Guardia {}: no llego a {} (aldea {}): me salto el puesto y sigo la"
+                DevilRpg.LOGGER.debug("[Village] Guardia {}: no llego a {} (aldea {}): me salto el puesto y sigo la"
                         + " ronda", villager.getUUID(), destino, objectiveIndex);
                 // Y SE APUNTA COMO FALLIDO (I33): sin esto, el puesto al que no llega se le vuelve a dar y el guardia
                 // se queda en bucle. Medido en el log del jugador (aldea 2, de noche): pasos 12, 13, 14, 15 y 16
@@ -1439,7 +1439,7 @@ public class VillagerGuardGoal extends Goal {
                         return false;
                     }
                     stuckEntreno = 0; // ventana nueva: se le da tiempo a andar el tramo
-                    DevilRpg.LOGGER.info("[Village] Guardia {}: reafirmo el paso del entreno {} ({}/{}), el cerebro iba "
+                    DevilRpg.LOGGER.debug("[Village] Guardia {}: reafirmo el paso del entreno {} ({}/{}), el cerebro iba "
                             + "a otra parte", villager.getUUID(), punto.toShortString(), reafirmacionesEntreno,
                             REAFIRMACIONES_DE_ENTRENO);
                 }
@@ -1447,7 +1447,7 @@ public class VillagerGuardGoal extends Goal {
                 entrenoTicks = 0;
                 stuckEntreno = 0;
                 VillageManager.marcarPuntoFallido(villager, diana);
-                DevilRpg.LOGGER.info("[Village] Guardia {}: no llego a la diana {} (aldea {}): me vuelvo a la ronda",
+                DevilRpg.LOGGER.debug("[Village] Guardia {}: no llego a la diana {} (aldea {}): me vuelvo a la ronda",
                         villager.getUUID(), diana.toShortString(), objectiveIndex);
                 return false;
             }
@@ -1471,7 +1471,7 @@ public class VillagerGuardGoal extends Goal {
             if (!VillageManager.caminarHaciaExactoSiPuede(villager, punto, VELOCIDAD)) {
                 if (!reafirmadoElPasoExacto) {
                     reafirmadoElPasoExacto = true;
-                    DevilRpg.LOGGER.info("[Village] Guardia {}: al paso del entreno {} NO se llega exacto; se camina "
+                    DevilRpg.LOGGER.debug("[Village] Guardia {}: al paso del entreno {} NO se llega exacto; se camina "
                                     + "con la tolerancia normal (I199)", villager.getUUID(), punto.toShortString());
                 }
                 VillageManager.caminarHacia(villager, punto, VELOCIDAD);

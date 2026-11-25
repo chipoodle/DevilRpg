@@ -1105,7 +1105,7 @@ public final class NavExecutor {
                         descensoBloqueado = true;
                         ultimoFalloConstruccion = "PLAN DE DESCENSO BLOQUEADO tras " + fallosMismoEscalon
                                 + " fallos: " + ultimoFalloConstruccion;
-                        com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} DESCESO BLOQUEADO: {}",
+                        com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] asaltante #{} DESCESO BLOQUEADO: {}",
                                 mob.getId(), ultimoFalloConstruccion);
                     }
                     return false;
@@ -1180,7 +1180,7 @@ public final class NavExecutor {
         intentosConstruccion = 0;
         nextConstruccionAt = ahora + ESPERA_ENTRE_ESCALONES;
         motivoConstruccion = "escalon " + escalonesVerificados + " colocado y verificado";
-        com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] ESCALON #{} colocado y verificado en {} ({} de {})",
+        com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] ESCALON #{} colocado y verificado en {} ({} de {})",
                 mob.getId(), escalonActual.toShortString(), escalonesVerificados, MAX_ESCALONES_POR_PLAN);
         return true;
     }
@@ -1597,7 +1597,7 @@ public final class NavExecutor {
         globalDesde = yo.immutable();
         ultimoGlobalDiag = r.summary();
         if (!r.pending()) {
-            com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} RUTA GLOBAL: {}", mob.getId(),
+            com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] asaltante #{} RUTA GLOBAL: {}", mob.getId(),
                     r.summary());
         }
         return r;
@@ -1820,7 +1820,7 @@ public final class NavExecutor {
                     objetivoPermiteConstruccion = false;
                     ultimoEscalonDeObjetivo = "fallback por presupuesto GLOBAL: escalon lateral colocado y verificado "
                             + escalonTransitable.toShortString() + " hacia " + mision.toShortString();
-                    com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] A2 GLOBAL-BUDGET-STAIR #{} objetivo={} escalon={}",
+                    com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] A2 GLOBAL-BUDGET-STAIR #{} objetivo={} escalon={}",
                             mob.getId(), mision.toShortString(), escalonTransitable.toShortString());
                     return escalonTransitable;
                 }
@@ -1830,7 +1830,7 @@ public final class NavExecutor {
                         + " pos=" + yo.toShortString() + " decision={" + az.decisionDescensoDiag()
                         + "} escalera={" + az.escaleraDiag() + "}";
                 if (!diagnostico.equals(ultimoEscalonDeObjetivo)) {
-                    com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] A2 GLOBAL-BUDGET-STAIR-REJECT #{} {}",
+                    com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] A2 GLOBAL-BUDGET-STAIR-REJECT #{} {}",
                             mob.getId(), diagnostico);
                 }
                 ultimoEscalonDeObjetivo = diagnostico;
@@ -2152,7 +2152,7 @@ public final class NavExecutor {
         objetivoPermiteConstruccion = false;
         ultimoEscalonDeObjetivo = causa + ": escalon verificado " + escalonTransitable.toShortString()
                 + " hacia " + mision.toShortString();
-        com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] A2 NO-WAYPOINT-STAIR #{} causa={} objetivo={} escalon={}",
+        com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] A2 NO-WAYPOINT-STAIR #{} causa={} objetivo={} escalon={}",
                 mob.getId(), causa, mision.toShortString(), escalonTransitable.toShortString());
         return escalonTransitable;
     }
@@ -4074,7 +4074,7 @@ public final class NavExecutor {
             globalSearchLastExpansions = 0;
             limpiarRecuperacionOrigenDrop();
             recoveryBacktrackObjective = null;
-            com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[JUMPUP] MISSIONCHANGE old={} new={} objective={}",
+            com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[JUMPUP] MISSIONCHANGE old={} new={} objective={}",
                     this.misionFinal, immutable, this.objective);
             if (this.objective != null) {
                 // La mision nueva manda: aunque el movimiento sea corto, el planificador no puede
@@ -4605,7 +4605,7 @@ public final class NavExecutor {
                     + MAX_TERMINAL_REARMS + " pos=" + mob.blockPosition().toShortString()
                     + " mision=" + misionFinal.toShortString() + " motivoAnterior={" + motivoFalloTerminal + "}");
         }
-        com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} REARME terminal {}/{} en {} (motivo: {})",
+        com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] asaltante #{} REARME terminal {}/{} en {} (motivo: {})",
                 mob.getId(), rearmesTerminales, MAX_TERMINAL_REARMS, mob.blockPosition().toShortString(),
                 motivoFalloTerminal);
     }
@@ -4645,7 +4645,7 @@ public final class NavExecutor {
             NavTrace.ev("NAV_FAIL", "uuid=" + mob.getUUID() + " pos=" + mob.blockPosition().toShortString()
                     + " motivo={" + motivo + "} rearmes=" + rearmesTerminales + "/" + MAX_TERMINAL_REARMS);
         }
-        com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} NAVEGACION FAILED en {}: {}",
+        com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] asaltante #{} NAVEGACION FAILED en {}: {}",
                 mob.getId(), mob.blockPosition().toShortString(), motivo);
     }
 
@@ -7005,7 +7005,7 @@ public final class NavExecutor {
             ticksSinAvance = 0;
             nextPlanAt = 0L;
             state = NavState.PLANNING;
-            com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} RUTA INVALIDADA por falta de avance en {}:{}; se replanifica",
+            com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] asaltante #{} RUTA INVALIDADA por falta de avance en {}:{}; se replanifica",
                     mob.getId(), node.pos().toShortString(), node.transition());
         }
     }
@@ -7223,7 +7223,7 @@ public final class NavExecutor {
                 state = NavState.PLANNING;
                 ultimoMotivoDeReentrada = "rechazo por guarda de ruta -> ruta local invalidada y replanificada ("
                         + replanteosPorGuarda + "/" + MAX_REPLANTEOS_POR_GUARDA + ")";
-                com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} GUARDA DE RUTA: replanteo {}/{} en {}",
+                com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] asaltante #{} GUARDA DE RUTA: replanteo {}/{} en {}",
                         mob.getId(), replanteosPorGuarda, MAX_REPLANTEOS_POR_GUARDA,
                         mob.blockPosition().toShortString());
                 return;
@@ -7265,7 +7265,7 @@ public final class NavExecutor {
                 ultimoEscalonDeObjetivo = "re-estadio global " + reestadiosGlobales + "/"
                         + MAX_REESTADIOS_GLOBALES + " en " + mob.blockPosition().toShortString()
                         + " (recuperacion generica agotada)";
-                com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{} RE-ESTADIO GLOBAL {}/{} en {}",
+                com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] asaltante #{} RE-ESTADIO GLOBAL {}/{} en {}",
                         mob.getId(), reestadiosGlobales, MAX_REESTADIOS_GLOBALES,
                         mob.blockPosition().toShortString());
                 return;

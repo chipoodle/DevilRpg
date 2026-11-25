@@ -1302,7 +1302,7 @@ public final class VillageManager {
                     int slot = VillageGenerator.slotDeProfesionFaltante(vivas);
                     if (slot >= 0) {
                         if (!cargaDeAldeaAsentada(level)) {
-                            DevilRpg.LOGGER.info("[Village] Aldea {}: falta el puesto de {} pero los aldeanos"
+                            DevilRpg.LOGGER.debug("[Village] Aldea {}: falta el puesto de {} pero los aldeanos"
                                     + " persistidos aun estan cargando; se espera al siguiente latido",
                                     i, VillageGenerator.profesionDeSlot(slot));
                         } else {
@@ -2957,14 +2957,14 @@ public final class VillageManager {
                 if (VillageGenerator.estaDentroDeLaParcela(center, i, cota, p)
                         || VillageGenerator.estaDentroDeLaParcela(center, i, cota, p.below())) {
                     String sobre = level.getBlockState(p.below()).getBlock().getName().getString();
-                    DevilRpg.LOGGER.info("[Huerta] OBJETO {} en {} · {} ticks ahi · sobre {} · parcela {} · flota={}",
+                    DevilRpg.LOGGER.debug("[Huerta] OBJETO {} en {} · {} ticks ahi · sobre {} · parcela {} · flota={}",
                             objeto.getItem().getItem(), p.toShortString(), objeto.tickCount, sobre, i,
                             level.getBlockState(p).is(Blocks.WATER) || level.getBlockState(p.below()).is(Blocks.WATER));
                     break;
                 }
             }
         }
-        DevilRpg.LOGGER.info("[Huerta] parcelas al nivel {}: {} celda(s) SIN SEMBRAR, {} PISOTEADA(s)",
+        DevilRpg.LOGGER.debug("[Huerta] parcelas al nivel {}: {} celda(s) SIN SEMBRAR, {} PISOTEADA(s)",
                 cota, sinSembrar, pisoteadas);
     }
 
@@ -3315,7 +3315,7 @@ public final class VillageManager {
             }
         }
         if (mandados > 0) {
-            DevilRpg.LOGGER.info("[Village] Aldea {}: {} animal(es) del rebano vuelven al corral andando",
+            DevilRpg.LOGGER.debug("[Village] Aldea {}: {} animal(es) del rebano vuelven al corral andando",
                     objectiveIndex, mandados);
         }
     }
@@ -5402,7 +5402,7 @@ public final class VillageManager {
         // `c4n-20261123-017`, reload1: farmers 628,120,547 y 668,120,537). Se aplaza el reparto completo hasta que
         // la ventana de carga termine: entonces se ven los dueños reales y no se libera ningún ticket ajeno.
         if (!cargaDeAldeaAsentada(level)) {
-            DevilRpg.LOGGER.info("[Village] reparto de estaciones aplazado: la aldea aun esta cargando");
+            DevilRpg.LOGGER.debug("[Village] reparto de estaciones aplazado: la aldea aun esta cargando");
             return;
         }
         // C4 · estampa de que la reconciliación REALMENTE pasó la gracia, aunque no hubiera nada que reclamar.
@@ -5840,7 +5840,7 @@ public final class VillageManager {
                 continue; // no se ha podido (el chunk no está cargado...): se reintenta en el latido siguiente
             }
             villager.getBrain().setMemory(MemoryModuleType.HOME, GlobalPos.of(level.dimension(), elegida));
-            DevilRpg.LOGGER.info("[Village] {} no tenia cama: reclama la de {} (aldea en {}; {}; {})",
+            DevilRpg.LOGGER.debug("[Village] {} no tenia cama: reclama la de {} (aldea en {}; {}; {})",
                     villager.getUUID(), elegida.toShortString(), center.toShortString(),
                     libre ? "libre y sin companero de cama" : "ticket perdido", estadoDeLaCama(level, elegida));
         }
@@ -5904,7 +5904,7 @@ public final class VillageManager {
                     continue;
                 }
                 ESPERA_PARA_DORMIR.put(villager.getUUID(), espera);
-                DevilRpg.LOGGER.info("[Village] {} no llega a su cama por el camino del juego: se le da {} y se le"
+                DevilRpg.LOGGER.debug("[Village] {} no llega a su cama por el camino del juego: se le da {} y se le"
                                 + " mandara a {} para acostarle", villager.getUUID(), cama.toShortString(),
                         espera.toShortString());
                 return cama;
@@ -6104,7 +6104,7 @@ public final class VillageManager {
                         villager.getNavigation().stop();
                         villager.moveTo(espera.getX() + 0.5D, espera.getY(), espera.getZ() + 0.5D,
                                 villager.getYRot(), villager.getXRot());
-                        DevilRpg.LOGGER.info("[Village] {} no llega ni andando a la celda de al lado de su cama: el"
+                        DevilRpg.LOGGER.debug("[Village] {} no llega ni andando a la celda de al lado de su cama: el"
                                         + " pueblo le lleva a {} (la cama {} la tiene a la vista)",
                                 villager.getUUID(), espera.toShortString(), cama.toShortString());
                         continue;
@@ -7740,7 +7740,7 @@ public final class VillageManager {
             datos.putLong(RUMBO_TICK, villager.level().getGameTime());
             if (villager.level().getGameTime() - ultimoAvisoDeRumbo >= 400L) {
                 ultimoAvisoDeRumbo = villager.level().getGameTime();
-                DevilRpg.LOGGER.info("[Rumbo] peticiones={} · ya iban andando (no se les toca)={}", rumbosPedidos,
+                DevilRpg.LOGGER.debug("[Rumbo] peticiones={} · ya iban andando (no se les toca)={}", rumbosPedidos,
                         rumbosSaltados);
             }
             return;
@@ -8495,7 +8495,7 @@ public final class VillageManager {
             int conFaenaEnLaVentana = datosDelParar.getInt("DevilRpgPararCuentaFaena");
             datosDelParar.putInt("DevilRpgPararCuenta", 0);
             datosDelParar.putInt("DevilRpgPararCuentaFaena", 0);
-            DevilRpg.LOGGER.info("[Village] PARAR: {} en {} · corriendo=[{}] · nav={} · paradas={} (con faena={}) · el goal"
+            DevilRpg.LOGGER.debug("[Village] PARAR: {} en {} · corriendo=[{}] · nav={} · paradas={} (con faena={}) · el goal"
                             + " que para es uno de los de arriba",
                     villager.getUUID(), villager.blockPosition().toShortString(), quien.toString().trim(),
                     camino == null ? "sin ruta" : camino.getNodeCount() + " nodos", paradas, conFaenaEnLaVentana);

@@ -363,7 +363,7 @@ public class VillagerLumberjackGoal extends Goal {
                     if (f == Fase.TALAR && villager.level() instanceof ServerLevel serverLevel) {
                         if (!TalarStepPlanner.isValidTalarTarget(serverLevel, objetivo)
                                 || !aceptarTalar(serverLevel, objetivo)) {
-                            DevilRpg.LOGGER.info("[TREE-CLAIM] event=RESTORE-DENIED uuid={} tree={} owner={} tick={}",
+                            DevilRpg.LOGGER.debug("[TREE-CLAIM] event=RESTORE-DENIED uuid={} tree={} owner={} tick={}",
                                     villager.getUUID(), objetivo.toShortString(),
                                     ForestryTreeClaims.ownerOf(dimId(serverLevel), objetivo.asLong(),
                                             serverLevel.getGameTime()), serverLevel.getGameTime());
@@ -371,7 +371,7 @@ public class VillagerLumberjackGoal extends Goal {
                             this.fase = Fase.TALAR;
                             taskController.scouting();
                         } else {
-                            DevilRpg.LOGGER.info("[TREE-CLAIM] event=RESTORE-ACQUIRED uuid={} tree={} task={} tick={}",
+                            DevilRpg.LOGGER.debug("[TREE-CLAIM] event=RESTORE-ACQUIRED uuid={} tree={} task={} tick={}",
                                     villager.getUUID(), objetivo.toShortString(), claimedTask,
                                     serverLevel.getGameTime());
                         }
@@ -673,7 +673,7 @@ public class VillagerLumberjackGoal extends Goal {
             if (!aceptarTalar(level, encontrado)) {
                 return; // contested: another worker owns it; keep discovering
             }
-            DevilRpg.LOGGER.info("[Village] El lenador: nueva tarea {} desde {}", encontrado,
+            DevilRpg.LOGGER.debug("[Village] El lenador: nueva tarea {} desde {}", encontrado,
                     villager.blockPosition());
             fase = Fase.TALAR;
             target = encontrado;
@@ -880,7 +880,7 @@ public class VillagerLumberjackGoal extends Goal {
         }
         if (!ForestryTreeClaims.acquire(dimension, pos.asLong(), villager.getUUID(), task,
                 level.getGameTime())) {
-            DevilRpg.LOGGER.info("[TREE-CLAIM] event=TARGET-DENIED uuid={} tree={} task={} owner={} tick={}",
+            DevilRpg.LOGGER.debug("[TREE-CLAIM] event=TARGET-DENIED uuid={} tree={} task={} owner={} tick={}",
                     villager.getUUID(), pos.toShortString(), task,
                     ForestryTreeClaims.ownerOf(dimension, pos.asLong(), level.getGameTime()),
                     level.getGameTime());
@@ -890,7 +890,7 @@ public class VillagerLumberjackGoal extends Goal {
         claimedTree = pos.immutable();
         claimedTask = task;
         claimedDimension = dimension;
-        DevilRpg.LOGGER.info("[TREE-CLAIM] event=ACQUIRE uuid={} tree={} task={} tick={}",
+        DevilRpg.LOGGER.debug("[TREE-CLAIM] event=ACQUIRE uuid={} tree={} task={} tick={}",
                 villager.getUUID(), pos.toShortString(), task, level.getGameTime());
         return true;
     }
@@ -905,7 +905,7 @@ public class VillagerLumberjackGoal extends Goal {
         }
         if (!ForestryTreeClaims.renew(claimedDimension, claimedTree.asLong(), villager.getUUID(),
                 claimedTask, level.getGameTime())) {
-            DevilRpg.LOGGER.info("[TREE-CLAIM] event=LOST uuid={} tree={} task={} owner={} tick={}",
+            DevilRpg.LOGGER.debug("[TREE-CLAIM] event=LOST uuid={} tree={} task={} owner={} tick={}",
                     villager.getUUID(), claimedTree.toShortString(), claimedTask,
                     ForestryTreeClaims.ownerOf(claimedDimension, claimedTree.asLong(), level.getGameTime()),
                     level.getGameTime());
@@ -928,7 +928,7 @@ public class VillagerLumberjackGoal extends Goal {
         boolean released = ForestryTreeClaims.release(claimedDimension, claimedTree.asLong(),
                 villager.getUUID(), claimedTask);
         if (released) {
-            DevilRpg.LOGGER.info("[TREE-CLAIM] event=RELEASE uuid={} tree={} task={}",
+            DevilRpg.LOGGER.debug("[TREE-CLAIM] event=RELEASE uuid={} tree={} task={}",
                     villager.getUUID(), claimedTree.toShortString(), claimedTask);
         }
         claimedTree = null;
@@ -2212,7 +2212,7 @@ public class VillagerLumberjackGoal extends Goal {
             if (!ForestryTreeClaims.isAvailable(dimId(level), base.asLong(), villager.getUUID(),
                     level.getGameTime())) {
                 if (Boolean.getBoolean("devilrpg.claimdiag")) {
-                    DevilRpg.LOGGER.info("[TREE-CLAIM] event=EXCLUDED uuid={} tree={} tick={}"
+                    DevilRpg.LOGGER.debug("[TREE-CLAIM] event=EXCLUDED uuid={} tree={} tick={}"
                                     + " reason=claimed-by-other",
                             villager.getUUID(), base.toShortString(), level.getGameTime());
                 }

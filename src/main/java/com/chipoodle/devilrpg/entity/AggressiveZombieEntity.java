@@ -245,7 +245,7 @@ public class AggressiveZombieEntity extends Zombie {
             misionInteriorRetry.fallo(ahora);
             int intentos = misionInteriorRetry.intentosFallidos();
             if (intentos == 1 || intentos % 10 == 0) {
-                DevilRpg.LOGGER.info("[Siege] asaltante #{}: sin celda interior valida en {} (intento {});"
+                DevilRpg.LOGGER.debug("[Siege] asaltante #{}: sin celda interior valida en {} (intento {});"
                                 + " se reintentara en {} ticks", getId(), centro.toShortString(), intentos,
                         com.chipoodle.devilrpg.entity.nav.NegativeDestinationCache.RETRY_TICKS);
             }
@@ -257,7 +257,7 @@ public class AggressiveZombieEntity extends Zombie {
         misionInteriorCentro = centro.immutable();
         misionInteriorCota = cota;
         if (intentosPrevios > 0) {
-            DevilRpg.LOGGER.info("[Siege] asaltante #{}: destino interior recuperado en {} tras {} intentos",
+            DevilRpg.LOGGER.debug("[Siege] asaltante #{}: destino interior recuperado en {} tras {} intentos",
                     getId(), misionInteriorCache.toShortString(), intentosPrevios);
         }
         return misionInteriorCache;
@@ -391,7 +391,7 @@ public class AggressiveZombieEntity extends Zombie {
         sb.append(" | necesidadConstruccion=").append(ultimaNecesidadDeConstruccion)
                 .append(" | ajusteAterrizaje=").append(ultimoAjusteDeAterrizaje)
                 .append(" | rechazoAterrizaje=").append(ultimoRechazoDeAterrizaje);
-        DevilRpg.LOGGER.info("[Siege] {}", sb);
+        DevilRpg.LOGGER.debug("[Siege] {}", sb);
     }
 
     /**
@@ -687,7 +687,7 @@ public class AggressiveZombieEntity extends Zombie {
     public void recargarTunel() {
         this.tunelRestante = TUNEL_PRESUPUESTO;
         // I358 · RENUEVA LA MARCHA: queda en el registro (con su altura) para poder seguirle la pista a un asaltante concreto.
-        DevilRpg.LOGGER.info("[Siege] asaltante #{} RENUEVA la marcha en {} (y={}): tunel {} de nuevo", getId(),
+        DevilRpg.LOGGER.debug("[Siege] asaltante #{} RENUEVA la marcha en {} (y={}): tunel {} de nuevo", getId(),
                 blockPosition().toShortString(), blockPosition().getY(), TUNEL_PRESUPUESTO);
         this.tunelEspera = 0;
         this.puenteEspera = 0;
@@ -788,7 +788,7 @@ public class AggressiveZombieEntity extends Zombie {
         if (applied && Boolean.getBoolean("devilrpg.a2n.traceCombat")
                 && !level().isClientSide && source.getEntity() instanceof net.minecraft.world.entity.npc.Villager guard
                 && com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(guard)) {
-            DevilRpg.LOGGER.info("[A2N] C4 GUARD HIT guard={} attacker={} direct={} damage={} remainingHealth={}",
+            DevilRpg.LOGGER.debug("[A2N] C4 GUARD HIT guard={} attacker={} direct={} damage={} remainingHealth={}",
                     guard.getUUID(), getUUID(), source.getDirectEntity() == null ? "null"
                             : source.getDirectEntity().getType(),
                     amount, getHealth());
@@ -811,7 +811,7 @@ public class AggressiveZombieEntity extends Zombie {
                 net.minecraft.world.entity.Entity source = cause.getEntity();
                 boolean guardKill = source instanceof net.minecraft.world.entity.npc.Villager guard
                         && com.chipoodle.devilrpg.entity.goal.VillagerGuardGoal.esGuardia(guard);
-                DevilRpg.LOGGER.info("[A2N] C4 ATTACKER DEATH attacker={} source={} sourceUuid={} guardKill={}",
+                DevilRpg.LOGGER.debug("[A2N] C4 ATTACKER DEATH attacker={} source={} sourceUuid={} guardKill={}",
                         getUUID(), source == null ? "null" : source.getType(),
                         source == null ? "null" : source.getUUID(), guardKill);
             }
@@ -862,9 +862,9 @@ public class AggressiveZombieEntity extends Zombie {
     public void remove(@NotNull RemovalReason motivo) {
         if (DIAGNOSTICO_DE_RETIRADA && !level().isClientSide) {
             // Diagnostico A2: causa AUTORITATIVA de retirada de una entidad (no implica muerte).
-            DevilRpg.LOGGER.info("[A2N] RETIRADA uuid={} motivo={} pos={} salud={} indiceAsedio={}",
+            DevilRpg.LOGGER.debug("[A2N] RETIRADA uuid={} motivo={} pos={} salud={} indiceAsedio={}",
                     getUUID(), motivo, blockPosition().toShortString(), getHealth(), worldSiegeIndex);
-            DevilRpg.LOGGER.info("[A2N] RETIRADA-STACK", new Exception("retirada " + motivo));
+            DevilRpg.LOGGER.debug("[A2N] RETIRADA-STACK", new Exception("retirada " + motivo));
         }
         // A2 REMEDIACIÓN 2 · KILLED/DISCARDED NO son muertes de combate confirmadas: `/kill` o un descarte
         // externo dejan el UUID en el libro mayor como DESCONOCIDO y el asedio se cierra por plazo, sin
@@ -1033,7 +1033,7 @@ public class AggressiveZombieEntity extends Zombie {
         // la misma aldea y NO se puede contar los bloques que lleva UN monstruo concreto (medido en la montana gruesa:
         // con mas atacantes del mundo no se podia aislar el tope de 40 bloques por marcha). `getId()` es corto y estable
         // mientras la entidad vive.
-        DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} pica {} en {} (le quedan {} de tunel)", getId(),
+        DevilRpg.LOGGER.debug("[Siege] asaltante #{} de la aldea {} pica {} en {} (le quedan {} de tunel)", getId(),
                 worldSiegeIndex, b, objetivo.toShortString(), tunelRestante);
         // El evento depende de la destrucción válida, no de entrar al recinto: pasar por un portón abierto sin romper
         // un bloque no genera este suceso.
@@ -1051,7 +1051,7 @@ public class AggressiveZombieEntity extends Zombie {
         if (!muro.columnaAnillo() && !muro.materialValido()) {
             return;
         }
-        DevilRpg.LOGGER.info("[Siege] evaluacion muro atacante=#{} atacantePos={} objetivo={} bloque={} aldea={} "
+        DevilRpg.LOGGER.debug("[Siege] evaluacion muro atacante=#{} atacantePos={} objetivo={} bloque={} aldea={} "
                         + "cota={} dy={} "
                         + "columnaAnillo={} capaValida={} materialValido={} materialYCapaValidas={} esMuro={} "
                         + "intentoDestruccion={} destroyBlock={} decisionBrecha={}",
@@ -1158,7 +1158,7 @@ public class AggressiveZombieEntity extends Zombie {
         }
         roturasEnIntento = 0;
         if (Boolean.getBoolean("n4.trace")) {
-            DevilRpg.LOGGER.info("[RECOVERY] attempt-start towards={} pos={}", towards.toShortString(),
+            DevilRpg.LOGGER.debug("[RECOVERY] attempt-start towards={} pos={}", towards.toShortString(),
                     blockPosition().toShortString());
         }
         BlockPos zPos = blockPosition();
@@ -1200,7 +1200,7 @@ public class AggressiveZombieEntity extends Zombie {
         // enfriamiento. Con esto se puede ver si cava A LA ALTURA DEL SUELO o a ras de lago, que es el fallo de I353.
         if (level().getGameTime() - ultimoAvisoDelAsedio > 40L) {
             ultimoAvisoDelAsedio = level().getGameTime();
-            DevilRpg.LOGGER.info("[Siege] asaltante #{} esta en {} (y={}) · OBJETIVO {} (y={}) · desnivel {} · va a cavar"
+            DevilRpg.LOGGER.debug("[Siege] asaltante #{} esta en {} (y={}) · OBJETIVO {} (y={}) · desnivel {} · va a cavar"
                             + " hasta dy={} · tunel {}/{}", getId(), blockPosition().toShortString(), blockPosition().getY(),
                     towards.toShortString(), towards.getY(), towards.getY() - blockPosition().getY(),
                     Math.max(1, Math.min(3, towards.getY() - blockPosition().getY() + 1)), tunelRestante, TUNEL_PRESUPUESTO);
@@ -1215,7 +1215,7 @@ public class AggressiveZombieEntity extends Zombie {
         if (roto) {
             if (tunelRestante == TUNEL_PRESUPUESTO) {
                 // Primer bloque de esta marcha: queda en el log (INFO) para poder comprobar que la horda se abre paso.
-                DevilRpg.LOGGER.info("[Siege] asaltante #{} empieza a TALADRAR hacia la aldea en {} (presupuesto {} bloques)",
+                DevilRpg.LOGGER.debug("[Siege] asaltante #{} empieza a TALADRAR hacia la aldea en {} (presupuesto {} bloques)",
                         getId(), best, TUNEL_PRESUPUESTO);
             }
             tunelRestante--;
@@ -1291,7 +1291,7 @@ public class AggressiveZombieEntity extends Zombie {
         if (breakBlockAt(pos)) {
             roturasEnIntento++;
             if (Boolean.getBoolean("n4.trace")) {
-                DevilRpg.LOGGER.info("[RECOVERY] removed target={} attemptCount={}/3", pos.toShortString(),
+                DevilRpg.LOGGER.debug("[RECOVERY] removed target={} attemptCount={}/3", pos.toShortString(),
                         roturasEnIntento);
             }
             return true;
@@ -1329,7 +1329,7 @@ public class AggressiveZombieEntity extends Zombie {
                     && !level().getBlockState(ultimoIntentoDeRotura).isAir()) {
                 roturasFallidas++;
                 evitarRoturaHasta = now + (roturasFallidas >= 3 ? 400L : 200L);
-                com.chipoodle.devilrpg.DevilRpg.LOGGER.info("[Siege] asaltante #{}: rotura fallida en {} ({}/3);"
+                com.chipoodle.devilrpg.DevilRpg.LOGGER.debug("[Siege] asaltante #{}: rotura fallida en {} ({}/3);"
                                 + " se replanifica un desvío", getId(), ultimoIntentoDeRotura.toShortString(),
                         roturasFallidas);
             }
@@ -1591,12 +1591,12 @@ public class AggressiveZombieEntity extends Zombie {
             anotarTablon(delante); // es obra del asedio: el pico no la toca (I239)
             // A2 Run24 · atribución forense por bloque: permite saber qué asaltante tendió cada tablón
             // y si su propia obra invade una columna DROP/escalera que ya estaba en uso.
-            DevilRpg.LOGGER.info("[Siege] asaltante #{} PUENTE_BLOQUE pos={} origen={} hacia={} tunelRestante={}",
+            DevilRpg.LOGGER.debug("[Siege] asaltante #{} PUENTE_BLOQUE pos={} origen={} hacia={} tunelRestante={}",
                     getId(), delante.toShortString(), zPos.toShortString(), towards.toShortString(), tunelRestante);
             level().playSound(null, delante, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
             particulasDeTrabajo(delante);
             if (puenteEspera == 0 && tunelRestante == TUNEL_PRESUPUESTO) {
-                DevilRpg.LOGGER.info("[Siege] asaltante #{} empieza a PONER UN PUENTE hacia la aldea en {}", getId(), delante);
+                DevilRpg.LOGGER.debug("[Siege] asaltante #{} empieza a PONER UN PUENTE hacia la aldea en {}", getId(), delante);
             }
             tunelRestante--;
             puenteEspera = PUENTE_ENTRE_BLOQUES;
@@ -1616,7 +1616,7 @@ public class AggressiveZombieEntity extends Zombie {
             return;
         }
         ultimoAvisoDelAsedio = level().getGameTime();
-        DevilRpg.LOGGER.info("[Siege] asaltante #{} NO pica {} en {} porque {} (tunel {}/{})", getId(),
+        DevilRpg.LOGGER.debug("[Siege] asaltante #{} NO pica {} en {} porque {} (tunel {}/{})", getId(),
                 b == null ? "(ese bloque)" : b, pos.toShortString(), motivo, tunelRestante, TUNEL_PRESUPUESTO);
     }
 
@@ -1680,7 +1680,7 @@ public class AggressiveZombieEntity extends Zombie {
             if (com.chipoodle.devilrpg.entity.nav.NavDropColumnPolicy.puenteInvadeColumnaDeEscalon(
                     escalon.getX(), escalon.getY(), escalon.getZ(),
                     puente.getX(), puente.getY(), puente.getZ(), CAIDA_SEGURA_MAXIMA)) {
-                DevilRpg.LOGGER.info("[Siege] asaltante #{} PUENTE_RECHAZADO_COLUMNA_ESCALERA puente={} escalon={}",
+                DevilRpg.LOGGER.debug("[Siege] asaltante #{} PUENTE_RECHAZADO_COLUMNA_ESCALERA puente={} escalon={}",
                         getId(), puente.toShortString(), escalon.toShortString());
                 return true;
             }
@@ -1784,7 +1784,7 @@ public class AggressiveZombieEntity extends Zombie {
         level().setBlock(escalon, Blocks.COBBLESTONE.defaultBlockState(), Block.UPDATE_ALL);
         level().playSound(null, escalon, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
         particulasDeTrabajo(escalon);
-        DevilRpg.LOGGER.info("[Siege] asaltante #{} pone un ESCALON en {} para subir al objetivo ({})",
+        DevilRpg.LOGGER.debug("[Siege] asaltante #{} pone un ESCALON en {} para subir al objetivo ({})",
                 getId(), escalon.toShortString(), hacia.toShortString());
         apilarEspera = APILAR_ENTRE_BLOQUES;
         apilarRestante--;
@@ -1829,7 +1829,7 @@ public class AggressiveZombieEntity extends Zombie {
         escalonesConstruidosEnMarcha.add(escalon.immutable());
         level().playSound(null, escalon, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.7F, 1.0F);
         particulasDeTrabajo(escalon);
-        DevilRpg.LOGGER.info("[Siege] asaltante #{} pone un ESCALON ADHERIDO A UNA CARA en {} (soporteDebajo={}"
+        DevilRpg.LOGGER.debug("[Siege] asaltante #{} pone un ESCALON ADHERIDO A UNA CARA en {} (soporteDebajo={}"
                         + " soporteLateral={}, hacia {})",
                 getId(), escalon.toShortString(), soporteDebajo, soporteLateral, hacia.toShortString());
         apilarEspera = APILAR_ENTRE_BLOQUES;
@@ -1922,7 +1922,7 @@ public class AggressiveZombieEntity extends Zombie {
             // Route-break mutates terrain outside normal tunnel/bridge goals: invalidate both planners.
             navExecutor.terrainChanged();
             if (Boolean.getBoolean("n4.trace")) {
-                DevilRpg.LOGGER.info("[NAV] TERRAIN_CHANGED_BY_ROUTE_BREAK uuid={} block={} executorState={}",
+                DevilRpg.LOGGER.debug("[NAV] TERRAIN_CHANGED_BY_ROUTE_BREAK uuid={} block={} executorState={}",
                         getUUID(), nodo.toShortString(), navExecutor.describe());
             }
         }
@@ -2132,7 +2132,7 @@ public class AggressiveZombieEntity extends Zombie {
                         escaleraRetraso = ESCALERA_ENTRE_BLOQUES;
                         escaleraMotivo = "escalon verificado tras " + probados + " candidatos (dy=" + dy + ")";
                         escaleraUltimoRechazo = "-";
-                        DevilRpg.LOGGER.info("[Siege] CONSTRUCCION-ESCALERA #{} bloque {} verificado"
+                        DevilRpg.LOGGER.debug("[Siege] CONSTRUCCION-ESCALERA #{} bloque {} verificado"
                                         + " ({} de {}) dy={} candidatos={} hacia {} primerLateral={}",
                                 getId(), objetivo.toShortString(), escaleraColocados,
                                 ESCALERA_MAX_BLOQUES, dy, probados, centro.toShortString(), primerPasoLateral);
@@ -2151,7 +2151,7 @@ public class AggressiveZombieEntity extends Zombie {
             escaleraUltimoRechazo = "acceso despejado en " + bloqueoAcceso.toShortString();
             escaleraPrimerBloqueoAcceso = null;
             escaleraRetraso = ESCALERA_ENTRE_BLOQUES;
-            DevilRpg.LOGGER.info("[Siege] A2 STAIR-ACCESS-CLEAR #{} bloque {} verificado; reintentar escalon",
+            DevilRpg.LOGGER.debug("[Siege] A2 STAIR-ACCESS-CLEAR #{} bloque {} verificado; reintentar escalon",
                     getId(), bloqueoAcceso.toShortString());
             return true; // accion de despeje verificada; aun no hay escalon pendiente
         }
@@ -2393,7 +2393,7 @@ public class AggressiveZombieEntity extends Zombie {
                         + " | bloqueVerificado=" + bloqueSigue
                         + " | ancla=" + (escaleraAncla == null ? "-" : escaleraAncla.toShortString())
                         + " (el ancla NO cuenta como escalon)";
-                DevilRpg.LOGGER.info("[Siege] ESCALON-TRAVESADO #{} {}", getId(), escaleraMotivoDeTravesia);
+                DevilRpg.LOGGER.debug("[Siege] ESCALON-TRAVESADO #{} {}", getId(), escaleraMotivoDeTravesia);
             }
             return true;
         }
@@ -2502,7 +2502,7 @@ public class AggressiveZombieEntity extends Zombie {
         escaleraTickDeTravesia = -1L;
         escaleraMotivoDeTravesia = "ancla avanzada al escalon atravesado " + escalonAtravesado.toShortString();
         escaleraUltimoRechazo = "-";
-        DevilRpg.LOGGER.info("[Siege] ESCALERA-ANCLA #{} avanza a {} (colocados={}/{})",
+        DevilRpg.LOGGER.debug("[Siege] ESCALERA-ANCLA #{} avanza a {} (colocados={}/{})",
                 getId(), escalonAtravesado.toShortString(), escaleraColocados, ESCALERA_MAX_BLOQUES);
         return true;
     }
@@ -2648,7 +2648,7 @@ public class AggressiveZombieEntity extends Zombie {
         }
         particulasDeTrabajo(abajo);
         cavarEspera = CAVAR_ENTRE_BLOQUES;
-        DevilRpg.LOGGER.info("[Siege] asaltante #{} CAVA hacia abajo en {} para bajar al objetivo ({})", getId(),
+        DevilRpg.LOGGER.debug("[Siege] asaltante #{} CAVA hacia abajo en {} para bajar al objetivo ({})", getId(),
                 abajo.toShortString(), hacia.toShortString());
         return true;
     }
@@ -2820,7 +2820,7 @@ public class AggressiveZombieEntity extends Zombie {
 
         double probability = calculateSpawnProbability(distance);
         double doubleRandom = random.nextDouble();
-        DevilRpg.LOGGER.info("Spawn Check => playerSpawn: {} distance: {} probability: {} random: {} spawn? {}", playerSpawn, distance, probability, doubleRandom, doubleRandom < probability);
+        DevilRpg.LOGGER.debug("Spawn Check => playerSpawn: {} distance: {} probability: {} random: {} spawn? {}", playerSpawn, distance, probability, doubleRandom, doubleRandom < probability);
         return doubleRandom < probability;
     }
 
@@ -2863,7 +2863,7 @@ public class AggressiveZombieEntity extends Zombie {
                 DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} ENTRO en el recinto por {}", getId(), worldSiegeIndex,
                         blockPosition().toShortString());
             }
-            DevilRpg.LOGGER.info("[Siege] asaltante #{} de la aldea {} va por {} (y={}) · dentro={} · tunel {}/{}", getId(),
+            DevilRpg.LOGGER.debug("[Siege] asaltante #{} de la aldea {} va por {} (y={}) · dentro={} · tunel {}/{}", getId(),
                     worldSiegeIndex, blockPosition().toShortString(), blockPosition().getY(), dentroDelRecinto,
                     tunelRestante, TUNEL_PRESUPUESTO);
         }
@@ -3631,7 +3631,7 @@ public class AggressiveZombieEntity extends Zombie {
                 shore = null;
                 // No se declara ARRIVED ni se destruye la mision: el ejecutor vuelve a `misionFinal`.
                 zombie.navExecutor().clearTacticalObjective();
-                DevilRpg.LOGGER.info("[Siege] asaltante #{}: escapes de agua agotados ({}/{});"
+                DevilRpg.LOGGER.debug("[Siege] asaltante #{}: escapes de agua agotados ({}/{});"
                                 + " se retoma la mision", zombie.getId(), escapeBudget.intentos(),
                         escapeBudget.maxIntentos());
                 return;
@@ -3710,7 +3710,7 @@ public class AggressiveZombieEntity extends Zombie {
                     stuckTicks = 0;
                     lastX = zombie.getX();
                     lastZ = zombie.getZ();
-                    DevilRpg.LOGGER.info("[Siege] asaltante #{} recuperacion de agua: rompio {} bloque(s) hacia {}"
+                    DevilRpg.LOGGER.debug("[Siege] asaltante #{} recuperacion de agua: rompio {} bloque(s) hacia {}"
                                     + " (intento {}/3)", zombie.getId(), rotos, shore.toShortString(), recoveryBreaks);
                 }
             }

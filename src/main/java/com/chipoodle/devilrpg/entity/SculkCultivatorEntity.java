@@ -365,7 +365,7 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
         // Se registra SIEMPRE, aunque no hubiera ningún catalizador cerca: si no, un sacrificio lejos del
         // corral (cuando el ganado se escapa y el guardián lo caza por la plataforma) no dejaba ni una línea
         // en el log y parecía que el guardián no estaba sacrificando nada.
-        DevilRpg.LOGGER.info("[Sculk] Sacrificio en {} alimentó {} catalizador(es) con carga {}",
+        DevilRpg.LOGGER.debug("[Sculk] Sacrificio en {} alimentó {} catalizador(es) con carga {}",
                 deathPos, fed, SACRIFICE_CHARGE);
     }
 

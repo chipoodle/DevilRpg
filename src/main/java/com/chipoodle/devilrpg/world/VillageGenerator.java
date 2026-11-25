@@ -9228,7 +9228,7 @@ public final class VillageGenerator {
                     new net.minecraft.world.phys.AABB(celda).inflate(RADIO_DE_PASO)).isEmpty();
             if (estado.getValue(DoubleGateBlock.OPEN) != hayPueblo) {
                 DoubleGateBlock.abatir(level, celda, estado, hayPueblo);
-                DevilRpg.LOGGER.info("[Porton] {} el porton del muro en {} (hay pueblo cerca: {})",
+                DevilRpg.LOGGER.debug("[Porton] {} el porton del muro en {} (hay pueblo cerca: {})",
                         hayPueblo ? "abro" : "cierro", celda.toShortString(), hayPueblo);
             }
         }
