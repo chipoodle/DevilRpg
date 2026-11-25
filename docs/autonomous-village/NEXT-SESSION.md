@@ -1,3 +1,18 @@
+# F1 Y F2 CERRADOS; F3 (PUESTO DE FLETCHER) INTERMITENTE (2026-11-24)
+
+- **Código:** `7e2b4293`. F1 (hambre) con ración al rendirse y a hambre crítica; F2 (caída) con
+  `VillageFallPolicy` (miembros del pueblo sin daño por caída **fuera de asedio**).
+- **Resultado 72k (`soak-f3-poi`, `743b81db`):** **0 muertes totales** (0 hambre, 0 caída),
+  población 30, comida 64, **11/11 al final**, 0 duplicados, 0 inactivos permanentes, guardado OK.
+  El único fallo es **F3**: 1 fletcher sin POI durante 148 muestras (antes 333) y 1 huérfano
+  transitorio; el 12k de la misma semilla pasa limpio.
+- **F3:** el POI de la mesa de flechas (`610,63,508`) existe al final y el POI se re-registra
+  (`743b81db`), pero el hueco inicial de 148 muestras sigue. Siguiente: re-registrar en el **latido
+  periódico**/antes de asignar `JOB_SITE` y repetir 72k con `huerfanos_max=0` y
+  `sin_puesto_bajo_max<=30`.
+- **Gates:** `test` 3m11s; persistencia 553, ownership 54, skills 376; lint/diff verdes.
+- Informes: `2026-11-24-F2-FALL-PROTECTION.md` y `2026-11-24-F3-JOB-SITE-POI.md`.
+
 # F1 CERRADO (HAMBRE); F2 CAÍDA ABIERTA (2026-11-24)
 
 - **Código:** `fa6a63f4`. Al rendirse `VillagerTavernGoal` (`stuckTicks >= STUCK_LIMIT`), si hay comida

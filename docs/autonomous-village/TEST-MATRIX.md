@@ -72,7 +72,7 @@
 | C4 puestos/guardias | mismo arnés | `jobsite-<fase>.txt`, `AL_CARGAR`, máscara de fundadores, equipo | JSON/log del run |
 | POI real `ServerLevel`/`PoiManager` | `tools/poi/lanzar-poi-harness.ps1` | 4 fases, tickets, digest vivo==disco, tardío, F1–F4, parcial medido | `build/av/poi-final-20261124-0305` (**POI_PASS 4/4**) |
 | Matriz navegación runtime | `tools/nav/lanzar-nav-harness.ps1` | 21 escenarios STEP_UP/DROP/BREAK/BUILD/túnel/terreno/A*/límites | `build/av/nav-final-20261124-0255` (**NAV_PASS 21/21**) |
-| Soak multi-día | `tools/soak/lanzar-soak.ps1 -PsoakHarness=true` | 72.000 ticks (3 días de juego), sin jugador; duplicados/huérfanos/inactividad/comida/muertes | `build/soak/soak-f1-fallback-20261124-1755` (`fa6a63f4`): **`SOAK_PASS_CON_BAJAS`**, **0 muertes por hambre**, 1 caída (F2), comida 88, 11/11, 0 huérfanos |
+| Soak multi-día | `tools/soak/lanzar-soak.ps1 -PsoakHarness=true` | 72.000 ticks (3 días de juego), sin jugador; duplicados/huérfanos/inactividad/comida/muertes | `build/soak/soak-f3-poi-20261124-1835` (`743b81db`): **`SOAK_FAIL` solo por cobertura**, **0 muertes**, 11/11 final, 1 fletcher sin POI 148 muestras |
 | Rendimiento real | `tools/perf/resumir-metricas.ps1` | Agregación literal, `NO_MEDIDO` fuera de medias | `build/av/perf-final/perf-resumen-final.md` |
 
 ## 3. Comandos de los gates

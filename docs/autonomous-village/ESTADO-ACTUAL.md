@@ -1,5 +1,13 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 24-nov-2026 — F1 Y F2 CERRADOS; F3 (PUESTO DE FLETCHER) INTERMITENTE.** Código
+> `7e2b4293`. F1 (hambre): ración real al rendirse y a hambre crítica. F2 (caída): `VillageFallPolicy`
+> protege a los miembros del pueblo **fuera de asedio**. El 72k `soak-f3-poi` (`743b81db`) dio **0
+> muertes totales** (0 hambre, 0 caída), población 30, comida 64 y **11/11 al final**; el único fallo es
+> **F3**: 1 fletcher sin POI durante 148 muestras iniciales (antes 333) y 1 huérfano transitorio. El
+> 12k de la misma semilla pasa 11/11. **F1/F2 cerrados; F3 abierta**, soak global **NO ACEPTADO** por
+> cobertura inicial. Informe: `2026-11-24-F3-JOB-SITE-POI.md`.
+
 > **ACTUALIZACIÓN 24-nov-2026 — F1 (HAMBRE) CERRADO; F2 (CAÍDA) ABIERTA.** Código `fa6a63f4`. Al
 > rendirse el goal de taberna, el aldeano recibe una **ración real en el sitio** (1 punto de despensa,
 > -25 hambre, respeta los 3 min). El 72k del mundo que moría da **1 muerte y 0 de hambre** (antes 8,

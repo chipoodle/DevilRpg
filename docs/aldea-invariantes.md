@@ -11810,9 +11810,28 @@ pero el goal se rendía sin relevo; los aldeanos morían con la despensa llena (
 **Límites:** F1 (hambre) **cerrado**; la caída F2 sigue abierta y el soak global no se acepta aún. La
 ruta/terreno a la taberna sigue siendo mejorable (el aldeano come donde está, no en la mesa).
 
-### I411 · F2 ABIERTA: LA CAÍDA AL VOLVER AL PUEBLO MATA (24-nov-2026)
+### I411 · F1/F2 CERRADOS; F3 ABIERTA: FLETCHER SIN POI INTERMITENTE (24-nov-2026)
 
-**Estado:** abierta. La única baja del 72k de cierre de F1 es
-`Zacarias (Sin oficio) Volviendo al pueblo hit the ground too hard` en `729,64,542`. No es hambre: es
-daño por caída/terreno. El soak global exige 0 bajas; se debe medir la caída y corregir la ruta o el
-daño, y repetir 72k.
+**F1 (hambre) cerrado** con I410 (ración al rendirse) y la ración a **hambre crítica** (`7e2b4293`):
+si el aldeano lleva 10 s en el goal y el hambre es `CRITICAL`, come una ración real en el sitio.
+**F2 (caída) cerrado** con `VillageFallPolicy`: un miembro del pueblo no recibe daño por caída **fuera
+de asedio**; en asedio la caída sigue contando. `soak-f2-final` (72k, misma semilla): **0 muertes
+totales** (0 hambre, 0 caída).
+
+**F3 abierta:** un **fletcher** queda sin POI válido (`sin_puesto=1` durante 333 muestras, 1 huérfano)
+en `soak-f2-final`; el 12k de la misma semilla pasa 11/11, o sea que es **intermitente**. El soak
+global no se acepta hasta 11/11 en un 72k.
+
+### I412 · EL POI DEL TALLER DEL LEÑADOR SE RE-REGISTRA (24-nov-2026)
+
+**Regla:** si la mesa de flechas del taller (`610,63,508` en la aldea de prueba) sigue siendo
+`Blocks.FLETCHING_TABLE` pero `PoiManager.getType(pos)` está vacío, se debe llamar a
+`PoiTypes.forState(state)` y `PoiManager.add(pos, tipo)` (idempotente). El bloque y el ticket pueden
+existir mientras el POI falta: el aldeano queda `sin_puesto` y el soak falla por cobertura.
+
+**Causa/evidencia:** `soak-f2-final` (`7e2b4293`): `sin_puesto=1` durante 333 muestras, 1 huérfano,
+10/11, **0 muertes**. Con `asegurarPoiDeTrabajo` (`743b81db`): `soak-f3-poi` baja a **148 muestras**,
+**final 11/11**, **0 muertes**; el hueco es **inicial** y el 12k pasa limpio.
+
+**Límites:** F3 **no cerrada**: falta que la cobertura sea 11/11 desde la primera muestra válida
+(re-registro periódico/antes de asignar `JOB_SITE`). El soak global no se acepta aún.
