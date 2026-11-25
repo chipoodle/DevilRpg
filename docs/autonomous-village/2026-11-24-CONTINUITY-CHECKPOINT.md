@@ -41,7 +41,8 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | **F4** | **Inactivo permanente sin goal**: en la semilla `7454…`, un granjero (`3bce318d…`) quedó **12.000 ticks** parado en `629,63,528` sin faena; el empujón I198 solo cubría a quien ya tenía goal. **CERRADO** con `bcf98f70` (`despertarSiEstaParado`): `soak-f4-stability` da **`SOAK_PASS`**, 0 inactivos permanentes. | `build/soak/soak-f4-stability-20261124-2115`; `2026-11-24-F4-IDLE-RECOVERY.md`. | Estable en dos semillas. | — (cerrado) |
 | **L2** | **Duplicado con el titular no cargado.** `limpiarDuplicados` + **59** aserciones de ownership: con el titular ausente se limpian las memorias cargadas y **NO se libera el ticket** (es suyo). | `VillageJobSiteOwnershipPolicyTest` 59; `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`. | Política cerrada; falta un fixture runtime con titular descargado (limitación declarada). | — (política) |
 | **L5/L6** | **Evidencia POI/navegación multi-entidad.** Soak de **30 aldeanos/72k** en dos semillas (0 muertes, 11/11, 0 inactivos permanentes) y **3 días de POI** sin duplicados/huérfanos. El arnés NAV sigue sin `multientidad_*` y el POI sin horas/jugador. | `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`. | Parcialmente cerradas; limitación de arnés declarada. | Implementar `multientidad_1/2/4/8` y la ventana horas+jugador si se quiere el contrato exacto. |
-| **SK** | **Skills runtime: humano→lobo a 0 maná y payload directo abierto.** (1) El cliente enviaba `TRANSFORM_WEREWOLF` cada 10 ticks sin mirar si estaba transformado; (2) `DirectSkillExecutionPayload` ejecutaba cualquier `SkillEnum` sin nivel/coste. **CORREGIDO** con `WerewolfManaPolicy` (solo revierte lobo, maná≤0, tick%20) y `DirectSkillExecutionPolicy` (solo `TRANSFORM_WEREWOLF` con nivel); skills **384**. | `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`, `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`; `SKILL_CAPABILITY_INTEGRATION_TEST` 384. | Defectos corregidos; cliente real (UI/HUD/`onKeyInput`) sigue pendiente. | Ejecutar servidor+cliente real y revisar la doble ejecución de `onKeyInput`. |
+| **SK** | **Skills runtime: humano→lobo a 0 maná, payload directo abierto y autoridad de maná/stamina.** (1) 0-maná ya no convierte humano en lobo (`WerewolfManaPolicy`); (2) el payload directo solo ejecuta `TRANSFORM_WEREWOLF` con nivel (`DirectSkillExecutionPolicy`); (3) maná/stamina son **autoridad del servidor** (`playToClient`, SERVERBOUND ignorado, regeneración propia con `PlayerResourceRegenPolicy`). **Skills 387.** | `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`, `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`, `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`; `SKILL_CAPABILITY_INTEGRATION_TEST` 387. | Defectos corregidos; cliente real (UI/HUD/`onKeyInput`) sigue pendiente. | Ejecutar servidor+cliente real y revisar la doble ejecución de `onKeyInput`. |
+| **L9** | **4 payloads de acción siguen aceptando NBT del cliente**: skill tree, experiencia, auxiliar (transformación) y minions. Deben pasar a **acciones validadas** (puntos/nivel/propiedad/cupo), no a `deserializeNBT` del estado completo. | `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md` §4. | Abierta; maná/stamina ya cerrados. | Diseñar payloads de acción validados en servidor y probar. |
 | **SOAK** | **Aceptación multi-día + estabilidad:** mismo SHA `bcf98f70` en dos semillas (`3188…` y `7454…`), ambas **PASS**: 0 muertes, 11/11, 0 duplicados/huérfanos/sin puesto/inactivos permanentes, guardado OK. | `soak-f4-confirm-20261124-2130`, `soak-f4-stability-20261124-2115`. | **`SOAK_PASS` estable en dos semillas** | Después L2/L5–L8/skills runtime. |
 
 ## 3. Protocolo de continuidad
@@ -224,6 +225,13 @@ skills **380** aserciones. Cliente real (UI/HUD/`onKeyInput`) sigue pendiente. I
 cooldown ni precondiciones. `DirectSkillExecutionPolicy` solo permite `TRANSFORM_WEREWOLF` con nivel
 >0; el handler lee la capability y rechaza el resto. Skills **384** aserciones. Informe:
 `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`.
+
+**Recursos: maná/stamina pasan a autoridad del servidor (`f231923a`).** El cliente enviaba su NBT en
+cada `setMana`/regeneración; ahora solo el servidor manda S→C (`playToClient`), la rama SERVERBOUND se
+ignora y `PlayerCapabilityForgeEventSubscriber` regenera en servidor con `PlayerResourceRegenPolicy`.
+Skills **387**. **L9 abierta:** los otros 4 payloads (skill tree, experiencia, auxiliar, minions)
+siguen aceptando NBT del cliente; deben ser acciones validadas. Informe:
+`2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
 
 **L5/L6 parcialmente cerradas con el soak.** 30 aldeanos navegando 72k en dos semillas (0 muertes,
 11/11, 0 inactivos permanentes) y 3 días de POI sin duplicados/huérfanos: evidencia runtime fuerte de

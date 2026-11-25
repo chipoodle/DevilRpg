@@ -10,13 +10,13 @@
   ya no ejecuta cualquier skill: `DirectSkillExecutionPolicy` solo permite `TRANSFORM_WEREWOLF` con
   nivel >0. **Skills 384 aserciones** (antes 376). El cliente real (UI/HUD/doble `onKeyInput`) sigue
   pendiente: no hay arnés de cliente.
-- **Gates:** `test` 1m18s; persistencia 553, ownership 59, skills 384; lint/diff verdes.
-- **L5/L6 parcialmente cerradas con el soak:** 30 aldeanos navegando 72k en dos semillas (0 muertes,
-  11/11, 0 inactivos permanentes) y 3 días de POI sin duplicados/huérfanos. El arnés NAV sigue sin los
-  escenarios `multientidad_*` y el arnés POI sin horas/jugador: limitación declarada.
-- **Siguen abiertos:** L7 (fastutil A/B runtime), L8 (excluido por el usuario), skills runtime con
-  cliente real y la decisión de ramas/A1.
-- Informes: `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md` y `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`.
+- **Recursos (autoridad):** maná/stamina ya **no** se aceptan del cliente (`playToClient`; SERVERBOUND
+  ignorado) y el servidor regenera con `PlayerResourceRegenPolicy`. **Skills 387**. Queda **L9**: los
+  otros 4 payloads (skill tree/experiencia/auxiliar/minion) siguen aceptando NBT del cliente y deben
+  pasar a **acciones validadas**.
+- **Gates:** `test` 1m21s; persistencia 553, ownership 59, skills 387; lint/diff verdes.
+- **Siguiente:** L9 (payloads de acción), L7, cliente real de skills y decisión de ramas/A1.
+- Informe: `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
 
 # SOAK ACEPTADO — F1/F2/F3 CERRADOS; PENDIENTES L2/L5–L8/SKILLS RUNTIME (2026-11-24)
 

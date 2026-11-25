@@ -11917,3 +11917,17 @@ invocar lobo no; skill nula no. `test` 1m18s. Informe:
 `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`.
 
 **Límites:** probado headless; el flujo cliente→servidor real sigue pendiente de cliente.
+
+### I418 · MANÁ/STAMINA SON AUTORIDAD DEL SERVIDOR (24-nov-2026)
+
+**Regla:** `PlayerManaPayload`/`PlayerStaminaPayload` son **S→C** (`playToClient`); la rama
+`SERVERBOUND` se ignora y el cliente no envía su estado. El servidor regenera maná/stamina cada 10
+ticks con `PlayerResourceRegenPolicy` (base 0,7 maná / 0,05 stamina; −0,01 maná por punto de
+transformación), autoridad real. Sin la regeneración en servidor, al cerrar el C2S el maná se quedaría
+congelado.
+
+**Evidencia:** `PlayerResourceRegenPolicy` 3 aserciones (lobo 0→0,7; lobo 20→0,5; humano→0); skills
+**387**; `test` 1m21s. Informe: `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
+
+**Límites:** cliente real sin ejecutar; quedan 4 payloads de acción (**L9**) que aún aceptan NBT del
+cliente.

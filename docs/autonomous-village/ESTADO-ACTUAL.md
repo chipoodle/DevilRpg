@@ -1,12 +1,11 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
-> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, L2, SKILLS 0-MANÁ Y PAYLOAD DIRECTO.** Soak `bcf98f70`:
-> **`SOAK_PASS`** en `3188…` y `7454…` (0 muertes, 11/11, 0 inactivos). **F1–F4 cerrados; L2 política
-> cerrada;** skills: humano 0-maná ya no se convierte en lobo (`WerewolfManaPolicy`) y el payload
-> directo ya no ejecuta cualquier skill (`DirectSkillExecutionPolicy`: solo TRANSFORM_WEREWOLF con
-> nivel). **Skills 384.** L5/L6 parciales con el soak. Siguiente: L7, cliente real y ramas/A1.
-> Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`,
-> `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`.
+> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, L2, SKILLS Y AUTORIDAD DE RECURSOS.** Soak `bcf98f70`:
+> **`SOAK_PASS`** en `3188…` y `7454…`. **F1–F4 cerrados; L2 política cerrada.** Skills: 0-maná ya no
+> convierte en lobo, payload directo restringido y **maná/stamina son autoridad del servidor** (el
+> cliente ya no escribe; el servidor regenera). **Skills 387.** Queda **L9** (4 payloads de acción),
+> L7, cliente real y ramas/A1. Informes: `2026-11-24-SOAK-ACCEPTANCE.md`,
+> `2026-11-24-SKILLS-DIRECT-PAYLOAD-POLICY.md`, `2026-11-24-MANA-STAMINA-SERVER-AUTHORITY.md`.
 
 
 
