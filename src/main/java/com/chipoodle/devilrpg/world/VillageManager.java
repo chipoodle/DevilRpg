@@ -1081,6 +1081,7 @@ public final class VillageManager {
         // La harina de la arboleda va APARTE de la remesa general: las aldeas viejas ya tienen
         // RemesaInicialEntregada y, sin esto, nunca recibirían los 64 para el leñador.
         if (!saved.isHarinaInicialEntregada(objectiveIndex)
+                && level.getGameTime() % 200L == 0L
                 && VillageStorage.remesaInicialHarina(level, center)) {
             saved.markHarinaInicialEntregada(objectiveIndex);
         }

@@ -608,12 +608,15 @@ public class VillagerLumberjackGoal extends Goal {
         if (troncosEnMano() > 0 && !enCooldown(level) && iniciarEntrega(level)) {
             return true;
         }
-        restTicks = 0; // sin tarea: el goal sigue vivo en modo exploración, no suelta al aldeano a vagar
-        return true;
+        // Sin faena no se queda escaneando el monte y los contenedores 20 veces por segundo:
+        // descansa 2 s y vuelve a mirar. Antes devolvía true con restTicks=0 y `canUse` repetía
+        // búsquedas de árboles/composteros + logs en cada tick.
+        restTicks = 40;
+        return false;
     }
 
     private void descubrirTrabajo(final ServerLevel level) {
-        DevilRpg.LOGGER.info("[LENADOR-DISCOVER] uuid={} pos={} harina={} faltaArboleda={}",
+        DevilRpg.LOGGER.debug("[LENADOR-DISCOVER] uuid={} pos={} harina={} faltaArboleda={}",
                 villager.getUUID(), villager.blockPosition(), harinaEnMano(), faltaPoblarLaArboleda(level));
         if (troncosEnMano() >= LLEVAR_TRONCOS && !enCooldown(level) && iniciarEntrega(level)) {
             return;
@@ -1816,7 +1819,7 @@ public class VillagerLumberjackGoal extends Goal {
         int despensaHarina = VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL));
         int almacenHarina = VillagePantry.contar(almacenDbg, s -> s.is(Items.BONE_MEAL));
         BlockPos puntoDbg = VillageStorage.puntoDeApoyo(level, center);
-        DevilRpg.LOGGER.info("[LUMBER-HARINA-SOURCE] uuid={} despensa={} almacen={} despensaHarina={} almacenHarina={} punto={}",
+        DevilRpg.LOGGER.debug("[LUMBER-HARINA-SOURCE] uuid={} despensa={} almacen={} despensaHarina={} almacenHarina={} punto={}",
                 villager.getUUID(), despensa, almacenDbg, despensaHarina, almacenHarina,
                 puntoDbg == null ? "null" : puntoDbg.toShortString());
         if (VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) > 0) {

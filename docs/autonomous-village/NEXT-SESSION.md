@@ -1,3 +1,13 @@
+# RENDIMIENTO — PICOS DE 2 s Y RUIDO DE LOG (25-nov-2026)
+
+- Tres `Can't keep up` (~2 s) en **login/generación**, **nacimiento de 8 asediadores en un tick** y
+  **guardado**; no hay bucle continuo.
+- **Fix:** el leñador sin faena descansa 2 s y deja de escanear/loguear por tick; logs de leñador a
+  DEBUG; la remesa de 64 de harina se reintenta cada 200 ticks, no cada tick.
+- **Pendiente:** repartir la creación/navegación de la oleada en varios ticks si el pico de 8
+  asediadores sigue molestando.
+- **Informe:** `2026-11-25-PERFORMANCE-SPIKES.md`; gate 1m39s.
+
 # LEÑADOR — PORTÓN Y HARINA DEL COMPOSTERO (25-nov-2026)
 
 - **Árboles de fuera:** `pasoDeCamino` no conocía el muro y devolvía NO-STEP; el leñador reclamaba

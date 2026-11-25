@@ -1,5 +1,9 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — RENDIMIENTO.** Tres picos de ~2 s: login/generación, oleada de 8
+> asediadores en un tick y guardado. No es un bucle. Se eliminó el escaneo/log por tick del leñador
+> sin faena y se espació la remesa de harina; el pico de la oleada queda pendiente de repartir.
+
 > **ACTUALIZACIÓN 25-nov-2026 — LEÑADOR.** Ya no reclama un árbol de fuera y se rinde: si el objetivo
 > está fuera y él dentro, `pasoDeCamino` devuelve primero el portón. Si no hay harina en
 > despensa/almacén, vacía un **compostero lleno** para abonar la arboleda. Además el almacén recibe
