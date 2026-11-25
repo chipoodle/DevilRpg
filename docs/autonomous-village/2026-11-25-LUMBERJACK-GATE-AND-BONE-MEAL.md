@@ -40,7 +40,18 @@ quedaba sin abonar el plantón de `522,69,549`.
 (`ComposterBlock.LEVEL == MAX_LEVEL`), camina a su punto de apoyo, lo vacía y se lleva la harina.
 El compostero se pone a nivel 0 y la harina va al inventario (o a la despensa si no cabe).
 
-## 2 · Límites
+## 2 · Harina inicial en el almacén (25-nov-2026)
+
+Además de la harina que ya hubiera, el almacén recibe **64 de harina de huesos**:
+
+- `VillageStorage.remesaInicialHarina` las guarda en el almacén (cofre doble incluido) y
+  `VillageSavedData.HarinaInicialEntregada` impide repetirlo al consumirlas.
+- Se entrega también a **aldeas ya generadas** (la bandera va aparte de `RemesaInicialEntregada`), así
+  que la partida actual recibe las 64 en el siguiente latido aunque su remesa general ya estuviera
+  marcada.
+- La despensa conserva sus 4 de la remesa inicial; no se duplican.
+
+## 3 · Límites
 
 - Si **no hay ningún compostero lleno** ni harina en los contenedores, el leñador sigue sin poder
   abonar: la solución es que el granjero llene/composte; el código no inventa harina.

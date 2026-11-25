@@ -183,6 +183,8 @@ public final class VillageSavedData extends SavedData {
     private final Map<Integer, Integer> guardiasFundadoras = new HashMap<>();
     /** Aldeas a las que ya se entregó la remesa inicial del almacén. */
     private final Set<Integer> remesaInicialEntregada = new HashSet<>();
+    /** Aldeas que ya recibieron los 64 de harina de huesos para la arboleda. */
+    private final Set<Integer> harinaInicialEntregada = new HashSet<>();
     /**
      * Centro <b>autoritativo</b> de cada aldea (una entrada por índice de objetivo). Es la <b>única fuente de
      * verdad</b> del centro: se escribe una sola vez, al generar la aldea, y a partir de ahí lo LEEN el muro, el
@@ -273,6 +275,9 @@ public final class VillageSavedData extends SavedData {
             }
             if (entry.getBoolean("RemesaInicialEntregada")) {
                 data.remesaInicialEntregada.add(index);
+            }
+            if (entry.getBoolean("HarinaInicialEntregada")) {
+                data.harinaInicialEntregada.add(index);
             }
             if (entry.contains("Center")) {
                 NbtUtils.readBlockPos(entry, "Center").ifPresent(pos -> data.centres.put(index, pos));
@@ -385,6 +390,7 @@ public final class VillageSavedData extends SavedData {
         villages.addAll(anexoAnimales.keySet());
         villages.addAll(guardiasFundadoras.keySet());
         villages.addAll(remesaInicialEntregada);
+        villages.addAll(harinaInicialEntregada);
         villages.addAll(pantryCredit.keySet());
         villages.addAll(centres.keySet());
         for (int index : villages) {
@@ -413,6 +419,9 @@ public final class VillageSavedData extends SavedData {
             }
             if (remesaInicialEntregada.contains(index)) {
                 one.putBoolean("RemesaInicialEntregada", true);
+            }
+            if (harinaInicialEntregada.contains(index)) {
+                one.putBoolean("HarinaInicialEntregada", true);
             }
             if (centres.containsKey(index)) {
                 one.put("Center", NbtUtils.writeBlockPos(centres.get(index)));
@@ -864,6 +873,16 @@ public final class VillageSavedData extends SavedData {
 
     public void markRemesaInicialEntregada(int objectiveIndex) {
         if (remesaInicialEntregada.add(objectiveIndex)) {
+            setDirty();
+        }
+    }
+
+    public boolean isHarinaInicialEntregada(int objectiveIndex) {
+        return harinaInicialEntregada.contains(objectiveIndex);
+    }
+
+    public void markHarinaInicialEntregada(int objectiveIndex) {
+        if (harinaInicialEntregada.add(objectiveIndex)) {
             setDirty();
         }
     }

@@ -4,7 +4,9 @@
   un árbol de fuera y lo soltaba. Ahora, si el árbol está fuera y él dentro, va primero al **portón**.
 - **Abono:** `puntoConHarina` daba 0/0 en despensa/almacén; ahora, si no hay harina en contenedores,
   busca un **compostero lleno**, lo vacía y se lleva la harina. Si no hay composta, no inventa.
-- **Informe:** `2026-11-25-LUMBERJACK-GATE-AND-BONE-MEAL.md`; gate 1m38s.
+- **Harina inicial:** el almacén recibe **64 de harina de huesos** además de lo existente
+  (`remesaInicialHarina`, bandera `HarinaInicialEntregada`); también en aldeas ya generadas.
+- **Informe:** `2026-11-25-LUMBERJACK-GATE-AND-BONE-MEAL.md`; gate 1m41s.
 
 # SPAWN — TIEMPO POR PERFIL Y DIAGNÓSTICO AGRESIVO (25-nov-2026)
 

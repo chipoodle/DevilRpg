@@ -1078,6 +1078,12 @@ public final class VillageManager {
 
     private static void entregarRemesaInicialSiHaceFalta(ServerLevel level, VillageSavedData saved,
                                                           int objectiveIndex, BlockPos center) {
+        // La harina de la arboleda va APARTE de la remesa general: las aldeas viejas ya tienen
+        // RemesaInicialEntregada y, sin esto, nunca recibirían los 64 para el leñador.
+        if (!saved.isHarinaInicialEntregada(objectiveIndex)
+                && VillageStorage.remesaInicialHarina(level, center)) {
+            saved.markHarinaInicialEntregada(objectiveIndex);
+        }
         if (saved.isRemesaInicialEntregada(objectiveIndex)) {
             return;
         }

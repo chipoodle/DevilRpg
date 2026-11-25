@@ -351,6 +351,28 @@ public final class VillageStorage {
         return true;
     }
 
+    /**
+     * <b>64 de harina de huesos</b> para que el leñador pueda abonar la arboleda desde el primer día.
+     * Es una entrega <b>única</b> por aldea y se suma a lo que ya hubiera: no espera a que el almacén
+     * esté vacío ni se repite al consumirla (la bandera vive en {@link VillageSavedData}).
+     *
+     * @return {@code true} si los 64 quedaron guardados; {@code false} si el almacén aún no existe o
+     *         no hay hueco (se reintenta en el siguiente latido)
+     */
+    public static boolean remesaInicialHarina(ServerLevel level, BlockPos villageCenter) {
+        Container caja = almacen(level, villageCenter);
+        if (caja == null) {
+            return false;
+        }
+        ItemStack resto = VillagePantry.guardar(caja, new ItemStack(Items.BONE_MEAL, 64));
+        if (!resto.isEmpty()) {
+            return false;
+        }
+        caja.setChanged();
+        DevilRpg.LOGGER.info("[Village] almacen: 64 de harina de huesos para abonar la arboleda (inicial)");
+        return true;
+    }
+
     /** Separa las unidades ya presentes de un tipo en pilas de una, sin modificar el contenedor de origen. */
     private static boolean separarEnHuecos(Container caja, net.minecraft.world.item.Item item) {
         List<ItemStack> unidades = new ArrayList<>();
