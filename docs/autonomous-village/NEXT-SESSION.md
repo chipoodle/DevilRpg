@@ -1,3 +1,19 @@
+# ACTUALIZACIÓN 25-nov-2026 — FAIL-CLOSED EN PRERREQUISITOS DE SKILLS
+
+- DeepSeek validó el SHA `47c2f72e20c54f223dfbd34a0ea193cd94d3de09`: compilación, tests (392), integración de skills (392 assertions), lint y diff-check PASS; no hubo runtime con jugador real.
+- Defecto confirmado: `SkillPointSpendPayload.prerequisitesMet` podía considerar desbloqueado un padre cuyo máximo era 0/negativo, porque `parentLevel >= parentMaximum` resultaba verdadero.
+- Corregido en `66f5964643128aafb2dd0a3b36719b63b39ed093`: para padres que representan skills, máximo ausente/no positivo o nivel negativo ahora rechaza el prerrequisito antes de evaluar progreso.
+- Corregido también el reflejo visual en `SkillProgress` (commit `30020a4e37c0f52e38a4d8cd80c54d469d3957e8`): `isDone()` solo devuelve true con máximo positivo; porcentaje/texto no intentan representar máximos negativos como progreso válido.
+- Las raíces visuales sin `SkillEnum` siguen desbloqueando sus primeros nodos, como antes; la validación fail-closed aplica a padres que sí representan una skill.
+- **HEAD esperado para Harness:** `30020a4e37c0f52e38a4d8cd80c54d469d3957e8`.
+- ChatGPT no ejecutó Gradle ni runtime. Validar primero compilación/tests/lint/diff en ese SHA exacto.
+- Añadir pruebas explícitas: padre con máximo null/ausente, 0 y negativo debe rechazar; máximo positivo con padre sin progreso debe rechazar; padre con progreso positivo debe permitir; padre completado con máximo positivo debe permitir; raíces sin skill deben conservar comportamiento. Confirmar también UI `isDone=false` para máximo <=0.
+- Repetir después la matriz dinámica 20/30/5, costes/tipos, nueva/existente, compra hasta máximo y rechazo del siguiente nivel, directexecution y save/reload descrita en `2026-11-25-SKILL-DATA-DRIVEN-RULES.md`.
+- El reporte anterior no ejecutó jugador real, cliente modificado, consumo de recurso, ni save/reload; siguen PENDIENTES. Servidor dedicado solo llegó a `Done`, sin conexión de jugador. No declarar PASS global hasta cubrir esos escenarios.
+- Harness no modifica producción. Preservar mundo/logs existentes; usar mundo de validación separado y documentar SHA, configuración JSON efectiva y evidencia de cada caso.
+
+---
+
 # ACTUALIZACIÓN 25-nov-2026 — FIX DE COMPILACIÓN POST-VALIDACIÓN
 
 - DeepSeek detectó que `PlayerCapabilityForgeEventSubscriber` conservaba un import y un uso de `PlayerPassiveSkillPayload`, clase eliminada en el hardening anterior.
