@@ -40,6 +40,7 @@ No son defectos abiertos ni autorizan una campaña por sí mismas.
 | **F3** | **JOB_SITE fuera del muro**: el diagnóstico `-PoiDiag` encontró un **granjero** (`a3dd7940…`) con su composter en `736,69,537`, **fuera de la muralla** (POI del oficio, por eso se aceptaba). **CERRADO** con `bfd5113b`: todo `JOB_SITE` fuera del muro es inválido y se suelta; `soak-f3-outside` da **`SOAK_PASS`**, **0 muertes**, **11/11 desde la primera muestra**, 0 huérfanos/sin puesto. | `build/soak/soak-f3-outside-20261124-2030`; `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-F3-JOB-SITE-POI.md`. | **Aceptado.** | — (cerrado) |
 | **F4** | **Inactivo permanente sin goal**: en la semilla `7454…`, un granjero (`3bce318d…`) quedó **12.000 ticks** parado en `629,63,528` sin faena; el empujón I198 solo cubría a quien ya tenía goal. **CERRADO** con `bcf98f70` (`despertarSiEstaParado`): `soak-f4-stability` da **`SOAK_PASS`**, 0 inactivos permanentes. | `build/soak/soak-f4-stability-20261124-2115`; `2026-11-24-F4-IDLE-RECOVERY.md`. | Estable en dos semillas. | — (cerrado) |
 | **L2** | **Duplicado con el titular no cargado.** `limpiarDuplicados` + **59** aserciones de ownership: con el titular ausente se limpian las memorias cargadas y **NO se libera el ticket** (es suyo). | `VillageJobSiteOwnershipPolicyTest` 59; `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`. | Política cerrada; falta un fixture runtime con titular descargado (limitación declarada). | — (política) |
+| **L5/L6** | **Evidencia POI/navegación multi-entidad.** Soak de **30 aldeanos/72k** en dos semillas (0 muertes, 11/11, 0 inactivos permanentes) y **3 días de POI** sin duplicados/huérfanos. El arnés NAV sigue sin `multientidad_*` y el POI sin horas/jugador. | `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`. | Parcialmente cerradas; limitación de arnés declarada. | Implementar `multientidad_1/2/4/8` y la ventana horas+jugador si se quiere el contrato exacto. |
 | **SK** | **Skills runtime: humano→lobo a 0 maná.** El cliente enviaba `TRANSFORM_WEREWOLF` cada 10 ticks sin mirar si estaba transformado; como el skill alterna, un humano con 0 maná se convertía. **CORREGIDO** con `WerewolfManaPolicy` (solo revierte lobo, maná≤0, tick%20); skills **380** aserciones. | `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`; `SKILL_CAPABILITY_INTEGRATION_TEST` 380. | Defecto corregido; cliente real (UI/HUD/`onKeyInput`) sigue pendiente. | Ejecutar servidor+cliente real y revisar la doble ejecución de `onKeyInput`. |
 | **SOAK** | **Aceptación multi-día + estabilidad:** mismo SHA `bcf98f70` en dos semillas (`3188…` y `7454…`), ambas **PASS**: 0 muertes, 11/11, 0 duplicados/huérfanos/sin puesto/inactivos permanentes, guardado OK. | `soak-f4-confirm-20261124-2130`, `soak-f4-stability-20261124-2115`. | **`SOAK_PASS` estable en dos semillas** | Después L2/L5–L8/skills runtime. |
 
@@ -217,3 +218,9 @@ transformado**; `SkillShapeshiftWerewolf` alterna y el payload directo no consum
 humano podía quedar convertido. `WerewolfManaPolicy` exige `transformado && mana<=0 && tick%20==0`;
 skills **380** aserciones. Cliente real (UI/HUD/`onKeyInput`) sigue pendiente. Informe:
 `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`.
+
+**L5/L6 parcialmente cerradas con el soak.** 30 aldeanos navegando 72k en dos semillas (0 muertes,
+11/11, 0 inactivos permanentes) y 3 días de POI sin duplicados/huérfanos: evidencia runtime fuerte de
+multi-entidad y propiedad. El arnés NAV sigue marcando `multientidad_1/2/4/8` como no soportados y el
+POI no mide horas/jugador; la limitación se declara. Informe:
+`2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`.

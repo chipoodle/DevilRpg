@@ -10,9 +10,12 @@
   `TRANSFORM_WEREWOLF` a ciegas cada 10 ticks). **Skills 380 aserciones** (antes 376). El cliente real
   (UI/HUD/doble `onKeyInput`) sigue pendiente: no hay arnés de cliente.
 - **Gates:** `test` 1m19s; persistencia 553, ownership 59, skills 380; lint/diff verdes.
-- **Siguiente:** L5–L8, resto de skills runtime con cliente real y la decisión de ramas/A1.
-- Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-F4-IDLE-RECOVERY.md`,
-  `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`, `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`.
+- **L5/L6 parcialmente cerradas con el soak:** 30 aldeanos navegando 72k en dos semillas (0 muertes,
+  11/11, 0 inactivos permanentes) y 3 días de POI sin duplicados/huérfanos. El arnés NAV sigue sin los
+  escenarios `multientidad_*` y el arnés POI sin horas/jugador: limitación declarada.
+- **Siguen abiertos:** L7 (fastutil A/B runtime), L8 (excluido por el usuario), skills runtime con
+  cliente real y la decisión de ramas/A1.
+- Informe: `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`.
 
 # SOAK ACEPTADO — F1/F2/F3 CERRADOS; PENDIENTES L2/L5–L8/SKILLS RUNTIME (2026-11-24)
 

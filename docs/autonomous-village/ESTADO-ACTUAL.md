@@ -1,10 +1,11 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
-> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, L2 Y SKILLS 0-MANÁ.** Soak `bcf98f70`: **`SOAK_PASS`**
-> en `3188…` y `7454…` (0 muertes, 11/11, 0 inactivos). **F1–F4 cerrados; L2 política cerrada;**
-> corregido el humano con 0 maná que se convertía en lobo (`WerewolfManaPolicy`; skills **380**).
-> El cliente real (UI/HUD/`onKeyInput`) sigue pendiente. Siguiente: L5–L8, skills runtime con cliente y
-> ramas/A1. Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-L2-DUPLICATE-KEEPER-POLICY.md`,
+> **ACTUALIZACIÓN 24-nov-2026 — SOAK ESTABLE, L2 Y SKILLS 0-MANÁ, L5/L6 PARCIALES.** Soak `bcf98f70`:
+> **`SOAK_PASS`** en `3188…` y `7454…` (0 muertes, 11/11, 0 inactivos). **F1–F4 cerrados; L2 política
+> cerrada;** corregido el humano con 0 maná que se convertía en lobo (`WerewolfManaPolicy`; skills
+> **380**). **L5/L6 parcialmente cerradas** con 30 aldeanos/3 días y POI sin duplicados; faltan
+> `multientidad_*` en el arnés NAV y horas/jugador en el POI. Siguiente: L7, cliente real y ramas/A1.
+> Informes: `2026-11-24-SOAK-ACCEPTANCE.md`, `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`,
 > `2026-11-24-SKILLS-RUNTIME-WEREWOLF-MANA.md`.
 
 

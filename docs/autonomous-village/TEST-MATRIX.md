@@ -114,6 +114,9 @@ Herramientas de evidencia:
 - **Soak y hambre**: el run 72k `soak-final-20261124-1120` registró 5 muertes por hambre con comida en
   la despensa (F1 abierto). El arnés reporta `bajas` y `ausentes_fin`; no se declara PASS de
   sostenibilidad alimentaria.
+- **L5/L6**: el arnés NAV no soporta `multientidad_*` (1 entidad por escenario) y el POI no mide
+  horas/jugador; el soak cubre **30 aldeanos/3 días** y propiedad de POI sin duplicados. Limitación
+  declarada en `2026-11-24-L5-L6-NAV-POI-EVIDENCE.md`.
 - **Skills**: cubiertas headless por `SkillCapabilityIntegrationTest` (**380**); corregido el humano
   con 0 maná que se convertía en lobo (`WerewolfManaPolicy`), pero **no** se ha ejecutado un servidor
   dedicado con jugador ni la UI de cliente (`SkillScreen`/HUD). La doble ejecución cliente/servidor de
