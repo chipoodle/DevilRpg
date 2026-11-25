@@ -550,4 +550,6 @@ tasks.named('test') {
     dependsOn tasks.named('poiPersistenceSelftest')
     // AV · contrato del catalogo runtime de navegacion (headless).
     dependsOn tasks.named('navScenarioContractTest')
+    // Food · despensa física + codec NBT real (los tests ya existían fuera de git; ahora son gate).
+    dependsOn tasks.named('foodTestSuite')
 }

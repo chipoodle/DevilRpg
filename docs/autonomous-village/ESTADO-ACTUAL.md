@@ -1,5 +1,9 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — FOOD TESTS.** `src/foodTest` ya está en git y en el gate `test`
+  (`foodTestSuite`). Se corrigió el `DeferredHolder` headless del huevo estrellado y la retirada
+  física que destruía puntos; `pantryPhysical` ahora se ejecuta.
+
 > **ACTUALIZACIÓN 25-nov-2026 — SPAWN/PODER.** `maxDistance` se separó en **`maxSpawnDistance`**
 > (probabilidad) y **`maxPowerDistance`** (atributos/XP); ambos 3000 por ahora. El `minDistance`
 > 67→40 del usuario quedó commiteado en `21fea398`.

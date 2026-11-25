@@ -1,8 +1,11 @@
 package com.chipoodle.devilrpg.world;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -335,7 +338,7 @@ public final class VillagePantry {
         if (cruda.is(Items.POTATO)) return new ItemStack(Items.BAKED_POTATO); // patata asada
         // EL HUEVO, ESTRELLADO (lo pidió el jugador): sale de los huevos de las gallinas del corral y lo cocina el
         // cocinero en su ahumador igual que la carne.
-        if (cruda.is(Items.EGG)) return new ItemStack(com.chipoodle.devilrpg.init.ModItems.HUEVO_ESTRELLADO.get());
+        if (cruda.is(Items.EGG)) return new ItemStack(huevoEstrellado());
         return ItemStack.EMPTY;
     }
 
@@ -365,7 +368,17 @@ public final class VillagePantry {
 
     /** ¿Es un <b>huevo estrellado</b> (la comida que cocina el cocinero con los huevos del corral)? */
     public static boolean esHuevoEstrellado(ItemStack s) {
-        return s.is(com.chipoodle.devilrpg.init.ModItems.HUEVO_ESTRELLADO.get());
+        return s.is(huevoEstrellado());
+    }
+
+    /**
+     * El huevo estrellado por el <b>registro real</b>, no por el {@code DeferredHolder}: así también
+     * funciona en un arranque headless de tests (Bootstrap) donde el {@code DeferredHolder} aún no está
+     * enlazado. En producción devuelve el mismo item.
+     */
+    private static Item huevoEstrellado() {
+        return BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(
+                com.chipoodle.devilrpg.DevilRpg.MODID, "huevo_estrellado"));
     }
 
     /**
@@ -540,6 +553,12 @@ public final class VillagePantry {
         while (faltan > 0) {
             Grupo grupo = elQueMasSobra(c, aldeanos);
             if (grupo == null) break;
+            // No se parte una pieza que se pasarÍa del valor pedido: se perderían puntos de comida
+            // (el test de integración lo midió: 3 panes = 12 para una petición de 10 dejaba 2 sin
+            // contabilizar). Es mejor devolver 8 que destruir 12 y acreditar 10.
+            if (grupo.puntos() > faltan) {
+                break;
+            }
             if (sacar(c, grupo.filtro(), 1) != 1) break;
             faltan -= grupo.puntos();
             sacados += grupo.puntos();

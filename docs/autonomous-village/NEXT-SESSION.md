@@ -1,3 +1,12 @@
+# FOOD TESTS — DE NO PERSISTIDOS A GATE PERMANENTE (25-nov-2026)
+
+- `src/foodTest` estaba fuera de git aunque `build.gradle` ya lo usaba; `FoodIntegrationTest.pantryPhysical()`
+  nunca se llamaba. Ahora es permanente y `test` depende de `foodTestSuite`.
+- Al ejecutarlo destapó dos fallos: `DeferredHolder` sin enlazar en headless (`huevo_estrellado`) y
+  retirada de despensa que destruía puntos (3 panes = 12 para pedir 10). Corregidos.
+- **Evidencia:** `foodTestSuite` OK; gate completo 1m31s; skills 416, persistencia 553.
+- **Informe:** `2026-11-25-FOOD-TESTS-PERMANENT.md`.
+
 # SPAWN — PROBABILIDAD Y PODER SEPARADOS (25-nov-2026)
 
 - `SpawnScaleProfile` ahora tiene **`maxSpawnDistance`** (probabilidad de spawn) y
