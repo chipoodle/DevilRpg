@@ -11,6 +11,7 @@ import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapability;
 import com.chipoodle.devilrpg.capability.stamina.PlayerStaminaCapabilityInterface;
 import com.chipoodle.devilrpg.network.payload.DirectSkillExecutionPayload;
+import com.chipoodle.devilrpg.skillsystem.WerewolfManaPolicy;
 import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -45,7 +46,8 @@ public final class ClientForgeResourceEventSubscriber {
                 }
 
                 unwrappedPlayerCapabilityMana.onPlayerTickEventRegeneration(event.getEntity(), manaDegeneration);
-                if (unwrappedPlayerCapabilityMana.getMana() <= 0.0f) {
+                if (WerewolfManaPolicy.debePedirReversion(unwrappedPlayerCapabilityAux.isWerewolfTransformation(),
+                        unwrappedPlayerCapabilityMana.getMana(), event.getEntity().tickCount)) {
                     PacketDistributor.sendToServer(new DirectSkillExecutionPayload(SkillEnum.TRANSFORM_WEREWOLF));
                     event.getEntity().level().playSound(event.getEntity(), event.getEntity().getX(), event.getEntity().getY(), event.getEntity().getZ(),
                             SoundEvents.NOTE_BLOCK_BASS, SoundSource.NEUTRAL, 0.5F,

@@ -51,6 +51,7 @@ public final class SkillCapabilityIntegrationTest {
             capabilityHeadless();
             persistenciaYCompatibilidad();
             registroDeObjetos();
+            werewolfMana();
         } catch (Throwable t) {
             fallos++;
             System.out.println("  EXCEPCION NO CONTROLADA: " + t);
@@ -231,6 +232,17 @@ public final class SkillCapabilityIntegrationTest {
             threw = true;
         }
         check(threw, "items: un icono sin 'item' falla con JsonSyntaxException");
+    }
+
+    private static void werewolfMana() {
+        check(com.chipoodle.devilrpg.skillsystem.WerewolfManaPolicy.debePedirReversion(true, 0.0F, 20),
+                "maná: transformado, 0 maná y tick 20 pide reversión");
+        check(!com.chipoodle.devilrpg.skillsystem.WerewolfManaPolicy.debePedirReversion(true, 0.0F, 10),
+                "maná: no pide reversión fuera del throttle de 20 ticks");
+        check(!com.chipoodle.devilrpg.skillsystem.WerewolfManaPolicy.debePedirReversion(false, 0.0F, 20),
+                "maná: un humano con 0 maná NO se transforma (bug de alternancia)");
+        check(!com.chipoodle.devilrpg.skillsystem.WerewolfManaPolicy.debePedirReversion(true, 1.0F, 20),
+                "maná: con maná no pide reversión");
     }
 
     private static JsonObject icon(String id) {
