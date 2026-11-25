@@ -58,7 +58,7 @@ public class VexSpawnRule implements CustomSpawnRule {
             return 0.0F;
         }
         double distance = Math.sqrt(player.distanceToSqr(spawn));
-        return (float) PROFILE.probability(distance, ThreatLevel.current(level));
+        return (float) PROFILE.probability(distance, PROFILE.threat(level));
     }
 
     @Override

@@ -1,28 +1,22 @@
 package com.chipoodle.devilrpg.spawnprofile;
 
+import com.chipoodle.devilrpg.survival.ThreatLevel;
+import net.minecraft.world.level.Level;
+
 /**
  * <h2>Patrón: entidad con spawnRule + atributos dinámicos según distancia</h2>
  * <p>
  * Un {@code SpawnScaleProfile} agrupa, en un único objeto neutro, toda la configuración que define cómo
  * una entidad pasa de "débil a fuerte" en función de la distancia del jugador a su punto de inicio:
- * los límites de distancia y la base/escala de sus atributos.
+ * los límites de distancia, la base/escala de sus atributos y el tiempo de amenaza propio del perfil.
  * <p>
  * Es el <b>origen único de verdad</b> de esos valores: lo comparten la entidad (para aplicar el
  * escalado de vida/velocidad/daño) y su {@code SpawnRule} (para calcular la probabilidad de spawn),
  * <b>sin que se acoplen entre sí</b> — ambos dependen solo de este perfil, no el uno del otro.
  * <p>
- * <b>Cómo usarlo como patrón para una entidad nueva</b>:
- * <ol>
- *   <li>Crea un {@code SpawnScaleProfile} con los valores de la entidad (rango de distancia, base y
- *       multiplicador de escala).</li>
- *   <li>Guarda una única instancia en una clase neutra (p. ej. {@code XxxSpawnProfile}) o como
- *       {@code public static final} en la entidad.</li>
- *   <li>En la entidad, usa {@link #scaleFactor(double)} y las bases para ajustar sus atributos, y
- *       {@link #maxDistance()} para acotar la búsqueda del jugador.</li>
- *   <li>En la {@code SpawnRule}, usa {@link #probability(double)} para la probabilidad de spawn (y
- *       {@link #minDistance()}/{@link #maxDistance()} para los mensajes de log).</li>
- * </ol>
- * De este modo la curva de probabilidad y la de escalado quedan centralizadas y son idénticas.
+ * <b>El tiempo es por perfil:</b> {@link #threat(Level)} usa {@link #threatFullHours()} de este
+ * perfil, no {@code [threat].threatFullHours} global. La config global sigue existiendo para las
+ * hordas y el resto del mundo; cada mob puede encoger su zona protegida a su propio ritmo.
  *
  * @param minDistance       distancia por debajo de la cual la probabilidad es 0 (zona protegida / sin spawn)
  * @param maxDistance       distancia a partir de la cual la probabilidad es 1 (máxima intensidad)
@@ -33,6 +27,7 @@ package com.chipoodle.devilrpg.spawnprofile;
  * @param baseDamage        daño base sobre el que se aplica el factor de escala
  * @param baseXp            experiencia base que da la entidad (sin escalar)
  * @param maxXpMultiplier   aumento de experiencia a la distancia máxima (0 = sin aumento)
+ * @param threatFullHours   horas jugadas hasta que la amenaza del perfil llega a 1; {@code <= 0} usa la global
  */
 public record SpawnScaleProfile(
         /** Distancia por debajo de la cual la probabilidad es 0 (zona protegida / sin spawn). */
@@ -52,7 +47,16 @@ public record SpawnScaleProfile(
         /** Experiencia base que da la entidad (en la zona protegida, sin escalar). */
         int baseXp,
         /** Multiplicador extra de experiencia a la distancia máxima (0 = sin aumento). */
-        double maxXpMultiplier) {
+        double maxXpMultiplier,
+        /** Horas jugadas hasta la amenaza máxima de ESTE perfil (0 = usar la global). */
+        double threatFullHours) {
+
+    /** Amenaza de este perfil en [0, 1] según el tiempo de mundo (o la global si {@code threatFullHours <= 0}). */
+    public double threat(Level level) {
+        return threatFullHours > 0.0D
+                ? ThreatLevel.current(level, threatFullHours)
+                : ThreatLevel.current(level);
+    }
 
     /**
      * Distancia mínima efectiva según la amenaza (0..1). Con amenaza 0 es {@code minDistance} y con
@@ -60,6 +64,11 @@ public record SpawnScaleProfile(
      */
     public double effectiveMinDistance(double threat) {
         return minDistance + (minHardDistance - minDistance) * threat;
+    }
+
+    /** {@link #effectiveMinDistance(double)} con la amenaza y el tiempo de este perfil. */
+    public double effectiveMinDistance(Level level) {
+        return effectiveMinDistance(threat(level));
     }
 
     /**

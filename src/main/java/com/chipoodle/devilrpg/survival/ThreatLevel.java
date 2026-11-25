@@ -58,6 +58,19 @@ public final class ThreatLevel {
     }
 
     /**
+     * Amenaza actual con un tiempo de maduración <b>por perfil</b>: {@code fullHours} horas jugadas
+     * hasta 1. Si {@code fullHours <= 0} se usa la config global; así un perfil puede encoger su zona
+     * protegida a su propio ritmo sin cambiar el resto del mundo.
+     */
+    public static double current(Level level, double fullHours) {
+        if (level == null || fullHours <= 0.0D) {
+            return current(level);
+        }
+        double ticks = Math.max(1.0D, fullHours * TICKS_PER_HOUR);
+        return Math.max(0.0, Math.min(1.0, level.getGameTime() / ticks));
+    }
+
+    /**
      * Multiplicador global de dificultad (1.0 con amenaza 0 &lt;=&gt; 1.0 + maxExtraDifficulty con amenaza 1).
      * Se puede multiplicar por el {@code scaleFactor} de distancia para combinar distancia + tiempo.
      */

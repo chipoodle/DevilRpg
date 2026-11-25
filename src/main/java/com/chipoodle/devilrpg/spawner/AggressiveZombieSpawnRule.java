@@ -33,10 +33,10 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
     private static final int MAX_INTERVAL_SECONDS = 3 * 60;  // intervalo maximo entre intentos (3 min)
     private static final int MAX_ALIVE_IN_WORLD = 30;        // limite de zombies agresivos vivos simultaneos
 
-    private static final int MIN_SPAWN_DISTANCE = 38;        // minimo lejos del jugador (bloques)
+    private static final int MIN_SPAWN_DISTANCE = 28;        // minimo lejos del jugador (bloques)
     private static final int MAX_SPAWN_DISTANCE = 86;        // maximo lejos del jugador (bloques)
     private static final int SURFACE_SEARCH_DOWN = 16;       // bloques hacia abajo para hallar suelo
-    private static final int SURFACE_SEARCH_UP = 2;          // bloques hacia arriba para hallar suelo
+    private static final int SURFACE_SEARCH_UP = 3;          // bloques hacia arriba para hallar suelo
 
     // Limites de distancia (debil a fuerte) y base/escala de atributos tomados del perfil compartido,
     // para no duplicarlos y no acoplarse con la entidad.
@@ -82,7 +82,7 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
         }
         double distance = Math.sqrt(player.distanceToSqr(spawnPoint));
         // La zona protegida (min) se encoge con la amenaza (tiempo).
-        double threat = ThreatLevel.current(level);
+        double threat = PROFILE.threat(level);
         double min = PROFILE.effectiveMinDistance(threat);
         if (distance < min) {
             DevilRpg.LOGGER.debug("[AggressiveZombieSpawnRule] Jugador {} a {} bloques (< {}), prob. 0",

@@ -3384,7 +3384,7 @@ public class AggressiveZombieEntity extends Zombie {
                     com.chipoodle.devilrpg.spawnprofile.SharedSpawnReferencePolicy.distanceSqr(
                             getX(), getY(), getZ(), sharedSpawn.getX() + 0.5D,
                             sharedSpawn.getY(), sharedSpawn.getZ() + 0.5D));
-            spawnThreat = ThreatLevel.current(this.level());
+            spawnThreat = SPAWN_PROFILE.threat(this.level());
             if (DevilRpgConfig.LOG_ESCALADO_DE_SPAWN
                     && (this.getX() != 0.0D || this.getY() != 0.0D || this.getZ() != 0.0D)) {
                 DevilRpg.LOGGER.info("Zombie Spawned at: {} | Shared world spawn: {} | Distance: {} | Threat: {}",

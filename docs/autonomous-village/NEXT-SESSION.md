@@ -1,3 +1,15 @@
+# SPAWN — TIEMPO POR PERFIL Y DIAGNÓSTICO AGRESIVO (25-nov-2026)
+
+- **Tiempo por perfil:** `SpawnScaleProfile` tiene `threatFullHours`; `AggressiveZombieSpawnProfile`
+  y `VexSpawnProfile` usan **3 h** cada uno. `SpawnScaleProfile.threat(Level)` y
+  `ThreatLevel.current(Level,double)` reemplazan el tiempo global en reglas/entidades.
+- **El `13` no era tiempo:** es `minHardDistance` en `AggressiveZombieSpawnProfile`; el tiempo era
+  `[threat] threatFullHours = 3.0`.
+- **Zombis agresivos:** la regla **sí funciona**. Log: 01:04 a 28 bloques (0 %), 01:05 a 98 (1 %),
+  01:12 a 358 (10 %), **01:14:11 spawn 3**. La curva 67→3000 hace que a media distancia la
+  probabilidad sea baja; el intervalo es 20 s–3 min.
+- **Informe:** `2026-11-25-PER-PROFILE-SPAWN-TIME.md`.
+
 # ASEDIO — CAMPANA DESTRUIDA = ALDEA CONQUISTADA (25-nov-2026)
 
 - **Diagnóstico:** guardado `Occupied [0,1]`, `Resolved [0,1]`, `Fallen []`. La campana estaba rota,

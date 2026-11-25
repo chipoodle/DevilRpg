@@ -106,7 +106,7 @@ public class FrostVexEntity extends Vex {
                     com.chipoodle.devilrpg.spawnprofile.SharedSpawnReferencePolicy.distanceSqr(
                             getX(), getY(), getZ(), sharedSpawn.getX() + 0.5D,
                             sharedSpawn.getY(), sharedSpawn.getZ() + 0.5D));
-            spawnThreat = ThreatLevel.current(this.level());
+            spawnThreat = SPAWN_PROFILE.threat(this.level());
             DevilRpg.LOGGER.info("FrostVex spawned at: {} | sharedSpawn: {} | distance: {} | threat: {}",
                     this.blockPosition(), sharedSpawn, spawnDistance, String.format("%.2f", spawnThreat));
         }

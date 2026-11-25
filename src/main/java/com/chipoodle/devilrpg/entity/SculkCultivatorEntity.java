@@ -501,7 +501,7 @@ public class SculkCultivatorEntity extends AbstractIllager implements RangedAtta
                 if (playerSpawn != null) {
                     spawnDistance = Math.sqrt(this.blockPosition().distSqr(
                             new BlockPos((int) playerSpawn.x, (int) playerSpawn.y, (int) playerSpawn.z)));
-                    spawnThreat = ThreatLevel.current(this.level());
+                    spawnThreat = SPAWN_PROFILE.threat(this.level());
                     // Detras del flag de la config (`devilrpg-server.toml`, [logs] logEscaladoDeSpawn) y solo en el
                     // servidor, como el zombie agresivo: el cliente tambien pasa por aqui y el primer `setPos` de
                     // la construccion es (0,0,0).

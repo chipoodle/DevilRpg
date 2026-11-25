@@ -1,5 +1,9 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — SPAWN.** El tiempo de amenaza es **por perfil** (`SpawnScaleProfile`;
+  3 h en agresivo/vex), no solo global. El `13` es `minHardDistance`, no tiempo. La `AggressiveZombieSpawnRule`
+  funciona: en el log spawnearon 3 a las 01:14; la probabilidad era 1–17 % por la curva 67→3000.
+
 > **ACTUALIZACIÓN 25-nov-2026 — ASEDIO/CAMPANA.** `Occupied [0,1]` y `Resolved [0,1]` con `Fallen []`:
 > la campana rota no hacía caer la aldea. `VillageSiegeBellPolicy` resuelve **caída inmediata** en
 > asedio clásico y horda; `reconciliarAldeasOcupadas` corrige partidas viejas. **25 aserciones**;

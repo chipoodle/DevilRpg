@@ -20,7 +20,8 @@ public final class VexSpawnProfile {
             0.071,  // baseSpeed (un tercio de la base anterior)
             0.34,    // baseDamage (un tercio de la base anterior)
             15,     // baseXp: 5 -> 15 para que matar un vex se note (hasta 15*5.5 = 82 lejos de la base)
-            4.5     // maxXpMultiplier: +450% de XP en la distancia máxima
+            4.5,    // maxXpMultiplier: +450% de XP en la distancia máxima
+            3.0     // threatFullHours: 3 h jugadas para que su zona protegida baje de 67 a 17
     );
 
     private VexSpawnProfile() {
