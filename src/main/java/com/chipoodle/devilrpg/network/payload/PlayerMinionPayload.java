@@ -32,14 +32,13 @@ public record PlayerMinionPayload(CompoundTag skillCompound) implements CustomPa
     public static void handle(PlayerMinionPayload msg, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.flow() == PacketFlow.SERVERBOUND) {
-                if (ctx.player() instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.getData(PlayerMinionCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.skillCompound());
-                }
-            } else {
-                LocalPlayer clientPlayer = Minecraft.getInstance().player;
-                if (clientPlayer != null) {
-                    clientPlayer.getData(PlayerMinionCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.skillCompound());
-                }
+                // La lista de minions la manda el servidor; el cliente no la escribe.
+                com.chipoodle.devilrpg.DevilRpg.LOGGER.warn("[Minion] payload C2S ignorado: el servidor es la autoridad");
+                return;
+            }
+            LocalPlayer clientPlayer = Minecraft.getInstance().player;
+            if (clientPlayer != null) {
+                clientPlayer.getData(PlayerMinionCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.skillCompound());
             }
         });
     }

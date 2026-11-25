@@ -136,8 +136,6 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             nbt.putByteArray(SOULWOLF_MINION_KEY, BytesUtil.toByteArray(soulWolMinions));
             if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
             }
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setSoulWolfMinions", e);
@@ -169,8 +167,6 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             nbt.putByteArray(SOULBEAR_MINION_KEY, BytesUtil.toByteArray(soulBearMinions));
             if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
             }
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setSoulBearMinions", e);
@@ -192,8 +188,6 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
             nbt.putByteArray(WISP_MINIONS_KEY, BytesUtil.toByteArray(wispMinions));
             if (!player.level().isClientSide) {
                 sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
             }
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setWispMinions", e);
@@ -206,8 +200,6 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         //DevilRpg.LOGGER.debug("setSoulBearInventory {}", soulbearInventory);
         if (!player.level().isClientSide) {
             sendSkillChangesToClient((ServerPlayer) player);
-        } else {
-            sendSkillChangesToServer();
         }
     }
 
@@ -411,10 +403,6 @@ public class PlayerMinionCapabilityImplementation implements PlayerMinionCapabil
         this.soulWolfMinionsCache = null;
         this.soulBearMinionsCache = null;
         this.wispMinionsCache = null;
-    }
-
-    private void sendSkillChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerMinionPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendSkillChangesToClient(ServerPlayer pe) {

@@ -32,14 +32,13 @@ public record PlayerAuxiliarPayload(CompoundTag auxiliaryCompound) implements Cu
     public static void handle(PlayerAuxiliarPayload msg, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (ctx.flow() == PacketFlow.SERVERBOUND) {
-                if (ctx.player() instanceof ServerPlayer serverPlayer) {
-                    serverPlayer.getData(PlayerAuxiliaryCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.auxiliaryCompound());
-                }
-            } else {
-                LocalPlayer clientPlayer = Minecraft.getInstance().player;
-                if (clientPlayer != null) {
-                    clientPlayer.getData(PlayerAuxiliaryCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.auxiliaryCompound());
-                }
+                // El estado auxiliar (transformación) lo manda el servidor; el cliente no lo escribe.
+                com.chipoodle.devilrpg.DevilRpg.LOGGER.warn("[Aux] payload C2S ignorado: el servidor es la autoridad");
+                return;
+            }
+            LocalPlayer clientPlayer = Minecraft.getInstance().player;
+            if (clientPlayer != null) {
+                clientPlayer.getData(PlayerAuxiliaryCapability.INSTANCE).deserializeNBT(ctx.player().level().registryAccess(), msg.auxiliaryCompound());
             }
         });
     }

@@ -40,10 +40,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
         if (!player.level().isClientSide) {
             //player.sendMessage(new StringTextComponent("Sending to client attaking werewolf: " + active),player.getUUID());
             sendAuxiliaryChangesToClient((ServerPlayer) player);
-        } else {
-            //player.sendMessage(new StringTextComponent("Sending to server attaking werewolf: " + active),player.getUUID());
-            sendAuxiliaryChangesToServer();
-
         }
     }
 
@@ -56,7 +52,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     public void setWerewolfTransformation(boolean active, Player player) {
         werewolfTransformation = active;
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
-        else sendAuxiliaryChangesToServer();
     }
 
     @Override
@@ -68,7 +63,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     public void setSwingingMainHand(boolean active, Player player) {
         swingingMainHand = active;
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
-        else sendAuxiliaryChangesToServer();
     }
 
     @Override
@@ -88,7 +82,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     public void setSpawnPoint(Vec3 spawnPoint, Player player) {
         this.spawnPoint = spawnPoint;
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
-        else sendAuxiliaryChangesToServer();
     }
 
     @Override
@@ -100,7 +93,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     public void setObjectiveIndex(int objectiveIndex, Player player) {
         this.objectiveIndex = objectiveIndex;
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
-        else sendAuxiliaryChangesToServer();
     }
 
     @Override
@@ -117,7 +109,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     public void setLoreStoneRead(boolean read, Player player) {
         this.loreStoneRead = read;
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
-        else sendAuxiliaryChangesToServer();
     }
 
     @Override
@@ -131,7 +122,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
             return; // ya estaba: idempotente (esto se llama en cada latido mientras el jugador está en la aldea)
         }
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
-        else sendAuxiliaryChangesToServer();
     }
 
     @Override
@@ -145,7 +135,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
             return; // ya se la habían revelado: idempotente
         }
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
-        else sendAuxiliaryChangesToServer();
     }
 
     @Override
@@ -162,7 +151,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
     public void setAnchorPoint(Vec3 anchorPoint, Player player) {
         this.anchorPoint = anchorPoint;
         if (!player.level().isClientSide) sendAuxiliaryChangesToClient((ServerPlayer) player);
-        else sendAuxiliaryChangesToServer();
     }
 
     @Override
@@ -223,10 +211,6 @@ public class PlayerAuxiliaryCapabilityImplementation implements PlayerAuxiliaryC
         for (int v : nbt.getIntArray("aldeasReveladas")) {
             aldeasReveladas.add(v);
         }
-    }
-
-    private void sendAuxiliaryChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerAuxiliarPayload(serializeNBT(RegistryAccess.EMPTY).copy()));
     }
 
     private void sendAuxiliaryChangesToClient(ServerPlayer pe) {
