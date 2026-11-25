@@ -3768,6 +3768,37 @@ public class AggressiveZombieEntity extends Zombie {
     }
 
     /**
+     * Ensancha una brecha <b>tangencialmente</b> (perpendicular a la dirección de entrada). Un hueco de
+     * una sola columna deja al zombi sin margen: su AABB de 0,6 puede quedar solapado con los bloques
+     * laterales y {@code NavObstruction.fitsActualAabb} lo rechaza, aunque el hueco sea nominalmente
+     * transitable. Se rompe una columna de muro contigua, con el mismo presupuesto y las mismas reglas
+     * (solo anillo real, nunca interior protegido, nunca tablón propio).
+     */
+    private boolean ensancharBrecha(BlockPos columnaRota, int dx, int dz, int cota) {
+        int tx = -dz;
+        int tz = dx;
+        if (tx == 0 && tz == 0) {
+            return false;
+        }
+        boolean roto = false;
+        for (int dy = 0; dy <= 2; dy++) {
+            if (tunelRestante <= 0) {
+                break;
+            }
+            BlockPos p = new BlockPos(columnaRota.getX() + tx, columnaRota.getY() + dy, columnaRota.getZ() + tz);
+            if (!esLaMuralla(p, cota) || protegidoPorLaAldea(p) || esTablonDelAsalto(p)
+                    || !canBreakBlock(level().getBlockState(p))) {
+                continue;
+            }
+            if (breakBlockAt(p)) {
+                tunelRestante--;
+                roto = true;
+            }
+        }
+        return roto;
+    }
+
+    /**
      * Goal: romper el obstáculo que le estorba cuando el zombie no logra acercarse a su objetivo, aunque
      * se balancee o rodee (el problema es la deriva/orbitación, no la inmovilidad). Lleva un registro del
      * mejor avance real (distancia al objetivo) y, si tras un periodo no mejoró, rompe el bloque delante.
@@ -3928,6 +3959,13 @@ public class AggressiveZombieEntity extends Zombie {
                     }
                 }
                 if (rompio) {
+                    // Ensanchar también en el camino de combate: un hueco de una columna puede dejar
+                    // el AABB del zombi solapado con los bloques de al lado.
+                    if (blockToBreak != null) {
+                        int dx = Integer.signum(hacia.getX() - zombie.blockPosition().getX());
+                        int dz = Integer.signum(hacia.getZ() - zombie.blockPosition().getZ());
+                        zombie.ensancharBrecha(blockToBreak, dx, dz, zombie.cotaParaElRecinto());
+                    }
                     fallosConsecutivos = 0;
                     if (++accionesDePicadoSinAvance >= MAX_BREAK_ACTIONS_WITHOUT_PROGRESS) {
                         excavacionPausada = true;
@@ -4037,6 +4075,7 @@ public class AggressiveZombieEntity extends Zombie {
                     if (roto) {
                         zombie.tunelEspera = TUNEL_ENTRE_BLOQUES;
                         zombie.particulasDeTrabajo(new BlockPos(px, zPos.getY(), pz));
+                        zombie.ensancharBrecha(new BlockPos(px, zPos.getY(), pz), d[0], d[1], cota);
                         return true;
                     }
                 }
