@@ -52,6 +52,34 @@ public final class VillageJobSiteOwnershipPolicy {
     }
 
     /**
+     * L2 · <b>Duplicados con el titular cargado o no.</b> Decide qué aldeanos cargados deben perder su
+     * memoria {@code JOB_SITE} porque comparten POI. <b>Nunca libera el ticket</b>: el ticket del POI
+     * pertenece al titular del libro, esté cargado o no; liberarlo con el titular descargado dejaría que
+     * otro aldeano se llevara su estación. Por eso esta consulta es pura y solo devuelve UUIDs a limpiar.
+     * <ul>
+     *   <li>sin titular en el libro: no se toca nada (no se adivina);</li>
+     *   <li>titular cargado: se conserva él y se limpian los demás;</li>
+     *   <li>titular NO cargado: se limpian todas las memorias cargadas, pero el ticket se queda con él.</li>
+     * </ul>
+     */
+    public static Set<UUID> limpiarDuplicados(final UUID titular, final boolean titularCargado,
+                                              final List<UUID> cargados) {
+        Set<UUID> out = new java.util.TreeSet<>();
+        if (titular == null || cargados == null) {
+            return out;
+        }
+        for (UUID u : cargados) {
+            if (u == null) {
+                continue;
+            }
+            if (!titularCargado || !titular.equals(u)) {
+                out.add(u);
+            }
+        }
+        return out;
+    }
+
+    /**
      * Devuelve los aldeanos que deben perder la memoria {@code JOB_SITE} por compartir POI con otro.
      * <p>
      * Reglas: por cada POI se conserva el aldeano con el UUID menor en orden lexicográfico (estable entre

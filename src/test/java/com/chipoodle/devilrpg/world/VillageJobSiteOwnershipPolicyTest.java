@@ -82,10 +82,31 @@ public final class VillageJobSiteOwnershipPolicyTest {
         probarTicketsPerdidos();
         probarLibroAlDesaparecerTitular();
         probarRestauracionDelLibro();
+        probarDuplicadosKeeperNoCargado();
         System.out.println("VILLAGE_JOB_SITE_OWNERSHIP_POLICY_TEST: OK (" + assertions + " assertions)");
     }
 
     // ------------------------------------------------------------- C4/L3 · restauración del libro
+
+    private static void probarDuplicadosKeeperNoCargado() {
+        UUID keeper = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
+        UUID a = UUID.fromString("00000000-0000-0000-0000-0000000000bb");
+        UUID c = UUID.fromString("00000000-0000-0000-0000-0000000000cc");
+
+        check("L2 keeper no cargado: limpia a todos los cargados del POI",
+                VillageJobSiteOwnershipPolicy.limpiarDuplicados(keeper, false, List.of(a, c))
+                        .equals(Set.of(a, c)));
+        check("L2 keeper cargado: conserva al titular y limpia a los demas",
+                VillageJobSiteOwnershipPolicy.limpiarDuplicados(keeper, true, List.of(a, keeper, c))
+                        .equals(Set.of(a, c)));
+        check("L2 sin titular en el libro no se adivina",
+                VillageJobSiteOwnershipPolicy.limpiarDuplicados(null, false, List.of(a)).isEmpty());
+        check("L2 lista vacia no produce limpieza",
+                VillageJobSiteOwnershipPolicy.limpiarDuplicados(keeper, false, List.of()).isEmpty());
+        check("L2 UUID nulo no rompe la consulta",
+                VillageJobSiteOwnershipPolicy.limpiarDuplicados(keeper, false, java.util.Arrays.asList(a, null))
+                        .equals(Set.of(a)));
+    }
 
     private static void probarRestauracionDelLibro() {
         UUID alice = UUID.fromString("00000000-0000-0000-0000-000000000001");

@@ -5237,18 +5237,16 @@ public final class VillageManager {
                 continue;
             }
             Villager conservar = duenos.stream().filter(v -> v.getUUID().equals(keeper)).findFirst().orElse(null);
+            Set<UUID> aLimpiar = VillageJobSiteOwnershipPolicy.limpiarDuplicados(keeper, conservar != null,
+                    duenos.stream().map(Villager::getUUID).toList());
             if (conservar == null) {
-                // El dueño del libro no está cargado: no se le toca su JOB, pero las memorias duplicadas
-                // cargadas de ese POI sí se limpian para que no haya dos dueños visibles.
-                for (Villager v : duenos) {
-                    saved.releaseJobSite(e.getKey(), v.getUUID());
-                    v.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
-                    v.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
-                }
-                continue;
+                // L2: el titular no está cargado. Se limpian las memorias duplicadas cargadas, pero el
+                // ticket NO se libera: pertenece al titular ausente; si se soltara, otro se lo llevaría.
+                DevilRpg.LOGGER.info("[Village] puesto {}: el titular {} no esta cargado; se limpian {} "
+                        + "memoria(s) duplicada(s) y NO se libera el ticket", e.getKey(), keeper, aLimpiar.size());
             }
             for (Villager v : duenos) {
-                if (v == conservar) {
+                if (!aLimpiar.contains(v.getUUID())) {
                     continue;
                 }
                 String poi = v.getBrain().getMemory(MemoryModuleType.JOB_SITE)
@@ -5256,8 +5254,10 @@ public final class VillageManager {
                 saved.releaseJobSite(e.getKey(), v.getUUID());
                 v.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
                 v.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
-                DevilRpg.LOGGER.info("[Village] {}: memoria de puesto DUPLICADA en {}; se limpia y el reparto le dara otra",
-                        v.getUUID(), poi);
+                if (conservar != null) {
+                    DevilRpg.LOGGER.info("[Village] {}: memoria de puesto DUPLICADA en {}; se limpia y el reparto le dara otra",
+                            v.getUUID(), poi);
+                }
             }
         }
     }
