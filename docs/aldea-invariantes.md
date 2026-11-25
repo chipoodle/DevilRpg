@@ -11973,8 +11973,22 @@ player, no un login de cliente real.
 `onEntityJoinLevel` lo usan y registran `[SpawnGuard]`. Los hostiles vanilla dentro de una aldea
 protegida se expulsan en el siguiente latido; los asediadores del mod conservan los 2 min de milicia.
 
-**Evidencia:** `VILLAGE_TERRAIN_POLICY_TEST: OK (22 aserciones)`; `test` 1m36s (skills 416,
+**Evidencia:** `VILLAGE_TERRAIN_POLICY_TEST: OK (25 aserciones)`; `test` 1m30s (skills 416,
 persistencia 553). Informe: `2026-11-25-VILLAGE-SPAWN-GUARD.md`.
 
 **Límites:** falta una noche de prueba runtime; si no aparece `[SpawnGuard]` y hay hostiles dentro,
 el camino es entrada por portón/brecha, no spawn.
+
+### I422 · LA CAMPANA DESTRUIDA CONQUISTA LA ALDEA (25-nov-2026)
+
+**Regla:** `VillageSiegeBellPolicy.laAldeaCaePorCampana(campanaDestruida, aldeaYaCaida)` exige
+`campanaDestruida && !aldeaYaCaida`. El asedio clásico (`VillageManager.tick`) y la horda del mundo
+(`tickWorldSieges`) resuelven **caída inmediata** si `VillageSavedData.isOccupied(index)`; no esperan
+a que la ola muera ni al plazo, y no pagan recompensa. `reconciliarAldeasOcupadas` corrige partidas
+guardadas con `Occupied && !Fallen` a caída (con log).
+
+**Evidencia:** `VILLAGE_TERRAIN_POLICY_TEST: OK (25 aserciones)`; `test` 1m30s. Informe:
+`2026-11-25-SIEGE-BELL-VICTORY.md`.
+
+**Límites:** la reparación arrasa las aldeas `Occupied` de la partida actual (`Occupied [0,1]`);
+runtime pendiente de reinicio.

@@ -1819,6 +1819,12 @@ public final class VillageManager {
         // Hordas que el MUNDO manda contra una aldea (Iteración 3): se resuelven aparte de los asedios que
         // arranca el jugador al llegar.
         tickWorldSieges(level);
+        // Reparación de datos históricos: una aldea con Occupied (campana destruida) pero sin Fallen es
+        // una partida guardada con la condición de victoria antigua (se declaró salvada). Se corrige a
+        // caída una sola vez, con log explícito; en mundos nuevos no hay nada que hacer.
+        if (level.getGameTime() % 200L == 0L) {
+            reconciliarAldeasOcupadas(level);
+        }
 
         List<VillageDefense> list = DEFENSES.get(level);
         if (list == null || list.isEmpty()) {
@@ -1895,6 +1901,33 @@ public final class VillageManager {
             }
 
             if (d.waveSpawned) {
+                VillageSavedData datos = VillageSavedData.get(level);
+                // LA CAMPANA ES LA CONDICIÓN DE VICTORIA: si un asaltante la destruyó (Occupied), la
+                // aldea ya está conquistada. Antes se seguía esperando a que la ola muriera o al timeout,
+                // así que una aldea con la campana rota podía declararse "salvada" y pagar recompensa.
+                if (VillageSiegeBellPolicy.laAldeaCaePorCampana(datos.isOccupied(d.objectiveIndex),
+                        datos.isFallen(d.objectiveIndex))) {
+                    ServerPlayer player = level.getServer().getPlayerList().getPlayer(d.playerUUID);
+                    boolean isCurrentObjective = false;
+                    PlayerAuxiliaryCapabilityInterface aux = null;
+                    if (player != null) {
+                        aux = IGenericCapability.getUnwrappedPlayerCapability(player,
+                                PlayerAuxiliaryCapability.INSTANCE);
+                        isCurrentObjective = aux != null && aux.getObjectiveIndex() == d.objectiveIndex;
+                    }
+                    fallVillage(level, datos, d.objectiveIndex, d.center);
+                    if (player != null) {
+                        player.displayClientMessage(Component.literal("La aldea cayó: los monstruos"
+                                + " alcanzaron el centro y destruyeron la campana."), false);
+                        if (isCurrentObjective) {
+                            aux.setObjectiveIndex(d.objectiveIndex + 1, player);
+                        }
+                    }
+                    disableGoToCenter(level, d.wave);
+                    datos.markSiegeResolved(d.objectiveIndex);
+                    list.remove(i);
+                    continue;
+                }
                 // ESTADO DEL ASEDIO: un asedio que se pierde sin decir cómo iba es una derrota a ciegas (el
                 // jugador vio caer su aldea 1 DENTRO de las murallas, peleando, sin saber que quedaba un
                 // atacante de la ola dentro: la valla está a 62 del centro, así que el pueblo es casi todo
@@ -2589,6 +2622,27 @@ public final class VillageManager {
         VillageSavedData saved = VillageSavedData.get(level);
         for (int i = list.size() - 1; i >= 0; i--) {
             WorldSiege siege = list.get(i);
+            // La campana rota también conquista en una horda del mundo: no se espera a que la ola
+            // muera ni al plazo. Sin esto, una aldea con Occupied podía "resistir" al confirmarse
+            // limpias las bajas y quedarse viva con la campana destruida.
+            if (VillageSiegeBellPolicy.laAldeaCaePorCampana(saved.isOccupied(siege.objectiveIndex),
+                    saved.isFallen(siege.objectiveIndex))) {
+                list.remove(i);
+                fallVillage(level, saved, siege.objectiveIndex, siege.center);
+                announceNearby(level, siege.center,
+                        "La aldea ha caído: los monstruos alcanzaron el centro y destruyeron la campana.");
+                for (ServerPlayer p : level.players()) {
+                    PlayerAuxiliaryCapabilityInterface aux =
+                            IGenericCapability.getUnwrappedPlayerCapability(p, PlayerAuxiliaryCapability.INSTANCE);
+                    if (aux != null && aux.getObjectiveIndex() == siege.objectiveIndex) {
+                        p.displayClientMessage(Component.literal(
+                                "La aldea del objetivo ha caído... El objetivo avanza."), false);
+                        aux.setObjectiveIndex(siege.objectiveIndex + 1, p);
+                    }
+                }
+                disableGoToCenter(level, siege.wave);
+                continue;
+            }
             // A2 REMEDIACIÓN 2 · el plazo se mide contra el gameTime del REGISTRO, no contra un contador de
             // invocaciones. Es determinista aunque cambie la cadencia o se congele el tick.
             long transcurrido = level.getGameTime() - siege.inicioTick;
@@ -9630,6 +9684,28 @@ public final class VillageManager {
      * repuebla). Se deja en <b>ruinas</b> ({@link VillageGenerator#ruin}) para que el jugador vea lo que pasó
      * cuando vuelva. Idempotente: si ya estaba caída no hace nada.
      */
+    /**
+     * Corrige datos guardados por la condición de victoria anterior: si la campana fue destruida
+     * ({@code Occupied}) pero la aldea no quedó {@code Fallen}, la aldea estaba conquistada y se
+     * marcó como salvada por error. Se marca caída una sola vez, con log; es idempotente.
+     */
+    private static void reconciliarAldeasOcupadas(ServerLevel level) {
+        VillageSavedData saved = VillageSavedData.get(level);
+        for (int objectiveIndex : saved.generatedIndices()) {
+            if (!VillageSiegeBellPolicy.laAldeaCaePorCampana(saved.isOccupied(objectiveIndex),
+                    saved.isFallen(objectiveIndex))) {
+                continue;
+            }
+            BlockPos center = centroDe(level, objectiveIndex);
+            if (center == null || !level.hasChunkAt(center)) {
+                continue;
+            }
+            fallVillage(level, saved, objectiveIndex, center);
+            DevilRpg.LOGGER.info("[Village] Aldea {}: estaba OCUPADA (campana destruida) sin caída;"
+                    + " se corrige a caída", objectiveIndex);
+        }
+    }
+
     private static void fallVillage(ServerLevel level, VillageSavedData saved, int objectiveIndex, BlockPos center) {
         if (saved.isFallen(objectiveIndex)) {
             return;

@@ -26,7 +26,7 @@
 | `VillageJobSiteOwnershipPolicyTest` | Unitario | **59** | `policyTest` | Un solo dueño por POI; idempotencia; no destruir titular; **puestosDelTitular** (L1/I400); **restauración del titular frente a `yaDeOtro`** (L3/I402); **L2 titular no cargado: limpia duplicados y no libera ticket** |
 | `VillagePopulationLoadPolicyTest` | Unitario | 7 | `policyTest` | Ventana de gracia de carga (no repoblar antes de cargar) |
 | `VillageFarmOwnershipTest` | Unitario | 6 | `policyTest` | Una parcela, un dueño; liberación segura |
-| `VillageTerrainPolicyTest` | Unitario | **22** | `policyTest` | I421: `VillageSpawnGuard` corta NATURAL/EVENT/REINFORCEMENT/SPAWNER/STRUCTURE dentro; no corta huevo/COMMAND/MOB_SUMMONED/null/fuera |
+| `VillageTerrainPolicyTest` | Unitario | **25** | `policyTest` | I421: `VillageSpawnGuard` corta NATURAL/EVENT/REINFORCEMENT/SPAWNER/STRUCTURE dentro; no corta huevo/COMMAND/MOB_SUMMONED/null/fuera. I422: campana destruida+y viva cae; ya caída no repite; sin campana no cae |
 | `VillageForestLayoutTest` | Unitario | 20 plazas | `policyTest` | Separación interior/arboleda, radio |
 | `WarehouseApproachPolicyTest` | Unitario | 8 | `policyTest` | Acceso al almacén |
 | `FoodHungerPolicyTest`, `PantryCreditPolicyTest` | Unitario | — | `policyTest` | Comida/crédito de despensa |

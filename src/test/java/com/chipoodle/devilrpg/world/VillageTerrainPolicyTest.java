@@ -49,6 +49,10 @@ public final class VillageTerrainPolicyTest {
         check(false, VillageSpawnGuard.debeCancelar(true, false, MobSpawnType.NATURAL));
         check(false, VillageSpawnGuard.debeCancelar(false, true, MobSpawnType.NATURAL));
         check(false, VillageSpawnGuard.debeCancelar(true, true, null));
+        // 14. La campana destruida conquista la aldea (aunque la ola muera después).
+        check(true, VillageSiegeBellPolicy.laAldeaCaePorCampana(true, false));
+        check(false, VillageSiegeBellPolicy.laAldeaCaePorCampana(true, true));
+        check(false, VillageSiegeBellPolicy.laAldeaCaePorCampana(false, false));
         System.out.println("VILLAGE_TERRAIN_POLICY_TEST: OK (" + checks + " aserciones)");
     }
 

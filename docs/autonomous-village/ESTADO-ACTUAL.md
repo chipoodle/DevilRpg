@@ -1,5 +1,10 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — ASEDIO/CAMPANA.** `Occupied [0,1]` y `Resolved [0,1]` con `Fallen []`:
+> la campana rota no hacía caer la aldea. `VillageSiegeBellPolicy` resuelve **caída inmediata** en
+> asedio clásico y horda; `reconciliarAldeasOcupadas` corrige partidas viejas. **25 aserciones**;
+> runtime pendiente. La partida actual pasará ambas aldeas a caídas al reiniciar.
+
 > **ACTUALIZACIÓN 25-nov-2026 — CAMPO DE FUERZA.** El guardado tenía `Resolved [0,1]`; el campo
 > estaba activo. El agujero era la lista cerrada de `MobSpawnType` en `EntityJoinLevelEvent`.
 > `VillageSpawnGuard` cancela todo hostil dentro salvo huevo/`/summon`/`MOB_SUMMONED`; vanilla se

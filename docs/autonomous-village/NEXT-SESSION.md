@@ -1,3 +1,14 @@
+# ASEDIO — CAMPANA DESTRUIDA = ALDEA CONQUISTADA (25-nov-2026)
+
+- **Diagnóstico:** guardado `Occupied [0,1]`, `Resolved [0,1]`, `Fallen []`. La campana estaba rota,
+  pero la resolución solo miraba `waveCleared`/timeout y la declaraba salvada.
+- **Fix:** `VillageSiegeBellPolicy`; asedio clásico y horda del mundo resuelven **caída inmediata** si
+  `Occupied`. `reconciliarAldeasOcupadas` corrige partidas viejas (`Occupied && !Fallen` → caída).
+- **Evidencia:** `VILLAGE_TERRAIN_POLICY_TEST: OK (25 aserciones)`; gate 1m30s; skills 416;
+  persistencia 553. **Runtime pendiente de reinicio.**
+- **Ojo:** la partida actual tiene `Occupied [0,1]`: al reiniciar, **ambas aldeas pasan a caídas**.
+- **Informe:** `2026-11-25-SIEGE-BELL-VICTORY.md`.
+
 # CAMPO DE FUERZA — SPAWN DE HOSTILES CERRADO (25-nov-2026)
 
 - **Diagnóstico:** el guardado tiene `Resolved [0,1]`; el campo **sí estaba activo**. El fallo era
