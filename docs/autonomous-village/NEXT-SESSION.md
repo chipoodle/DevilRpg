@@ -1,3 +1,14 @@
+# ACTUALIZACIÓN 25-nov-2026 — HARDENING DE SKILLS PUBLICADO, VALIDACIÓN PENDIENTE
+
+- Código de seguridad publicado en `2224c77a359434b23a8929a58e66e4fe60a34930`.
+- El árbol completo ya no acepta NBT C2S; compras, loadouts y rotación usan acciones tipadas.
+- Pasivos ejecutados dentro de la compra validada; payload independiente retirado.
+- Payload directo de transformación exige hombre lobo activo y maná agotado.
+- **No hay PASS nuevo:** DeepSeek debe ejecutar build, tests, lint, UI cliente y servidor dedicado sobre el HEAD actual.
+- Informe: `2026-11-25-SKILLS-SECURITY-HARDENING.md`.
+
+---
+
 # OBJETIVO CERRADO — SOAK FINAL PASS EN `43afe1e6` (24-nov-2026)
 
 - **Soak final:** `soak-final-head-20261124-2200` → **`SOAK_PASS`**: 72k, **0 muertes**, 11/11,
