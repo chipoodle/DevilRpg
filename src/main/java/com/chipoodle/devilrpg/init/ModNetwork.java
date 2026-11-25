@@ -21,10 +21,13 @@ public class ModNetwork {
         registrar.playToServer(WerewolfAttackPayload.TYPE, WerewolfAttackPayload.STREAM_CODEC, WerewolfAttackPayload::handle);
         registrar.playToServer(PlayerPassiveSkillPayload.TYPE, PlayerPassiveSkillPayload.STREAM_CODEC, PlayerPassiveSkillPayload::handle);
         registrar.playToServer(DirectSkillExecutionPayload.TYPE, DirectSkillExecutionPayload.STREAM_CODEC, DirectSkillExecutionPayload::handle);
+        registrar.playToServer(SkillPointSpendPayload.TYPE, SkillPointSpendPayload.STREAM_CODEC, SkillPointSpendPayload::handle);
+        registrar.playToServer(SkillLoadoutPayload.TYPE, SkillLoadoutPayload.STREAM_CODEC, SkillLoadoutPayload::handle);
+        registrar.playToServer(SkillSetRotatePayload.TYPE, SkillSetRotatePayload.STREAM_CODEC, SkillSetRotatePayload::handle);
 
         // Bidirectional (client <-> server)
         registrar.playToClient(PlayerManaPayload.TYPE, PlayerManaPayload.STREAM_CODEC, PlayerManaPayload::handle);
-        registrar.playBidirectional(PlayerSkillTreePayload.TYPE, PlayerSkillTreePayload.STREAM_CODEC, PlayerSkillTreePayload::handle);
+        registrar.playToClient(PlayerSkillTreePayload.TYPE, PlayerSkillTreePayload.STREAM_CODEC, PlayerSkillTreePayload::handle);
         registrar.playToClient(PlayerExperiencePayload.TYPE, PlayerExperiencePayload.STREAM_CODEC, PlayerExperiencePayload::handle);
         registrar.playToClient(PlayerAuxiliarPayload.TYPE, PlayerAuxiliarPayload.STREAM_CODEC, PlayerAuxiliarPayload::handle);
         registrar.playToClient(PlayerMinionPayload.TYPE, PlayerMinionPayload.STREAM_CODEC, PlayerMinionPayload::handle);

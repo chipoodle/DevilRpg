@@ -16,6 +16,9 @@ import com.chipoodle.devilrpg.client.gui.scrollableskillscreen.model.ClientSkill
 import com.chipoodle.devilrpg.entity.ITamableEntity;
 import com.chipoodle.devilrpg.init.ModNetwork;
 import com.chipoodle.devilrpg.network.payload.PlayerSkillTreePayload;
+import com.chipoodle.devilrpg.network.payload.SkillLoadoutPayload;
+import com.chipoodle.devilrpg.network.payload.SkillPointSpendPayload;
+import com.chipoodle.devilrpg.network.payload.SkillSetRotatePayload;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
 import com.chipoodle.devilrpg.skillsystem.SingletonSkillExecutorFactory;
 import com.chipoodle.devilrpg.util.BytesUtil;
@@ -138,13 +141,31 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     public void setSkillsNameOfPowers(HashMap<PowerEnum, SkillEnum> names, Player player) {
         List<HashMap<PowerEnum, SkillEnum>> sets = loadSkillSets();
         int idx = clampActiveIndex(sets.size());
-        sets.set(idx, names);
-        saveSkillSets(sets);
-        if (!player.level().isClientSide) {
-            sendSkillChangesToClient((ServerPlayer) player);
-        } else {
-            sendSkillChangesToServer();
+        if (names == null) return;
+        if (player.level().isClientSide) {
+            HashMap<PowerEnum, SkillEnum> current = sets.get(idx);
+            PowerEnum changedPower = null;
+            SkillEnum changedSkill = null;
+            int changes = 0;
+            for (PowerEnum power : PowerEnum.values()) {
+                SkillEnum before = current.getOrDefault(power, SkillEnum.EMPTY);
+                SkillEnum after = names.getOrDefault(power, SkillEnum.EMPTY);
+                if (before != after) {
+                    changedPower = power;
+                    changedSkill = after;
+                    changes++;
+                }
+            }
+            if (changes == 1 && changedPower != null && changedSkill != null) {
+                PacketDistributor.sendToServer(new SkillLoadoutPayload(changedPower, changedSkill));
+            } else {
+                DevilRpg.LOGGER.warn("[SkillTree] cambio de loadout local rechazado: {} ranuras modificadas", changes);
+            }
+            return;
         }
+        sets.set(idx, new HashMap<>(names));
+        saveSkillSets(sets);
+        sendSkillChangesToClient((ServerPlayer) player);
     }
 
     @Override
@@ -159,6 +180,11 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void rotateSkillSet(int delta, Player player) {
+        if (delta != -1 && delta != 1) return;
+        if (player.level().isClientSide) {
+            PacketDistributor.sendToServer(new SkillSetRotatePayload(delta));
+            return;
+        }
         List<HashMap<PowerEnum, SkillEnum>> sets = loadSkillSets();
         // Crear conjuntos vacios de sobra hasta MAX_SKILL_SETS (3) para poder rotar entre ellos.
         boolean grew = false;
@@ -172,11 +198,7 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         int count = sets.size();
         int newIdx = ((getActiveSkillSetIndex() + delta) % count + count) % count;
         nbt.putInt(ACTIVE_SKILL_SET_KEY, newIdx);
-        if (!player.level().isClientSide) {
-            sendSkillChangesToClient((ServerPlayer) player);
-        } else {
-            sendSkillChangesToServer();
-        }
+        sendSkillChangesToClient((ServerPlayer) player);
     }
 
     private int clampActiveIndex(int count) {
@@ -244,17 +266,57 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
 
     @Override
     public void setSkillsPoints(HashMap<SkillEnum, Integer> points, Player player) {
-        skillsCache = null; // los puntos cambian -> invalidar la cache
-        try {
-            nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(points));
-            if (!player.level().isClientSide) {
-                sendSkillChangesToClient((ServerPlayer) player);
-            } else {
-                sendSkillChangesToServer();
+        if (points == null) return;
+        if (player.level().isClientSide) {
+            HashMap<SkillEnum, Integer> before = readStoredSkillsPoints();
+            Set<SkillEnum> all = new HashSet<>(before.keySet());
+            all.addAll(points.keySet());
+            SkillEnum requestedSkill = null;
+            int changes = 0;
+            boolean valid = true;
+            for (SkillEnum skill : all) {
+                if (skill == null || skill == SkillEnum.EMPTY) continue;
+                int oldLevel = before.getOrDefault(skill, 0);
+                int newLevel = points.getOrDefault(skill, 0);
+                if (oldLevel != newLevel) {
+                    if (newLevel != oldLevel + 1) { valid = false; break; }
+                    requestedSkill = skill;
+                    changes++;
+                }
             }
+            skillsCache = before;
+            if (valid && changes == 1 && requestedSkill != null) {
+                PacketDistributor.sendToServer(new SkillPointSpendPayload(requestedSkill));
+            } else if (changes > 0 || !valid) {
+                DevilRpg.LOGGER.warn("[SkillTree] solicitud local de puntos rechazada: cambios={}, valida={}", changes, valid);
+            }
+            return;
+        }
+        skillsCache = new HashMap<>(points);
+        try {
+            nbt.putByteArray(SKILLS_KEY, BytesUtil.toByteArray(new HashMap<>(points)));
+            sendSkillChangesToClient((ServerPlayer) player);
         } catch (IOException e) {
             DevilRpg.LOGGER.error("Error en setSkillsPoints", e);
         }
+    }
+
+    private HashMap<SkillEnum, Integer> readStoredSkillsPoints() {
+        try {
+            Object stored = BytesUtil.toObject(nbt.getByteArray(SKILLS_KEY));
+            if (stored instanceof HashMap<?, ?> map) {
+                HashMap<SkillEnum, Integer> result = new HashMap<>();
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    if (entry.getKey() instanceof SkillEnum skill && entry.getValue() instanceof Integer level) {
+                        result.put(skill, level);
+                    }
+                }
+                return result;
+            }
+        } catch (Exception e) {
+            DevilRpg.LOGGER.error("No se pudo leer el árbol persistido para validar la solicitud local", e);
+        }
+        return new HashMap<>();
     }
 
     @SuppressWarnings("unchecked")
@@ -443,23 +505,14 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
     }
 
     @Override
-    public void triggerPassive(Player sender, CompoundTag triggeredSkill) {
-        //if (!sender.level().isClientSide) {
-        SkillEnum skillFromByteArray = getSkillFromByteArray(triggeredSkill);
-        // Regla: un pasivo hijo de un skill ACTIVO no se ejecuta solo; lo ejecuta su padre activo
-        // con sus parametros (executePassiveChildren). Solo los pasivos "raiz" (sin padre activo)
-        // se aplican aqui al asignarles puntos. Esto evita ejecutar a KNOCKBACK_RESISTANCE etc. con
-        // un mapa vacio.
-        if (skillFromByteArray == SkillEnum.EMPTY || isChildOfActiveSkill(skillFromByteArray)) {
-            return;
-        }
+    public void triggerPassive(Player sender, SkillEnum skillFromByteArray) {
+        if (skillFromByteArray == null || skillFromByteArray == SkillEnum.EMPTY
+                || !skillFromByteArray.isPassive() || skillFromByteArray.isForMinion()
+                || isChildOfActiveSkill(skillFromByteArray)) return;
         Integer nivel = getSkillsPoints() == null ? null : getSkillsPoints().get(skillFromByteArray);
-        if (nivel == null || nivel <= 0) {
-            return; // el servidor solo ejecuta el pasivo si el árbol ya le dio nivel
-        }
+        if (nivel == null || nivel <= 0) return;
         AbstractSkillExecutor skill = getLoadedSkillExecutor(skillFromByteArray);
-        skill.execute(sender.level(), sender, new HashMap<>());
-        //}
+        if (skill != null) skill.execute(sender.level(), sender, new HashMap<>());
     }
 
     /** Devuelve true si el pasivo es descendiente (hijo o nieto...) de algun skill activo del arbol. */
@@ -590,8 +643,9 @@ public class PlayerSkillCapabilityImplementation implements PlayerSkillCapabilit
         return clientBuilder;
     }
 
+    /** Las modificaciones C2S del árbol usan acciones tipadas, nunca el NBT completo. */
     private void sendSkillChangesToServer() {
-        PacketDistributor.sendToServer(new PlayerSkillTreePayload(serializeNBT(RegistryAccess.EMPTY).copy()));
+        DevilRpg.LOGGER.warn("[SkillTree] intento de sincronización C2S del NBT completo bloqueado");
     }
 
     private void sendSkillChangesToClient(ServerPlayer pe) {

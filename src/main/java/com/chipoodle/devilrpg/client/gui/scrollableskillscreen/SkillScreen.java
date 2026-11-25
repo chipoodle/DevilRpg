@@ -25,7 +25,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -456,8 +455,7 @@ public class SkillScreen extends Screen implements ClientSkillBuilderFromJson.IL
 
                     if (skillEnum.isPassive() && !skillEnum.isForMinion()) {
                         //Para pasivos
-                        CompoundTag compoundTag = skillCap.setSkillToByteArray(skillEnum);
-                        PacketDistributor.sendToServer(new PlayerPassiveSkillPayload(compoundTag));
+                        PacketDistributor.sendToServer(new PlayerPassiveSkillPayload(skillEnum));
                     }
                 }
             }

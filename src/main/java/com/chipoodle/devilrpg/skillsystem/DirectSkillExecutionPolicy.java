@@ -16,7 +16,16 @@ public final class DirectSkillExecutionPolicy {
     private DirectSkillExecutionPolicy() {
     }
 
+    /** Elegibilidad de la habilidad; no autoriza por sí sola el payload directo. */
     public static boolean puedeEjecutar(SkillEnum skill, int nivel) {
         return skill == SkillEnum.TRANSFORM_WEREWOLF && nivel > 0;
+    }
+
+    /** Autoriza únicamente la reversión con el jugador transformado y el maná agotado. */
+    public static boolean puedeEjecutar(SkillEnum skill, int nivel, boolean transformado, float mana) {
+        return puedeEjecutar(skill, nivel)
+                && transformado
+                && Float.isFinite(mana)
+                && mana <= 0.0001F;
     }
 }

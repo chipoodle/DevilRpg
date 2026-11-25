@@ -2,6 +2,10 @@ package com.chipoodle.devilrpg.network.payload;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.IGenericCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapability;
+import com.chipoodle.devilrpg.capability.auxiliar.PlayerAuxiliaryCapabilityInterface;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapability;
+import com.chipoodle.devilrpg.capability.mana.PlayerManaCapabilityInterface;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapabilityInterface;
 import com.chipoodle.devilrpg.skillsystem.AbstractSkillExecutor;
@@ -42,12 +46,20 @@ public record DirectSkillExecutionPayload(SkillEnum skill) implements CustomPack
                 PlayerSkillCapabilityInterface unwrappedPlayerCapability = IGenericCapability.getUnwrappedPlayerCapability(Objects.requireNonNull(sender), PlayerSkillCapability.INSTANCE);
                 int nivel = unwrappedPlayerCapability.getSkillsPoints() == null ? 0
                         : unwrappedPlayerCapability.getSkillsPoints().getOrDefault(msg.skill(), 0);
-                if (!com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy.puedeEjecutar(msg.skill(), nivel)) {
-                    DevilRpg.LOGGER.warn("[Skill] payload directo rechazado: {} (nivel {})", msg.skill(), nivel);
+                PlayerAuxiliaryCapabilityInterface auxiliary =
+                        IGenericCapability.getUnwrappedPlayerCapability(sender, PlayerAuxiliaryCapability.INSTANCE);
+                PlayerManaCapabilityInterface mana =
+                        IGenericCapability.getUnwrappedPlayerCapability(sender, PlayerManaCapability.INSTANCE);
+                boolean transformed = auxiliary != null && auxiliary.isWerewolfTransformation();
+                float currentMana = mana == null ? Float.MAX_VALUE : mana.getMana();
+                if (!com.chipoodle.devilrpg.skillsystem.DirectSkillExecutionPolicy
+                        .puedeEjecutar(msg.skill(), nivel, transformed, currentMana)) {
+                    DevilRpg.LOGGER.warn("[Skill] reversión directa rechazada: skill={}, nivel={}, transformado={}, mana={}",
+                            msg.skill(), nivel, transformed, currentMana);
                     return;
                 }
                 AbstractSkillExecutor loadedSkillExecutor = unwrappedPlayerCapability.getLoadedSkillExecutor(msg.skill());
-                if (loadedSkillExecutor != null) {
+                if (loadedSkillExecutor != null && loadedSkillExecutor.arePreconditionsMetBeforeConsumingResource(sender)) {
                     loadedSkillExecutor.execute(sender.level(), sender, null);
                 }
             }

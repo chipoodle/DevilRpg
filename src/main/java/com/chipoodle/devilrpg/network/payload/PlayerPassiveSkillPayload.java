@@ -2,7 +2,7 @@ package com.chipoodle.devilrpg.network.payload;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.capability.skill.PlayerSkillCapability;
-import net.minecraft.nbt.CompoundTag;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -11,15 +11,20 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record PlayerPassiveSkillPayload(CompoundTag skillCompound) implements CustomPacketPayload {
+public record PlayerPassiveSkillPayload(SkillEnum skill) implements CustomPacketPayload {
 
     public static final Type<PlayerPassiveSkillPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, "player_passive_skill"));
 
     public static final StreamCodec<FriendlyByteBuf, PlayerPassiveSkillPayload> STREAM_CODEC = StreamCodec.of(
-            (buf, msg) -> buf.writeNbt(msg.skillCompound()),
-            buf -> new PlayerPassiveSkillPayload(buf.readNbt())
+            (buf, msg) -> buf.writeUtf(msg.skill().name()),
+            buf -> new PlayerPassiveSkillPayload(readSkill(buf))
     );
+
+    private static SkillEnum readSkill(FriendlyByteBuf buf) {
+        try { return SkillEnum.valueOf(buf.readUtf(64)); }
+        catch (IllegalArgumentException ignored) { return SkillEnum.EMPTY; }
+    }
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
@@ -30,7 +35,7 @@ public record PlayerPassiveSkillPayload(CompoundTag skillCompound) implements Cu
         ctx.enqueueWork(() -> {
             Player player = ctx.player();
             if (player instanceof ServerPlayer sender) {
-                sender.getData(PlayerSkillCapability.INSTANCE).triggerPassive(sender, msg.skillCompound());
+                sender.getData(PlayerSkillCapability.INSTANCE).triggerPassive(sender, msg.skill());
             }
         });
     }
