@@ -40,6 +40,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.jetbrains.annotations.Nullable;
@@ -225,6 +226,8 @@ public class VillagerLumberjackGoal extends Goal {
     private int nivelAldea = Integer.MIN_VALUE;
     /** ¿La harina que va a buscar está en el ALMACÉN (y no en la despensa)? Decide a dónde camina y su alcance. */
     private boolean harinaEnElAlmacen;
+    /** La última harina se localizó en un compostero listo (no en un contenedor). */
+    private boolean harinaEnElCompostero;
 
     public VillagerLumberjackGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -1640,6 +1643,10 @@ public class VillagerLumberjackGoal extends Goal {
      * leñador se enterara).
      */
     private void recogerHarina(ServerLevel level) {
+        if (harinaEnElCompostero) {
+            recogerHarinaDelCompostero(level);
+            return;
+        }
         Container origen = harinaEnElAlmacen ? VillageStorage.almacen(level, center)
                 : VillagePantry.despensa(level, center);
         if (origen == null) {
@@ -1658,6 +1665,29 @@ public class VillagerLumberjackGoal extends Goal {
             DevilRpg.LOGGER.info("[Village] El lenador: se lleva {} de harina de huesos del {} para la arboleda",
                     cogidas, harinaEnElAlmacen ? "almacen" : "despensa");
         }
+    }
+
+    /** Vacía un compostero lleno directamente: es la harina que el granjero aún no había llevado a la despensa. */
+    private void recogerHarinaDelCompostero(ServerLevel level) {
+        BlockPos comp = composteroConHarina(level);
+        harinaEnElCompostero = false;
+        if (comp == null) {
+            return;
+        }
+        BlockState state = level.getBlockState(comp);
+        level.setBlock(comp, state.setValue(ComposterBlock.LEVEL, 0), Block.UPDATE_ALL);
+        ItemStack resto = guardarEnInventario(new ItemStack(Items.BONE_MEAL, 1));
+        if (!resto.isEmpty()) {
+            Container despensa = VillagePantry.despensa(level, center);
+            if (despensa != null) {
+                VillagePantry.guardar(despensa, resto);
+            } else {
+                villager.spawnAtLocation(resto);
+            }
+        }
+        VillageManager.ponerSuceso(villager, "Vacio el compostero");
+        DevilRpg.LOGGER.info("[LUMBER-HARINA-COMPOSTER] uuid={} comp={} harina={}",
+                villager.getUUID(), comp.toShortString(), harinaEnMano());
     }
 
     /**
@@ -1791,12 +1821,37 @@ public class VillagerLumberjackGoal extends Goal {
                 puntoDbg == null ? "null" : puntoDbg.toShortString());
         if (VillagePantry.contar(despensa, s -> s.is(Items.BONE_MEAL)) > 0) {
             harinaEnElAlmacen = false;
+            harinaEnElCompostero = false;
             return VillagePantry.puntoDeApoyo(level, center);
         }
         Container almacen = VillageStorage.almacen(level, center);
         if (VillagePantry.contar(almacen, s -> s.is(Items.BONE_MEAL)) > 0) {
             harinaEnElAlmacen = true;
+            harinaEnElCompostero = false;
             return VillageStorage.puntoDeApoyo(level, center);
+        }
+        // El compostero del granjero produce la harina, pero hasta que el granjero lo vacía en la
+        // despensa el leñador no la veía: con 0 en los dos contenedores se quedaba sin abonar la
+        // arboleda. Si hay un compostero lleno, se va a él y lo vacía.
+        BlockPos comp = composteroConHarina(level);
+        if (comp != null) {
+            harinaEnElAlmacen = false;
+            harinaEnElCompostero = true;
+            return VillageGenerator.puntoDeApoyoDelCompostero(level, comp);
+        }
+        return null;
+    }
+
+    /** Un compostero del pueblo que ya está lleno (nivel máximo), o {@code null}. */
+    @Nullable
+    private BlockPos composteroConHarina(ServerLevel level) {
+        int cota = nivelDeLaAldea(level);
+        for (int i = 0; i < 3; i++) {
+            BlockPos comp = VillageGenerator.composteroDeLaParcela(center, i, cota);
+            BlockState s = level.getBlockState(comp);
+            if (s.is(Blocks.COMPOSTER) && s.getValue(ComposterBlock.LEVEL) >= ComposterBlock.MAX_LEVEL) {
+                return comp;
+            }
         }
         return null;
     }
@@ -2602,6 +2657,17 @@ public class VillagerLumberjackGoal extends Goal {
     @Nullable
     private BlockPos pasoDeCamino(ServerLevel level) {
         if (fase != Fase.ENTREGAR) {
+            if (fase == Fase.TALAR && target != null
+                    && !VillageManager.dentroDelRecinto(level, target, center, VillageGenerator.FENCE_RADIUS)
+                    && VillageManager.dentroDelRecinto(level, villager.blockPosition(), center,
+                            VillageGenerator.FENCE_RADIUS)) {
+                // Un árbol de FUERA: primero se cruza el portón. El planificador de tala no conoce
+                // el muro y devolvía NO-STEP, así que el leñador reclamaba el árbol y se rendía.
+                BlockPos porton = VillageManager.pasoParaCruzarElMuro(level, center, villager, target);
+                if (porton != null) {
+                    return porton;
+                }
+            }
             if (fase == Fase.TALAR) {
                 // TEST-ONLY C1 barrier: while a selected Step is held, do not re-plan it.
                 BlockPos held = TalarStepBarrier.heldDestination(villager.getUUID(), target);

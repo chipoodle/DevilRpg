@@ -1,3 +1,11 @@
+# LEÑADOR — PORTÓN Y HARINA DEL COMPOSTERO (25-nov-2026)
+
+- **Árboles de fuera:** `pasoDeCamino` no conocía el muro y devolvía NO-STEP; el leñador reclamaba
+  un árbol de fuera y lo soltaba. Ahora, si el árbol está fuera y él dentro, va primero al **portón**.
+- **Abono:** `puntoConHarina` daba 0/0 en despensa/almacén; ahora, si no hay harina en contenedores,
+  busca un **compostero lleno**, lo vacía y se lleva la harina. Si no hay composta, no inventa.
+- **Informe:** `2026-11-25-LUMBERJACK-GATE-AND-BONE-MEAL.md`; gate 1m38s.
+
 # SPAWN — TIEMPO POR PERFIL Y DIAGNÓSTICO AGRESIVO (25-nov-2026)
 
 - **Tiempo por perfil:** `SpawnScaleProfile` tiene `threatFullHours`; `AggressiveZombieSpawnProfile`

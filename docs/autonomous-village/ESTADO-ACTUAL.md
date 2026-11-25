@@ -1,5 +1,9 @@
 # ESTADO ACTUAL — Handoff de sesión (navegación autónoma A2)
 
+> **ACTUALIZACIÓN 25-nov-2026 — LEÑADOR.** Ya no reclama un árbol de fuera y se rinde: si el objetivo
+> está fuera y él dentro, `pasoDeCamino` devuelve primero el portón. Si no hay harina en
+> despensa/almacén, vacía un **compostero lleno** para abonar la arboleda. Runtime pendiente.
+
 > **ACTUALIZACIÓN 25-nov-2026 — SPAWN.** El tiempo de amenaza es **por perfil** (`SpawnScaleProfile`;
   3 h en agresivo/vex), no solo global. El `13` es `minHardDistance`, no tiempo. La `AggressiveZombieSpawnRule`
   funciona: en el log spawnearon 3 a las 01:14; la probabilidad era 1–17 % por la curva 67→3000.
