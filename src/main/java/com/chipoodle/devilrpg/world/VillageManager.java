@@ -1875,7 +1875,8 @@ public final class VillageManager {
             }
             d.tickTicks++;
 
-            // Tras el margen de exif (!d.waveSpawned && d.tickTicks >= GRACE_TICKS) {
+            // Tras el margen de exploración, inicia la oleada de forma escalonada.
+            if (!d.waveSpawned && d.tickTicks >= GRACE_TICKS) {
                 // La preparación y cada intento de spawn se reparten entre ticks. Cada tick se busca
                 // como máximo un sitio y se inserta como máximo un asediador.
                 if (!d.oleadaEnCurso) {
