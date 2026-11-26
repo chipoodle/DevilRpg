@@ -2639,6 +2639,15 @@ public final class VillageManager {
         WORLD_SIEGES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave,
                         level.getGameTime()));
+        // El libro mayor ya existe: ahora sí se puede marcar a cada entidad como participante oficial.
+        // La marca y la última posición deben nacer DESPUÉS del registro, nunca durante PendingHorde.
+        for (UUID uuid : wave) {
+            net.minecraft.world.entity.Entity entity = level.getEntity(uuid);
+            if (entity instanceof AggressiveZombieEntity zombie) {
+                zombie.setWorldSiegeIndex(settlement.objectiveIndex());
+                registrarPosicionDeAsediador(uuid, zombie.blockPosition());
+            }
+        }
         // Los que marchan contra la aldea van marcados con brillo, igual que la ola del asedio clásico: es la
         // única forma de saber a quién hay que parar cuando llegan de noche entre los monstruos del campo.
         marcarAsediadores(level, wave, true);
