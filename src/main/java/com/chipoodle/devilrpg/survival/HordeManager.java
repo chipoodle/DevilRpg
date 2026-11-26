@@ -494,10 +494,26 @@ public final class HordeManager {
                 return;
             }
             request.terminal = true;
-            request.ticketReleased = true;
+            try {
+                level.getChunkSource().removeRegionTicket(
+                        HORDE_CHUNK_TICKET, request.chunkPos, 0, request.ticketKey);
+                request.ticketReleased = true;
+            } catch (RuntimeException firstFailure) {
+                // Ticket cleanup must never interrupt timeout/unload/member finalization.
+                // Retry once immediately on the server thread; if the chunk source is already
+                // closing, retain an explicit diagnostic instead of propagating into lifecycle code.
+                try {
+                    level.getChunkSource().removeRegionTicket(
+                            HORDE_CHUNK_TICKET, request.chunkPos, 0, request.ticketKey);
+                    request.ticketReleased = true;
+                } catch (RuntimeException retryFailure) {
+                    DevilRpg.LOGGER.error(
+                            "[Horda] no se pudo retirar ticket {} de campaña {} tras dos intentos: {}; reintento: {}",
+                            request.chunkPos, request.ticketKey.campaignId(),
+                            firstFailure.toString(), retryFailure.toString());
+                }
+            }
         }
-        level.getChunkSource().removeRegionTicket(
-                HORDE_CHUNK_TICKET, request.chunkPos, 0, request.ticketKey);
     }
 
     private static void finishPendingHorde(ServerLevel level, PendingHorde pending) {
