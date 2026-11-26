@@ -10,12 +10,17 @@ import com.chipoodle.devilrpg.spawnprofile.AggressiveZombieSpawnProfile;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Hordas periódicas: cada cierto tiempo (que se acorta con la amenaza global) se intenta spawnear una
@@ -65,10 +71,55 @@ public final class HordeManager {
      */
     private static final Map<ServerLevel, Long> ULTIMO_TURNO = new HashMap<>();
 
-    /** Oleada en construcción: se inserta como máximo un mob por tick del servidor. */
+    /** Oleada en construcción; cada miembro conserva su sorteo y candidato durante la carga del chunk. */
     private static final Map<ServerLevel, PendingHorde> PENDING_HORDES = new HashMap<>();
 
+    /** FULL basta para insertar una entidad; no reservamos innecesariamente un radio ENTITY_TICKING. */
+    private static final TicketType<ChunkTicketKey> HORDE_CHUNK_TICKET = TicketType.create(
+            "devilrpg_horde",
+            Comparator.comparing(ChunkTicketKey::campaignId).thenComparingLong(ChunkTicketKey::chunkPos),
+            0
+    );
+    private static final int MAX_CHUNK_LOAD_ATTEMPTS = 2;
+    private static final long CHUNK_RETRY_DELAY_TICKS = 20L;
+    private static final long CHUNK_REQUEST_TIMEOUT_TICKS = 20L * 30L;
+
+    private record ChunkTicketKey(UUID campaignId, long chunkPos) {
+    }
+
+    private static final class HordeMember {
+        private final int index;
+        private final boolean eligible;
+        private final int x;
+        private final int z;
+        private int attempts;
+        private long retryAtTick;
+        private ChunkRequest request;
+
+        private HordeMember(int index, boolean eligible, int x, int z) {
+            this.index = index;
+            this.eligible = eligible;
+            this.x = x;
+            this.z = z;
+        }
+    }
+
+    private static final class ChunkRequest {
+        private final ChunkPos chunkPos;
+        private final ChunkTicketKey ticketKey;
+        private final long startedAtTick;
+        private volatile boolean terminal;
+        private boolean ticketReleased;
+
+        private ChunkRequest(ChunkPos chunkPos, ChunkTicketKey ticketKey, long startedAtTick) {
+            this.chunkPos = chunkPos;
+            this.ticketKey = ticketKey;
+            this.startedAtTick = startedAtTick;
+        }
+    }
+
     private static final class PendingHorde {
+        private final UUID campaignId = UUID.randomUUID();
         private final ServerPlayer playerTarget;
         private final VillageManager.Settlement settlement;
         private final double probability;
@@ -79,6 +130,8 @@ public final class HordeManager {
         private final Set<UUID> defenders = new HashSet<>();
         private int nextIndex;
         private int spawned;
+        private HordeMember currentMember;
+        private boolean cancelled;
 
         private PendingHorde(ServerPlayer playerTarget, VillageManager.Settlement settlement,
                              double probability, int plannedCount, Vec3 base) {
@@ -135,6 +188,10 @@ public final class HordeManager {
         PendingHorde pending = PENDING_HORDES.remove(level);
         if (pending == null) {
             return;
+        }
+        pending.cancelled = true;
+        if (pending.currentMember != null && pending.currentMember.request != null) {
+            releaseChunkTicket(level, pending.currentMember.request);
         }
         for (UUID uuid : pending.wave) {
             net.minecraft.world.entity.Entity entity = level.getEntity(uuid);
@@ -194,52 +251,220 @@ public final class HordeManager {
     }
 
     /**
-     * Avanza una oleada pendiente. Cada tick consume un índice y crea/inserta como máximo una entidad;
-     * las búsquedas de IA/navegación iniciales quedan distribuidas en ticks consecutivos.
+     * Avanza la oleada sin pedir chunks de forma bloqueante. Las solicitudes se inician desde el common pool;
+     * toda mutación de nivel, ticket, entidad y PendingHorde vuelve al hilo del servidor.
      */
     private static void tickPendingHorde(ServerLevel level) {
         PendingHorde pending = PENDING_HORDES.get(level);
-        if (pending == null) {
+        if (pending == null || pending.cancelled) {
             return;
         }
-        if (pending.nextIndex < pending.plannedCount) {
-            pending.nextIndex++;
-            if (pending.random.nextDouble() < pending.probability) {
+
+        HordeMember member = pending.currentMember;
+        if (member == null) {
+            if (pending.nextIndex >= pending.plannedCount) {
+                finishPendingHorde(level, pending);
+                return;
+            }
+            int index = pending.nextIndex++;
+            boolean eligible = pending.random.nextDouble() < pending.probability;
+            int x = 0;
+            int z = 0;
+            if (eligible) {
                 double angle = pending.random.nextDouble() * Math.PI * 2.0D;
-                double dist = pending.settlement != null
+                double distance = pending.settlement != null
                         ? VILLAGE_SPAWN_MIN + pending.random.nextDouble() * (VILLAGE_SPAWN_MAX - VILLAGE_SPAWN_MIN)
                         : 20.0D + pending.random.nextDouble() * 24.0D;
-                int x = (int) Math.floor(pending.base.x + Math.cos(angle) * dist);
-                int z = (int) Math.floor(pending.base.z + Math.sin(angle) * dist);
-                int y = pending.settlement != null ? VillageGenerator.spawnY(level, x, z)
-                        : (int) Math.floor(pending.base.y);
-                BlockPos pos = new BlockPos(x, y, z);
-                AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
-                        .create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
-                if (zombie != null) {
-                    zombie.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
-                    if (pending.settlement != null) {
-                        zombie.setVillageCenter(pending.settlement.center());
-                        zombie.setGoToCenterActive(true);
-                    }
-                    if (level.addFreshEntity(zombie)) {
-                        com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
-                        if (pending.settlement != null) {
-                            // La entidad ya es participante de la campaña en construcción: debe conservar
-                            // la protección contra despawn y contabilizar daño/bajas. readAdditionalSaveData
-                            // autocura esta marca si el servidor se reinicia antes del libro mayor.
-                            zombie.setWorldSiegeIndex(pending.settlement.objectiveIndex());
-                            pending.wave.add(zombie.getUUID());
-                            VillageManager.registrarPosicionDeAsediador(zombie.getUUID(), pos);
-                        }
-                        pending.spawned++;
-                    } else {
-                        zombie.discard();
-                    }
+                x = (int) Math.floor(pending.base.x + Math.cos(angle) * distance);
+                z = (int) Math.floor(pending.base.z + Math.sin(angle) * distance);
+            }
+            member = new HordeMember(index, eligible, x, z);
+            pending.currentMember = member;
+            if (!eligible) {
+                pending.currentMember = null;
+                if (pending.nextIndex >= pending.plannedCount) {
+                    finishPendingHorde(level, pending);
                 }
+                return;
             }
         }
-        if (pending.nextIndex < pending.plannedCount) {
+
+        if (member.request != null) {
+            ChunkRequest request = member.request;
+            if (level.getGameTime() - request.startedAtTick >= CHUNK_REQUEST_TIMEOUT_TICKS) {
+                releaseChunkTicket(level, request);
+                member.request = null;
+                scheduleMemberRetry(level, pending, member, "timeout esperando chunk");
+            }
+            return;
+        }
+        if (level.getGameTime() < member.retryAtTick) {
+            return;
+        }
+
+        BlockPos column = new BlockPos(member.x, level.getMinBuildHeight(), member.z);
+        if (level.hasChunkAt(column)) {
+            spawnPendingMember(level, pending, member);
+            return;
+        }
+        requestMemberChunk(level, pending, member);
+    }
+
+    private static void requestMemberChunk(ServerLevel level, PendingHorde pending, HordeMember member) {
+        ChunkPos chunkPos = new ChunkPos(member.x >> 4, member.z >> 4);
+        ChunkTicketKey key = new ChunkTicketKey(pending.campaignId, chunkPos.toLong());
+        ChunkRequest request = new ChunkRequest(chunkPos, key, level.getGameTime());
+        member.attempts++;
+        member.request = request;
+
+        // Ticket mutations belong to the server thread. Keep the FULL chunk resident until insertion/cancellation.
+        level.getChunkSource().addRegionTicket(HORDE_CHUNK_TICKET, chunkPos, 0, key);
+        MinecraftServer server = level.getServer();
+
+        CompletableFuture.runAsync(() -> {
+            CompletableFuture<?> chunkFuture;
+            synchronized (request) {
+                // Unload may win while this task is waiting in the worker queue.
+                if (request.terminal) {
+                    return;
+                }
+                chunkFuture = level.getChunkSource().getChunkFuture(
+                        chunkPos.x, chunkPos.z, ChunkStatus.FULL, true);
+            }
+            chunkFuture.whenComplete((result, error) -> {
+                boolean loaded = error == null && result instanceof com.mojang.datafixers.util.Either<?, ?> either
+                        && either.left().isPresent();
+                dispatchChunkCompletion(server, level, pending, member, request, loaded, error);
+            });
+        }).exceptionally(error -> {
+            dispatchChunkCompletion(server, level, pending, member, request, false, error);
+            return null;
+        });
+    }
+
+    private static void dispatchChunkCompletion(MinecraftServer server, ServerLevel level, PendingHorde pending,
+                                                HordeMember member, ChunkRequest request,
+                                                boolean loaded, Throwable error) {
+        try {
+            server.execute(() -> completeChunkRequest(level, pending, member, request, loaded, error));
+        } catch (RuntimeException rejected) {
+            // During shutdown onLevelUnload invalidates the request and removes its ticket.
+            // Never attempt ticket or level access from this worker callback.
+            DevilRpg.LOGGER.debug("[Horda] callback de chunk rechazado durante cierre: {}", rejected.toString());
+        }
+    }
+
+    private static void completeChunkRequest(ServerLevel level, PendingHorde pending, HordeMember member,
+                                             ChunkRequest request, boolean loaded, Throwable error) {
+        if (request.terminal || pending.cancelled || PENDING_HORDES.get(level) != pending
+                || pending.currentMember != member || member.request != request) {
+            return;
+        }
+        if (loaded && level.hasChunkAt(new BlockPos(member.x, level.getMinBuildHeight(), member.z))) {
+            spawnPendingMember(level, pending, member);
+            return;
+        }
+
+        releaseChunkTicket(level, request);
+        member.request = null;
+        String reason = error == null ? "el future no entregó un chunk FULL" : error.toString();
+        scheduleMemberRetry(level, pending, member, reason);
+    }
+
+    private static void scheduleMemberRetry(ServerLevel level, PendingHorde pending,
+                                            HordeMember member, String reason) {
+        if (pending.cancelled || PENDING_HORDES.get(level) != pending || pending.currentMember != member) {
+            return;
+        }
+        if (member.attempts < MAX_CHUNK_LOAD_ATTEMPTS) {
+            member.retryAtTick = level.getGameTime() + CHUNK_RETRY_DELAY_TICKS;
+            DevilRpg.LOGGER.warn("[Horda] miembro {} campaña {} reintentará candidato ({}, {}) intento {}/{}: {}",
+                    member.index, pending.campaignId, member.x, member.z, member.attempts + 1,
+                    MAX_CHUNK_LOAD_ATTEMPTS, reason);
+            return;
+        }
+        DevilRpg.LOGGER.error("[Horda] miembro {} campaña {} no pudo cargar candidato ({}, {}) tras {} intentos: {}",
+                member.index, pending.campaignId, member.x, member.z, member.attempts, reason);
+        pending.currentMember = null;
+        if (pending.nextIndex >= pending.plannedCount) {
+            finishPendingHorde(level, pending);
+        }
+    }
+
+    private static void spawnPendingMember(ServerLevel level, PendingHorde pending, HordeMember member) {
+        if (pending.cancelled || PENDING_HORDES.get(level) != pending || pending.currentMember != member) {
+            return;
+        }
+        try {
+            // A direct spawn into an already-loaded chunk has no async request to account for.
+            if (member.request == null) {
+                member.attempts++;
+            }
+            int y = pending.settlement != null
+                    ? VillageGenerator.spawnY(level, member.x, member.z)
+                    : (int) Math.floor(pending.base.y);
+            BlockPos pos = new BlockPos(member.x, y, member.z);
+            AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
+                    .create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
+            if (zombie == null) {
+                failCurrentMember(level, pending, member, "la fábrica de entidad devolvió null");
+                return;
+            }
+            zombie.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
+            if (pending.settlement != null) {
+                zombie.setVillageCenter(pending.settlement.center());
+                zombie.setGoToCenterActive(true);
+            }
+            if (!level.addFreshEntity(zombie)) {
+                zombie.discard();
+                failCurrentMember(level, pending, member, "addFreshEntity rechazó la entidad");
+                return;
+            }
+
+            com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
+            if (pending.settlement != null) {
+                zombie.setWorldSiegeIndex(pending.settlement.objectiveIndex());
+                pending.wave.add(zombie.getUUID());
+                VillageManager.registrarPosicionDeAsediador(zombie.getUUID(), pos);
+            }
+            pending.spawned++;
+            if (member.request != null) {
+                releaseChunkTicket(level, member.request);
+                member.request = null;
+            }
+            pending.currentMember = null;
+            if (pending.nextIndex >= pending.plannedCount) {
+                finishPendingHorde(level, pending);
+            }
+        } catch (RuntimeException failure) {
+            failCurrentMember(level, pending, member, "excepción durante spawn: " + failure);
+        }
+    }
+
+    private static void failCurrentMember(ServerLevel level, PendingHorde pending,
+                                          HordeMember member, String reason) {
+        if (member.request != null) {
+            releaseChunkTicket(level, member.request);
+            member.request = null;
+        }
+        scheduleMemberRetry(level, pending, member, reason);
+    }
+
+    private static void releaseChunkTicket(ServerLevel level, ChunkRequest request) {
+        synchronized (request) {
+            if (request.ticketReleased) {
+                return;
+            }
+            request.terminal = true;
+            request.ticketReleased = true;
+        }
+        level.getChunkSource().removeRegionTicket(
+                HORDE_CHUNK_TICKET, request.chunkPos, 0, request.ticketKey);
+    }
+
+    private static void finishPendingHorde(ServerLevel level, PendingHorde pending) {
+        if (pending.cancelled || PENDING_HORDES.get(level) != pending || pending.currentMember != null
+                || pending.nextIndex < pending.plannedCount) {
             return;
         }
         PENDING_HORDES.remove(level);
