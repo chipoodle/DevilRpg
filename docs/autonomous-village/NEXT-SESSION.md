@@ -1,3 +1,16 @@
+# ACTUALIZACIÓN 26-nov-2026 — SPAWN EXTERIOR Y OLEADA ESCALONADA
+
+- El usuario aportó evidencia de ocho asediadores nacidos a radio 64,8 sobre la coronación; el primer waypoint exterior estaba a un bloque y NavExecutor lo consideraba alcanzado inmediatamente.
+- Se cambió el anillo de spawn a `FENCE_RADIUS + 6 .. FENCE_RADIUS + 11` (68–73 con valla 62).
+- Se reemplazó la creación en bucle de toda la oleada en un tick por estado transitorio `oleadaPendiente`: cada tick realiza una búsqueda de sitio y como máximo inserta un asediador. Conserva el tamaño total, brillo, libro mayor, reintentos de oleada vacía y cancelación sin recompensa.
+- Commit de código: `aeb00a5a00c1a201c65d0b7311cafb4998631722`.
+- Informe: `2026-11-26-RAID-SPAWN-STAGGERING.md`.
+- No se modificó `VexSpawnProfile.java`, Harness ni datos locales.
+- ChatGPT no ejecutó Gradle ni Minecraft runtime. Validación pendiente sobre SHA exacto `aeb00a5a00c1a201c65d0b7311cafb4998631722`, especialmente entrada física a través de la brecha.
+- El guardado manual/pausa de 20,5 s se considera separado del coste de IA/spawn según el log compartido; este cambio no altera el guardado.
+
+---
+
 # ACTUALIZACIÓN 26-nov-2026 — BRECHA EN LA RUTA BREAK ACTIVA
 
 - Usuario confirmó que Mana Pool ya se puede comprar; no reabrir ese incidente.
