@@ -107,7 +107,7 @@ public class AggressiveZombieSpawnRule implements CustomSpawnRule {
             int x = (int) Math.floor(player.getX() + Math.cos(angle) * distance);
             int z = (int) Math.floor(player.getZ() + Math.sin(angle) * distance);
             BlockPos surface = findSurface(level, new BlockPos(x, player.getBlockY(), z));
-            if (surface != null) {
+            if (surface != null && !com.chipoodle.devilrpg.world.VillageManager.estaProtegida(level, surface)) {
                 return surface;
             }
         }
