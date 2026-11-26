@@ -90,7 +90,6 @@ try {
 
     $gradleArgs = @('--no-daemon','--console=plain','--stacktrace','runServer',"-Pa2nGameDirectory=$gameDir",'-Pa2nMode=raid',"-Pa2nPhaseA=$FaseA", "-Pa2nPhaseB=$FaseB", "-Pa2nRunId=$runId",'-Pa2nTraceNav=true','-Pa2nTraceGlobalSearch=true','-Pa2nDiagnostics=true','-Pa2nPopulationQueryHarness=true')
     Write-Status 'PREPARED' "HEAD=$head; seed=$Semilla; phaseA=$FaseA; phaseB=$FaseB; budget=$Presupuesto; world=$worldDir"
-    $gradleArgs[$gradleArgs.IndexOf("-Pa2nGameDirectory=$gameDir")] = ('-Pa2nGameDirectory=' + [char]34 + $gameDir + [char]34)
     $gradleArgumentLine = ($gradleArgs | ForEach-Object { if ($_ -match '\s') { [char]34 + $_.Replace([string][char]34, ([string][char]92 + [string][char]34)) + [char]34 } else { $_ } }) -join ' '
     $gradleProcess = Start-Process -FilePath $gradlew -ArgumentList $gradleArgumentLine -WorkingDirectory $repo -PassThru -NoNewWindow -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
     Write-Status 'GRADLE_STARTED' 'Waiting for JVM identified by exclusive runId and trace flags.'
