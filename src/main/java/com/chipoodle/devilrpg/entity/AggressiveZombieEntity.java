@@ -1908,6 +1908,14 @@ public class AggressiveZombieEntity extends Zombie {
             boolean rotoMuro = breakBlockAt(nodo);
             if (rotoMuro) {
                 tunelEspera = TUNEL_ENTRE_BLOQUES;
+                // La navegación real la ejecuta NavExecutor: BreakBlockGoal ya no está registrado.
+                // Por eso el ensanche no puede depender de aquel goal legado; debe ocurrir aquí,
+                // dentro de la acción BREAK que acaba de abrir la primera columna del muro.
+                int dx = Integer.signum(misionBrecha.getX() - blockPosition().getX());
+                int dz = Integer.signum(misionBrecha.getZ() - blockPosition().getZ());
+                if (dx != 0 || dz != 0) {
+                    ensancharBrecha(nodo, dx, dz, cotaParaElRecinto());
+                }
                 navExecutor.terrainChanged();
             }
             return rotoMuro;
