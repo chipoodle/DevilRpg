@@ -105,7 +105,7 @@ try {
     Write-Status 'PREPARED' "HEAD=$head; seed=$Semilla; phaseA=$FaseA; phaseB=$FaseB; budget=$Presupuesto; world=$worldDir"
     $gradleArgumentLine = ($gradleArgs | ForEach-Object { if ($_ -match '\s') { [char]34 + $_.Replace([string][char]34, ([string][char]92 + [string][char]34)) + [char]34 } else { $_ } }) -join ' '
     $gradleProcess = Start-Process -FilePath $gradlew -ArgumentList $gradleArgumentLine -WorkingDirectory $repo -PassThru -NoNewWindow -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
-    Write-Status 'GRADLE_STARTED' 'Waiting for Forge/NeoForge server JVM in this launcher's Gradle process tree.'
+    Write-Status 'GRADLE_STARTED' "Waiting for Forge/NeoForge server JVM in this launcher's Gradle process tree."
 
     $startupEnd = (Get-Date).AddSeconds($InicioServidorSegundos)
     while ((Get-Date) -lt $startupEnd) {
