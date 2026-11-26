@@ -245,10 +245,9 @@ public class PlayerCapabilityForgeEventSubscriber {
      * {@code EntityType.spawn} (que llama a {@code finalizeSpawn} pero no a las reglas de spawn). Aquí se cortan al
      * <b>entrar en el mundo</b>, que sí se dispara siempre.
      * <p>
-     * Solo se cortan los caminos que el aura debe cortar: {@link com.chipoodle.devilrpg.world.VillageSpawnGuard}
-     * cancela <b>todo</b> hostil dentro de la aldea protegida salvo el huevo de spawn, {@code /summon} y
-     * {@code MOB_SUMMONED} del mod. Lo que se <b>carga del guardado</b> no pasa por aquí: ésos ya estaban y de
-     * ellos se encarga la expulsión del latido (ver {@code VillageManager.expulsarHostilesDeLaAldea}).
+     * El sello cancela <b>todo</b> monstruo que intente entrar en una aldea protegida, sin excepción por tipo
+     * de spawn (huevo, comando, vanilla o invocación del mod). Lo que se <b>carga del guardado</b> no pasa por aquí:
+     * esas entidades ya existían y se gestionan por el mantenimiento de la aldea.
      */
     @SubscribeEvent
     public static void onEntityJoinLevel(net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) {
