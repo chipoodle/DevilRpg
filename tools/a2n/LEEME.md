@@ -48,10 +48,10 @@ El modo `raid` de `A2NavHarness` exige que ambas propiedades estén activas en e
 [A2N] JVM_TRACE traceNav=true traceGlobalSearch=true ...
 ```
 
-Usa el wrapper versionado, que añade ambas propiedades al entorno JVM y las propiedades Gradle, preserva/restaura el entorno del proceso llamador y delega al lanzador local existente sin modificarlo:
+Usa el launcher **versionado** `tools/a2n/lanzar-a2n.ps1`. Ya no depende de un archivo local ignorado bajo `build/`. El launcher valida rama/árbol, crea un directorio y mundo desechables, configura las dos trazas, arranca `runServer --nogui`, identifica la JVM por un `runId` exclusivo, espera `fin.txt` y supervisa el cierre. No mata procesos Java que no haya identificado como propios:
 
 ```powershell
-.\tools\a2n\lanzar-phase55-diagnostico.ps1 -Modo raid -LimiteMinutos 18
+.\tools\a2n\lanzar-phase55-diagnostico.ps1 -Modo raid -LimiteMinutos 90 -FaseA 3000 -FaseB 12000 -AceptarEula
 ```
 
 El wrapper establece `JDK_JAVA_OPTIONS` con:
@@ -61,7 +61,7 @@ El wrapper establece `JDK_JAVA_OPTIONS` con:
 -Ddevilrpg.a2n.traceGlobalSearch=true
 ```
 
-También define `ORG_GRADLE_PROJECT_a2nTraceNav=true`,
+El parámetro `-AceptarEula` escribe `eula=true` únicamente cuando el operador confirma explícitamente que acepta la EULA de Minecraft; sin ese parámetro, el launcher exige un `eula.txt` ya aceptado. El presupuesto local se configura con `-Ddevilrpg.nav.budget=900`; no se pasa `devilrpg.nav.custom` ni `devilrpg.nav.globalBudget` (bandera obsoleta y propiedad sin consumidor confirmado, respectivamente). El launcher preserva/restaura las variables del proceso llamador. También define `ORG_GRADLE_PROJECT_a2nTraceNav=true`,
 `ORG_GRADLE_PROJECT_a2nTraceGlobalSearch=true`, `ORG_GRADLE_PROJECT_a2nDiagnostics=true` y
 `ORG_GRADLE_PROJECT_a2nPopulationQueryHarness=true`. Así Gradle compila la fuente canónica de
 `tools/a2n/A2NavHarness.java` y excluye sólo en ese build el arnés legacy trackeado. El wrapper restaura
