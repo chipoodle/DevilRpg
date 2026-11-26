@@ -67,7 +67,6 @@ public final class HordeManager {
     private static final Map<ServerLevel, PendingHorde> PENDING_HORDES = new HashMap<>();
 
     private static final class PendingHorde {
-        private final ServerPlayer spawnTarget;
         private final ServerPlayer playerTarget;
         private final VillageManager.Settlement settlement;
         private final double probability;
@@ -78,10 +77,8 @@ public final class HordeManager {
         private int nextIndex;
         private int spawned;
 
-        private PendingHorde(ServerPlayer spawnTarget, ServerPlayer playerTarget,
-                             VillageManager.Settlement settlement, double probability,
-                             int plannedCount, Vec3 base) {
-            this.spawnTarget = spawnTarget;
+        private PendingHorde(ServerPlayer playerTarget, VillageManager.Settlement settlement,
+                             double probability, int plannedCount, Vec3 base) {
             this.playerTarget = playerTarget;
             this.settlement = settlement;
             this.probability = probability;
@@ -141,8 +138,7 @@ public final class HordeManager {
                 : AggressiveZombieSpawnProfile.INSTANCE.probability(distance, threat);
         int plannedCount = BASE_HORDE_SIZE + (int) Math.round(threat * MAX_EXTRA_MEMBERS);
         Vec3 base = settlement != null ? Vec3.atCenterOf(settlement.center()) : target.position();
-        PENDING_HORDES.put(level, new PendingHorde(paraLaAldea, target, settlement,
-                probability, plannedCount, base));
+        PENDING_HORDES.put(level, new PendingHorde(target, settlement, probability, plannedCount, base));
         DevilRpg.LOGGER.info("[Horda] preparando oleada escalonada: {} enemigos previstos{}",
                 plannedCount, settlement != null ? " contra la aldea " + settlement.objectiveIndex() : "");
     }
