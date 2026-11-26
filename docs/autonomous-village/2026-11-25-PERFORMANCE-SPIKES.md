@@ -53,16 +53,26 @@ recalculan.
   el almacén aún no tiene hueco.
 - No se tocó la IA de guardias, el spawn de la oleada ni el guardado.
 
-## 4 · Lo que queda (no aplicado)
+## 4 · Corrección posterior: oleadas escalonadas
 
-- **El pico de 2 s de la oleada** viene de crear **8 asediadores en el mismo tick** y que todos
-  empiecen a navegar. La solución correcta sería **repartir la creación/navegación en varios ticks**
-  (por ejemplo 1 asediador cada 2 ticks), no bajar el número ni debilitar el asedio. No se hizo en
-  este cambio porque toca el contrato de la oleada (recuento, reintentos, avisos).
-- El pico de login y el de guardado son de **generación/carga** y de **I/O de guardado**; no hay un
-  bucle de la IA detrás.
-- Si tras estos cambios sigue lento fuera de esos tres momentos, hace falta un **perfil de ticks**
-  (spark o similar) para ver el método caliente; el log solo no lo dice.
+La oleada del asedio clásico ya procesa **un atacante por tick** mediante
+`iniciarOleada` / `spawnWaveAttacker` en `VillageManager`.
+
+La horda del mundo seguía teniendo el bucle síncrono: creaba, insertaba e inicializaba todos sus
+zombies en un solo tick. Se corrigió en `HordeManager` con una cola por dimensión:
+
+- cada tick consume un índice de la oleada y crea/inserta como máximo **un** zombie;
+- se conservan el tamaño calculado, la probabilidad, el objetivo y el libro mayor UUID;
+- el asedio del mundo se registra cuando termina la oleada, no antes;
+- no se reduce el número de enemigos ni se debilita su IA.
+
+La protección de aldeas y el cierre terminal de asedios se documentan en el cambio del 26-nov-2026.
+El resultado de rendimiento queda **pendiente de medición runtime**: el reparto temporal reduce el
+trabajo concentrado, pero no demuestra por sí solo que no haya otros picos.
+
+El pico de login y el de guardado siguen siendo eventos distintos (generación/carga e I/O de guardado).
+Si persisten congelamientos fuera de la aparición de oleadas, hace falta un perfil de ticks (spark o
+similar) para identificar el método caliente.
 
 ## 5 · Evidencia de gates
 
