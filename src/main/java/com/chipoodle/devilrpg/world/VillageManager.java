@@ -1908,9 +1908,6 @@ public final class VillageManager {
                     }
                 }
             }
-ro, la aldea cae."), false);
-                }
-            }
 
             if (d.waveSpawned) {
                 VillageSavedData datos = VillageSavedData.get(level);
@@ -2202,7 +2199,7 @@ ro, la aldea cae."), false);
         Random orden = new Random(341873128712L * (d.objectiveIndex + 1L)
                 + 132897987541L * (d.reintentosDeOleada + 1L) + indice);
         double anguloBase = orden.nextDouble() * Math.PI * 2.0D;
-        // Los radios se reparten por la banda documentada: mínimo, medio y máximo (65, 69 y 73 con la valla en 62).
+        // Los radios se reparten por la banda documentada: mínimo, medio y máximo (68, 70 y 73 con la valla en 62).
         int banda = WAVE_SPAWN_MAX - WAVE_SPAWN_MIN;
         for (int r = 0; r < SPAWN_CANDIDATOS_RADIOS; r++) {
             int radio = WAVE_SPAWN_MIN + (r * banda) / (SPAWN_CANDIDATOS_RADIOS - 1);
