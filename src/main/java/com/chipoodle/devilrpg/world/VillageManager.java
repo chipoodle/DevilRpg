@@ -2615,7 +2615,8 @@ public final class VillageManager {
      * Registra una horda del mundo que va a por una aldea. La resuelve {@link #tickWorldSieges}: si los
      * enemigos caen, la aldea resiste (y su presión vuelve a cero); si se queda sin aldeanos, la aldea cae.
      */
-    public static void startWorldSiege(ServerLevel level, Settlement settlement, List<UUID> wave) {
+    public static void startWorldSiege(ServerLevel level, Settlement settlement, List<UUID> wave,
+                                        Set<UUID> pendingDefenders) {
         if (wave.isEmpty()) {
             return;
         }
@@ -2638,7 +2639,7 @@ public final class VillageManager {
         }
         WORLD_SIEGES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave,
-                        level.getGameTime()));
+                        level.getGameTime(), pendingDefenders));
         // El libro mayor ya existe: ahora sí se puede marcar a cada entidad como participante oficial.
         // La marca y la última posición deben nacer DESPUÉS del registro, nunca durante PendingHorde.
         for (UUID uuid : wave) {
@@ -2855,6 +2856,10 @@ public final class VillageManager {
                 return;
             }
         }
+        // La oleada puede seguir en PendingHorde: conservar la participación del jugador hasta
+        // que el WorldSiege se registre oficialmente.
+        com.chipoodle.devilrpg.survival.HordeManager.registerPendingDefender(
+                level, objectiveIndex, player.getUUID());
     }
 
     /** El jugador detrás de un atacante: él mismo, o el dueño si el que pega es un minion suyo. */
@@ -2881,6 +2886,7 @@ public final class VillageManager {
         for (VillageDefense defense : DEFENSES.getOrDefault(level, List.of())) {
             defense.wave.remove(attacker);
         }
+        com.chipoodle.devilrpg.survival.HordeManager.onPendingAttackerKilled(level, attacker);
         olvidarPosicionDeAsediador(attacker);
     }
 
@@ -9876,11 +9882,15 @@ public final class VillageManager {
         /** Si ya se avisó (una sola vez) de que esta aldea no cae porque no hay nadie que la defienda. */
         boolean avisadoSinDefensor;
 
-        WorldSiege(int objectiveIndex, BlockPos center, List<UUID> wave, long inicioTick) {
+        WorldSiege(int objectiveIndex, BlockPos center, List<UUID> wave, long inicioTick,
+                   Set<UUID> pendingDefenders) {
             this.objectiveIndex = objectiveIndex;
             this.center = center;
             this.wave = wave;
             this.inicioTick = inicioTick;
+            if (pendingDefenders != null) {
+                this.defenders.addAll(pendingDefenders);
+            }
         }
     }
 

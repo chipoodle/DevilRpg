@@ -74,6 +74,7 @@ public final class HordeManager {
         private final Vec3 base;
         private final Random random = new Random();
         private final List<UUID> wave = new ArrayList<>();
+        private final Set<UUID> defenders = new HashSet<>();
         private int nextIndex;
         private int spawned;
 
@@ -145,6 +146,28 @@ public final class HordeManager {
         }
     }
 
+    /**
+     * Registra a un defensor que intervino mientras se está ensamblando una horda del mundo.
+     * Devuelve false si no existe una PendingHorde para ese objetivo.
+     */
+    public static boolean registerPendingDefender(ServerLevel level, int objectiveIndex, UUID defender) {
+        PendingHorde pending = PENDING_HORDES.get(level);
+        if (pending == null || pending.settlement == null
+                || pending.settlement.objectiveIndex() != objectiveIndex || defender == null) {
+            return false;
+        }
+        pending.defenders.add(defender);
+        return true;
+    }
+
+    /** Una baja confirmada durante PendingHorde debe quitar el UUID antes de crear el libro mayor. */
+    public static void onPendingAttackerKilled(ServerLevel level, UUID attacker) {
+        PendingHorde pending = PENDING_HORDES.get(level);
+        if (pending != null && attacker != null) {
+            pending.wave.remove(attacker);
+        }
+    }
+
     private static void spawnHorde(ServerLevel level, double threat) {
         ServerPlayer target = pickPlayer(level, threat);
         ServerPlayer paraLaAldea = target != null ? target : pickAnyPlayer(level);
@@ -200,10 +223,12 @@ public final class HordeManager {
                     if (level.addFreshEntity(zombie)) {
                         com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
                         if (pending.settlement != null) {
-                            // El UUID queda pendiente, pero NO es asediador oficial hasta que
-                            // VillageManager registre el WorldSiege. Así no se persiste una marca
-                            // de campaña sin libro mayor si el servidor se interrumpe a mitad de ola.
+                            // La entidad ya es participante de la campaña en construcción: debe conservar
+                            // la protección contra despawn y contabilizar daño/bajas. readAdditionalSaveData
+                            // autocura esta marca si el servidor se reinicia antes del libro mayor.
+                            zombie.setWorldSiegeIndex(pending.settlement.objectiveIndex());
                             pending.wave.add(zombie.getUUID());
+                            VillageManager.registrarPosicionDeAsediador(zombie.getUUID(), pos);
                         }
                         pending.spawned++;
                     } else {
@@ -220,7 +245,7 @@ public final class HordeManager {
             DevilRpg.LOGGER.info("[Horda] {} de {} enemigos van a por la aldea {} (centro {}); spawn escalonado",
                     pending.spawned, pending.plannedCount, pending.settlement.objectiveIndex(),
                     pending.settlement.center());
-            VillageManager.startWorldSiege(level, pending.settlement, pending.wave);
+            VillageManager.startWorldSiege(level, pending.settlement, pending.wave, pending.defenders);
         } else if (pending.playerTarget != null) {
             DevilRpg.LOGGER.info("[Horda] {} de {} enemigos van a por el jugador {} (a {} bloques de su ancla, probabilidad {}); spawn escalonado",
                     pending.spawned, pending.plannedCount, pending.playerTarget.getGameProfile().getName(),
