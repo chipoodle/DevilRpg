@@ -8523,16 +8523,14 @@ public final class VillageManager {
     }
 
     /**
-     * ¿Ese punto cae dentro de una aldea <b>protegida</b>? Una aldea queda protegida cuando se <b>vence su asedio</b>
-     * (el clásico o una horda del mundo) y sigue viva: entonces ninguna criatura hostil puede <b>aparecer</b> entre
-     * sus muros (fuera sí, en el campo). Si la aldea cae (todos los aldeanos muertos) deja de estar protegida y queda
-     * abandonada.
+     * ¿Ese punto cae dentro de una aldea <b>protegida</b>? El campo está activo desde que la aldea se genera y
+     * permanece activo durante, después o entre asedios. Solo se desactiva cuando la aldea cae definitivamente.
      */
     public static boolean estaProtegida(ServerLevel level, BlockPos pos) {
         VillageSavedData saved = VillageSavedData.get(level);
         double limite = (double) VillageGenerator.FENCE_RADIUS * VillageGenerator.FENCE_RADIUS;
         for (int i = 0; i <= MAX_OBJECTIVES; i++) {
-            if (!saved.isGenerated(i) || saved.isFallen(i)) {
+            if (!VillageSpawnGuard.estaProtegida(saved.isGenerated(i), saved.isFallen(i))) {
                 continue;
             }
             BlockPos centro = centroDe(level, i);
