@@ -41,7 +41,8 @@ function Find-OwnedServer {
     $found = @(Get-CimInstance Win32_Process -Filter "Name='java.exe' OR Name='javaw.exe'" | Where-Object {
         $_.CommandLine -and $_.CommandLine -match $rx -and
         $_.CommandLine -match 'devilrpg\.a2n\.traceNav=true' -and
-        $_.CommandLine -match 'devilrpg\.a2n\.traceGlobalSearch=true'
+        $_.CommandLine -match 'devilrpg\.a2n\.traceGlobalSearch=true' -and
+        $_.CommandLine -match 'forgeserverdev|devlaunch\.Main|serverRunProgramArgs'
     })
     if ($found.Count -gt 1) { throw "Más de una JVM coincide con el runId exclusivo $script:runId." }
     if ($found.Count -eq 1) { return $found[0] }
@@ -65,6 +66,7 @@ try {
     if ($dirty.Count -gt 0) { throw "Hay cambios tracked; no se inicia ni se altera el árbol: $([string]::Join([Environment]::NewLine,$dirty))" }
     if ($FaseB -le $FaseA) { throw 'FaseB debe ser mayor que FaseA.' }
 
+    if (Test-Path -LiteralPath $runDir) { throw "El runId ya existe; no se reutilizan artefactos: $runDir" }
     New-Item -ItemType Directory -Path $gameDir -Force | Out-Null
     if (Test-Path -LiteralPath $worldDir) { throw "No se reutiliza mundo existente: $worldDir" }
     $eula = Join-Path $gameDir 'eula.txt'
