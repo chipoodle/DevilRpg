@@ -11,6 +11,11 @@ public final class VillageSpawnGuard {
     private VillageSpawnGuard() {
     }
 
+    /** El sello existe desde que se genera la aldea y solo desaparece al marcarla como caída. */
+    public static boolean estaProtegida(boolean generada, boolean caida) {
+        return generada && !caida;
+    }
+
     public static boolean debeCancelar(boolean esMonstruo, boolean dentroDeAldeaProtegida,
                                        MobSpawnType tipo) {
         return esMonstruo && dentroDeAldeaProtegida;
