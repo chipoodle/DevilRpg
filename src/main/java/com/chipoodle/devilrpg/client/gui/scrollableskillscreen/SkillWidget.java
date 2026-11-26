@@ -2,6 +2,7 @@ package com.chipoodle.devilrpg.client.gui.scrollableskillscreen;
 
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.config.ConfigHolder;
+import com.chipoodle.devilrpg.util.SkillEnum;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -372,7 +373,21 @@ public class SkillWidget {
         if (this.parent == null)
             return false;
 
-        return !(parent.getSkillProgress().hasProgress() || parent.getSkillProgress().isDone());
+        SkillElement parentElement = this.parent.getSkillElement();
+        // Las raíces estructurales (p. ej. nature:root) no son habilidades comprables:
+        // no tienen capability real y su progreso 0/0 no debe bloquear sus primeros nodos.
+        // Esta excepción vive en la regla de desbloqueo de la UI; SkillProgress.isDone()
+        // conserva el comportamiento fail-closed para máximos ausentes o inválidos.
+        if (parentElement != null
+                && parentElement.getParent() == null
+                && (parentElement.getSkillCapability() == null
+                || parentElement.getSkillCapability() == SkillEnum.EMPTY)) {
+            return false;
+        }
+
+        SkillProgress parentProgress = this.parent.getSkillProgress();
+        return parentProgress == null
+                || !(parentProgress.hasProgress() || parentProgress.isDone());
     }
 
     /**
