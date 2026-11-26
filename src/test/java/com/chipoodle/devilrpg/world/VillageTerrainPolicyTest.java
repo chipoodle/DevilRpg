@@ -35,7 +35,11 @@ public final class VillageTerrainPolicyTest {
         check(true, VillageTerrainPolicy.allowsModification(false, true, true, false, false, false));
         // 10. Active siege does not erase a saved+field denial.
         check(false, VillageTerrainPolicy.allowsModification(true, true, true, true, false, false));
-        // 11. El sello corta cualquier spawn hostil dentro, no solo una lista cerrada.
+        // 11. El campo existe desde la generación, también durante o después de un asedio.
+        check(true, VillageSpawnGuard.estaProtegida(true, false));
+        check(false, VillageSpawnGuard.estaProtegida(false, false));
+        check(false, VillageSpawnGuard.estaProtegida(true, true));
+        // 12. El sello corta cualquier spawn hostil dentro, no solo una lista cerrada.
         check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.NATURAL));
         check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.EVENT));
         check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.REINFORCEMENT));
