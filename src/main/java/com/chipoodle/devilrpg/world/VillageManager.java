@@ -1010,6 +1010,31 @@ public final class VillageManager {
         }
     }
 
+    /**
+     * Descarga el estado transitorio asociado a un nivel. Los asedios no se persisten como libro mayor:
+     * al salir del nivel, sus participantes cargados se liberan como zombis normales y los registros
+     * en memoria se descartan. No se marca la aldea como ganada, perdida ni resuelta.
+     */
+    public static void onLevelUnload(final ServerLevel level) {
+        if (level == null) {
+            return;
+        }
+        List<VillageDefense> defenses = DEFENSES.remove(level);
+        if (defenses != null) {
+            for (VillageDefense defense : defenses) {
+                disableGoToCenter(level, defense.wave);
+            }
+        }
+        List<WorldSiege> worldSieges = WORLD_SIEGES.remove(level);
+        if (worldSieges != null) {
+            for (WorldSiege siege : worldSieges) {
+                disableGoToCenter(level, siege.wave);
+            }
+        }
+        MARCHAS.remove(level);
+        CLAIMS.remove(level);
+    }
+
     private VillageManager() {
     }
 

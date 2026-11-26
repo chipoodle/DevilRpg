@@ -120,6 +120,31 @@ public final class HordeManager {
         spawnHorde(level, threat);
     }
 
+    /**
+     * Libera el estado transitorio de una dimensión al descargarla. Una horda incompleta no tiene
+     * libro mayor: sus entidades ya insertadas vuelven a ser zombis normales antes de olvidar la ola.
+     */
+    public static void onLevelUnload(ServerLevel level) {
+        if (level == null) {
+            return;
+        }
+        ULTIMO_TURNO.remove(level);
+        PendingHorde pending = PENDING_HORDES.remove(level);
+        if (pending == null) {
+            return;
+        }
+        for (UUID uuid : pending.wave) {
+            net.minecraft.world.entity.Entity entity = level.getEntity(uuid);
+            if (entity instanceof AggressiveZombieEntity zombie) {
+                zombie.setGoToCenterActive(false);
+                zombie.setWorldSiegeIndex(-1);
+                zombie.setVillageCenter(null);
+                zombie.setGlowingTag(false);
+            }
+            VillageManager.olvidarPosicionDeAsediador(uuid);
+        }
+    }
+
     private static void spawnHorde(ServerLevel level, double threat) {
         ServerPlayer target = pickPlayer(level, threat);
         ServerPlayer paraLaAldea = target != null ? target : pickAnyPlayer(level);
@@ -175,9 +200,10 @@ public final class HordeManager {
                     if (level.addFreshEntity(zombie)) {
                         com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
                         if (pending.settlement != null) {
-                            zombie.setWorldSiegeIndex(pending.settlement.objectiveIndex());
+                            // El UUID queda pendiente, pero NO es asediador oficial hasta que
+                            // VillageManager registre el WorldSiege. Así no se persiste una marca
+                            // de campaña sin libro mayor si el servidor se interrumpe a mitad de ola.
                             pending.wave.add(zombie.getUUID());
-                            VillageManager.registrarPosicionDeAsediador(zombie.getUUID(), pos);
                         }
                         pending.spawned++;
                     } else {
