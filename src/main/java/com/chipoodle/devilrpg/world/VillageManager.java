@@ -109,10 +109,11 @@ public final class VillageManager {
      * Zona mínima/máxima (bloques) a la que spawnea la ola: <b>derivada del radio de la valla</b>, siempre FUERA.
      * <p>
      * Antes eran 32/40 fijos: cuando la valla estaba en 36 los monstruos habrían aparecido <b>dentro</b> del muro.
-     * <b>Hoy la valla está en 62</b> ({@code VillageGenerator.FENCE_RADIUS}), así que la ola nace a 65-73 del
-     * centro: un pueblo grande NO se defiende "en las afueras" — casi todo lo que rodea la plaza está dentro.
+     * <b>Hoy la valla está en 62</b> ({@code VillageGenerator.FENCE_RADIUS}), así que la ola nace a 68-73 del
+     * centro: evita que los asediadores aparezcan sobre la coronación del muro y que el primer waypoint exterior
+     * se considere alcanzado en el mismo tick de inicio.
      */
-    private static final int WAVE_SPAWN_MIN = VillageGenerator.FENCE_RADIUS + 3;
+    private static final int WAVE_SPAWN_MIN = VillageGenerator.FENCE_RADIUS + 6;
     private static final int WAVE_SPAWN_MAX = VillageGenerator.FENCE_RADIUS + 11;
     /**
      * Radio del <b>perímetro</b> de la aldea (la valla, {@code VillageGenerator.FENCE_RADIUS}): a partir de
@@ -1874,36 +1875,40 @@ public final class VillageManager {
             }
             d.tickTicks++;
 
-            // Tras el margen de exploración, lanza la ola desde FUERA de la valla.
-            if (!d.waveSpawned && d.tickTicks >= GRACE_TICKS) {
-                spawnWave(level, d);
-                if (d.wave.isEmpty()) {
-                    // LA OLEADA NO PUDO NACER Y ANTES ESO SE DABA POR VICTORIA (3-oct-2026, medido en la partida
-                    // del jugador). `EntityType.create(..., alignPosition=true, ...)` devuelve **null** cuando la
-                    // casilla no admite el spawn (agua, dentro de un bloque, chunk sin cargar), y
-                    // `isWaveCleared` de una ola **VACÍA** es cierto: su registro enseña «¡Defiende la aldea de los
-                    // monstruos!» a las 04:17:19 y «Aldea 0 salvada» a las 04:17:20, **sin un solo spawn de asediador
-                    // en todo el log**. Ahora: se reintenta cada 5 s (hasta 5 veces) y, si no nace, el asedio se
-                    // CANCELA sin darse por ganado y sin pagar recompensa.
-                    if (d.reintentosDeOleada < 5) {
-                        d.reintentosDeOleada++;
-                        d.tickTicks -= 100; // cinco segundos más y se vuelve a intentar
-                        DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada salio VACIA (0 asediadores, intento {}/5){}:"
-                                        + " se reintenta en 5 s", d.objectiveIndex, d.reintentosDeOleada,
-                                motivoDeOleada(d));
-                    } else {
-                        DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada NO PUDO NACER en 5 intentos{}: el asedio se"
-                                        + " cancela SIN darse por ganado (antes se regalaba la victoria)",
-                                d.objectiveIndex, motivoDeOleada(d));
-                        list.remove(i);
-                    }
-                    continue;
+            // Tras el margen de exif (!d.waveSpawned && d.tickTicks >= GRACE_TICKS) {
+                // La preparación y cada intento de spawn se reparten entre ticks. Cada tick se busca
+                // como máximo un sitio y se inserta como máximo un asediador.
+                if (!d.oleadaEnCurso) {
+                    iniciarOleada(level, d);
                 }
-                d.waveSpawned = true;
-                ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
-                if (p != null) {
-                    p.displayClientMessage(Component.literal("¡Defiende la aldea de los monstruos! Los asediadores"
-                            + " van marcados con un brillo: si aguantan dentro del muro, la aldea cae."), false);
+                spawnWaveAttacker(level, d);
+                if (d.oleadaPendiente == 0) {
+                    finalizarOleada(level, d);
+                    if (d.wave.isEmpty()) {
+                        // Una oleada vacía conserva el contrato anterior: reintentar cada 5 s hasta cinco
+                        // veces y cancelar sin declarar victoria si nunca pudo nacer un asediador.
+                        if (d.reintentosDeOleada < 5) {
+                            d.reintentosDeOleada++;
+                            d.tickTicks -= 100;
+                            DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada salio VACIA (0 asediadores, intento {}/5){}:"
+                                            + " se reintenta en 5 s", d.objectiveIndex, d.reintentosDeOleada,
+                                    motivoDeOleada(d));
+                        } else {
+                            DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada NO PUDO NACER en 5 intentos{}: el asedio se"
+                                            + " cancela SIN darse por ganado", d.objectiveIndex, motivoDeOleada(d));
+                            list.remove(i);
+                        }
+                        continue;
+                    }
+                    d.waveSpawned = true;
+                    ServerPlayer p = level.getServer().getPlayerList().getPlayer(d.playerUUID);
+                    if (p != null) {
+                        p.displayClientMessage(Component.literal("¡Defiende la aldea de los monstruos! Los asediadores"
+                                + " van marcados con un brillo: si aguantan dentro del muro, la aldea cae."), false);
+                    }
+                }
+            }
+ro, la aldea cae."), false);
                 }
             }
 
@@ -2124,64 +2129,62 @@ public final class VillageManager {
         return d.motivoFalloDeOleada.isEmpty() ? "" : " [" + d.motivoFalloDeOleada + "]";
     }
 
-    private static void spawnWave(ServerLevel level, VillageDefense d) {
-        // La ola crece al alejarse del ancla, pero con un LÍMITE: no se extiende infinitamente (SIN CAMBIOS).
-        int count = DEFAULT_WAVE + Math.min(d.objectiveIndex * 2, MAX_WAVE_EXTRA);
-        // La cota de la aldea se mide UNA vez por oleada: es la referencia del barrido vertical (y no cambia).
-        int cota = VillageGenerator.cotaDeLaPlaza(level, d.center);
-        // Contabilidad de fallos (Incremento B, ampliada en C): se acumula por CAUSA y se escribe UNA vez al final
-        // de la oleada. Nunca una línea por spawn ni por tick.
-        int sinSitio = 0;
-        int fallosCreacion = 0;
-        int fallosInsercion = 0;
-        for (int i = 0; i < count; i++) {
-            // SELECCIÓN DE LA CASILLA (Incremento C): fuera del recinto, con apoyo sólido, la caja completa del
-            // asediador libre de bloques y sin fluido ni peligro. Null = no hay sitio seguro en esta columna de
-            // candidatos (acotada); el asediador no se crea.
-            BlockPos sitio = buscarSitioDeLaOleada(level, d, cota, i);
-            if (sitio == null) {
-                sinSitio++;
-                continue;
-            }
-            AggressiveZombieEntity zombie = crearAsediador(level, sitio);
-            if (zombie == null) {
-                fallosCreacion++;
-                continue;
-            }
-            zombie.moveTo(sitio.getX() + 0.5D, sitio.getY(), sitio.getZ() + 0.5D, 0.0F, 0.0F);
-            zombie.setVillageCenter(d.center); // para que converja hacia la aldea si no ataca
-            // EL LIBRO MAYOR SE ESCRIBE DESPUÉS DE QUE LA ENTIDAD ESTÉ DE VERDAD EN EL MUNDO (Incremento B):
-            // `addFreshEntity` puede devolver false (casilla rechazada, UUID duplicado...). Antes se apuntaba el
-            // UUID igual y el asedio quedaba "con oleada" con cero asediadores reales; ahora solo cuenta lo que
-            // existe. El marcador persistente (`DevilRpgWorldSiegeIndex`) también se pone ya añadida, de modo que
-            // morir/retirarse la descuenta de ESTA defensa (y de ninguna otra).
-            if (!level.addFreshEntity(zombie)) {
-                fallosInsercion++;
-                zombie.discard(); // no llegó al mundo: no se deja una entidad suelta
-                continue;
-            }
-            com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("village_siege_wave", level, zombie, sitio);
-            zombie.setWorldSiegeIndex(d.objectiveIndex);
-            d.wave.add(zombie.getUUID());
-            // FASE 5/6: ultima celda conocida, para distinguir "muerto" de "descargado" mas tarde.
-            registrarPosicionDeAsediador(zombie.getUUID(), sitio);
+    private static void iniciarOleada(ServerLevel level, VillageDefense d) {
+        d.oleadaTotal = DEFAULT_WAVE + Math.min(d.objectiveIndex * 2, MAX_WAVE_EXTRA);
+        d.oleadaPendiente = d.oleadaTotal;
+        d.oleadaIndice = 0;
+        d.oleadaCota = VillageGenerator.cotaDeLaPlaza(level, d.center);
+        d.oleadaSinSitio = 0;
+        d.oleadaFallosCreacion = 0;
+        d.oleadaFallosInsercion = 0;
+        d.motivoFalloDeOleada = "";
+        d.oleadaEnCurso = true;
+    }
+
+    /** Busca y crea como máximo un asediador por tick. */
+    private static void spawnWaveAttacker(ServerLevel level, VillageDefense d) {
+        if (!d.oleadaEnCurso || d.oleadaPendiente <= 0) {
+            return;
         }
-        int fallos = sinSitio + fallosCreacion + fallosInsercion;
-        // Motivo grabado en la defensa para que el aviso de `tick` (reintento/cancelación) diga POR QUÉ no nació,
-        // distinguiendo «no hay sitio seguro» de «la entidad no se pudo crear/insertar» (Incremento C, punto 8).
+        int indice = d.oleadaIndice++;
+        d.oleadaPendiente--;
+        BlockPos sitio = buscarSitioDeLaOleada(level, d, d.oleadaCota, indice);
+        if (sitio == null) {
+            d.oleadaSinSitio++;
+            return;
+        }
+        AggressiveZombieEntity zombie = crearAsediador(level, sitio);
+        if (zombie == null) {
+            d.oleadaFallosCreacion++;
+            return;
+        }
+        zombie.moveTo(sitio.getX() + 0.5D, sitio.getY(), sitio.getZ() + 0.5D, 0.0F, 0.0F);
+        zombie.setVillageCenter(d.center);
+        if (!level.addFreshEntity(zombie)) {
+            d.oleadaFallosInsercion++;
+            zombie.discard();
+            return;
+        }
+        com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("village_siege_wave", level, zombie, sitio);
+        zombie.setWorldSiegeIndex(d.objectiveIndex);
+        zombie.setGlowingTag(true);
+        d.wave.add(zombie.getUUID());
+        registrarPosicionDeAsediador(zombie.getUUID(), sitio);
+    }
+
+    private static void finalizarOleada(ServerLevel level, VillageDefense d) {
+        int fallos = d.oleadaSinSitio + d.oleadaFallosCreacion + d.oleadaFallosInsercion;
         d.motivoFalloDeOleada = d.wave.isEmpty() && fallos > 0
-                ? "intentados=" + count + ", sin_sitio_seguro=" + sinSitio + ", creacion=" + fallosCreacion
-                        + ", insercion=" + fallosInsercion
+                ? "intentados=" + d.oleadaTotal + ", sin_sitio_seguro=" + d.oleadaSinSitio
+                        + ", creacion=" + d.oleadaFallosCreacion + ", insercion=" + d.oleadaFallosInsercion
                 : "";
         DevilRpg.LOGGER.info("[Village] Aldea {}: OLEADA de {} asediadores intentados, {} colocados (radio {}-{},"
                         + " barrido vertical -{}/+{} de la cota){}",
-                d.objectiveIndex, count, d.wave.size(), WAVE_SPAWN_MIN, WAVE_SPAWN_MAX,
+                d.objectiveIndex, d.oleadaTotal, d.wave.size(), WAVE_SPAWN_MIN, WAVE_SPAWN_MAX,
                 SPAWN_SCAN_ABAJO_DE_LA_COTA, SPAWN_SCAN_ARRIBA_DE_LA_COTA,
-                fallos > 0 ? ", " + fallos + " fallos (sin sitio seguro=" + sinSitio + ", creacion="
-                        + fallosCreacion + ", insercion=" + fallosInsercion + ")" : "");
-        // Los asediadores van marcados con brillo (ver `marcarAsediadores`): sin la marca, en una noche con
-        // decenas de monstruos alrededor el jugador no puede saber a quién tiene que matar.
-        marcarAsediadores(level, d.wave, true);
+                fallos > 0 ? ", " + fallos + " fallos (sin sitio seguro=" + d.oleadaSinSitio + ", creacion="
+                        + d.oleadaFallosCreacion + ", insercion=" + d.oleadaFallosInsercion + ")" : "");
+        d.oleadaEnCurso = false;
     }
 
     /**
@@ -9856,6 +9859,15 @@ public final class VillageManager {
         final RaidTacticalBoard raidBoard = new RaidTacticalBoard();
         long tickTicks;
         boolean waveSpawned;
+        /** Estado del spawn escalonado: un intento de asediador por tick. */
+        boolean oleadaEnCurso;
+        int oleadaTotal;
+        int oleadaPendiente;
+        int oleadaIndice;
+        int oleadaCota;
+        int oleadaSinSitio;
+        int oleadaFallosCreacion;
+        int oleadaFallosInsercion;
         /** Defensa headless controlada por el arnés; no ejecuta el reloj ni genera una segunda oleada. */
         boolean testHarness;
         /** Último recuento de atacantes vivos, para escribir cada baja (y no repetir el mensaje). */
