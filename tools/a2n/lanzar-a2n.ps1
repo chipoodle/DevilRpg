@@ -49,7 +49,16 @@ function Find-OwnedServer {
     if ($null -eq $script:gradleProcess) { return $null }
     $snapshot = @(Get-CimInstance Win32_Process)
     $found = @($snapshot | Where-Object {
-        $_.Name -match '^javaw?\.exe
+        $_.Name -match '^javaw?\.exe$' -and
+        $_.CommandLine -and
+        $_.CommandLine -match 'forgeserverdev|devlaunch\.Main|serverRunProgramArgs' -and
+        $_.CreationDate -ge $script:startedAt.AddSeconds(-5) -and
+        (Test-IsLauncherDescendant -ProcessId ([int]$_.ProcessId) -RootPid ([int]$script:gradleProcess.Id) -Snapshot $snapshot)
+    })
+    if ($found.Count -gt 1) { throw "Más de una JVM servidor desciende del proceso Gradle de esta corrida ($($script:gradleProcess.Id))." }
+    if ($found.Count -eq 1) { return $found[0] }
+    return $null
+}
 function Stop-OwnedServer {
     if ($null -ne $script:serverPid -and (Get-Process -Id $script:serverPid -ErrorAction SilentlyContinue)) {
         Stop-Process -Id $script:serverPid -Force -ErrorAction SilentlyContinue
