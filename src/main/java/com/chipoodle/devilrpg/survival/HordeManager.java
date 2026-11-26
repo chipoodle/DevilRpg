@@ -429,19 +429,51 @@ public final class HordeManager {
             return;
         }
 
-        // From this point insertion is confirmed: never retry this member, even if later bookkeeping fails.
-        com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
-        if (pending.settlement != null) {
-            zombie.setWorldSiegeIndex(pending.settlement.objectiveIndex());
-            pending.wave.add(zombie.getUUID());
-            VillageManager.registrarPosicionDeAsediador(zombie.getUUID(), pos);
-        }
+        // addFreshEntity ya confirmó la inserción: primero cerramos el miembro y contabilizamos
+        // el UUID. Ninguna operación auxiliar posterior puede dejarlo pendiente ni provocar otro spawn.
+        UUID insertedId = zombie.getUUID();
         pending.spawned++;
-        if (member.request != null) {
-            releaseChunkTicket(level, member.request);
-            member.request = null;
+        if (pending.settlement != null) {
+            pending.wave.add(insertedId);
         }
+
+        ChunkRequest completedRequest = member.request;
+        member.request = null;
         pending.currentMember = null;
+
+        // La liberación del ticket tampoco debe reabrir el miembro confirmado si falla el unload interno.
+        if (completedRequest != null) {
+            try {
+                releaseChunkTicket(level, completedRequest);
+            } catch (RuntimeException failure) {
+                DevilRpg.LOGGER.error("[Horda] no se pudo liberar ticket tras insertar miembro {} de campaña {}: {}",
+                        member.index, pending.campaignId, failure.toString());
+            }
+        }
+
+        // Auditoría y registro de asedio son efectos secundarios: se aíslan individualmente.
+        // El libro mayor en memoria ya refleja el spawn confirmado, aunque alguno falle.
+        try {
+            com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
+        } catch (RuntimeException failure) {
+            DevilRpg.LOGGER.error("[Horda] falló la auditoría del miembro ya insertado {} campaña {}: {}",
+                    member.index, pending.campaignId, failure.toString());
+        }
+        if (pending.settlement != null) {
+            try {
+                zombie.setWorldSiegeIndex(pending.settlement.objectiveIndex());
+            } catch (RuntimeException failure) {
+                DevilRpg.LOGGER.error("[Horda] no se pudo asignar índice de asedio al miembro insertado {} campaña {}: {}",
+                        member.index, pending.campaignId, failure.toString());
+            }
+            try {
+                VillageManager.registrarPosicionDeAsediador(insertedId, pos);
+            } catch (RuntimeException failure) {
+                DevilRpg.LOGGER.error("[Horda] no se pudo registrar posición del miembro insertado {} campaña {}: {}",
+                        member.index, pending.campaignId, failure.toString());
+            }
+        }
+
         if (pending.nextIndex >= pending.plannedCount) {
             finishPendingHorde(level, pending);
         }
