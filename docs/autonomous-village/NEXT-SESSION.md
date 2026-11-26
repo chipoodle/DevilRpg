@@ -1,3 +1,15 @@
+# ACTUALIZACIÓN 26-nov-2026 — CORRECCIÓN DEL BLOQUEO DE COMPILACIÓN DEL SPAWN
+
+- Harness reportó FAIL en `f5c5fcad700e794022d34e25f72c636f54947561`: fragmento residual `ro, la aldea cae."), false);` en VillageManager.java:1911, con dos llaves duplicadas.
+- Corregido directamente en producción. Commit: `3882b61a67739b72c43528112efbfdd8ff47ba72`.
+- El diff correctivo es exclusivamente VillageManager.java (1 inserción, 4 eliminaciones). Se actualizó comentario obsoleto 65/69/73 a 68/70/73.
+- Verificación GitHub del archivo: fragmento eliminado, bloque de mensaje completo, radio 68–73, spawn de un atacante por llamada y reintentos de oleada vacía conservados.
+- Informe: `2026-11-26-RAID-SPAWN-COMPILE-FIX.md`.
+- **No declarar compilación PASS:** CHRIS-PC aparece online, pero Desktop Commander indica 0% de llamadas remotas disponibles. No se ejecutaron Gradle, lint ni runtime después del fix.
+- Próximo paso único: Harness ejecutar compileJava, compileTestJava, test, lint estricto y diff-check sobre el HEAD corregido exacto `3882b61a67739b72c43528112efbfdd8ff47ba72`. Solo si STATIC PASS, ejecutar asedio runtime y medición.
+
+---
+
 # ACTUALIZACIÓN 26-nov-2026 — SPAWN EXTERIOR Y OLEADA ESCALONADA
 
 - El usuario aportó evidencia de ocho asediadores nacidos a radio 64,8 sobre la coronación; el primer waypoint exterior estaba a un bloque y NavExecutor lo consideraba alcanzado inmediatamente.
