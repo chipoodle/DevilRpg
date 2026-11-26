@@ -1,3 +1,15 @@
+# ACTUALIZACIÓN 26-nov-2026 — BRECHA EN LA RUTA BREAK ACTIVA
+
+- Usuario confirmó que Mana Pool ya se puede comprar; no reabrir ese incidente.
+- Se encontró por qué el ensanche previo no actuaba: `ensancharBrecha` solo era invocado desde `BreakBlockGoal`, pero ese goal ya no está registrado. La ruta productiva es `NavExecutor` → callback BREAK → `romperNodoDeRuta`.
+- Corregido en `76cbc148e3680ae0e8da6e35da72c9324e9c8fa1`: la rama de rotura del muro en `romperNodoDeRuta` ensancha tangencialmente después de abrir la primera columna, usando la dirección hacia la misión interior. Conserva el presupuesto, protección y validación de anillo.
+- Informe: `2026-11-26-ACTIVE-BREACH-AND-PERFORMANCE.md`.
+- **Pendiente runtime:** verificar que el asediador atraviese la brecha de dos columnas. No declarar A2 aceptado solo por compilación.
+- **Rendimiento sin corregir todavía:** `2026-11-25-PERFORMANCE-SPIKES.md` midió picos ~2 s en login/generación, spawn de 8 asediadores en el mismo tick y guardado. El nacimiento escalonado quedó pendiente; este commit no lo modifica. Siguiente cambio de rendimiento debe medir y repartir el spawn sin reducir la oleada ni cambiar su contrato.
+- ChatGPT no ejecutó Gradle ni runtime. Validar el SHA final posterior a esta actualización documental.
+
+---
+
 # FOOD TESTS — DE NO PERSISTIDOS A GATE PERMANENTE (25-nov-2026)
 
 - `src/foodTest` estaba fuera de git aunque `build.gradle` ya lo usaba; `FoodIntegrationTest.pantryPhysical()`
