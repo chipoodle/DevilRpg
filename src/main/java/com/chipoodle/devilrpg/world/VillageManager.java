@@ -2640,8 +2640,8 @@ public final class VillageManager {
         WORLD_SIEGES.computeIfAbsent(level, l -> new ArrayList<>())
                 .add(new WorldSiege(settlement.objectiveIndex(), settlement.center(), wave,
                         level.getGameTime(), pendingDefenders));
-        // El libro mayor ya existe: ahora sí se puede marcar a cada entidad como participante oficial.
-        // La marca y la última posición deben nacer DESPUÉS del registro, nunca durante PendingHorde.
+        // El libro mayor ya existe: reconfirmar el índice y refrescar la última posición de cada
+        // participante que sobrevivió a la fase PendingHorde.
         for (UUID uuid : wave) {
             net.minecraft.world.entity.Entity entity = level.getEntity(uuid);
             if (entity instanceof AggressiveZombieEntity zombie) {
