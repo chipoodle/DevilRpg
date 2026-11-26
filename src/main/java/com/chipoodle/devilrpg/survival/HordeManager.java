@@ -395,6 +395,9 @@ public final class HordeManager {
         if (pending.cancelled || PENDING_HORDES.get(level) != pending || pending.currentMember != member) {
             return;
         }
+
+        AggressiveZombieEntity zombie;
+        BlockPos pos;
         try {
             // A direct spawn into an already-loaded chunk has no async request to account for.
             if (member.request == null) {
@@ -403,8 +406,8 @@ public final class HordeManager {
             int y = pending.settlement != null
                     ? VillageGenerator.spawnY(level, member.x, member.z)
                     : (int) Math.floor(pending.base.y);
-            BlockPos pos = new BlockPos(member.x, y, member.z);
-            AggressiveZombieEntity zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
+            pos = new BlockPos(member.x, y, member.z);
+            zombie = ModEntities.AGGRESSIVE_ZOMBIE.get()
                     .create(level, null, pos, MobSpawnType.MOB_SUMMONED, true, true);
             if (zombie == null) {
                 failCurrentMember(level, pending, member, "la fábrica de entidad devolvió null");
@@ -420,24 +423,26 @@ public final class HordeManager {
                 failCurrentMember(level, pending, member, "addFreshEntity rechazó la entidad");
                 return;
             }
-
-            com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
-            if (pending.settlement != null) {
-                zombie.setWorldSiegeIndex(pending.settlement.objectiveIndex());
-                pending.wave.add(zombie.getUUID());
-                VillageManager.registrarPosicionDeAsediador(zombie.getUUID(), pos);
-            }
-            pending.spawned++;
-            if (member.request != null) {
-                releaseChunkTicket(level, member.request);
-                member.request = null;
-            }
-            pending.currentMember = null;
-            if (pending.nextIndex >= pending.plannedCount) {
-                finishPendingHorde(level, pending);
-            }
         } catch (RuntimeException failure) {
             failCurrentMember(level, pending, member, "excepción durante spawn: " + failure);
+            return;
+        }
+
+        // From this point insertion is confirmed: never retry this member, even if later bookkeeping fails.
+        com.chipoodle.devilrpg.spawner.AggressiveSpawnAudit.success("horde_wave", level, zombie, pos);
+        if (pending.settlement != null) {
+            zombie.setWorldSiegeIndex(pending.settlement.objectiveIndex());
+            pending.wave.add(zombie.getUUID());
+            VillageManager.registrarPosicionDeAsediador(zombie.getUUID(), pos);
+        }
+        pending.spawned++;
+        if (member.request != null) {
+            releaseChunkTicket(level, member.request);
+            member.request = null;
+        }
+        pending.currentMember = null;
+        if (pending.nextIndex >= pending.plannedCount) {
+            finishPendingHorde(level, pending);
         }
     }
 
