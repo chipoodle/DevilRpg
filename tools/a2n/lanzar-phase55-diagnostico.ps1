@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $launcher = [System.IO.Path]::GetFullPath(
-    (Join-Path $PSScriptRoot '..\..\build\a2n\lanzar-a2n.ps1')
+    (Join-Path $PSScriptRoot 'lanzar-a2n.ps1')
 )
 
 if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) {
