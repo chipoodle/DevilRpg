@@ -11,24 +11,26 @@ declare acceptance.
 - Minecraft 1.21.1, NeoForge 21.1.249.
 - Branch `feature/autonomous-village`; current baseline HEAD `518fee1`.
 - Do not use `run\saves\New World`; all disposable worlds live under `build\a2n\<runId>\game`.
-- Required source: `tools/a2n/A2NavHarness.java` (temporary copy in the debug source during a run),
-  `build/a2n/lanzar-a2n-run40.ps1` (launcher template), and `build/a2n/lanzar-a2n.ps1`.
+- Required source: `tools/a2n/A2NavHarness.java` and the versioned launcher `tools/a2n/lanzar-a2n.ps1`.
+  The launcher no longer copies source into `src/`, and does not depend on ignored files under `build/`.
 
 ## B. Test architecture
 
 ```text
-lanzar-a2n-run40.ps1
-  -> creates build/a2n/a2n-<timestamp>/{game,init.gradle,server.properties}
-  -> copies the harness into src/main/java/.../debug/A2NavHarness.java
-  -> starts gradlew runServer headlessly with:
-       -Da2n.mode=raid -Da2n.faseA=3000 -Da2n.faseB=12000
-       -Ddevilrpg.nav.custom=true -Ddevilrpg.nav.budget=900
-       -Ddevilrpg.nav.globalBudget=8000
-       -Ddevilrpg.a2n.traceNav=true -Dn4.trace=true
-  -> harness builds the walled fixture, spawns 8 attackers and samples phase A/B
-  -> writes fin.txt and stops the server
-  -> launcher waits for fin.txt, verifies save lines, stops only the owned JVM
+ tools/a2n/lanzar-a2n.ps1
+   -> validates feature/autonomous-village and a clean tracked worktree
+   -> creates build/a2n/a2n-<timestamp>/{game,server.properties,eula.txt}
+   -> compiles the canonical tools/a2n/A2NavHarness.java via Gradle source-set flags
+   -> starts runServer headlessly with phase A=3000 and phase B=12000
+   -> passes traceNav=true, traceGlobalSearch=true and nav.budget=900
+   -> identifies the dedicated-server JVM by runId + server launch marker
+   -> waits for fin.txt, then supervises server and Gradle shutdown
 ```
+
+The launcher intentionally does not pass the obsolete `devilrpg.nav.custom` flag or the
+unconsumed `devilrpg.nav.globalBudget` property. It never edits production sources or reuses
+`run/saves`. Minecraft EULA acceptance is explicit: use `-AceptarEula` only after accepting
+https://aka.ms/MinecraftEULA; otherwise the launcher requires an already accepted `eula.txt`.
 
 The server is headless. No client GUI, keyboard or mouse input is used. A2 and C4 are separate:
 A2 measures attacker approach/entry; C4 measures guards, worker recovery and job-site integrity.
@@ -54,9 +56,8 @@ java -cp "build/classes/java/main;build/classes/java/test" com.chipoodle.devilrp
 Full headless A2 (only one at a time):
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build\a2n\lanzar-a2n-run40.ps1 `
-  -Modo raid -Semilla 12345 -LimiteMinutos 90 -Pared 0 -FaseA 3000 -FaseB 12000 `
-  -Rampa 0 -Perfil 0 -Inundacion 0 -NavCustom true -Presupuesto 900 -GlobalBudget 8000
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\a2n\lanzar-a2n.ps1 `
+  -Modo raid -Semilla 12345 -LimiteMinutos 90 -FaseA 3000 -FaseB 12000 -Presupuesto 900 -AceptarEula
 ```
 
 Run directory: `build\a2n\a2n-<timestamp>`. Logs: `srv.log`, `nav-trace.log`, `fin.txt`,
