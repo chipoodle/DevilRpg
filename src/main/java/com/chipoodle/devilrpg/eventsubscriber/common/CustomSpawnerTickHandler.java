@@ -63,8 +63,6 @@ public class CustomSpawnerTickHandler {
             });
             spawner.tick();
 
-            // Hordas periodicas (tam y frecuencia escalan con la amenaza global por tiempo).
-            HordeManager.tick(level);
             // Asedios a las aldeas (iteracion 3 en miniatura).
             VillageManager.tick(level);
             // Guaridas (iteracion 2): focos de enemigos que el jugador puede asaltar.
