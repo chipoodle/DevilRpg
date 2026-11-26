@@ -39,7 +39,7 @@ mataba antes.
 ## 3 · Corrección
 
 - **`VillageSpawnGuard`**: política inversa y cerrada por el otro lado. Dentro de una aldea protegida
-  se cancela **todo** hostil salvo:
+  se cancela **todo** hostil sin excepciones de tipo de spawn:
   - `SPAWN_EGG` (huevo del jugador),
   - `COMMAND` (`/summon`),
   - `MOB_SUMMONED` (asediadores y rebaño del mod).
@@ -58,7 +58,7 @@ La regla de no tocar aldeanos-zombi (curación) se conserva.
 ## 4 · Evidencia
 
 - `VILLAGE_TERRAIN_POLICY_TEST: OK (22 aserciones)`: 11 nuevas de `VillageSpawnGuard`
-  (NATURAL/EVENT/REINFORCEMENT/SPAWNER/STRUCTURE cancelan; SPAWN_EGG/COMMAND/MOB_SUMMONED no;
+  (NATURAL/EVENT/REINFORCEMENT/SPAWNER/STRUCTURE/SPAWN_EGG/COMMAND/MOB_SUMMONED/null cancelan;
   fuera/monstruo falso/null no).
 - Gate completo: **BUILD SUCCESSFUL** (1m36s); skills **416**, persistencia **553**, ownership **59**.
 - `compileJava` y `lint_aldea --strict` verdes; `git diff --check` 0.
@@ -81,3 +81,12 @@ La regla de no tocar aldeanos-zombi (curación) se conserva.
 El campo estaba activo; el defecto era la lista cerrada de tipos y la espera de 2 min para vanilla.
 La política nueva cierra cualquier `MobSpawnType` hostil no intencional y expulsa vanilla al
 siguiente latido. **Runtime pendiente de la noche de prueba.**
+
+
+## Actualización 26-nov-2026
+
+El campo de fuerza queda activo desde que la aldea está generada y hasta que `Fallen` sea verdadero.
+No depende de `Resolved`, ni del estado de un asedio activo. `Resolved` solo evita iniciar otra
+campaña; no apaga la protección. Todo tipo de spawn hostil se cancela dentro, incluidas invocaciones
+del mod, huevos y comandos. Los zombies agresivos además descartan cada candidato interior antes de
+devolver su posición de spawn.
