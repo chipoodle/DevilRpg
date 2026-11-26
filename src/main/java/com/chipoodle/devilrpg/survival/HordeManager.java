@@ -14,7 +14,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
-import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.phys.Vec3;
@@ -332,8 +332,9 @@ public final class HordeManager {
                         chunkPos.x, chunkPos.z, ChunkStatus.FULL, true);
             }
             chunkFuture.whenComplete((result, error) -> {
-                boolean loaded = error == null && result instanceof com.mojang.datafixers.util.Either<?, ?> either
-                        && either.left().isPresent();
+                boolean loaded = error == null
+                        && result instanceof net.minecraft.server.level.ChunkResult<?> chunkResult
+                        && chunkResult.isSuccess();
                 dispatchChunkCompletion(server, level, pending, member, request, loaded, error);
             });
         }).exceptionally(error -> {
