@@ -149,7 +149,12 @@ try {
     if (-not $traceOk -or -not $startOk) { throw "Evidencia incompleta: serverStarted=$startOk traceConfirmed=$traceOk" }
     $summary = @("RUN_ID=$runId","HEAD=$head","BRANCH=$branch","MODE=raid","PHASE_A=$FaseA","PHASE_B=$FaseB","BUDGET=$Presupuesto","FIN=$fin","TRACE_CONFIRMED=$traceOk","SERVER_STARTED=$startOk","NAV_TRACE_EXISTS=$(Test-Path -LiteralPath $navTraceFile)","GRADLE_EXIT_CODE=$($gradleProcess.ExitCode)","ELAPSED_SECONDS=$([int]((Get-Date)-$startedAt).TotalSeconds)")
     $summary | Set-Content -LiteralPath (Join-Path $runDir 'launcher-summary.txt') -Encoding UTF8
-    if ($fin -match '^COMPLETO\b' -and $gradleProcess.ExitCode -eq 0) { $exitCode = 0; Write-Status 'COMPLETE' $fin }
+    $finAccepted = ($fin -match '^COMPLETO\b') -or (
+        $Modo -eq 'raid' -and
+        $fin -match '^C4_PASS \(raid\) - ' -and
+        $fin -match 'fallosDeInstrumento=0'
+    )
+    if ($finAccepted -and $gradleProcess.ExitCode -eq 0) { $exitCode = 0; Write-Status 'COMPLETE' $fin }
     else { $exitCode = 2; Write-Status 'HARNESS_FINISHED_NONPASS' $fin }
 }
 catch {
