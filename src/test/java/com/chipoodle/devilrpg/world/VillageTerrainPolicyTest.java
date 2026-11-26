@@ -41,14 +41,14 @@ public final class VillageTerrainPolicyTest {
         check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.REINFORCEMENT));
         check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.SPAWNER));
         check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.STRUCTURE));
-        // 12. Lo que crea el jugador o el mod a propósito no se corta.
-        check(false, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.SPAWN_EGG));
-        check(false, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.COMMAND));
-        check(false, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.MOB_SUMMONED));
-        // 13. Fuera de aldea, sin monstruo o sin tipo no se corta.
+        // 12. Ninguna vía de creación puede saltarse el sello, ni siquiera comandos o invocaciones del mod.
+        check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.SPAWN_EGG));
+        check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.COMMAND));
+        check(true, VillageSpawnGuard.debeCancelar(true, true, MobSpawnType.MOB_SUMMONED));
+        check(true, VillageSpawnGuard.debeCancelar(true, true, null));
+        // 13. Fuera de aldea o si no es monstruo, no se cancela.
         check(false, VillageSpawnGuard.debeCancelar(true, false, MobSpawnType.NATURAL));
         check(false, VillageSpawnGuard.debeCancelar(false, true, MobSpawnType.NATURAL));
-        check(false, VillageSpawnGuard.debeCancelar(true, true, null));
         // 14. La campana destruida conquista la aldea (aunque la ola muera después).
         check(true, VillageSiegeBellPolicy.laAldeaCaePorCampana(true, false));
         check(false, VillageSiegeBellPolicy.laAldeaCaePorCampana(true, true));
