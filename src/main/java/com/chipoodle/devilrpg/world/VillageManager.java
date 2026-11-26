@@ -1897,6 +1897,7 @@ public final class VillageManager {
                         } else {
                             DevilRpg.LOGGER.warn("[Village] Aldea {}: la oleada NO PUDO NACER en 5 intentos{}: el asedio se"
                                             + " cancela SIN darse por ganado", d.objectiveIndex, motivoDeOleada(d));
+                            VillageSavedData.get(level).markSiegeResolved(d.objectiveIndex);
                             list.remove(i);
                         }
                         continue;
@@ -2561,7 +2562,7 @@ public final class VillageManager {
         Settlement best = null;
         int bestPressure = 0;
         for (int i = 0; i <= currentIndex; i++) {
-            if (saved.isFallen(i) || !saved.isGenerated(i) || isUnderAttack(level, i)) {
+            if (saved.isFallen(i) || saved.isSiegeResolved(i) || !saved.isGenerated(i) || isUnderAttack(level, i)) {
                 continue;
             }
             BlockPos target = centroDe(level, i);
@@ -2601,6 +2602,7 @@ public final class VillageManager {
         // rechaza hay que SOLTAR la oleada que el llamador ya creo; si no, esos raiders quedarian marcados en campana
         // para siempre y sin libro mayor que los resolviera.
         if (VillageSavedData.get(level).isFallen(settlement.objectiveIndex())
+                || VillageSavedData.get(level).isSiegeResolved(settlement.objectiveIndex())
                 || isUnderWorldSiege(level, settlement.objectiveIndex())
                 || isUnderPlayerSiege(level, settlement.objectiveIndex())) {
             disableGoToCenter(level, wave);
@@ -2675,6 +2677,7 @@ public final class VillageManager {
                             "La aldea ha resistido: los monstruos han sido rechazados.");
                     // Recompensa para quien la defendió (ver registerDefender).
                     rewardWorldSiegeDefenders(level, siege);
+                    saved.markSiegeResolved(siege.objectiveIndex);
                     disableGoToCenter(level, siege.wave);
                 }
                 case FALLEN -> {
@@ -2700,6 +2703,7 @@ public final class VillageManager {
                     // registro para que un asedio futuro pueda empezar y se liberan las banderas de campaña.
                     // NO se reinicia la presión: no hubo defensa confirmada y resetearla falsearía el abandono.
                     list.remove(i);
+                    saved.markSiegeResolved(siege.objectiveIndex);
                     boolean activa = resultado == WorldSiegePolicy.Outcome.TIMEOUT_ACTIVE;
                     DevilRpg.LOGGER.warn("[Horda] la aldea {}: asedio del mundo cerrado por plazo ({}) {};"
                                     + " sin victoria ni recompensa (ultimaPosicionRef={})", siege.objectiveIndex,
@@ -8528,7 +8532,7 @@ public final class VillageManager {
         VillageSavedData saved = VillageSavedData.get(level);
         double limite = (double) VillageGenerator.FENCE_RADIUS * VillageGenerator.FENCE_RADIUS;
         for (int i = 0; i <= MAX_OBJECTIVES; i++) {
-            if (!saved.isGenerated(i) || saved.isFallen(i) || !saved.isSiegeResolved(i)) {
+            if (!saved.isGenerated(i) || saved.isFallen(i)) {
                 continue;
             }
             BlockPos centro = centroDe(level, i);
