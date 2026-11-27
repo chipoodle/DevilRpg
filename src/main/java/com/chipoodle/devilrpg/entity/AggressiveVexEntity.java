@@ -86,7 +86,7 @@ public class AggressiveVexEntity extends Vex {
      * <p>
      * Los goals vanilla ya filtran eso por su cuenta vía {@code canBeSeenAsEnemy()}, pero el mod asigna el
      * objetivo <b>a mano</b> al spawnear el vex ({@code AggressiveVexSpawnRule} y {@code LairManager.spawnOne}), y eso
-     * se salta el filtro: sin esta guarda, los vexes perseguían y atacaban a un jugador en creativo.
+     * se salta el filtro: sin esta guarda, los Aggressive Vexes perseguían y atacaban a un jugador en creativo.
      */
     @Override
     public void setTarget(@Nullable LivingEntity target) {
