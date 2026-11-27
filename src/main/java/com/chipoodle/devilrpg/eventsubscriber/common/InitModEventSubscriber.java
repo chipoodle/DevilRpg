@@ -56,7 +56,7 @@ public final class InitModEventSubscriber {
         event.put(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulker.createAttributes().build());
         event.put(ModEntities.EXPLODING_SPORE_BULLET.get(),ExplodingSporeBullet.createAttributes().build());
         event.put(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieEntity.setAttributes().build());
-        event.put(ModEntities.FROST_VEX.get(), FrostVexEntity.setAttributes().build());
+        event.put(ModEntities.AGGRESSIVE_VEX.get(), AggressiveVexEntity.setAttributes().build());
         event.put(ModEntities.SCULK_CULTIVATOR.get(), SculkCultivatorEntity.setAttributes().build());
 
     }
