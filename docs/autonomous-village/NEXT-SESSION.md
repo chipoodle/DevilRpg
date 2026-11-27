@@ -1,3 +1,16 @@
+# CHECKPOINT 27-nov-2026 — CORRECCIÓN DE DESTINO INVÁLIDO DE GUARDIAS
+
+- **HEAD de implementación:** `73016ae093de18d1d9744d9bd8164ef35189ec2d` (dos commits productivos encima de `c6709eb5b2f864b1126b2e9deb5f2f346edcabfc)).
+- **Informe:** `docs/autonomous-village/2026-11-27-GUARD-POST-FALLBACK-FIX.md`.
+- **Evidencia causal:** Harness Run 008 confirmó que `puestoLibre()` caía al fallback `villager.blockPosition()` mientras Ximeno estaba en agua; el destino quedaba a 0.633 (< `REACH=3.0`), el goal paraba y `stuckTicks=0`. No había candidato cardinal seco, soportado y alcanzable.
+- **Corrección publicada:** `sePuedeEstar()` rechaza fluidos en pies/cabeza; `puestoLibre()` devuelve `null` si no hay puesto seguro en vez de fingir llegada a la posición actual. Los métodos que propagan esa posibilidad son nullable. Si el puesto del corral no existe, se omite ese turno y se prueba la ronda normal.
+- **No se modificaron:** `REACH`, navegación, soporte físico requerido, protección ni umbrales de `GuardTerrainRecovery`.
+- **Validación:** ChatGPT revisó los diffs y los puntos de propagación null. Compile/tests/lint/runtime **NOT RUN**. No declarar PASS.
+- **Siguiente acción única:** Harness debe sincronizar sin operaciones destructivas, validar exactamente `73016ae093de18d1d9744d9bd8164ef35189ec2d`, ejecutar compile/tests/policyTest/lint/diff-check y, si el gate estático pasa, probar el escenario automatizado en una copia NUEVA del mundo. Ver handoff y escenarios detallados en el informe.
+- Preservar Run 008, copias previas y mundo original. Harness no modifica producción. Sin teletransporte, sin forzar recuperación y sin debilitar criterios.
+
+---
+
 # CHECKPOINT 27-nov-2026 — RECUPERACIÓN DE TERRENO PARA GUARDIAS
 
 - **Implementación publicada:** `cd532f1d630f26c81e6acbcde91112390e157eb1` (serie de 7 commits sobre `9271e6706fe4e70dc61e06f70ebb3f76ea9f4399`).
