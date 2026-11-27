@@ -1,3 +1,17 @@
+# CHECKPOINT 27-nov-2026 — RECUPERACIÓN DE TERRENO PARA GUARDIAS
+
+- **Implementación publicada:** `13ea721ba8f246a6be2b04664b473138c51e8512` (serie de 4 commits sobre `9271e6706fe4e70dc61e06f70ebb3f76ea9f4399`).
+- **HEAD remoto al redactar este checkpoint:** `2c34fada38297475a7f4b43c410bd511e1fbd15e` (incluye el informe de implementación).
+- Se añadió `GuardTerrainRecovery` y se integró en `VillagerGuardGoal`: tras 60 ticks sin progreso y con el Brain aún apuntando al destino, busca un rellano seco y soportado hasta 2 bloques más alto; construye columnas escalonadas de adoquín con soporte real y presupuesto/cadencia acotados; después solicita el rellano mediante `VillageManager.caminarHacia`.
+- No toma la autoridad de navegación, no llama a `Navigation.moveTo`, no altera el destino estratégico y no interrumpe combate/equipamiento/marcha.
+- **ESTADO: IMPLEMENTADO, NO VALIDADO.** ChatGPT no pudo ejecutar Gradle, lint ni runtime: CHRIS-PC está offline. No declarar PASS.
+- Informe completo: `docs/autonomous-village/2026-11-27-GUARD-TERRAIN-RECOVERY.md`.
+- **Siguiente acción única:** Harness debe sincronizar sin operaciones destructivas, verificar el SHA exacto de implementación `13ea721ba8f246a6be2b04664b473138c51e8512` (el HEAD documental es descendiente), ejecutar compile/test/lint/diff-check y luego el escenario runtime de depresión de agua descrito en el informe.
+- Criterios runtime: guardia atrapado en charco con suelo 2 bloques abajo; salida seca y soportada 2 bloques arriba; evidencia de bloques colocados, Brain WALK_TARGET, coordenadas y logs `[GuardTerrain]`; sin teletransporte. Ejecutar controles negativos de ruta natural, protección, lava/bloques especiales y prioridad de combate/equipamiento/marcha.
+- No modificar A2/C4, sus umbrales, presupuestos, protección ni criterios de aceptación.
+
+---
+
 # ACTUALIZACIÓN 26-nov-2026 — CORRECCIÓN DEL BLOQUEO DE COMPILACIÓN DEL SPAWN
 
 - Harness reportó FAIL en `f5c5fcad700e794022d34e25f72c636f54947561`: fragmento residual `ro, la aldea cae."), false);` en VillageManager.java:1911, con dos llaves duplicadas.
