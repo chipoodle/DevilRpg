@@ -24,7 +24,7 @@ import java.util.List;
  * real, espacio para el cuerpo y fuera de las zonas protegidas. La colocación es incremental y acotada.
  */
 final class GuardTerrainRecovery {
-    private static final int STUCK_TRIGGER_TICKS = 60;
+    static final int STUCK_TRIGGER_TICKS = 60;
     private static final int ACTION_COOLDOWN_TICKS = 10;
     private static final int MAX_RISE = 2;
     private static final int MAX_SUPPORT_DEPTH = 4;
@@ -38,6 +38,10 @@ final class GuardTerrainRecovery {
     private long nextActionAt;
     private long startedAt;
     private boolean active;
+
+    boolean isActive() {
+        return active;
+    }
 
     /**
      * @return true mientras la recuperación controla el destino temporal; false cuando no aplica o terminó.
@@ -140,7 +144,11 @@ final class GuardTerrainRecovery {
                     }
                     for (int y = supportY + 1; y <= topBlockY; y++) {
                         BlockPos place = new BlockPos(column.getX(), y, column.getZ());
-                        if (!celdaColocable(level, place) || VillageManager.estaProtegida(level, place)) {
+                        BlockPos head = place.above();
+                        BlockPos upperBody = place.above(2);
+                        if (!celdaColocable(level, place) || VillageManager.estaProtegida(level, place)
+                                || !level.getBlockState(head).getCollisionShape(level, head).isEmpty()
+                                || !level.getBlockState(upperBody).getCollisionShape(level, upperBody).isEmpty()) {
                             valid = false;
                             break;
                         }
