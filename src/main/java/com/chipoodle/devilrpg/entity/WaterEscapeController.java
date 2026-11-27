@@ -41,6 +41,7 @@ public final class WaterEscapeController {
     private int waterDwellTicks;
     private int stuckTicks;
     private int escapeTicks;
+    private long escapeStartedAt;
     private int jumpCooldown;
     private long nextAttemptAt;
     private double lastX;
@@ -62,7 +63,8 @@ public final class WaterEscapeController {
             if (tracking) {
                 if (active && entity instanceof Villager villager) {
                     DevilRpg.LOGGER.info("[GuardWaterEscape] guard={} reached dry ground at {} after {} ticks",
-                            villager.getUUID(), entity.blockPosition().toShortString(), escapeTicks);
+                            villager.getUUID(), entity.blockPosition().toShortString(),
+                            elapsedTicks(escapeStartedAt, now));
                 }
                 resetEpisode();
             }
@@ -177,6 +179,7 @@ public final class WaterEscapeController {
         active = true;
         stuckTicks = 0;
         escapeTicks = 0;
+        escapeStartedAt = now;
         jumpCooldown = 0;
         lastX = entity.getX();
         lastZ = entity.getZ();
@@ -186,6 +189,10 @@ public final class WaterEscapeController {
                     villager.getUUID(), shore.toShortString(), budget.intentos(), budget.maxIntentos());
         }
         return true;
+    }
+
+    static long elapsedTicks(long startedAt, long now) {
+        return Math.max(0L, now - startedAt);
     }
 
     private static double missionDistance(LivingEntity entity, BlockPos target) {
@@ -202,6 +209,7 @@ public final class WaterEscapeController {
         waterDwellTicks = 0;
         stuckTicks = 0;
         escapeTicks = 0;
+        escapeStartedAt = 0L;
         jumpCooldown = 0;
         nextAttemptAt = 0L;
         lastX = Double.NaN;
