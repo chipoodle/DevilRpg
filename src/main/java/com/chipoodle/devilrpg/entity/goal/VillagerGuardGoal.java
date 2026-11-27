@@ -366,7 +366,7 @@ public class VillagerGuardGoal extends Goal {
         // la barraca, y se van turnando para no dejar la aldea sola. Cuando le toca, el goal se corta y mandan los
         // demás (el de la taberna, el de la cama): el guardia vuelve solo cuando le toca el servicio otra vez. Con un
         // enemigo a la vista o la aldea en asalto NO hay descanso: primero se pelea.
-        if (enemigo == null && !aldeaEnAsalto() && leTocaElTurnoDeDescanso() && !leTocaEntrenar()) {
+        if (!regresandoAlPueblo && enemigo == null && !aldeaEnAsalto() && leTocaElTurnoDeDescanso() && !leTocaEntrenar()) {
             return false;
         }
         // Tampoco se corta por la hora de descanso: la guardia de noche es parte del servicio (ver `canUse`). Si el
