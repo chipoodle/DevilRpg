@@ -25,7 +25,7 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_GREEN)
                     .randomTicks()
-                    .noCollission()
+                    
                     .instabreak()
                     .sound(SoundType.VINE)
     ));
@@ -33,7 +33,7 @@ public final class ModBlocks {
             BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_GREEN)
                     .randomTicks()
-                    .noCollission()
+                    
                     .instabreak()
                     .sound(SoundType.VINE)
     ));
