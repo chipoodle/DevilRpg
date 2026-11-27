@@ -313,11 +313,8 @@ public class VillagerGuardGoal extends Goal {
         // RESCATE SIN COMPETENCIA: cuando no existe puesto de patrulla y el guardia ni siquiera puede estar de pie
         // (agua, celda ocupada o sin soporte), no hay asignación militar ejecutable. Se conserva su identidad y se
         // usa la plaza/calle como objetivo de retorno; el goal de guardia ya no puede reclamar un puesto ficticio.
-        regresandoAlPueblo = villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG);
-        if (!regresandoAlPueblo && !equipando && puntoDeGuardia(level) == null
-                && (!sePuedeEstar(level, villager.blockPosition())
-                        || !VillageManager.esDeDentroDelMuro(center, villager.blockPosition()))) {
-            regresandoAlPueblo = true;
+        regresandoAlPueblo = retornoPendiente;
+        if (regresandoAlPueblo && !villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG)) {
             villager.getPersistentData().putBoolean(VillageManager.GUARD_RETURNING_TAG, true);
             DevilRpg.LOGGER.warn("[GuardReturn] guard={} village={} stranded at {}; preserving militia identity",
                     villager.getUUID(), objectiveIndex, villager.blockPosition().toShortString());
