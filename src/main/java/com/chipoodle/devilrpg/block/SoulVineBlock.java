@@ -6,6 +6,7 @@ import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -151,6 +152,15 @@ public class SoulVineBlock extends Block implements EntityBlock {
                 .add(SOULVINE_FACING)
                 .add(DECAY_STAGE)
         ;
+    }
+
+    /**
+     * Keeps this custom vine climbable independently of datapack tag loading.
+     * The climbable tag remains declared as well for vanilla tag-based consumers.
+     */
+    @Override
+    public boolean isLadder(@NotNull BlockState state, @NotNull LevelReader level, @NotNull BlockPos pos, @Nullable LivingEntity entity) {
+        return true;
     }
 
     public @NotNull VoxelShape getShape(@NotNull BlockState p_53880_, @NotNull BlockGetter p_53881_, @NotNull BlockPos p_53882_, @NotNull CollisionContext p_53883_) {
