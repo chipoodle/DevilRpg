@@ -30,7 +30,7 @@ public class ModCreativeTabs {
                 populator.accept(ModItems.SOULWISP_ARCHER_SPAWN_EGG.get());
                 populator.accept(ModItems.SOULWISP_RANGER_SPAWN_EGG.get());
                 populator.accept(ModItems.AGGRESSIVE_ZOMBIE_SPAWN_EGG.get());
-                populator.accept(ModItems.FROST_VEX_SPAWN_EGG.get());
+                populator.accept(ModItems.AGGRESSIVE_VEX_SPAWN_EGG.get());
                 populator.accept(ModItems.SCULK_CULTIVATOR_SPAWN_EGG.get());
                 // La comida que cocina el cocinero de la aldea con los huevos del corral.
                 populator.accept(ModItems.HUEVO_ESTRELLADO.get());
