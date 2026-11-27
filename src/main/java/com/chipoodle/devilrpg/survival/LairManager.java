@@ -5,7 +5,7 @@ import com.chipoodle.devilrpg.capability.IGenericCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapability;
 import com.chipoodle.devilrpg.capability.experience.PlayerExperienceCapabilityInterface;
 import com.chipoodle.devilrpg.entity.AggressiveZombieEntity;
-import com.chipoodle.devilrpg.entity.FrostVexEntity;
+import com.chipoodle.devilrpg.entity.AggressiveVexEntity;
 import com.chipoodle.devilrpg.entity.SculkCultivatorEntity;
 import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntities;
@@ -576,7 +576,7 @@ public final class LairManager {
         if (cultivator) {
             mob = ModEntities.SCULK_CULTIVATOR.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         } else if (frost) {
-            mob = ModEntities.FROST_VEX.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
+            mob = ModEntities.AGGRESSIVE_VEX.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         } else {
             mob = ModEntities.AGGRESSIVE_ZOMBIE.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         }
@@ -588,7 +588,7 @@ public final class LairManager {
             } else if (mob instanceof SculkCultivatorEntity cultivatorMob) {
                 // El cultivador trabaja la infección dentro de ese mismo radio.
                 cultivatorMob.setHome(lair.corePos, PATROL_RADIUS);
-            } else if (mob instanceof FrostVexEntity vex) {
+            } else if (mob instanceof AggressiveVexEntity vex) {
                 vex.setTarget(player);
             }
             level.addFreshEntity(mob);
@@ -607,7 +607,7 @@ public final class LairManager {
     private static int countLairMobs(ServerLevel level, Lair lair) {
         AABB box = new AABB(lair.center).inflate(PATROL_RADIUS);
         return level.getEntitiesOfClass(AggressiveZombieEntity.class, box).size()
-                + level.getEntitiesOfClass(FrostVexEntity.class, box).size();
+                + level.getEntitiesOfClass(AggressiveVexEntity.class, box).size();
     }
 
     /**
