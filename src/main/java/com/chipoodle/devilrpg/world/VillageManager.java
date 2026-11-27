@@ -336,6 +336,8 @@ public final class VillageManager {
      * para que no se apelotonen ni hagan todos el mismo recorrido.
      */
     public static final String GUARD_INDEX_TAG = "DevilRpgGuardiaPuesto";
+    /** El guardia conserva su identidad mientras sale de un atasco y vuelve a terreno de la aldea. */
+    public static final String GUARD_RETURNING_TAG = "DevilRpgGuardiaRegresando";
     /** Marca persistente que separa la cohorte fija de los guardias reclutados por sobrantes. */
     public static final String FOUNDING_GUARD_TAG = "DevilRpgGuardiaFundadora";
     /** Aldea propietaria de una guardia fundadora, para restaurar su goal al cargarla durante un asedio. */
@@ -4364,6 +4366,9 @@ public final class VillageManager {
                 asegurarGuardiaFundadora(level, villager, center, objectiveIndex);
                 continue; // los cuatro puestos fundadores no cubren oficios ni entran en el reparto dinámico
             }
+            if (villager.getPersistentData().getBoolean(GUARD_RETURNING_TAG)) {
+                continue; // un guardia en rescate no ocupa ni pierde una plaza hasta volver a terreno seguro
+            }
             if (puedeSerGuardia(villager)) {
                 adultos.add(villager);
             }
@@ -4424,6 +4429,7 @@ public final class VillageManager {
         // quedaría sin granjero o sin herreros por tener milicia.
         for (Villager villager : aldeanos) {
             if (VillagerGuardGoal.esGuardia(villager) && !esGuardiaFundadora(villager)
+                    && !villager.getPersistentData().getBoolean(GUARD_RETURNING_TAG)
                     && !sobrantes.contains(villager)) {
                 desalistarGuardia(villager);
             }
