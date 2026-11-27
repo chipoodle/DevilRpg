@@ -7,6 +7,7 @@ import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -158,6 +159,15 @@ public class SoulMinerVineBlock extends Block implements EntityBlock {
      * while the top collision surface remains available for standing on the structure.
      * Climbing itself is provided by the minecraft:climbable block tag.
      */
+    /**
+     * Delegate entity movement to NeoForge's native scaffolding handling.
+     */
+    @Override
+    public boolean isScaffolding(@NotNull BlockState state, @NotNull LevelReader level,
+                                 @NotNull BlockPos pos, @NotNull LivingEntity entity) {
+        return true;
+    }
+
     @Override
     public @NotNull VoxelShape getCollisionShape(@NotNull BlockState state, @NotNull BlockGetter level,
                                                   @NotNull BlockPos pos, @NotNull CollisionContext context) {
