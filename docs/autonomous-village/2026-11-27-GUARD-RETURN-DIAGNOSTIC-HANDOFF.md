@@ -5,7 +5,7 @@
 - Repository: `chipoodle/DevilRpg`
 - Branch: `feature/autonomous-village`
 - Diagnostic source commit: `968d78ffcaac4e345868583cd21f3a59e35e2703`
-- Expected remote HEAD at handoff: `b1abf7af7c02262764115722ac2551f0734b16c7` (documentation descendants included)
+- Expected remote HEAD at handoff: `09b10e1c5081a8f198df8ab28119829182576af3` (documentation descendants included)
 - Sync the latest branch tip and record its exact tested SHA. Prove it contains both diagnostic source commit `968d78ffcaac4e345868583cd21f3a59e35e2703` and implementation commit `39229f5dc45c2234bb65559251d33aeb42735c67`.
 - Diagnostic source parent: `7d65b74f501a741f0be69fd029cb03e6039b2fd5`
 - Minecraft 1.21.1 / NeoForge 21.1.249

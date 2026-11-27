@@ -5,7 +5,7 @@
 - **Rama:** `feature/autonomous-village`
 - **Implementación probada por Harness:** `39229f5dc45c2234bb65559251d33aeb42735c67`
 - **Commit con instrumentación diagnóstica:** `968d78ffcaac4e345868583cd21f3a59e35e2703`
-- **HEAD remoto actual (incluye instrumentación y documentación):** `b1abf7af7c02262764115722ac2551f0734b16c7`
+- **HEAD remoto actual (incluye instrumentación y documentación):** `09b10e1c5081a8f198df8ab28119829182576af3`
 - **Reporte Harness:** resultado `PARTIAL`; estático PASS, escenario A FAIL. Informe comunicado en chat; el archivo local indicado por Harness aún no está publicado en GitHub.
 - **Evidencia:** Ximeno activa retorno, conserva el goal, recibe destino de calle y tiene WALK_TARGET, pero no se mueve durante 600 ticks. No se colocan bloques ni termina el retorno. B–F y controles negativos NOT RUN.
 - **Importante:** `[GuardTerrain]=none` no demuestra que el método no se invocó. En el código anterior, `GuardTerrainRecovery.tick(..., true)` podía rechazar silenciosamente el plan, programar reintento a 100 ticks y no emitir log. También la compuerta de activación exige coincidencia exacta entre WALK_TARGET y el destino estratégico. El reporte no capturó brainTarget ni el resultado de ruta; la causa sigue INCONCLUSIVE.
