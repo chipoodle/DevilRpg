@@ -1,18 +1,19 @@
-# CHECKPOINT 27-nov-2026 — RESCATE Y REINTEGRACIÓN DE GUARDIAS (ACTUAL)
+# CHECKPOINT 27-nov-2026 — DIAGNÓSTICO DEL RESCATE DE GUARDIAS (ACTUAL)
 
-> Este checkpoint supersede las instrucciones anteriores de validación del rescate. El historial debajo se conserva íntegro.
+> Este checkpoint supersede el handoff de validación anterior. El historial y los reportes previos se conservan íntegros.
 
 - **Rama:** `feature/autonomous-village`
-- **Implementación productiva:** `39229f5dc45c2234bb65559251d33aeb42735c67`
-- **Diseño:** `docs/autonomous-village/2026-11-27-GUARD-RETURN-AND-REINTEGRATION.md`
-- **Evidencia Run011:** `docs/autonomous-village/2026-11-27-GUARD-TERRAIN-RECOVERY-RUN011.md`
-- **Prompt ejecutable Harness:** `docs/autonomous-village/2026-11-27-GUARD-RETURN-HARNESS-HANDOFF.md`
-- El rescate está integrado en el **mismo** `VillagerGuardGoal`; no se añadió un segundo goal que compita por MOVE/LOOK. Combate, marcha y equipamiento conservan sus ramas/prioridad; la huida/emergencia vanilla sigue por delante.
-- Si no hay puesto de patrulla y el guardia está en terreno inseguro o fuera de la muralla, se persiste `DevilRpgGuardiaRegresando` y se le dirige a `VillageManager.casillaDeLaCalle`. El rescate reutiliza `GuardTerrainRecovery` solo tras atasco/ruta natural no alcanzable y siempre mediante `VillageManager.caminarHacia`.
-- Mientras retorna, el reparto dinámico lo excluye de selección y baja, conserva su identidad/tipo/índice y reasegura el goal tras save/reload. Al llegar a terreno seco, soportado y dentro del muro se limpia la etiqueta; el siguiente reparto normal decide si sigue en milicia o vuelve a oficio.
-- **Estado:** IMPLEMENTADO / VALIDACIÓN PENDIENTE. ChatGPT no ejecutó Gradle, tests, lint ni runtime. No declarar PASS.
-- **Siguiente acción única:** Harness sincroniza con seguridad y ejecuta exactamente el plan de `2026-11-27-GUARD-RETURN-HARNESS-HANDOFF.md` en una copia NUEVA del mundo. No reutilizar Run010/Run011, no tocar el mundo original, no modificar producción.
+- **HEAD productivo/documental anterior probado:** `39229f5dc45c2234bb65559251d33aeb42735c67`
+- **HEAD actual con instrumentación diagnóstica:** `968d78ffcaac4e345868583cd21f3a59e35e2703`
+- **Reporte Harness:** resultado `PARTIAL`; estático PASS, escenario A FAIL. Informe comunicado en chat; el archivo local indicado por Harness aún no está publicado en GitHub.
+- **Evidencia:** Ximeno activa retorno, conserva el goal, recibe destino de calle y tiene WALK_TARGET, pero no se mueve durante 600 ticks. No se colocan bloques ni termina el retorno. B–F y controles negativos NOT RUN.
+- **Importante:** `[GuardTerrain]=none` no demuestra que el método no se invocó. En el código anterior, `GuardTerrainRecovery.tick(..., true)` podía rechazar silenciosamente el plan, programar reintento a 100 ticks y no emitir log. También la compuerta de activación exige coincidencia exacta entre WALK_TARGET y el destino estratégico. El reporte no capturó brainTarget ni el resultado de ruta; la causa sigue INCONCLUSIVE.
+- **Cambio de ChatGPT:** commit `968d78ffcaac4e345868583cd21f3a59e35e2703` agrega exclusivamente trazas diagnósticas en `VillagerGuardGoal` y `GuardTerrainRecovery`: resultado de ruta natural a los 60 ticks, WALK_TARGET real, coincidencia exacta, estado de Navigation, y resumen de rechazos/aceptación del plan (bloques y rellano). No cambia umbrales, navegación, colocación, presupuestos ni prioridades.
+- **A2/C4:** sin cambios.
+- **Validación de 968d:** pendiente. ChatGPT no ejecutó Gradle, tests, lint ni runtime.
+- **Siguiente acción única:** Harness sincroniza de forma segura, valida estáticamente el SHA exacto `968d78ffcaac4e345868583cd21f3a59e35e2703` y, si pasa, repite SOLO escenario A en una copia NUEVA y desechable del mundo. Seguir `2026-11-27-GUARD-RETURN-DIAGNOSTIC-HANDOFF.md`. No reutilizar Run010/Run011 ni el mundo original.
 
+---
 ---
 
 # CHECKPOINT 27-nov-2026 — CORRECCIÓN DE DESTINO INVÁLIDO DE GUARDIAS
