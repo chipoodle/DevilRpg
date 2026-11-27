@@ -3,7 +3,7 @@
 > Este checkpoint supersede las instrucciones anteriores de validación del rescate. El historial debajo se conserva íntegro.
 
 - **Rama:** `feature/autonomous-village`
-- **Implementación productiva:** `9632c9df61438fc39f1a32fda83a8affbc691be0`
+- **Implementación productiva:** `c7738f27c4ad2ccc58c6c6b4736fe1eb91bc952a`
 - **Diseño:** `docs/autonomous-village/2026-11-27-GUARD-RETURN-AND-REINTEGRATION.md`
 - **Evidencia Run011:** `docs/autonomous-village/2026-11-27-GUARD-TERRAIN-RECOVERY-RUN011.md`
 - **Prompt ejecutable Harness:** `docs/autonomous-village/2026-11-27-GUARD-RETURN-HARNESS-HANDOFF.md`
