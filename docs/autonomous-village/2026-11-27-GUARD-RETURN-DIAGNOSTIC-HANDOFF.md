@@ -93,5 +93,3 @@ Do not run B–F or priority negatives in this campaign. Do not modify productio
 - A missing `[GuardTerrain]` line alone is not proof that the planner was not called.
 
 Harness must not change production source or acceptance criteria.
-```
-

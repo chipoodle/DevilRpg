@@ -14,7 +14,6 @@
 - **Siguiente acción única:** Harness sincroniza de forma segura, valida estáticamente el SHA exacto `968d78ffcaac4e345868583cd21f3a59e35e2703` y, si pasa, repite SOLO escenario A en una copia NUEVA y desechable del mundo. Seguir `2026-11-27-GUARD-RETURN-DIAGNOSTIC-HANDOFF.md`. No reutilizar Run010/Run011 ni el mundo original.
 
 ---
----
 
 # CHECKPOINT 27-nov-2026 — CORRECCIÓN DE DESTINO INVÁLIDO DE GUARDIAS
 
