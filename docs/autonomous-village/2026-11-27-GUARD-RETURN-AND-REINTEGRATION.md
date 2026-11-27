@@ -50,6 +50,7 @@ Al llegar a una casilla segura dentro del muro y cerca de la calle:
 | Combate | Se procesa antes del movimiento de retorno en el mismo goal |
 | Marcha a guarida | La rama de marcha sale antes de seleccionar retorno |
 | Equipamiento | Puede sustituir temporalmente el destino y pausar/cancelar recovery |
+| Entrenamiento | Se omite mientras `regresandoAlPueblo` está activo |
 | Retorno | Mismo goal SECURITY=3; sin goal competidor |
 | Patrulla | Solo vuelve después de confirmar terreno seguro dentro del muro |
 | Profesiones | SECURITY sigue delante de PROFESSION; reparto no reasigna al guardia durante retorno |
