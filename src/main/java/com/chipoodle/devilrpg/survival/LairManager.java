@@ -571,11 +571,11 @@ public final class LairManager {
         // Nunca dentro de un bloque: si la columna estuviera tapada, se sube al primer hueco de 2 de alto.
         // (Antes un enemigo podía aparecer enterrado y asfixiarse: el guardián se moría solo y el sello se abría.)
         BlockPos posicion = VillageGenerator.huecoLibre(level, new BlockPos(x, y, z));
-        boolean frost = !cultivator && lair.objectiveIndex >= 2 && random.nextInt(4) == 0;
+        boolean aggressiveVex = !cultivator && lair.objectiveIndex >= 2 && random.nextInt(4) == 0;
         Mob mob;
         if (cultivator) {
             mob = ModEntities.SCULK_CULTIVATOR.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
-        } else if (frost) {
+        } else if (aggressiveVex) {
             mob = ModEntities.AGGRESSIVE_VEX.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
         } else {
             mob = ModEntities.AGGRESSIVE_ZOMBIE.get().create(level, null, posicion, MobSpawnType.MOB_SUMMONED, true, true);
