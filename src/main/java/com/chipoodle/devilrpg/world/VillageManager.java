@@ -2227,6 +2227,10 @@ public final class VillageManager {
                 + 132897987541L * (d.reintentosDeOleada + 1L) + indice);
         double anguloBase = orden.nextDouble() * Math.PI * 2.0D;
         // Los radios se reparten por la banda documentada: mínimo, medio y máximo (68, 70 y 73 con la valla en 62).
+        // Se evalúan TODOS los candidatos acotados: no se acepta la primera columna si su única superficie segura
+        // está en una repisa muy por encima de la aldea y otra columna ofrece terreno a la altura de la plaza.
+        BlockPos mejorSitio = null;
+        int mejorDeltaVertical = Integer.MAX_VALUE;
         int banda = WAVE_SPAWN_MAX - WAVE_SPAWN_MIN;
         for (int r = 0; r < SPAWN_CANDIDATOS_RADIOS; r++) {
             int radio = WAVE_SPAWN_MIN + (r * banda) / (SPAWN_CANDIDATOS_RADIOS - 1);
@@ -2235,12 +2239,17 @@ public final class VillageManager {
                 int x = (int) Math.round(d.center.getX() + Math.cos(angulo) * radio);
                 int z = (int) Math.round(d.center.getZ() + Math.sin(angulo) * radio);
                 BlockPos sitio = sitioSeguroEnLaColumna(level, d.center, cota, x, z);
-                if (sitio != null) {
-                    return sitio;
+                if (sitio == null) {
+                    continue;
+                }
+                int deltaVertical = Math.abs(sitio.getY() - cota);
+                if (deltaVertical < mejorDeltaVertical) {
+                    mejorSitio = sitio;
+                    mejorDeltaVertical = deltaVertical;
                 }
             }
         }
-        return null;
+        return mejorSitio;
     }
 
     /**
@@ -2276,27 +2285,49 @@ public final class VillageManager {
         if (!level.hasChunkAt(celda)) {
             return null;
         }
-        // (3) BARRIDO VERTICAL ACOTADO, de arriba abajo, recortado a la altura del mundo.
+        // (3) Buscar primero las superficies más próximas a la cota de la plaza, no la más alta.
+        // En empate se prefiere la superficie inferior: evita elegir una cornisa elevada cuando existe suelo
+        // transitable a una altura equivalente por debajo. Los límites verticales originales se conservan.
         var tipo = ModEntities.AGGRESSIVE_ZOMBIE.get();
         double ancho = tipo.getWidth();   // 0,6: lo mismo que devuelve getBbWidth() para esta entidad
         double alto = tipo.getHeight();   // 1,95: lo mismo que devuelve getBbHeight()
         int techo = Math.min(cota + SPAWN_SCAN_ARRIBA_DE_LA_COTA, level.getMaxBuildHeight() - 2);
         int suelo = Math.max(cota - SPAWN_SCAN_ABAJO_DE_LA_COTA, level.getMinBuildHeight() + 1);
-        for (int y = techo; y >= suelo; y--) {
-            BlockPos donde = new BlockPos(x, y, z);
-            if (!soporteFirme(level, donde.below())) {
-                continue; // sin suelo sólido debajo no hay casilla
+        int maxDelta = Math.max(cota - suelo, techo - cota);
+        for (int delta = 0; delta <= maxDelta; delta++) {
+            int yInferior = cota - delta;
+            if (yInferior >= suelo) {
+                BlockPos sitioInferior = sitioSeguroEnAltura(level, x, yInferior, z, ancho, alto);
+                if (sitioInferior != null) {
+                    return sitioInferior;
+                }
             }
-            AABB caja = cajaDelAsediador(x, y, z, ancho, alto);
-            if (!level.noCollision(caja)) {
-                continue; // el cuerpo ENTERO tiene que caber: muro, valla, losa a media altura o techo
+            int ySuperior = cota + delta;
+            if (delta > 0 && ySuperior <= techo) {
+                BlockPos sitioSuperior = sitioSeguroEnAltura(level, x, ySuperior, z, ancho, alto);
+                if (sitioSuperior != null) {
+                    return sitioSuperior;
+                }
             }
-            if (hayFluidoOPeligro(level, caja)) {
-                continue; // agua, lava, fuego: no es segura aunque el bloque exista
-            }
-            return donde;
         }
         return null;
+    }
+
+    /** Valida una altura candidata sin alterar el mundo ni forzar carga de chunks. */
+    @Nullable
+    private static BlockPos sitioSeguroEnAltura(ServerLevel level, int x, int y, int z, double ancho, double alto) {
+        BlockPos donde = new BlockPos(x, y, z);
+        if (!soporteFirme(level, donde.below())) {
+            return null;
+        }
+        AABB caja = cajaDelAsediador(x, y, z, ancho, alto);
+        if (!level.noCollision(caja)) {
+            return null; // el cuerpo ENTERO tiene que caber: muro, valla, losa a media altura o techo
+        }
+        if (hayFluidoOPeligro(level, caja)) {
+            return null; // agua, lava, fuego: no es segura aunque el bloque exista
+        }
+        return donde;
     }
 
     /**
