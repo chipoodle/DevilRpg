@@ -4,7 +4,7 @@
 
 - Repository: `chipoodle/DevilRpg`
 - Branch: `feature/autonomous-village`
-- Production implementation commit: `c7738f27c4ad2ccc58c6c6b4736fe1eb91bc952a` (includes the last source change: restore the returning guard goal after reload).
+- Production implementation commit: `39229f5dc45c2234bb65559251d33aeb42735c67` (includes the last source change: restore the returning guard goal after reload).
 - The final documentation commit will be a descendant; sync the current branch tip and record the exact tested SHA. Do not test an earlier base.
 - Minecraft 1.21.1 / NeoForge 21.1.249.
 - ChatGPT did not run Gradle, unit tests, lint, dedicated server, client or runtime.
@@ -17,7 +17,7 @@ TASK: Validate stranded guard return and militia reintegration. Harness is verif
 REPOSITORY
 - chipoodle/DevilRpg
 - branch feature/autonomous-village
-- expected implementation commit c7738f27c4ad2ccc58c6c6b4736fe1eb91bc952a
+- expected implementation commit 39229f5dc45c2234bb65559251d33aeb42735c67
 - Sync the current remote branch tip (documentation-only descendants may exist). Record exact tested SHA and prove it contains the implementation commit.
 
 SAFE SYNC / WORKTREE
