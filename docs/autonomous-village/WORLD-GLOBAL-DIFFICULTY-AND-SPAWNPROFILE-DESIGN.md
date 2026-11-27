@@ -40,7 +40,7 @@ spawnDistance = sqrt(distSqr(new BlockPos(playerSpawn)));
 spawnThreat = ThreatLevel.current(level());
 ```
 
-`FrostVexEntity.setPos` follows the same pattern with a 128-block search and the same anchor
+`AggressiveVexEntity.setPos` follows the same pattern with a 128-block search and the same anchor
 fallback.
 
 ### Classification
@@ -74,9 +74,9 @@ This is harness instrumentation, not production behavior.
 
 ### C. Custom Vex
 
-`FrostVexEntity` (current name) extends vanilla `Vex`. `VexSpawnRule` creates `ModEntities.FROST_VEX`.
-`FrostVexEntity.setPos` reads the nearest player's anchor (fallback spawn point), captures
-`ThreatLevel.current`, then `adjustAttributesBasedOnSpawnDistance()` uses `VexSpawnProfile`.
+`AggressiveVexEntity` (current name) extends vanilla `Vex`. `AggressiveVexSpawnRule` creates `ModEntities.AGGRESSIVE_VEX`.
+`AggressiveVexEntity.setPos` reads the nearest player's anchor (fallback spawn point), captures
+`ThreatLevel.current`, then `adjustAttributesBasedOnSpawnDistance()` uses `AggressiveVexSpawnProfile`.
 Same global inputs as the zombie, in the normal path.
 
 ## 4. Temporal difficulty
@@ -121,7 +121,7 @@ baseHealth, baseSpeed, baseDamage, baseXp, maxXpMultiplier
 Profiles are static singletons:
 
 - `AggressiveZombieSpawnProfile.INSTANCE`
-- `VexSpawnProfile.INSTANCE`
+- `AggressiveVexSpawnProfile.INSTANCE`
 
 Distance configuration lives in the profile. Temporal response lives outside it, in
 `ThreatLevel.maxExtraDifficulty()` and the shared formula.
@@ -173,22 +173,22 @@ This refactor is **design only**; no class or profile was modified.
 
 | Current identifier/name | File | Category | Proposed AggressiveVex name | Compatibility risk |
 |---|---|---|---|---|
-| `FrostVexEntity` | `entity/FrostVexEntity.java` | Java class | `AggressiveVexEntity` | Source-only; all references must update |
-| `FrostVexEntity` ctor | same | Java constructor | `AggressiveVexEntity` | Source-only |
+| `AggressiveVexEntity` | `entity/AggressiveVexEntity.java` | Java class | `AggressiveVexEntity` | Source-only; all references must update |
+| `AggressiveVexEntity` ctor | same | Java constructor | `AggressiveVexEntity` | Source-only |
 | `LaunchSnowballGoal` | same | inner class | unchanged | none |
-| `FROST_VEX` | `init/ModEntities.java` | registry holder | `AGGRESSIVE_VEX` | source-only, but registry ID must not change casually |
+| `AGGRESSIVE_VEX` | `init/ModEntities.java` | registry holder | `AGGRESSIVE_VEX` | source-only, but registry ID must not change casually |
 | `"frost_vex"` | `init/ModEntities.java` | registry ID / saved entity id | keep `frost_vex` initially; optional alias | **HIGH** — existing worlds/NBT use it |
-| `FROST_VEX_NAME` | same | Java constant | `AGGRESSIVE_VEX_NAME` | source-only |
-| `FROST_VEX_SPAWN_EGG` | `init/ModItems.java`, `ModCreativeTabs` | item holder | `AGGRESSIVE_VEX_SPAWN_EGG` | source-only |
+| `AGGRESSIVE_VEX_NAME` | same | Java constant | `AGGRESSIVE_VEX_NAME` | source-only |
+| `AGGRESSIVE_VEX_SPAWN_EGG` | `init/ModItems.java`, `ModCreativeTabs` | item holder | `AGGRESSIVE_VEX_SPAWN_EGG` | source-only |
 | `frost_vex_spawn_egg` | `ModItems`, lang, model JSON | registry item ID | keep old ID initially | **HIGH** — item NBT/recipes |
-| `VexSpawnRule` | `spawner/VexSpawnRule.java` | class | `AggressiveVexSpawnRule` | source-only |
-| `VexSpawnProfile` | `spawnprofile/VexSpawnProfile.java` | class | `AggressiveVexSpawnProfile` | source-only |
-| `Frost Vex` | `assets/.../lang/en_us.json` | display name | `Aggressive Vex` | low (visual) |
+| `AggressiveVexSpawnRule` | `spawner/AggressiveVexSpawnRule.java` | class | `AggressiveAggressiveVexSpawnRule` | source-only |
+| `AggressiveVexSpawnProfile` | `spawnprofile/AggressiveVexSpawnProfile.java` | class | `AggressiveAggressiveVexSpawnProfile` | source-only |
+| `Aggressive Vex` | `assets/.../lang/en_us.json` | display name | `Aggressive Vex` | low (visual) |
 | `frost_vex` lang keys | same | translation keys | keep old keys or duplicate | medium; HUD/tooltips |
-| `"FrostVex spawned..."` | `FrostVexEntity.java` | log string | `AggressiveVex spawned` | diagnostic only |
+| `"FrostVex spawned..."` | `AggressiveVexEntity.java` | log string | `AggressiveVex spawned` | diagnostic only |
 | `frost_vex` model/egg assets | `assets/.../models/item/frost_vex_spawn_egg.json` | resource path | new asset alias | medium; resource pack compatibility |
 | Vex references in `LairManager`, renderer, tooltip docs | multiple | consumers | update source refs | source-only |
-| `FrostVexEntity` in tests/fixtures/docs | repo-wide | references | update docs/tests separately | low |
+| `AggressiveVexEntity` in tests/fixtures/docs | repo-wide | references | update docs/tests separately | low |
 
 Recommended sequence: rename Java types/classes and display strings first while **keeping registry
 IDs `frost_vex` and `frost_vex_spawn_egg`** for save compatibility; then optionally introduce
@@ -197,7 +197,7 @@ IDs `frost_vex` and `frost_vex_spawn_egg`** for save compatibility; then optiona
 ## 9. Save/registry compatibility
 
 - Registry IDs are persisted in saved entities. Renaming `frost_vex` → `aggressive_vex` without a
-  migration makes existing Frost Vex entities unreadable/removed.
+  migration makes existing Aggressive Vex entities unreadable/removed.
 - Java class renames do not affect saves if registry IDs stay.
 - Spawn egg item IDs are also persisted in inventories.
 - Translation key changes only affect display; safe with fallbacks.
@@ -224,7 +224,7 @@ IDs `frost_vex` and `frost_vex_spawn_egg`** for save compatibility; then optiona
 ## 2026-11-14 12:05 — Shared world spawn invariant implemented
 
 - AggressiveZombieEntity.setPos now reads ServerLevel.getSharedSpawnPos() directly when spawnDistance == 0; it no longer looks up the nearest player or falls back to getSpawnPoint().
-- FrostVexEntity.setPos uses the same direct shared spawn and policy.
+- AggressiveVexEntity.setPos uses the same direct shared spawn and policy.
 - New pure SharedSpawnReferencePolicy + test (5 assertions) uses only the shared origin; player/personal spawn values are not inputs.
 - Distance and temporal formulas, profile values, multipliers, temporal snapshot semantics and all unrelated anchor uses are unchanged.
 - A2 harness still contains the fake anchor override -5000, but it is now inert for difficulty because entities use the real shared spawn directly. This changes A2 scaling from the synthetic max-distance anchor to the actual world spawn distance; harness cleanup is a separate task.
