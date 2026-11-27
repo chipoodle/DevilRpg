@@ -268,6 +268,14 @@ public class VillagerGuardGoal extends Goal {
         // realmente requiere retorno. Evita una segunda búsqueda de calle por evaluación normal del GoalSelector.
         boolean retornoPendiente = villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG)
                 || (fueraDeTerrenoDeGuardia && puntoDeGuardia(level) == null);
+        regresandoAlPueblo = retornoPendiente;
+        if (regresandoAlPueblo && !villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG)) {
+            // Se marca antes de las ramas de marcha/equipo: esas tareas conservan prioridad, pero el reparto no debe
+            // reasignar ni deslistar al guardia mientras está fuera y espera reanudar el retorno.
+            villager.getPersistentData().putBoolean(VillageManager.GUARD_RETURNING_TAG, true);
+            DevilRpg.LOGGER.warn("[GuardReturn] guard={} village={} stranded at {}; preserving militia identity",
+                    villager.getUUID(), objectiveIndex, villager.blockPosition().toShortString());
+        }
         // Un turno de descanso no puede dejar abandonado a un guardia atrapado. El rescate es una condición
         // excepcional de supervivencia/retorno, no una asignación de milicia ni una faena ordinaria.
         if (restTicks > 0 && !retornoPendiente) {
@@ -315,12 +323,6 @@ public class VillagerGuardGoal extends Goal {
         // RESCATE SIN COMPETENCIA: cuando no existe puesto de patrulla y el guardia ni siquiera puede estar de pie
         // (agua, celda ocupada o sin soporte), no hay asignación militar ejecutable. Se conserva su identidad y se
         // usa la plaza/calle como objetivo de retorno; el goal de guardia ya no puede reclamar un puesto ficticio.
-        regresandoAlPueblo = retornoPendiente;
-        if (regresandoAlPueblo && !villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG)) {
-            villager.getPersistentData().putBoolean(VillageManager.GUARD_RETURNING_TAG, true);
-            DevilRpg.LOGGER.warn("[GuardReturn] guard={} village={} stranded at {}; preserving militia identity",
-                    villager.getUUID(), objectiveIndex, villager.blockPosition().toShortString());
-        }
         if (regresandoAlPueblo && !equipando) {
             destino = VillageManager.casillaDeLaCalle(level, center);
             return destino != null;
