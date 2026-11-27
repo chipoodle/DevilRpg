@@ -3,15 +3,16 @@
 > Este checkpoint supersede el handoff de validación anterior. El historial y los reportes previos se conservan íntegros.
 
 - **Rama:** `feature/autonomous-village`
-- **HEAD productivo/documental anterior probado:** `39229f5dc45c2234bb65559251d33aeb42735c67`
-- **HEAD actual con instrumentación diagnóstica:** `968d78ffcaac4e345868583cd21f3a59e35e2703`
+- **Implementación probada por Harness:** `39229f5dc45c2234bb65559251d33aeb42735c67`
+- **Commit con instrumentación diagnóstica:** `968d78ffcaac4e345868583cd21f3a59e35e2703`
+- **HEAD remoto actual (incluye instrumentación y documentación):** `b1abf7af7c02262764115722ac2551f0734b16c7`
 - **Reporte Harness:** resultado `PARTIAL`; estático PASS, escenario A FAIL. Informe comunicado en chat; el archivo local indicado por Harness aún no está publicado en GitHub.
 - **Evidencia:** Ximeno activa retorno, conserva el goal, recibe destino de calle y tiene WALK_TARGET, pero no se mueve durante 600 ticks. No se colocan bloques ni termina el retorno. B–F y controles negativos NOT RUN.
 - **Importante:** `[GuardTerrain]=none` no demuestra que el método no se invocó. En el código anterior, `GuardTerrainRecovery.tick(..., true)` podía rechazar silenciosamente el plan, programar reintento a 100 ticks y no emitir log. También la compuerta de activación exige coincidencia exacta entre WALK_TARGET y el destino estratégico. El reporte no capturó brainTarget ni el resultado de ruta; la causa sigue INCONCLUSIVE.
 - **Cambio de ChatGPT:** commit `968d78ffcaac4e345868583cd21f3a59e35e2703` agrega exclusivamente trazas diagnósticas en `VillagerGuardGoal` y `GuardTerrainRecovery`: resultado de ruta natural a los 60 ticks, WALK_TARGET real, coincidencia exacta, estado de Navigation, y resumen de rechazos/aceptación del plan (bloques y rellano). No cambia umbrales, navegación, colocación, presupuestos ni prioridades.
 - **A2/C4:** sin cambios.
 - **Validación de 968d:** pendiente. ChatGPT no ejecutó Gradle, tests, lint ni runtime.
-- **Siguiente acción única:** Harness sincroniza de forma segura, valida estáticamente el SHA exacto `968d78ffcaac4e345868583cd21f3a59e35e2703` y, si pasa, repite SOLO escenario A en una copia NUEVA y desechable del mundo. Seguir `2026-11-27-GUARD-RETURN-DIAGNOSTIC-HANDOFF.md`. No reutilizar Run010/Run011 ni el mundo original.
+- **Siguiente acción única:** Harness sincroniza de forma segura, valida estáticamente el SHA exacto del HEAD remoto que sincronice y comprueba que contiene los commits `968d78ffcaac4e345868583cd21f3a59e35e2703` y `39229f5dc45c2234bb65559251d33aeb42735c67` y, si pasa, repite SOLO escenario A en una copia NUEVA y desechable del mundo. Seguir `2026-11-27-GUARD-RETURN-DIAGNOSTIC-HANDOFF.md`. No reutilizar Run010/Run011 ni el mundo original.
 
 ---
 

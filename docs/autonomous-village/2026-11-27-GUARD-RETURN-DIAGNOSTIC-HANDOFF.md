@@ -4,8 +4,10 @@
 
 - Repository: `chipoodle/DevilRpg`
 - Branch: `feature/autonomous-village`
-- Exact commit: `968d78ffcaac4e345868583cd21f3a59e35e2703`
-- Parent: `7d65b74f501a741f0be69fd029cb03e6039b2fd5`
+- Diagnostic source commit: `968d78ffcaac4e345868583cd21f3a59e35e2703`
+- Expected remote HEAD at handoff: `b1abf7af7c02262764115722ac2551f0734b16c7` (documentation descendants included)
+- Sync the latest branch tip and record its exact tested SHA. Prove it contains both diagnostic source commit `968d78ffcaac4e345868583cd21f3a59e35e2703` and implementation commit `39229f5dc45c2234bb65559251d33aeb42735c67`.
+- Diagnostic source parent: `7d65b74f501a741f0be69fd029cb03e6039b2fd5`
 - Minecraft 1.21.1 / NeoForge 21.1.249
 - This commit adds diagnostics only; it does not claim to fix the runtime failure.
 
@@ -17,8 +19,8 @@ TASK: Diagnose why Ximeno's guard return does not move. Harness is verification-
 REPOSITORY
 - chipoodle/DevilRpg
 - feature/autonomous-village
-- Exact target 968d78ffcaac4e345868583cd21f3a59e35e2703
-- Prove the tested SHA contains this exact commit.
+- Sync and test the exact current remote branch tip.
+- Prove the tested SHA contains diagnostic commit 968d78ffcaac4e345868583cd21f3a59e35e2703 and implementation commit 39229f5dc45c2234bb65559251d33aeb42735c67.
 
 SAFE SYNC
 1. Inspect branch, local HEAD, fetched remote HEAD, upstream, status, untracked files and divergence.
