@@ -191,6 +191,8 @@ public class VillagerGuardGoal extends Goal {
     public Monster enemigoActual() { return enemigo; }
     private int espera;
     private int stuckTicks;
+    /** Recuperación física acotada cuando la guardia queda aislada por desniveles exteriores. */
+    private final GuardTerrainRecovery recuperacionTerreno = new GuardTerrainRecovery();
     private double mejorDistancia = Double.MAX_VALUE;
     private int restTicks;
     /** Contador de puntos de ronda (para que no repita el mismo). */
@@ -471,6 +473,16 @@ public class VillagerGuardGoal extends Goal {
                     VillageManager.ponerActividad(villager, "Llevando el hierro al almacen");
                 }
             }
+        }
+        // RECUPERACIÓN DE TERRENO: solo si el guardia lleva 60 ticks sin progreso y el cerebro
+        // conserva el destino de la guardia. Nunca compite con combate, equipo o marcha; el movimiento
+        // temporal sigue pasando por VillageManager.caminarHacia (autoridad del Brain).
+        boolean intentarRecuperacionTerreno = enemigo == null && !equipando && !marchando
+                && stuckTicks >= 60 && VillageManager.elCerebroVaA(villager, destino);
+        if (recuperacionTerreno.tick(level, villager, destino, intentarRecuperacionTerreno)) {
+            stuckTicks = 0;
+            mejorDistancia = Double.MAX_VALUE;
+            return;
         }
         villager.getLookControl().setLookAt(destino.getX() + 0.5D, destino.getY() + 0.5D, destino.getZ() + 0.5D);
         double distancia = Math.sqrt(villager.distanceToSqr(destino.getX() + 0.5D, destino.getY() + 0.5D,
