@@ -163,10 +163,21 @@ final class GuardTerrainRecovery {
                         BlockPos place = new BlockPos(column.getX(), y, column.getZ());
                         BlockPos head = place.above();
                         BlockPos upperBody = place.above(2);
-                        if (!celdaColocable(level, place) || VillageManager.estaProtegida(level, place)
-                                || !level.getBlockState(head).getCollisionShape(level, head).isEmpty()
-                                || !level.getBlockState(upperBody).getCollisionShape(level, upperBody).isEmpty()) {
+                        String placementFailure = motivoCeldaNoColocable(level, place);
+                        boolean headBlocked = !level.getBlockState(head).getCollisionShape(level, head).isEmpty();
+                        boolean upperBodyBlocked = !level.getBlockState(upperBody).getCollisionShape(level, upperBody).isEmpty();
+                        if (placementFailure != null || headBlocked || upperBodyBlocked) {
                             invalidPlacements++;
+                            DevilRpg.LOGGER.warn("[GuardTerrain] placement rejected guard={} direction={} rise={} step={} "
+                                            + "place={} reason={} protected={} placeState={} placeFluid={} "
+                                            + "head={} headState={} headFluid={} headCollision={} "
+                                            + "upperBody={} upperBodyState={} upperBodyFluid={} upperBodyCollision={}",
+                                    villager.getUUID(), direction, rise, step, place.toShortString(),
+                                    placementFailure == null ? "BODY_CLEARANCE" : placementFailure,
+                                    VillageManager.estaProtegida(level, place), level.getBlockState(place),
+                                    level.getFluidState(place), head.toShortString(), level.getBlockState(head),
+                                    level.getFluidState(head), headBlocked, upperBody.toShortString(),
+                                    level.getBlockState(upperBody), level.getFluidState(upperBody), upperBodyBlocked);
                             valid = false;
                             break;
                         }
@@ -232,14 +243,35 @@ final class GuardTerrainRecovery {
     }
 
     private static boolean celdaColocable(ServerLevel level, BlockPos pos) {
-        if (pos == null || !level.hasChunkAt(pos) || VillageManager.estaProtegida(level, pos)) {
-            return false;
+        return motivoCeldaNoColocable(level, pos) == null;
+    }
+
+    /**
+     * Devuelve la primera razón por la que una celda no admite el bloque de la rampa.
+     * Mantiene exactamente las mismas reglas de aceptación que celdaColocable; se separa
+     * para que los rechazos del planificador sean reproducibles por coordenada y estado.
+     */
+    private static String motivoCeldaNoColocable(ServerLevel level, BlockPos pos) {
+        if (pos == null) {
+            return "NULL_POSITION";
+        }
+        if (!level.hasChunkAt(pos)) {
+            return "CHUNK_NOT_LOADED";
+        }
+        if (VillageManager.estaProtegida(level, pos)) {
+            return "PROTECTED_POSITION";
         }
         BlockState state = level.getBlockState(pos);
-        if (state.hasBlockEntity() || !state.getCollisionShape(level, pos).isEmpty()) {
-            return false;
+        if (state.hasBlockEntity()) {
+            return "BLOCK_ENTITY";
         }
-        return state.getFluidState().isEmpty() || state.getFluidState().is(FluidTags.WATER);
+        if (!state.getCollisionShape(level, pos).isEmpty()) {
+            return "PLACEMENT_COLLISION";
+        }
+        if (!state.getFluidState().isEmpty() && !state.getFluidState().is(FluidTags.WATER)) {
+            return "UNSUPPORTED_FLUID";
+        }
+        return null;
     }
 
     private static boolean esEspacioLibre(ServerLevel level, BlockPos pos) {
