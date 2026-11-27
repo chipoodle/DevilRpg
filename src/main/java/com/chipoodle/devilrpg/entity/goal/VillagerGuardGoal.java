@@ -580,6 +580,7 @@ public class VillagerGuardGoal extends Goal {
                 if (destino == null) {
                     return; // el siguiente reparto decidirá si conserva milicia o vuelve a oficio
                 }
+                return; // no tratar la plaza de retorno como si ya fuera el siguiente puesto de patrulla
             }
         }
         if (equipando) {
