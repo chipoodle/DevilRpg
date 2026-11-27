@@ -3,7 +3,7 @@ package com.chipoodle.devilrpg.eventsubscriber.common;
 import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.spawner.AggressiveZombieSpawnRule;
 import com.chipoodle.devilrpg.spawner.CustomSpawner;
-import com.chipoodle.devilrpg.spawner.VexSpawnRule;
+import com.chipoodle.devilrpg.spawner.AggressiveVexSpawnRule;
 import com.chipoodle.devilrpg.survival.HordeManager;
 import com.chipoodle.devilrpg.survival.LairManager;
 import com.chipoodle.devilrpg.world.VillageManager;
@@ -58,7 +58,7 @@ public class CustomSpawnerTickHandler {
                 CustomSpawner s = new CustomSpawner(l);
                 // Aqui se registran las entidades custom. Anade mas reglas para mas mobs.
                 s.register(new AggressiveZombieSpawnRule());
-                s.register(new VexSpawnRule());
+                s.register(new AggressiveVexSpawnRule());
                 return s;
             });
             spawner.tick();
