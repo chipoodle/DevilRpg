@@ -208,6 +208,8 @@ public class VillagerGuardGoal extends Goal {
     private int arcoCarga;
     /** true mientras la milicia está de asalto en la guarida (lo dice {@code VillageManager.marchaDe}). */
     private boolean marchando;
+    /** Rescate temporal: mantiene identidad y prioridad sobre profesiones, sin competir con combate/equipo/marcha. */
+    private boolean regresandoAlPueblo;
 
     public VillagerGuardGoal(Villager villager, BlockPos center, int objectiveIndex) {
         this.villager = villager;
@@ -300,6 +302,21 @@ public class VillagerGuardGoal extends Goal {
         if (marchando) {
             destino = sinEquipo ? (equipando ? VillageStorage.puntoDeApoyo(level, center) : puntoDeGuardia(level))
                     : marcha;
+            return destino != null;
+        }
+        // RESCATE SIN COMPETENCIA: cuando no existe puesto de patrulla y el guardia ni siquiera puede estar de pie
+        // (agua, celda ocupada o sin soporte), no hay asignación militar ejecutable. Se conserva su identidad y se
+        // usa la plaza/calle como objetivo de retorno; el goal de guardia ya no puede reclamar un puesto ficticio.
+        regresandoAlPueblo = villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG);
+        if (!regresandoAlPueblo && !equipando && puntoDeGuardia(level) == null
+                && !sePuedeEstar(level, villager.blockPosition())) {
+            regresandoAlPueblo = true;
+            villager.getPersistentData().putBoolean(VillageManager.GUARD_RETURNING_TAG, true);
+            DevilRpg.LOGGER.warn("[GuardReturn] guard={} village={} stranded at {}; preserving militia identity",
+                    villager.getUUID(), objectiveIndex, villager.blockPosition().toShortString());
+        }
+        if (regresandoAlPueblo && !equipando) {
+            destino = VillageManager.casillaDeLaCalle(level, center);
             return destino != null;
         }
         if (dist2 > MAX_DISTANCE_FROM_CENTER * MAX_DISTANCE_FROM_CENTER) {
@@ -456,6 +473,16 @@ public class VillagerGuardGoal extends Goal {
             mejorDistancia = Double.MAX_VALUE;
             stuckTicks = 0;
         }
+        // El rescate cede durante combate (return anterior), equipamiento y marcha. Al terminar esas tareas,
+        // vuelve a apuntar a una casilla real de la calle, nunca al centro geométrico ni a un puesto inventado.
+        if (regresandoAlPueblo && !equipando && !marchando) {
+            BlockPos calle = VillageManager.casillaDeLaCalle(level, center);
+            if (calle != null && !calle.equals(destino)) {
+                destino = calle;
+                mejorDistancia = Double.MAX_VALUE;
+                stuckTicks = 0;
+            }
+        }
         // 3.b) Y EL HIERRO QUE HA LOOTEADO, AL ALMACÉN (27-sep-2026, medido): el que mata el zombi de raid se queda
         //      sus pepitas en el inventario (`AggressiveZombieEntity.dropCustomDeathLoot`) y el herrero las necesita para
         //      el pico de hierro. El guardia VA a dejarlas (no espera a pasar por delante: su ronda es un círculo
@@ -538,6 +565,23 @@ public class VillagerGuardGoal extends Goal {
             return;
         }
         VillageManager.parar(villager);
+        if (regresandoAlPueblo && !equipando && !marchando) {
+            BlockPos calle = VillageManager.casillaDeLaCalle(level, center);
+            if (calle != null && villager.blockPosition().closerThan(calle, 4.0D)
+                    && VillageManager.esDeDentroDelMuro(center, villager.blockPosition())
+                    && sePuedeEstar(level, villager.blockPosition())) {
+                villager.getPersistentData().remove(VillageManager.GUARD_RETURNING_TAG);
+                regresandoAlPueblo = false;
+                destino = puntoDeGuardia(level);
+                stuckTicks = 0;
+                mejorDistancia = Double.MAX_VALUE;
+                DevilRpg.LOGGER.info("[GuardReturn] guard={} returned inside village at {}; normal militia assignment resumes",
+                        villager.getUUID(), villager.blockPosition().toShortString());
+                if (destino == null) {
+                    return; // el siguiente reparto decidirá si conserva milicia o vuelve a oficio
+                }
+            }
+        }
         if (equipando) {
             boolean listo = equipar(level);
             equipando = false;
