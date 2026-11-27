@@ -1,8 +1,9 @@
 # NUEVA TAREA — RECUPERACIÓN DE TERRENO DE GUARDIAS (27-nov-2026)
 
-- Código: `13ea721ba8f246a6be2b04664b473138c51e8512`.
+- Código final: `cd532f1d630f26c81e6acbcde91112390e157eb1` (7 commits desde el HEAD base inspeccionado).
 - Informe: `docs/autonomous-village/2026-11-27-GUARD-TERRAIN-RECOVERY.md`.
 - Estado: implementado en `GuardTerrainRecovery` + integración en `VillagerGuardGoal`; compilación, pruebas, lint y runtime aún NO ejecutados.
+- Activación tras 60 ticks, solo después de descartar ruta natural alcanzable; rampa soportada de hasta 2 bloques; prioridad de combate/equipamiento/marcha conservada.
 - Próximo responsable: Harness. Validar el SHA exacto, primero gate estático y luego escenario runtime de guardia en depresión de agua de dos bloques; documentar coordenadas, cambios de bloques, Brain WALK_TARGET y trazas `[GuardTerrain]`.
 - No alterar A2/C4 ni sus criterios. No declarar aceptación sin evidencia runtime.
 
