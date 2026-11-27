@@ -262,10 +262,12 @@ public class VillagerGuardGoal extends Goal {
         if (villager.isBaby() || !esGuardia(villager) || !(villager.level() instanceof ServerLevel level)) {
             return false;
         }
+        boolean fueraDeTerrenoDeGuardia = !sePuedeEstar(level, villager.blockPosition())
+                || !VillageManager.esDeDentroDelMuro(center, villager.blockPosition());
+        // No recalcular el costoso puesto de patrulla para todos los guardias sanos: solo se consulta si su posición
+        // realmente requiere retorno. Evita una segunda búsqueda de calle por evaluación normal del GoalSelector.
         boolean retornoPendiente = villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG)
-                || (puntoDeGuardia(level) == null
-                        && (!sePuedeEstar(level, villager.blockPosition())
-                                || !VillageManager.esDeDentroDelMuro(center, villager.blockPosition())));
+                || (fueraDeTerrenoDeGuardia && puntoDeGuardia(level) == null);
         // Un turno de descanso no puede dejar abandonado a un guardia atrapado. El rescate es una condición
         // excepcional de supervivencia/retorno, no una asignación de milicia ni una faena ordinaria.
         if (restTicks > 0 && !retornoPendiente) {
