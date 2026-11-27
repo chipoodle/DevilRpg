@@ -37,7 +37,7 @@ public class AggressiveVexSpawnRule implements CustomSpawnRule {
 
     @Override
     public EntityType<? extends Mob> getEntityType() {
-        return ModEntities.FROST_VEX.get(); // vex propio: vuela, lanza bolas de hielo y escala atributos
+        return ModEntities.AGGRESSIVE_VEX.get(); // vex propio: vuela, lanza bolas de hielo y escala atributos
     }
 
     @Override
