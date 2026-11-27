@@ -37,7 +37,7 @@ public final class ModEntities {
 	private static final String GENERIC_ITEM_PROJECTILE_NAME = "generic_item_projectile";
 
 	public static final String AGGRESSIVE_ZOMBIE_NAME = "aggressive_zombie";
-	public static final String FROST_VEX_NAME = "frost_vex";
+	public static final String AGGRESSIVE_VEX_NAME = "frost_vex";
 	public static final String SCULK_CULTIVATOR_NAME = "sculk_cultivator";
 
 
@@ -103,11 +103,11 @@ public final class ModEntities {
 							.clientTrackingRange(8)
 							.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, AGGRESSIVE_ZOMBIE_NAME).toString()));
 
-	public static final DeferredHolder<EntityType<?>, EntityType<FrostVexEntity>> FROST_VEX = ENTITY_TYPES.register(FROST_VEX_NAME,
-					() -> EntityType.Builder.of(FrostVexEntity::new, MobCategory.MONSTER)
+	public static final DeferredHolder<EntityType<?>, EntityType<AggressiveVexEntity>> AGGRESSIVE_VEX = ENTITY_TYPES.register(AGGRESSIVE_VEX_NAME,
+					() -> EntityType.Builder.of(AggressiveVexEntity::new, MobCategory.MONSTER)
 							.sized(EntityType.VEX.getWidth(), EntityType.VEX.getHeight())
 							.clientTrackingRange(8)
-							.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, FROST_VEX_NAME).toString()));
+							.build(ResourceLocation.fromNamespaceAndPath(DevilRpg.MODID, AGGRESSIVE_VEX_NAME).toString()));
 
 	public static final DeferredHolder<EntityType<?>, EntityType<SculkCultivatorEntity>> SCULK_CULTIVATOR = ENTITY_TYPES.register(SCULK_CULTIVATOR_NAME,
 					() -> EntityType.Builder.of(SculkCultivatorEntity::new, MobCategory.MONSTER)
