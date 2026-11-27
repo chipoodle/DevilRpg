@@ -1,3 +1,13 @@
+# NUEVA TAREA — RECUPERACIÓN DE TERRENO DE GUARDIAS (27-nov-2026)
+
+- Código: `13ea721ba8f246a6be2b04664b473138c51e8512`.
+- Informe: `docs/autonomous-village/2026-11-27-GUARD-TERRAIN-RECOVERY.md`.
+- Estado: implementado en `GuardTerrainRecovery` + integración en `VillagerGuardGoal`; compilación, pruebas, lint y runtime aún NO ejecutados.
+- Próximo responsable: Harness. Validar el SHA exacto, primero gate estático y luego escenario runtime de guardia en depresión de agua de dos bloques; documentar coordenadas, cambios de bloques, Brain WALK_TARGET y trazas `[GuardTerrain]`.
+- No alterar A2/C4 ni sus criterios. No declarar aceptación sin evidencia runtime.
+
+---
+
 # AUDITORÍA DE CONSOLIDACIÓN — A2 Y C4 ACEPTADOS; SIGUIENTE ETAPA PENDIENTE DE DECISIÓN (2026-11-23)
 
 - **Informe:** `docs/autonomous-village/2026-11-23-AUTONOMOUS-VILLAGE-CONSOLIDATION-AUDIT.md` (auditoría completa: Git, ramas, NeoForge, navegación §K/§L, persistencia, reconciliación, muro, Full12K, contrato de finalización y hoja de ruta).
