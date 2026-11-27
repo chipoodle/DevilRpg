@@ -153,6 +153,18 @@ public class SoulMinerVineBlock extends Block implements EntityBlock {
                 .add(DECAY_STAGE);
     }
 
+    /**
+     * Reuse vanilla scaffolding collision rules: entities can enter the block volume,
+     * while the top collision surface remains available for standing on the structure.
+     * Climbing itself is provided by the minecraft:climbable block tag.
+     */
+    @Override
+    public @NotNull VoxelShape getCollisionShape(@NotNull BlockState state, @NotNull BlockGetter level,
+                                                  @NotNull BlockPos pos, @NotNull CollisionContext context) {
+        return net.minecraft.world.level.block.Blocks.SCAFFOLDING.defaultBlockState()
+                .getCollisionShape(level, pos, context);
+    }
+
     public @NotNull VoxelShape getShape(@NotNull BlockState p_53880_, @NotNull BlockGetter p_53881_, @NotNull BlockPos p_53882_, @NotNull CollisionContext p_53883_) {
         return SHAPE;
     }
