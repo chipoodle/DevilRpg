@@ -20,12 +20,13 @@ import java.util.function.Predicate;
  * Comparte únicamente la detección acotada, búsqueda de orillas y el impulso físico de salida.
  */
 public final class WaterEscapeController {
-    private static final int STUCK_TICKS_BEFORE_ESCAPE = 8;
-    private static final int WATER_DWELL_TICKS = 60;
-    private static final int RESELECT_STUCK_TICKS = 80;
-    private static final int RECALCULATE_TICKS = 200;
-    private static final int MAX_RADIUS = 16;
-    private static final int JUMP_INTERVAL_TICKS = 6;
+    public static final int STUCK_TICKS_BEFORE_ESCAPE = 8;
+    public static final int WATER_DWELL_TICKS = 60;
+    public static final int RESELECT_STUCK_TICKS = 80;
+    public static final int RECALCULATE_TICKS = 200;
+    public static final int MAX_RADIUS = 16;
+    public static final int MAX_ATTEMPTS = 4;
+    public static final int JUMP_INTERVAL_TICKS = 6;
 
     private final TacticalEscapeBudget budget;
     private final Set<BlockPos> attemptedShores = new HashSet<>();
