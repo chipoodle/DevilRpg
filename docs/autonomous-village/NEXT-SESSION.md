@@ -1,12 +1,12 @@
 # CHECKPOINT 27-nov-2026 — RECUPERACIÓN DE TERRENO PARA GUARDIAS
 
-- **Implementación publicada:** `13ea721ba8f246a6be2b04664b473138c51e8512` (serie de 4 commits sobre `9271e6706fe4e70dc61e06f70ebb3f76ea9f4399`).
-- **HEAD remoto al redactar este checkpoint:** `2c34fada38297475a7f4b43c410bd511e1fbd15e` (incluye el informe de implementación).
-- Se añadió `GuardTerrainRecovery` y se integró en `VillagerGuardGoal`: tras 60 ticks sin progreso y con el Brain aún apuntando al destino, busca un rellano seco y soportado hasta 2 bloques más alto; construye columnas escalonadas de adoquín con soporte real y presupuesto/cadencia acotados; después solicita el rellano mediante `VillageManager.caminarHacia`.
+- **Implementación publicada:** `cd532f1d630f26c81e6acbcde91112390e157eb1` (serie de 7 commits sobre `9271e6706fe4e70dc61e06f70ebb3f76ea9f4399`).
+- **HEAD remoto al redactar este checkpoint:** `5fa2d58e929adcc2eaa27734078d2b17868a87f5` (incluye el informe actualizado).
+- Se añadió `GuardTerrainRecovery` y se integró en `VillagerGuardGoal`: tras 60 ticks sin progreso y con el Brain aún apuntando al destino, primero comprueba que no haya ruta natural alcanzable; busca un rellano seco y soportado hasta 2 bloques más alto; construye columnas escalonadas de adoquín con soporte real y presupuesto/cadencia acotados; cancela ante equipamiento/marcha y después solicita el rellano mediante `VillageManager.caminarHacia`.
 - No toma la autoridad de navegación, no llama a `Navigation.moveTo`, no altera el destino estratégico y no interrumpe combate/equipamiento/marcha.
 - **ESTADO: IMPLEMENTADO, NO VALIDADO.** ChatGPT no pudo ejecutar Gradle, lint ni runtime: CHRIS-PC está offline. No declarar PASS.
 - Informe completo: `docs/autonomous-village/2026-11-27-GUARD-TERRAIN-RECOVERY.md`.
-- **Siguiente acción única:** Harness debe sincronizar sin operaciones destructivas, verificar el SHA exacto de implementación `13ea721ba8f246a6be2b04664b473138c51e8512` (el HEAD documental es descendiente), ejecutar compile/test/lint/diff-check y luego el escenario runtime de depresión de agua descrito en el informe.
+- **Siguiente acción única:** Harness debe sincronizar sin operaciones destructivas, verificar el SHA exacto de implementación `cd532f1d630f26c81e6acbcde91112390e157eb1` (el HEAD documental es descendiente), ejecutar compile/test/lint/diff-check y luego el escenario runtime de depresión de agua descrito en el informe.
 - Criterios runtime: guardia atrapado en charco con suelo 2 bloques abajo; salida seca y soportada 2 bloques arriba; evidencia de bloques colocados, Brain WALK_TARGET, coordenadas y logs `[GuardTerrain]`; sin teletransporte. Ejecutar controles negativos de ruta natural, protección, lava/bloques especiales y prioridad de combate/equipamiento/marcha.
 - No modificar A2/C4, sus umbrales, presupuestos, protección ni criterios de aceptación.
 
