@@ -4367,6 +4367,11 @@ public final class VillageManager {
                 continue; // los cuatro puestos fundadores no cubren oficios ni entran en el reparto dinámico
             }
             if (villager.getPersistentData().getBoolean(GUARD_RETURNING_TAG)) {
+                // Los goals no se serializan: el reparto es también el punto de rehidratación tras cargar el mundo.
+                // Se restaura el goal del guardia sin tocar su plaza/tipo ni incluirlo en el reparto de candidatos.
+                if (VillagerGuardGoal.esGuardia(villager)) {
+                    asegurarGoalDeGuardia(villager, center, objectiveIndex);
+                }
                 continue; // un guardia en rescate no ocupa ni pierde una plaza hasta volver a terreno seguro
             }
             if (puedeSerGuardia(villager)) {
