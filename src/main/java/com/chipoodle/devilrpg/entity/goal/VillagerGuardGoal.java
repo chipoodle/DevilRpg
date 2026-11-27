@@ -259,16 +259,22 @@ public class VillagerGuardGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (restTicks > 0) {
-            restTicks--;
+        if (villager.isBaby() || !esGuardia(villager) || !(villager.level() instanceof ServerLevel level)) {
             return false;
         }
-        if (villager.isBaby() || !esGuardia(villager) || !(villager.level() instanceof ServerLevel level)) {
+        boolean retornoPendiente = villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG)
+                || (puntoDeGuardia(level) == null
+                        && (!sePuedeEstar(level, villager.blockPosition())
+                                || !VillageManager.esDeDentroDelMuro(center, villager.blockPosition())));
+        // Un turno de descanso no puede dejar abandonado a un guardia atrapado. El rescate es una condición
+        // excepcional de supervivencia/retorno, no una asignación de milicia ni una faena ordinaria.
+        if (restTicks > 0 && !retornoPendiente) {
+            restTicks--;
             return false;
         }
         // EL TURNO DE DESCANSO, TAMBIÉN AQUÍ: sin esta comprobación el goal se reiniciaría al tick siguiente de
         // cortarse por el turno y el guardia no llegaría a descansar nunca (ver `canContinueToUse`).
-        if (!aldeaEnAsalto() && leTocaElTurnoDeDescanso() && !leTocaEntrenar()) {
+        if (!retornoPendiente && !aldeaEnAsalto() && leTocaElTurnoDeDescanso() && !leTocaEntrenar()) {
             return false;
         }
         // OJO: aquí NO se comprueba `estaDescansando` (cosa que sí hacen los demás goals del pueblo): el guardia está
