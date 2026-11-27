@@ -1,5 +1,6 @@
 package com.chipoodle.devilrpg.entity.goal;
 
+import com.chipoodle.devilrpg.DevilRpg;
 import com.chipoodle.devilrpg.world.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -54,6 +55,8 @@ final class GuardTerrainRecovery {
             active = true;
             startedAt = now;
             nextActionAt = now;
+            DevilRpg.LOGGER.info("[GuardTerrain] guard={} recovery started blocks={} landing={}",
+                    villager.getUUID(), pendingBlocks.size(), landing.toShortString());
         }
 
         if (now - startedAt > MAX_ACTIVE_TICKS) {
@@ -82,6 +85,8 @@ final class GuardTerrainRecovery {
             }
             level.playSound(null, pos, SoundType.STONE.getPlaceSound(), SoundSource.BLOCKS, 0.65F, 1.0F);
             nextBlock++;
+            DevilRpg.LOGGER.debug("[GuardTerrain] guard={} placed {}/{} at {}",
+                    villager.getUUID(), nextBlock, pendingBlocks.size(), pos.toShortString());
             nextActionAt = now + ACTION_COOLDOWN_TICKS;
             return true;
         }
@@ -91,6 +96,8 @@ final class GuardTerrainRecovery {
             return false;
         }
         if (villager.blockPosition().closerThan(landing, 1.5D)) {
+            DevilRpg.LOGGER.info("[GuardTerrain] guard={} recovered at {} after {} ticks",
+                    villager.getUUID(), landing.toShortString(), now - startedAt);
             reset(now + 40L);
             return false;
         }
