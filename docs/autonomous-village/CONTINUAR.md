@@ -1,20 +1,21 @@
-# CHECKPOINT 27-nov-2026 — DIAGNÓSTICO DEL RESCATE DE GUARDIAS (ACTUAL)
+# CHECKPOINT 27-nov-2026 — DIAGNÓSTICO DE RECHAZO DE COLOCACIÓN (ACTUAL)
 
-> Este checkpoint supersede el handoff de validación anterior. El historial y los reportes previos se conservan íntegros.
+> Este checkpoint supersede el handoff de diagnóstico previo. Se conserva íntegro el historial posterior.
 
 - **Rama:** `feature/autonomous-village`
-- **Implementación probada por Harness:** `39229f5dc45c2234bb65559251d33aeb42735c67`
-- **Commit con instrumentación diagnóstica:** `968d78ffcaac4e345868583cd21f3a59e35e2703`
-- **HEAD remoto actual (incluye instrumentación y documentación):** `09b10e1c5081a8f198df8ab28119829182576af3`
-- **Reporte Harness:** resultado `PARTIAL`; estático PASS, escenario A FAIL. Informe comunicado en chat; el archivo local indicado por Harness aún no está publicado en GitHub.
-- **Evidencia:** Ximeno activa retorno, conserva el goal, recibe destino de calle y tiene WALK_TARGET, pero no se mueve durante 600 ticks. No se colocan bloques ni termina el retorno. B–F y controles negativos NOT RUN.
-- **Importante:** `[GuardTerrain]=none` no demuestra que el método no se invocó. En el código anterior, `GuardTerrainRecovery.tick(..., true)` podía rechazar silenciosamente el plan, programar reintento a 100 ticks y no emitir log. También la compuerta de activación exige coincidencia exacta entre WALK_TARGET y el destino estratégico. El reporte no capturó brainTarget ni el resultado de ruta; la causa sigue INCONCLUSIVE.
-- **Cambio de ChatGPT:** commit `968d78ffcaac4e345868583cd21f3a59e35e2703` agrega exclusivamente trazas diagnósticas en `VillagerGuardGoal` y `GuardTerrainRecovery`: resultado de ruta natural a los 60 ticks, WALK_TARGET real, coincidencia exacta, estado de Navigation, y resumen de rechazos/aceptación del plan (bloques y rellano). No cambia umbrales, navegación, colocación, presupuestos ni prioridades.
+- **Último reporte Harness:** RUN 012, probado en `d643e5d7d5dbfd73218eb31fb81330874e9c2dda`.
+- **Resultado RUN 012:** STATIC/COMPILE/TESTS/POLICY_TESTS/STRICT_LINT/DIFF_CHECK PASS; escenario A FAIL.
+- **Evidencia confirmada:** Ximeno (`5b42b9cf-8e30-4c9f-ad16-2ad31491a2e5`) activa correctamente la recuperación; `brainMatches=true`, `naturalRouteReachable=false`. El planificador se invoca cuatro veces y rechaza dos ubicaciones de colocación (`invalidPlacements=2)); no coloca bloques ni se mueve. Los mundos originales permanecieron intactos.
+- **Cambio de ChatGPT:** `0024196c0811f568a10b01af70bb8f275a90236d` añade diagnóstico por coordenada/estado para cada rechazo de colocación en `GuardTerrainRecovery`. Se registra place, dirección, rise/step, razón (`PROTECTED_POSITION`, `BLOCK_ENTITY`, `PLACEMENT_COLLISION`, `UNSUPPORTED_FLUID`, etc.), estado/fluido de place, head y upperBody, y colisión corporal.
+- **Importante:** el cambio es estrictamente diagnóstico. Mantiene exactamente las reglas de aceptación/rechazo; no relaja protección, soporte, espacio corporal, fluidos, presupuesto ni navegación. No se ha identificado todavía la causa física de los dos rechazos.
 - **A2/C4:** sin cambios.
-- **Validación de 968d:** pendiente. ChatGPT no ejecutó Gradle, tests, lint ni runtime.
-- **Siguiente acción única:** Harness sincroniza de forma segura, valida estáticamente el SHA exacto del HEAD remoto que sincronice y comprueba que contiene los commits `968d78ffcaac4e345868583cd21f3a59e35e2703` y `39229f5dc45c2234bb65559251d33aeb42735c67` y, si pasa, repite SOLO escenario A en una copia NUEVA y desechable del mundo. Seguir `2026-11-27-GUARD-RETURN-DIAGNOSTIC-HANDOFF.md`. No reutilizar Run010/Run011 ni el mundo original.
+- **Validación del nuevo commit:** pendiente. ChatGPT no ejecutó Gradle, tests, lint ni runtime.
+- **Siguiente acción única:** Harness sincroniza de forma segura el HEAD remoto actual, verifica que contiene `0024196c0811f568a10b01af70bb8f275a90236d`, ejecuta compile/tests/policyTest, lint estricto y diff-check; solo si todo pasa, repite únicamente escenario A en una copia NUEVA y desechable del mundo. Capturar todas las líneas `[GuardTerrain] placement rejected` y el resumen del plan. No ejecutar B–F, Save/Reload ni negativos en esta ronda.
+- **Informe:** `docs/autonomous-village/2026-11-27-GUARD-PLACEMENT-REJECTION-DIAGNOSTICS.md`.
+- Preservar el mundo original, RUN 012 y todas las copias/logs anteriores. Harness no modifica producción/tests/docs, no crea commits ni hace push. Sin teletransporte ni manipulación de posición/Brain/tags.
 
 ---
+
 
 # CHECKPOINT 27-nov-2026 — CORRECCIÓN DE DESTINO INVÁLIDO DE GUARDIAS
 
