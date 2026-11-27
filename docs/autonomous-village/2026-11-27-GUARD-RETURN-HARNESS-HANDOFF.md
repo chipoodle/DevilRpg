@@ -4,7 +4,7 @@
 
 - Repository: `chipoodle/DevilRpg`
 - Branch: `feature/autonomous-village`
-- Production implementation commit: `fe758aa677bc20c388a2d0c8adc9e8fd7602a400` (includes the last source change: restore the returning guard goal after reload).
+- Production implementation commit: `9632c9df61438fc39f1a32fda83a8affbc691be0` (includes the last source change: restore the returning guard goal after reload).
 - The final documentation commit will be a descendant; sync the current branch tip and record the exact tested SHA. Do not test an earlier base.
 - Minecraft 1.21.1 / NeoForge 21.1.249.
 - ChatGPT did not run Gradle, unit tests, lint, dedicated server, client or runtime.
@@ -17,7 +17,7 @@ TASK: Validate stranded guard return and militia reintegration. Harness is verif
 REPOSITORY
 - chipoodle/DevilRpg
 - branch feature/autonomous-village
-- expected implementation commit fe758aa677bc20c388a2d0c8adc9e8fd7602a400
+- expected implementation commit 9632c9df61438fc39f1a32fda83a8affbc691be0
 - Sync the current remote branch tip (documentation-only descendants may exist). Record exact tested SHA and prove it contains the implementation commit.
 
 SAFE SYNC / WORKTREE
@@ -53,7 +53,7 @@ Scenario A — reproduce the stranded guard
 - Verify ordinary rest schedule does not suppress rescue.
 
 Scenario B — natural path first, terrain recovery only when needed
-- If a natural route to the street cell is reachable, guard must use it without block placement.
+- If a natural route to the street cell is reachable, guard must use it without block placement. Also create a second case where a patrol post exists but is unreachable: after 60 ticks without progress and with Brain still targeting that post, the guard must abandon that post and switch to the street cell before any terrain construction. If the patrol route is reachable, it must not switch merely because straight-line distance temporarily increases.
 - If no natural route reaches and the Brain continues to target the street cell, verify stuck trigger is 60 ticks and existing GuardTerrainRecovery is invoked.
 - Record full plan before any placement: landing, each block coordinate, support depth, block count, protection/chunk/block-entity checks.
 - Confirm each placement is incremental and at existing cooldown; verify all resulting blocks are allowed and the villager walks using Brain WALK_TARGET / VillageManager.caminarHacia.
