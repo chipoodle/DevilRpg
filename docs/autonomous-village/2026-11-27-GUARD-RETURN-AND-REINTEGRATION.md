@@ -1,6 +1,6 @@
 # Guard return and militia reintegration — 27-nov-2026
 
-- **Production implementation commit:** `fe758aa677bc20c388a2d0c8adc9e8fd7602a400`.
+- **Production implementation commit:** `c7738f27c4ad2ccc58c6c6b4736fe1eb91bc952a`.
 
 ## Objetivo
 
