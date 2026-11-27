@@ -43,6 +43,12 @@ final class GuardTerrainRecovery {
         return active;
     }
 
+    void cancel(long retryAt) {
+        if (active) {
+            reset(retryAt);
+        }
+    }
+
     /**
      * @return true mientras la recuperación controla el destino temporal; false cuando no aplica o terminó.
      */
