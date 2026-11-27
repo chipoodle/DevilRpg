@@ -3503,7 +3503,7 @@ public class AggressiveZombieEntity extends Zombie {
      * están en el agua se quedan ahí y avanzan muy lento»* ✓): no es que naden despacio, es que <b>esperan a estar
      * atascados</b> ✓. Con 8 ticks reaccionan en menos de medio segundo ✓ y el asaltante no se queda plantado ✓.
      */
-    private static final int STUCK_TICKS_BEFORE_TRYING = 8;
+    private static final int STUCK_TICKS_BEFORE_TRYING = WaterEscapeController.STUCK_TICKS_BEFORE_ESCAPE;
         /**
          * <b>EL AGUA NO ES UN ATAJO, ES OTRO SITIO POR EL QUE SE ANDA</b> (5-oct-2026, y es el arreglo del "se quedan en el
          * agua y avanzan muy lento" del jugador).
@@ -3518,9 +3518,9 @@ public class AggressiveZombieEntity extends Zombie {
          * "rendirse" y pasa a ser un <b>recálculo</b>: si en 10 s no ha salido, vuelve a buscar orilla (por si la que
          * eligió no tenía salida) y <b>sigue nadando</b>, sin castigo.
          */
-        private static final int RECALCULAR_CADA_TICKS = 200;
+        private static final int RECALCULAR_CADA_TICKS = WaterEscapeController.RECALCULATE_TICKS;
         /** A2 REMEDIACIÓN 2 · escapes de agua por episodio; al agotarlos se retoma la mision. */
-        private static final int MAX_INTENTOS_DE_ESCAPE = 4;
+        private static final int MAX_INTENTOS_DE_ESCAPE = WaterEscapeController.MAX_ATTEMPTS;
 
         private final AggressiveZombieEntity zombie;
         private BlockPos shore = null;
@@ -3539,7 +3539,7 @@ public class AggressiveZombieEntity extends Zombie {
         // A5.32 · agua atrapada: el movimiento horizontal de una misión no puede aplazar el escape para siempre.
         // 60 ticks (3 s) sin acercarse a la misión es el umbral independiente; se reinicia al salir del agua o al
         // acercarse de verdad a la misión.
-        private static final int WATER_DWELL_TICKS = 60;
+        private static final int WATER_DWELL_TICKS = WaterEscapeController.WATER_DWELL_TICKS;
         private int waterDwellTicks = 0;
         private double bestMissionDistance = Double.MAX_VALUE;
         private boolean waterDwellTracked = false;
@@ -3690,7 +3690,7 @@ public class AggressiveZombieEntity extends Zombie {
                 lastZ = zombie.getZ();
             }
             // Si no avanza en 80 ticks (4 s), re-buscar la orilla y re-navegar.
-            if (stuckTicks >= 80) {
+            if (stuckTicks >= WaterEscapeController.RESELECT_STUCK_TICKS) {
                 solicitarOrilla(findNearestShore());
                 stuckTicks = 0;
                 lastX = zombie.getX();
@@ -3707,7 +3707,7 @@ public class AggressiveZombieEntity extends Zombie {
             // ticks y además con la mitad del tiempo rendido, y eso es "avanzan muy lento".
             if (zombie.isInWater() && shore != null && --jumpCooldown <= 0) {
                 jumpTowardShore();
-                jumpCooldown = 6;
+                jumpCooldown = WaterEscapeController.JUMP_INTERVAL_TICKS;
             }
             // A5.32 · Stage 2 (break) after the bounded jump has failed. At most 3 blocks per escape attempt.
             if (zombie.isInWater() && shore != null && stuckTicks >= 20 && recoveryBreaks < 3) {
