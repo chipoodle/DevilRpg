@@ -14,9 +14,7 @@ El estado de retorno se persiste en `VillageManager.GUARD_RETURNING_TAG` (`Devil
 
 ## Activación
 
-El guardia entra en retorno si:
-- no hay un puesto de guardia válido (`puntoDeGuardia(level)==null`), y
-- su celda actual no es un lugar seguro según las mismas reglas físicas del puesto (pies/cabeza sin fluido, espacio libre y soporte), o está fuera del perímetro de la muralla.
+El guardia entra en retorno si no hay un puesto válido y su celda actual es insegura (pies/cabeza con fluido, ocupada o sin soporte) o está fuera del perímetro. Además, si un puesto seleccionado no tiene ruta alcanzable y el guardia acumula 60 ticks sin progreso con el Brain apuntando a ese puesto, abandona esa patrulla y cambia el objetivo a la calle. No construye hacia una patrulla inalcanzable.
 
 Una etiqueta de retorno ya persistida mantiene el estado a través de guardados. El retorno puede arrancar aunque el guardia esté en turno ordinario de descanso; ese horario no puede dejar abandonado a un guardia varado.
 
@@ -26,7 +24,7 @@ No se inicia el retorno si hay marcha activa: la rama de marcha conserva priorid
 
 - Objetivo: `VillageManager.casillaDeLaCalle(level, center)`, no el centro geométrico ni un puesto de patrulla.
 - Todos los desplazamientos siguen pasando por `VillageManager.caminarHacia`; no se usa `Navigation.moveTo` ni teletransporte.
-- Si no hay ruta natural y el guardia lleva 60 ticks sin progreso con el Brain apuntando al objetivo, se reutiliza `GuardTerrainRecovery` para buscar un rellano seguro orientado hacia la calle.
+- Si no hay ruta natural y el guardia lleva 60 ticks sin progreso con el Brain apuntando al objetivo, primero cambia el destino al punto de calle. Entonces se reutiliza `GuardTerrainRecovery` para buscar un rellano seguro orientado hacia la calle.
 - La recuperación existente conserva sus límites de subida, profundidad, presupuesto de bloques, cadencia, protección, validación de chunks, block entities y soporte.
 - Si no hay plan válido, falla cerrado y reintenta con backoff; no rompe bloques ni fuerza una ruta.
 
