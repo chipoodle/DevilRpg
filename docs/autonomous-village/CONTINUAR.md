@@ -1,3 +1,20 @@
+# CHECKPOINT 27-nov-2026 — RESCATE Y REINTEGRACIÓN DE GUARDIAS (ACTUAL)
+
+> Este checkpoint supersede las instrucciones anteriores de validación del rescate. El historial debajo se conserva íntegro.
+
+- **Rama:** `feature/autonomous-village`
+- **Implementación productiva:** `86a3bde14c3fc86515750a354a1e76489c2b1eca`
+- **Diseño:** `docs/autonomous-village/2026-11-27-GUARD-RETURN-AND-REINTEGRATION.md`
+- **Evidencia Run011:** `docs/autonomous-village/2026-11-27-GUARD-TERRAIN-RECOVERY-RUN011.md`
+- **Prompt ejecutable Harness:** `docs/autonomous-village/2026-11-27-GUARD-RETURN-HARNESS-HANDOFF.md`
+- El rescate está integrado en el **mismo** `VillagerGuardGoal`; no se añadió un segundo goal que compita por MOVE/LOOK. Combate, marcha y equipamiento conservan sus ramas/prioridad; la huida/emergencia vanilla sigue por delante.
+- Si no hay puesto de patrulla y el guardia está en terreno inseguro o fuera de la muralla, se persiste `DevilRpgGuardiaRegresando` y se le dirige a `VillageManager.casillaDeLaCalle`. El rescate reutiliza `GuardTerrainRecovery` solo tras atasco/ruta natural no alcanzable y siempre mediante `VillageManager.caminarHacia`.
+- Mientras retorna, el reparto dinámico lo excluye de selección y baja, conserva su identidad/tipo/índice y reasegura el goal tras save/reload. Al llegar a terreno seco, soportado y dentro del muro se limpia la etiqueta; el siguiente reparto normal decide si sigue en milicia o vuelve a oficio.
+- **Estado:** IMPLEMENTADO / VALIDACIÓN PENDIENTE. ChatGPT no ejecutó Gradle, tests, lint ni runtime. No declarar PASS.
+- **Siguiente acción única:** Harness sincroniza con seguridad y ejecuta exactamente el plan de `2026-11-27-GUARD-RETURN-HARNESS-HANDOFF.md` en una copia NUEVA del mundo. No reutilizar Run010/Run011, no tocar el mundo original, no modificar producción.
+
+---
+
 # CHECKPOINT 27-nov-2026 — CORRECCIÓN DE DESTINO INVÁLIDO DE GUARDIAS
 
 - **HEAD de implementación:** `73016ae093de18d1d9744d9bd8164ef35189ec2d` (dos commits productivos encima de `c6709eb5b2f864b1126b2e9deb5f2f346edcabfc)).
