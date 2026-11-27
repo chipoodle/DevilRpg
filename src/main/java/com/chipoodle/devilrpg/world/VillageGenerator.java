@@ -278,7 +278,11 @@ public final class VillageGenerator {
         // planta el generador y se planta al final, así que si hay parcela la aldea se construyó entera.
         if (bancalHecho(level, center.offset(FARM_PLOTS[0][0], 0, FARM_PLOTS[0][1]),
                 cotaDeLaPlaza(level, center))) {
-            DevilRpg.LOGGER.info("[Village] Aldea en {}: ya estaba construida (hay parcela): no se vuelve a generar",
+            // La primera parcela es el testigo de que la aldea ya existe, NO de que las tres huertas estén completas.
+            // Completar aquí las parcelas ausentes evita reconstruir casas/caminos y también reponer las celdas
+            // vacías de una huerta parcialmente sembrada. plot() conserva los cultivos vivos y solo rellena huecos.
+            farm(level, center, cotaDeLaPlaza(level, center));
+            DevilRpg.LOGGER.info("[Village] Aldea en {}: ya estaba construida; parcelas verificadas sin reconstruir la aldea",
                     center);
             return captureBlueprint(level, center);
         }
@@ -8451,10 +8455,48 @@ public final class VillageGenerator {
         return false;
     }
 
+    /**
+     * Repone únicamente los cultivos que faltan en una parcela ya construida.
+     *
+     * No nivela terreno ni modifica cultivos existentes: exige farmland debajo, aire encima y excluye la acequia.
+     * Así puede completar una parcela que quedó labrada pero sin sembrar sin reiniciar el crecimiento de las demás.
+     */
+    private static int reponerCultivosAusentes(ServerLevel level, BlockPos corner, int nivel) {
+        Block[] plants = {Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES, Blocks.BEETROOTS};
+        int repuestos = 0;
+        for (int dx = 0; dx < PLOT_WIDTH; dx++) {
+            for (int dz = 0; dz < PLOT_DEPTH; dz++) {
+                if (esFilaDeAcequia(dx, dz)) {
+                    continue;
+                }
+                BlockPos tierra = new BlockPos(corner.getX() + dx, nivel - 1, corner.getZ() + dz);
+                if (!level.getBlockState(tierra).is(Blocks.FARMLAND)) {
+                    continue;
+                }
+                BlockPos cultivo = tierra.above();
+                if (!level.getBlockState(cultivo).isAir()) {
+                    continue;
+                }
+                BlockState estado = cultivoInicial(plants[dx % plants.length].defaultBlockState());
+                colocar(level, cultivo, estado, Block.UPDATE_ALL);
+                repuestos++;
+            }
+        }
+        if (repuestos > 0) {
+            DevilRpg.LOGGER.info("[Village] Parcela en {}: se repusieron {} cultivos ausentes sin tocar los existentes",
+                    corner, repuestos);
+        }
+        return repuestos;
+    }
+
     private static void plot(ServerLevel level, BlockPos corner, int nivel) {
         // SI LA PARCELA YA ESTÁ, NO SE NIVELA NI SE REPLANTA: solo se asegura lo que NO toca los cultivos (el
         // compostero del granjero y la valla con sus faroles). Ver `bancalHecho`.
         if (bancalHecho(level, corner, nivel)) {
+            // La tierra de cultivo no demuestra que la parcela siga sembrada: una generación interrumpida puede
+            // dejar FARMLAND sin plantas. Reponer solo celdas vacías sobre farmland conserva las cosechas vivas,
+            // la acequia, la humedad y cualquier bloque colocado por el jugador.
+            reponerCultivosAusentes(level, corner, nivel);
             composteroDelBancal(level, corner, nivel);
             cercaDelBancal(level, corner, nivel);
             return;
