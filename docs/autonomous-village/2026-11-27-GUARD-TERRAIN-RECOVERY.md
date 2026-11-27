@@ -5,9 +5,9 @@
 - Repository: `chipoodle/DevilRpg`
 - Branch: `feature/autonomous-village`
 - Base remote HEAD inspected before edits: `9271e6706fe4e70dc61e06f70ebb3f76ea9f4399`
-- Implementation HEAD: `13ea721ba8f246a6be2b04664b473138c51e8512`
+- Implementation HEAD: `cd532f1d630f26c81e6acbcde91112390e157eb1`
 - Parent of implementation series: `9271e6706fe4e70dc61e06f70ebb3f76ea9f4399`
-- The branch advanced only through this implementation series; GitHub compare reports 4 commits ahead, 0 behind.
+- The branch advanced only through this implementation series plus this handoff documentation; GitHub compare reports a fast-forward descendant, 0 behind.
 - No local build machine was reachable. Desktop Commander reported CHRIS-PC offline. **Compilation, tests, lint and Minecraft runtime are NOT RUN.**
 
 ## Problem
@@ -34,6 +34,8 @@ A guard can become stranded in a water depression below the surrounding terrain.
 ## Known scope and limitations
 
 - This first increment builds a short supported ramp; it does not yet mine dirt. It intentionally fails closed when no dry, naturally supported landing is found within the bounded search.
+- Activation occurs only after the one-time natural-route reachability check rejects the route; a reachable route is not replaced by construction.
+- An active recovery is cancelled when equipment acquisition or a guard march takes priority.
 - It is not yet runtime-accepted. The screenshot scenario must be reproduced in a disposable test world.
 - The recovery state is transient in the goal instance. Already placed blocks remain in the world if the entity unloads; interrupted recovery must be checked during runtime validation.
 - Do not infer success merely from the presence of the new class or log start event.
@@ -41,7 +43,7 @@ A guard can become stranded in a water depression below the surrounding terrain.
 ## Harness validation required
 
 1. Preserve local-only work and diagnostic worlds. Fetch and fast-forward only; stop on divergence or dirty-tree overwrite risk.
-2. Confirm exact tested SHA is `13ea721ba8f246a6be2b04664b473138c51e8512`.
+2. Confirm exact tested SHA is `cd532f1d630f26c81e6acbcde91112390e157eb1`.
 3. Run the repository's full static gate: `clean compileJava compileTestJava test`, strict village lint, and `git diff --check`. Record commands, exit codes and logs.
 4. In a disposable NeoForge 1.21.1 world, create a guard at the bottom of a water depression with:
    - floor two blocks below the surrounding bank;
