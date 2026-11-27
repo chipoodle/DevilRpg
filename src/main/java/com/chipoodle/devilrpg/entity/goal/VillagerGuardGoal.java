@@ -1,6 +1,7 @@
 package com.chipoodle.devilrpg.entity.goal;
 
 import com.chipoodle.devilrpg.DevilRpg;
+import com.chipoodle.devilrpg.entity.WaterEscapeController;
 import com.chipoodle.devilrpg.init.ModCapabilities;
 import com.chipoodle.devilrpg.world.VillageGenerator;
 import com.chipoodle.devilrpg.world.VillageManager;
@@ -193,6 +194,8 @@ public class VillagerGuardGoal extends Goal {
     private int stuckTicks;
     /** Recuperación física acotada cuando la guardia queda aislada por desniveles exteriores. */
     private final GuardTerrainRecovery recuperacionTerreno = new GuardTerrainRecovery();
+    /** Recuperación compartida de agua; delega el movimiento al Brain/WALK_TARGET del guardia. */
+    private final WaterEscapeController recuperacionAgua = new WaterEscapeController(4);
     private double mejorDistancia = Double.MAX_VALUE;
     private int restTicks;
     /** Contador de puntos de ronda (para que no repita el mismo). */
@@ -340,6 +343,7 @@ public class VillagerGuardGoal extends Goal {
 
     @Override
     public void start() {
+        recuperacionAgua.cancel();
         stuckTicks = 0;
         espera = 0;
         cadencia = 0;
@@ -433,6 +437,7 @@ public class VillagerGuardGoal extends Goal {
         }
         if (enemigo != null) {
             if (enemigo.isAlive() && !enemigo.isRemoved()) {
+                recuperacionAgua.cancel();
                 calmar();
                 pelear(level);
                 return;
@@ -509,13 +514,24 @@ public class VillagerGuardGoal extends Goal {
                 }
             }
         }
-        // Si una recuperación ya empezó, se atiende aquí antes del movimiento normal. La activación
-        // inicial se hace más abajo, DESPUÉS de comprobar que no existe una ruta natural alcanzable.
-        if (recuperacionTerreno.isActive() && (equipando || marchando)) {
-            recuperacionTerreno.cancel(level.getGameTime() + 100L);
-        }
-        if (recuperacionTerreno.isActive()
-                && recuperacionTerreno.tick(level, villager, destino, false)) {
+        // El rescate de agua comparte detección/orillas/impulso con EscapeWaterGoal, pero NO su
+        // autoridad de movimiento: el callback conserva Brain/WALK_TARGET vía VillageManager.
+        if (equipando || marchando) {
+            recuperacionAgua.cancel();
+            if (recuperacionTerreno.isActive()) {
+                recuperacionTerreno.cancel(level.getGameTime() + 100L);
+            }
+        } else if (recuperacionTerreno.isActive()) {
+            // Una vez iniciada la construcción de respaldo, no se intercala otra recuperación de agua.
+            recuperacionAgua.cancel();
+            if (recuperacionTerreno.tick(level, villager, destino, false)) {
+                stuckTicks = 0;
+                mejorDistancia = Double.MAX_VALUE;
+                return;
+            }
+        } else if (recuperacionAgua.tick(level, villager, destino,
+                shore -> esRellanoSeco(level, villager, shore),
+                shore -> VillageManager.caminarHacia(villager, shore, VELOCIDAD))) {
             stuckTicks = 0;
             mejorDistancia = Double.MAX_VALUE;
             return;
@@ -686,6 +702,7 @@ public class VillagerGuardGoal extends Goal {
                             + " ticks, aldea {})", villager.getUUID(), destino, paso, stuckTicks, espera,
                     objectiveIndex);
         }
+        recuperacionAgua.cancel();
         destino = null;
         enemigo = null;
         // OJO: **NO** se pone `espera` (el rato plantado en el puesto) a cero. Se ponía, y con el servicio cortándose
@@ -2055,6 +2072,29 @@ public class VillagerGuardGoal extends Goal {
                 && level.getBlockState(p).getCollisionShape(level, p).isEmpty()
                 && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
                 && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty();
+    }
+
+    /**
+     * Orilla apta para un guardia: pies, cabeza y volumen superior secos/libres, soporte real y AABB completa
+     * sin colisión. Solo se consultan chunks ya cargados; la búsqueda nunca fuerza carga de terreno.
+     */
+    private boolean esRellanoSeco(ServerLevel level, Villager guardia, BlockPos feet) {
+        BlockPos upperBody = feet.above(2);
+        BlockPos support = feet.below();
+        if (!level.hasChunkAt(feet) || !level.hasChunkAt(feet.above())
+                || !level.hasChunkAt(upperBody) || !level.hasChunkAt(support)) {
+            return false;
+        }
+        if (!sePuedeEstar(level, feet)
+                || !level.getFluidState(upperBody).isEmpty()
+                || !level.getBlockState(upperBody).getCollisionShape(level, upperBody).isEmpty()
+                || !level.getFluidState(support).isEmpty()) {
+            return false;
+        }
+        double dx = feet.getX() + 0.5D - guardia.getX();
+        double dy = feet.getY() - guardia.getY();
+        double dz = feet.getZ() + 0.5D - guardia.getZ();
+        return level.noCollision(guardia, guardia.getBoundingBox().move(dx, dy, dz));
     }
 
     /** ¿Este paso de la ronda le toca al <b>corral anexo</b>? (lo miran el destino y la etiqueta: uno solo) */
