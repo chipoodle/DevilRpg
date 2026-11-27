@@ -476,6 +476,9 @@ public class VillagerGuardGoal extends Goal {
         }
         // Si una recuperación ya empezó, se atiende aquí antes del movimiento normal. La activación
         // inicial se hace más abajo, DESPUÉS de comprobar que no existe una ruta natural alcanzable.
+        if (recuperacionTerreno.isActive() && (equipando || marchando)) {
+            recuperacionTerreno.cancel(level.getGameTime() + 100L);
+        }
         if (recuperacionTerreno.isActive()
                 && recuperacionTerreno.tick(level, villager, destino, false)) {
             stuckTicks = 0;
