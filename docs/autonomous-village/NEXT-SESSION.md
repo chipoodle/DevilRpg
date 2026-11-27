@@ -4,7 +4,7 @@
 
 - **Rama:** \`feature/autonomous-village\`
 - **Base de implementación inspeccionada:** \`8b335d024b257bfbbe6bdcf87b67e84ce2e85e8e\`
-- **Último commit de código:** \`1203a4d54d91cdbc9501ba066f99bb9f1ab56be4\`
+- **Último commit de código:** \`965e60712b177ddccc01d1ad6e15efc4e556b251\`
 - **Informe técnico:** \`docs/autonomous-village/2026-11-27-SHARED-WATER-ESCAPE-IMPLEMENTATION.md\`
 - **Cambio:** nuevo \`WaterEscapeController\` compartido; guardias lo usan desde el \`VillagerGuardGoal\` existente mediante \`VillageManager.caminarHacia\`/Brain WALK_TARGET. Zombies reutilizan la misma búsqueda, impulso, umbrales y presupuesto manteniendo \`NavExecutor\` y su recuperación de rotura.
 - **Validación:** pendiente. ChatGPT no ejecutó compile, tests, policyTest, lint ni runtime. La prueba nueva \`WaterEscapeControllerTest\` está añadida y registrada, no ejecutada.
