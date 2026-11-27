@@ -1550,6 +1550,7 @@ public class VillagerGuardGoal extends Goal {
     @Nullable
     private BlockPos pasoDelEntreno;
 
+    @Nullable
     private BlockPos puntoDeGuardia(ServerLevel level) {
         int nivel = VillageGenerator.cotaDeLaPlaza(level, center);
         if (level.isNight()) {
@@ -1620,6 +1621,7 @@ public class VillagerGuardGoal extends Goal {
      * se lo cerraba encima. Un guardia no tiene por qué cruzar la única puerta del rebaño: desde fuera de la valla ve
      * (y defiende) el corral igual.
      */
+    @Nullable
     private BlockPos puestoDelCorral(ServerLevel level, int nivel) {
         BlockPos base = VillageGenerator.baseDeAnexo(center);
         int dz = PUNTOS_DEL_CORRAL[Math.floorMod(indice, PUNTOS_DEL_CORRAL.length)];
@@ -1671,6 +1673,7 @@ public class VillagerGuardGoal extends Goal {
      * <b>llegar</b> (`createPath(...).canReach()`), que es la prueba del caminante del juego; y el abanico de casillas
      * que se prueban es más ancho (hasta 6 bloques) para que el puesto acabe en la calle.
      */
+    @Nullable
     private BlockPos puestoLibre(ServerLevel level, BlockPos puesto, int haciaDonde) {
         BlockPos primeroDePie = null;
         Set<Long> calle = null; // se calcula una vez por puesto (recorrido en anchura desde la plaza)
@@ -1732,9 +1735,10 @@ public class VillagerGuardGoal extends Goal {
         if (primeroDePie != null && seLlega(level, primeroDePie) && !dentroDeUnaConstruccion(level, primeroDePie)) {
             return primeroDePie;
         }
-        // NI ESO: el guardia se QUEDA DONDE ESTÁ —que es lo único de lo que consta que se llega— en vez de ir a
-        // empujar la pared de dentro. Medido (25-sep): por este respaldo se colaban todavía 6 rendiciones de golpe.
-        return villager.blockPosition();
+        // SIN PUESTO SEGURO: no convertir la posición actual del guardia en un destino ficticio. Si está en agua,
+        // sin soporte o en una celda no validada, devolver null permite que el goal no arranque y vuelva a buscar
+        // cuando cambie el terreno o aparezca una ruta válida. Así no se confunde "estoy aquí" con "llegué al puesto".
+        return null;
     }
 
     /**
@@ -1936,7 +1940,12 @@ public class VillagerGuardGoal extends Goal {
         if (p == null) {
             return false; // la calle puede no existir todavía (aldea recién cargada): no hay dónde estar
         }
-        return level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+        // Una forma de colisión vacía no basta: el agua también permite colisión vacía y no es una celda
+        // válida para un puesto de guardia. Pies y cabeza deben estar libres de fluidos; debajo debe existir
+        // soporte físico (la forma de colisión no vacía que ya exige esta política).
+        return level.getFluidState(p).isEmpty()
+                && level.getFluidState(p.above()).isEmpty()
+                && level.getBlockState(p).getCollisionShape(level, p).isEmpty()
                 && level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()
                 && !level.getBlockState(p.below()).getCollisionShape(level, p.below()).isEmpty();
     }
