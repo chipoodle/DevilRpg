@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 
 /**
- * Vex "helado" del mod: copia del vex vanilla (vuela, ataca cuerpo a cuerpo y puede spawnear de día) pero
+ * Aggressive Vex del mod: copia del vex vanilla (vuela, ataca cuerpo a cuerpo y puede spawnear de día) pero
  * con dos añadidos:
  * <ul>
  *   <li><b>Ataque a distancia</b>: lanza una {@link FrostBall} (la misma bola de hielo del wisp), con un
