@@ -195,7 +195,7 @@ public class VillagerGuardGoal extends Goal {
     /** Recuperación física acotada cuando la guardia queda aislada por desniveles exteriores. */
     private final GuardTerrainRecovery recuperacionTerreno = new GuardTerrainRecovery();
     /** Recuperación compartida de agua; delega el movimiento al Brain/WALK_TARGET del guardia. */
-    private final WaterEscapeController recuperacionAgua = new WaterEscapeController(4);
+    private final WaterEscapeController recuperacionAgua = new WaterEscapeController(WaterEscapeController.MAX_ATTEMPTS);
     private double mejorDistancia = Double.MAX_VALUE;
     private int restTicks;
     /** Contador de puntos de ronda (para que no repita el mismo). */
