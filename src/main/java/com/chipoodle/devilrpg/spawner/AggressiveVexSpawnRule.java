@@ -18,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Regla de spawn de los <b>vexes helados</b> ({@link AggressiveVexEntity}): amenaza aérea que ataca al jugador
+ * Regla de spawn de los <b>Aggressive Vex</b> ({@link AggressiveVexEntity}): amenaza aérea que ataca al jugador
  * con cuerpo a cuerpo y bolas de hielo, y puede spawnear de día (a diferencia de los zombies, que se
  * queman al sol). Usa su propio {@link AggressiveVexSpawnProfile} para la probabilidad por distancia del jugador a
  * su punto de inicio.
@@ -29,7 +29,7 @@ public class AggressiveVexSpawnRule implements CustomSpawnRule {
 
     private static final int MIN_INTERVAL_SECONDS = 20;     // intervalo minimo entre intentos (20 s)
     private static final int MAX_INTERVAL_SECONDS = 2 * 60; // intervalo maximo entre intentos (2 min)
-    private static final int MAX_ALIVE_IN_WORLD = 15;       // limite de vexes vivos
+    private static final int MAX_ALIVE_IN_WORLD = 15;       // limite de Vexes vivos
     private static final int MIN_SPAWN_DISTANCE = 12;        // minimo cerca del jugador
     private static final int MAX_SPAWN_DISTANCE = 24;       // maximo cerca del jugador
     private static final int SURFACE_SEARCH_DOWN = 8;       // bloques hacia abajo para hallar suelo
@@ -52,7 +52,7 @@ public class AggressiveVexSpawnRule implements CustomSpawnRule {
 
     @Override
     public float getSpawnChance(ServerLevel level, ServerPlayer player) {
-        // Los vexes no se queman al sol: pueden spawnear tanto de día como de noche.
+        // Los Vexes no se queman al sol: pueden spawnear tanto de día como de noche.
         Vec3 spawn = getSpawnPoint(player);
         if (spawn == null) {
             return 0.0F;
@@ -100,7 +100,7 @@ public class AggressiveVexSpawnRule implements CustomSpawnRule {
             //
             // OJO: ya NO se le da vida limitada (antes `setLimitedLife(2 * 60 * 20)`). Con vida limitada el vex
             // moría "de inanición" a los 2 minutos (vanilla lo mata con `damageSources().starve()`), y como no
-            // lo mataba el jugador NO soltaba experiencia: parecía que los vexes no daban XP. El tope
+            // lo mataba el jugador NO soltaba experiencia: parecía que los Vexes no daban XP. El tope
             // `MAX_ALIVE_IN_WORLD` (15) ya evita que se acumulen, así que ahora todos se pueden matar y dan su
             // XP. Si algún día se acumulan demasiado, basta con volver a poner la línea del setLimitedLife.
             vex.setTarget(player);
