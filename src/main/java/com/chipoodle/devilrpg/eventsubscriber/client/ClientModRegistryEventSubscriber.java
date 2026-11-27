@@ -16,7 +16,7 @@ import com.chipoodle.devilrpg.client.gui.screen.MountablePetScreen;
 import com.chipoodle.devilrpg.client.render.blockentity.PortonDobleRenderer;
 import com.chipoodle.devilrpg.client.render.entity.model.*;
 import com.chipoodle.devilrpg.client.render.entity.renderer.*;
-import com.chipoodle.devilrpg.entity.FrostVexEntity;
+import com.chipoodle.devilrpg.entity.AggressiveVexEntity;
 import com.chipoodle.devilrpg.init.ModContainers;
 import com.chipoodle.devilrpg.init.ModEntities;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
@@ -92,9 +92,9 @@ public final class ClientModRegistryEventSubscriber {
         event.registerEntityRenderer(ModEntities.SUNFLOWER_SHULKER.get(), SunflowerShulkerRenderer::new);
         event.registerEntityRenderer(ModEntities.EXPLODING_SPORE_BULLET.get(), ExplodingSporeBulletRenderer::new);
         event.registerEntityRenderer(ModEntities.AGGRESSIVE_ZOMBIE.get(), AggressiveZombieRenderer::new);
-        // FrostVexEntity extiende Vex; VexModel no es genérico, así que reutilizamos el renderer vanilla
+        // AggressiveVexEntity extiende Vex; VexModel no es genérico, así que reutilizamos el renderer vanilla
         // del vex con un cast controlado (la entidad ES un Vex, por lo que el renderer es válido).
-        event.registerEntityRenderer(ModEntities.FROST_VEX.get(), frostVexRendererProvider());
+        event.registerEntityRenderer(ModEntities.AGGRESSIVE_VEX.get(), frostVexRendererProvider());
         // El cultivador del sculk usa el modelo del Invocador con tinte escarlata (cultista del sculk).
         event.registerEntityRenderer(ModEntities.SCULK_CULTIVATOR.get(), SculkCultivatorRenderer::new);
         // GUARDIA DE LA ALDEA: se sustituye el renderer del ALDEANO por el nuestro (`EntityRenderers.register`
@@ -129,14 +129,14 @@ public final class ClientModRegistryEventSubscriber {
     }
 
     /**
-     * Proveedor del renderer del {@link FrostVexEntity}: reutiliza el {@code VexRenderer} vanilla. El
+     * Proveedor del renderer del {@link AggressiveVexEntity}: reutiliza el {@code VexRenderer} vanilla. El
      * {@code VexModel} no es genérico (es {@code HierarchicalModel<Vex>}), por lo que se hace un cast
-     * controlado; es seguro porque {@code FrostVexEntity} ES un {@code Vex}.
+     * controlado; es seguro porque {@code AggressiveVexEntity} ES un {@code Vex}.
      */
     @SuppressWarnings("unchecked")
-    private static EntityRendererProvider<FrostVexEntity> frostVexRendererProvider() {
+    private static EntityRendererProvider<AggressiveVexEntity> frostVexRendererProvider() {
         EntityRendererProvider<Vex> provider = VexRenderer::new;
-        return (EntityRendererProvider<FrostVexEntity>) (EntityRendererProvider<?>) provider;
+        return (EntityRendererProvider<AggressiveVexEntity>) (EntityRendererProvider<?>) provider;
     }
 
 }
