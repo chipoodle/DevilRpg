@@ -1,5 +1,7 @@
 # Guard return and militia reintegration — 27-nov-2026
 
+- **Production implementation commit:** `fe758aa677bc20c388a2d0c8adc9e8fd7602a400`.
+
 ## Objetivo
 
 Un guardia que perdió el acceso a un puesto de patrulla no debe quedar inactivo porque `puntoDeGuardia()` devuelve null. Debe recuperar terreno seguro y regresar a la aldea; no necesita alcanzar el centro ni recibir un puesto ficticio. Una vez dentro, el reparto ordinario decide si conserva plaza militar o vuelve a cubrir un oficio.
