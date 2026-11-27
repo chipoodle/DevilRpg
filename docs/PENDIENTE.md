@@ -1,6 +1,6 @@
 # PENDIENTE ACTUAL — VALIDAR RESCATE DE AGUA COMPARTIDO (27-nov-2026)
 
-- **Implementación publicada:** \`1203a4d54d91cdbc9501ba066f99bb9f1ab56be4\`.
+- **Implementación publicada:** \`965e60712b177ddccc01d1ad6e15efc4e556b251\`.
 - **Informe:** \`docs/autonomous-village/2026-11-27-SHARED-WATER-ESCAPE-IMPLEMENTATION.md\`.
 - **Estado:** implementación pendiente de compile/tests/policyTest/lint/runtime. RUN 013 diagnóstico anterior no se ejecutó y queda reemplazado.
 - **Acción:** Harness valida el HEAD actual; si STATIC PASS, prueba escenario A de guardia en mundo nuevo desechable, prioridades/negativos y regresión focalizada del escape de agua zombie. No tocar el mundo original ni cambiar A2/C4.
