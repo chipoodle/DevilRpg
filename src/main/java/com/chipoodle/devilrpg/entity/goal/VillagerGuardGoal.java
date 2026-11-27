@@ -309,7 +309,8 @@ public class VillagerGuardGoal extends Goal {
         // usa la plaza/calle como objetivo de retorno; el goal de guardia ya no puede reclamar un puesto ficticio.
         regresandoAlPueblo = villager.getPersistentData().getBoolean(VillageManager.GUARD_RETURNING_TAG);
         if (!regresandoAlPueblo && !equipando && puntoDeGuardia(level) == null
-                && !sePuedeEstar(level, villager.blockPosition())) {
+                && (!sePuedeEstar(level, villager.blockPosition())
+                        || !VillageManager.esDeDentroDelMuro(center, villager.blockPosition()))) {
             regresandoAlPueblo = true;
             villager.getPersistentData().putBoolean(VillageManager.GUARD_RETURNING_TAG, true);
             DevilRpg.LOGGER.warn("[GuardReturn] guard={} village={} stranded at {}; preserving militia identity",
