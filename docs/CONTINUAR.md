@@ -1,9 +1,9 @@
 # CONTINUIDAD — RESCATE DE AGUA COMPARTIDO (27-nov-2026)
 
-**Implementación:** \`965e60712b177ddccc01d1ad6e15efc4e556b251\` en \`feature/autonomous-village\`.
-**Informe:** \`docs/autonomous-village/2026-11-27-SHARED-WATER-ESCAPE-IMPLEMENTATION.md\`.
+**Implementación:** `965e60712b177ddccc01d1ad6e15efc4e556b251` en `feature/autonomous-village`.
+**Informe:** `docs/autonomous-village/2026-11-27-SHARED-WATER-ESCAPE-IMPLEMENTATION.md`.
 
-El RUN 013 anterior no se ejecutó y queda sustituido. Se implementó \`WaterEscapeController\`: núcleo compartido para detección de atasco, búsqueda de orilla, presupuesto finito e impulso. \`EscapeWaterGoal\` delega búsqueda/impulso/umbrales comunes, conservando el adaptador \`NavExecutor\` y rotura propia de zombies. \`VillagerGuardGoal\` usa el mismo controlador pero navega solo mediante \`VillageManager.caminarHacia\` y Brain WALK_TARGET. La búsqueda de guardias cubre suelo entre -2 y +1 Y relativo a los pies (rellano hasta +2); zombies conservan -1..0. La orilla del guardia se valida con chunks cargados, pies/cabeza/volumen superior secos, soporte y AABB libre. Sin segundo goal, sin teletransporte y sin edición de terreno en el escape de agua. \`GuardTerrainRecovery\` queda como fallback exclusivo cuando el controlador de agua no resuelve.
+El RUN 013 anterior no se ejecutó y queda sustituido. Se implementó `WaterEscapeController`: núcleo compartido para detección de atasco, búsqueda de orilla, presupuesto finito e impulso. `EscapeWaterGoal` delega búsqueda/impulso/umbrales comunes, conservando el adaptador `NavExecutor` y rotura propia de zombies. `VillagerGuardGoal` usa el mismo controlador pero navega solo mediante `VillageManager.caminarHacia` y Brain WALK_TARGET. La búsqueda de guardias cubre suelo entre -2 y +1 Y relativo a los pies (rellano hasta +2); zombies conservan -1..0. La orilla del guardia se valida con chunks cargados, pies/cabeza/volumen superior secos, soporte y AABB libre. Sin segundo goal, sin teletransporte y sin edición de terreno en el escape de agua. `GuardTerrainRecovery` queda como fallback exclusivo cuando el controlador de agua no resuelve.
 
 **Estado:** código implementado; compile/tests/policyTest/lint/runtime NO ejecutados por ChatGPT. Harness debe validar el HEAD actual, correr gates estáticos y probar Ximeno en mundo NUEVO desechable, además de regresión focalizada de escape de zombie. Ver informe para los escenarios, logs esperados y preservación de mundos.
 
@@ -2419,7 +2419,7 @@ validación en `…141858`), así que la alcanzabilidad del terreno sigue **sin 
 sustituye el navegador por puntos intermedios de arriba.
 
 **A1 · sigue ABIERTO por un solo criterio.** Falta la verificación no ejecutada: **armas visibles en un cliente real**,
-que exige una corrida de cliente con **directorio de juego aislado** (no `run\`) para no tocar `run\saves`. Todo lo
+que exige una corrida de cliente con **directorio de juego aislado** (no `run`) para no tocar `run\saves`. Todo lo
 demás del muro y de la fundación consta medido; el terreno queda documentado sin corrección. El jugador debe confirmar
 además el resultado en su partida. **Esta limitación no cambia en esta actualización.**
 
