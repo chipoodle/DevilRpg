@@ -1578,9 +1578,11 @@ public class VillagerGuardGoal extends Goal {
             // intentarlo en cada vuelta: lo reportó el jugador con captura —*"el espadachín se quedó como ciclado
             // patrullando el corral"*—. Ahora, si está aparcado, se prueba el punto siguiente de la ronda; cuando el
             // aparcamiento caduque (5 min) volverá a probar el corral.
-            if (!VillageManager.esPuntoFallido(villager, corral)) {
+            if (corral != null && !VillageManager.esPuntoFallido(villager, corral)) {
                 return corral;
             }
+            // Si no hay puesto seco, soportado y alcanzable alrededor del corral, se omite este turno
+            // y se intenta una posición ordinaria de ronda; nunca se consulta el aparcamiento con null.
             paso++;
         }
         // Y cada RONDA_CADA_ARBOLEDA puntos, a la ARBOLEDA DEL PUEBLO (dentro de la valla, en la diagonal noreste):
