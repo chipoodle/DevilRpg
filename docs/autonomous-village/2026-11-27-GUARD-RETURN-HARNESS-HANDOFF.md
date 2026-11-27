@@ -4,7 +4,7 @@
 
 - Repository: `chipoodle/DevilRpg`
 - Branch: `feature/autonomous-village`
-- Production implementation commit: `9632c9df61438fc39f1a32fda83a8affbc691be0` (includes the last source change: restore the returning guard goal after reload).
+- Production implementation commit: `c7738f27c4ad2ccc58c6c6b4736fe1eb91bc952a` (includes the last source change: restore the returning guard goal after reload).
 - The final documentation commit will be a descendant; sync the current branch tip and record the exact tested SHA. Do not test an earlier base.
 - Minecraft 1.21.1 / NeoForge 21.1.249.
 - ChatGPT did not run Gradle, unit tests, lint, dedicated server, client or runtime.
@@ -17,7 +17,7 @@ TASK: Validate stranded guard return and militia reintegration. Harness is verif
 REPOSITORY
 - chipoodle/DevilRpg
 - branch feature/autonomous-village
-- expected implementation commit 9632c9df61438fc39f1a32fda83a8affbc691be0
+- expected implementation commit c7738f27c4ad2ccc58c6c6b4736fe1eb91bc952a
 - Sync the current remote branch tip (documentation-only descendants may exist). Record exact tested SHA and prove it contains the implementation commit.
 
 SAFE SYNC / WORKTREE
@@ -81,7 +81,7 @@ Scenario E — save/reload during rescue
 - Save/reload again after successful completion; verify the tag stays cleared and normal distribution proceeds.
 
 Priority/negative controls
-- Combat: introduce a hostile within guard combat radius; combat must run before return movement.
+- Combat: introduce a hostile within guard combat radius; combat must run before return movement. Training: force the training schedule while RETURNING_TAG=true; training must not delay return.
 - Equipment: when eligible equipment exists, equip flow may take priority/pause recovery; after completion return resumes.
 - March: when marchDe is active, march destination remains authoritative; no return destination may override it.
 - Flee/emergency and critical needs retain their existing higher GoalSelector priority.
