@@ -2260,8 +2260,8 @@ public final class VillageManager {
      *       {@link #PERIMETER_RADIUS}) más un margen para el cuerpo. No se acepta nada que el propio asedio fuera a
      *       contar como «dentro».</li>
      *   <li><b>Chunk cargado</b> ({@link ServerLevel#hasChunkAt}): no se fuerza la carga de ningún chunk.</li>
-     *   <li><b>Barrido vertical acotado</b> de arriba abajo entre {@link #SPAWN_SCAN_ARRIBA_DE_LA_COTA} y
-     *       {@link #SPAWN_SCAN_ABAJO_DE_LA_COTA} sobre la cota, recortado a la altura del mundo.</li>
+     *   <li><b>Barrido vertical acotado</b> desde la cota hacia abajo y arriba, por distancia creciente, entre
+     *       {@link #SPAWN_SCAN_ABAJO_DE_LA_COTA} y {@link #SPAWN_SCAN_ARRIBA_DE_LA_COTA}, recortado al mundo.</li>
      *   <li>Por cada altura: <b>apoyo sólido y estable</b> debajo, la <b>caja completa</b> del asediador sin
      *       intersección con bloques, y sin <b>fluido ni peligro</b> en ninguna celda de la caja.</li>
      * </ol>
