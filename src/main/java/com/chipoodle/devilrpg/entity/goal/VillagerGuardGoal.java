@@ -474,12 +474,10 @@ public class VillagerGuardGoal extends Goal {
                 }
             }
         }
-        // RECUPERACIÓN DE TERRENO: solo si el guardia lleva 60 ticks sin progreso y el cerebro
-        // conserva el destino de la guardia. Nunca compite con combate, equipo o marcha; el movimiento
-        // temporal sigue pasando por VillageManager.caminarHacia (autoridad del Brain).
-        boolean intentarRecuperacionTerreno = enemigo == null && !equipando && !marchando
-                && stuckTicks >= 60 && VillageManager.elCerebroVaA(villager, destino);
-        if (recuperacionTerreno.tick(level, villager, destino, intentarRecuperacionTerreno)) {
+        // Si una recuperación ya empezó, se atiende aquí antes del movimiento normal. La activación
+        // inicial se hace más abajo, DESPUÉS de comprobar que no existe una ruta natural alcanzable.
+        if (recuperacionTerreno.isActive()
+                && recuperacionTerreno.tick(level, villager, destino, false)) {
             stuckTicks = 0;
             mejorDistancia = Double.MAX_VALUE;
             return;
@@ -509,6 +507,16 @@ public class VillagerGuardGoal extends Goal {
                 if (stuckTicks == TICKS_PARA_PREGUNTAR_SI_HAY_RUTA
                         && VillageManager.hayRutaQueAlcanza(villager, destino)) {
                     stuckTicks = 0;
+                }
+                // Solo construir después de la comprobación cara de ruta natural. Si hay camino,
+                // el guardia lo sigue sin modificar el terreno.
+                if (stuckTicks >= GuardTerrainRecovery.STUCK_TRIGGER_TICKS
+                        && enemigo == null && !equipando && !marchando
+                        && VillageManager.elCerebroVaA(villager, destino)
+                        && recuperacionTerreno.tick(level, villager, destino, true)) {
+                    stuckTicks = 0;
+                    mejorDistancia = Double.MAX_VALUE;
+                    return;
                 }
                 // Y TAMPOCO ES ATASCO SI EL CEREBRO VA A OTRA PARTE (I125): eso no es "no puedo llegar", es que **le
                 // están mandando a otro sitio** —el paseo del cerebro le pisa el `WALK_TARGET`, medido: un guardia
