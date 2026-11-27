@@ -550,11 +550,31 @@ public class VillagerGuardGoal extends Goal {
                 // el guardia lo sigue sin modificar el terreno.
                 if (stuckTicks >= GuardTerrainRecovery.STUCK_TRIGGER_TICKS
                         && enemigo == null && !equipando && !marchando
-                        && VillageManager.elCerebroVaA(villager, destino)
-                        && recuperacionTerreno.tick(level, villager, destino, true)) {
-                    stuckTicks = 0;
-                    mejorDistancia = Double.MAX_VALUE;
-                    return;
+                        && VillageManager.elCerebroVaA(villager, destino)) {
+                    // Un puesto que no se alcanza deja de ser una asignación útil. En vez de construir hacia una
+                    // patrulla inalcanzable, el guardia abandona temporalmente la milicia y vuelve a la calle.
+                    // La misma instancia de goal conserva MOVE/LOOK; no aparece un segundo goal competidor.
+                    if (!regresandoAlPueblo) {
+                        BlockPos calle = VillageManager.casillaDeLaCalle(level, center);
+                        if (calle != null) {
+                            regresandoAlPueblo = true;
+                            villager.getPersistentData().putBoolean(VillageManager.GUARD_RETURNING_TAG, true);
+                            destino = calle;
+                            stuckTicks = 0;
+                            mejorDistancia = Double.MAX_VALUE;
+                            DevilRpg.LOGGER.warn("[GuardReturn] guard={} village={} abandoned unreachable patrol; returning to {}",
+                                    villager.getUUID(), objectiveIndex, calle.toShortString());
+                            if (recuperacionTerreno.tick(level, villager, destino, true)) {
+                                return;
+                            }
+                            VillageManager.caminarHacia(villager, destino, VELOCIDAD);
+                            return;
+                        }
+                    } else if (recuperacionTerreno.tick(level, villager, destino, true)) {
+                        stuckTicks = 0;
+                        mejorDistancia = Double.MAX_VALUE;
+                        return;
+                    }
                 }
                 // Y TAMPOCO ES ATASCO SI EL CEREBRO VA A OTRA PARTE (I125): eso no es "no puedo llegar", es que **le
                 // están mandando a otro sitio** —el paseo del cerebro le pisa el `WALK_TARGET`, medido: un guardia
