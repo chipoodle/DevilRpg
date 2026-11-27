@@ -27,6 +27,17 @@ public final class WaterEscapeControllerTest {
         check("no repite orillas intentadas", farGround.above().equals(selected));
 
         attempted.clear();
+        BlockPos highGround = new BlockPos(0, 65, 1);
+        BlockPos highLanding = highGround.above();
+        selected = WaterEscapeController.findNearestShore(origin, 2,
+                WaterEscapeController.GUARD_MIN_GROUND_DY, WaterEscapeController.GUARD_MAX_GROUND_DY,
+                attempted, p -> p.equals(highGround), feet -> feet.equals(highLanding));
+        check("guardia encuentra orilla elevada dentro del rango vertical", highLanding.equals(selected));
+        selected = WaterEscapeController.findNearestShore(origin, 2, attempted,
+                p -> p.equals(highGround), feet -> feet.equals(highLanding));
+        check("zombie conserva rango vertical histórico", selected == null);
+
+        attempted.clear();
         selected = WaterEscapeController.findNearestShore(origin, 0, attempted,
                 p -> p.equals(nearGround), feet -> true);
         check("respeta radio máximo", selected == null);
