@@ -1,3 +1,14 @@
+# CONTINUIDAD — RESCATE DE AGUA COMPARTIDO (27-nov-2026)
+
+**Implementación:** \`1203a4d54d91cdbc9501ba066f99bb9f1ab56be4\` en \`feature/autonomous-village\`.
+**Informe:** \`docs/autonomous-village/2026-11-27-SHARED-WATER-ESCAPE-IMPLEMENTATION.md\`.
+
+El RUN 013 anterior no se ejecutó y queda sustituido. Se implementó \`WaterEscapeController\`: núcleo compartido para detección de atasco, búsqueda de orilla, presupuesto finito e impulso. \`EscapeWaterGoal\` delega búsqueda/impulso/umbrales comunes, conservando el adaptador \`NavExecutor\` y rotura propia de zombies. \`VillagerGuardGoal\` usa el mismo controlador pero navega solo mediante \`VillageManager.caminarHacia\` y Brain WALK_TARGET. La orilla del guardia se valida con chunks cargados, pies/cabeza/volumen superior secos, soporte y AABB libre. Sin segundo goal, sin teletransporte y sin edición de terreno en el escape de agua. \`GuardTerrainRecovery\` queda como fallback exclusivo cuando el controlador de agua no resuelve.
+
+**Estado:** código implementado; compile/tests/policyTest/lint/runtime NO ejecutados por ChatGPT. Harness debe validar el HEAD actual, correr gates estáticos y probar Ximeno en mundo NUEVO desechable, además de regresión focalizada de escape de zombie. Ver informe para los escenarios, logs esperados y preservación de mundos.
+
+---
+
 # CHECKPOINT 27-nov-2026 — DIAGNÓSTICO DE RECHAZO DE COLOCACIÓN (ACTUAL)
 
 > Este checkpoint supersede el handoff de diagnóstico previo. Se conserva íntegro el historial posterior.
