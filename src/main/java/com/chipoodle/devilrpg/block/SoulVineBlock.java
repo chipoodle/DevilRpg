@@ -6,7 +6,9 @@ import com.chipoodle.devilrpg.init.ModBlocks;
 import com.chipoodle.devilrpg.init.ModEntityBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -26,6 +28,7 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -161,6 +164,27 @@ public class SoulVineBlock extends Block implements EntityBlock {
     @Override
     public boolean isLadder(@NotNull BlockState state, @NotNull LevelReader level, @NotNull BlockPos pos, @Nullable LivingEntity entity) {
         return true;
+    }
+
+    /**
+     * Fallback climbing movement for the no-collision vine body. The vanilla ladder hook
+     * identifies this block as climbable, while this callback supplies upward movement
+     * whenever a player presses forward while intersecting the vine's block cell.
+     */
+    @Override
+    public void entityInside(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Entity entity) {
+        super.entityInside(state, level, pos, entity);
+        if (!(entity instanceof Player player)) {
+            return;
+        }
+
+        Vec3 movement = player.getDeltaMovement();
+        if (player.zza > 0.0F) {
+            player.setDeltaMovement(movement.x * 0.65D, Math.max(movement.y, 0.2D), movement.z * 0.65D);
+            player.resetFallDistance();
+        } else if (movement.y < -0.15D) {
+            player.setDeltaMovement(movement.x, -0.15D, movement.z);
+        }
     }
 
     public @NotNull VoxelShape getShape(@NotNull BlockState p_53880_, @NotNull BlockGetter p_53881_, @NotNull BlockPos p_53882_, @NotNull CollisionContext p_53883_) {
