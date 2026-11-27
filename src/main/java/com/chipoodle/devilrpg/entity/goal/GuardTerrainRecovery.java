@@ -44,8 +44,11 @@ final class GuardTerrainRecovery {
     boolean tick(ServerLevel level, Villager villager, BlockPos strategicTarget, boolean mayStart) {
         long now = level.getGameTime();
         if (!active) {
-            if (!mayStart || strategicTarget == null || villager.isSleeping()
-                    || now < nextActionAt || !plan(level, villager, strategicTarget)) {
+            if (!mayStart || strategicTarget == null || villager.isSleeping() || now < nextActionAt) {
+                return false;
+            }
+            if (!plan(level, villager, strategicTarget)) {
+                nextActionAt = now + 100L;
                 return false;
             }
             active = true;
@@ -103,7 +106,6 @@ final class GuardTerrainRecovery {
         BlockPos origin = villager.blockPosition();
         double targetDx = strategicTarget.getX() - villager.getX();
         double targetDz = strategicTarget.getZ() - villager.getZ();
-        Direction bestDirection = null;
         List<BlockPos> bestBlocks = null;
         BlockPos bestLanding = null;
         double bestScore = Double.NEGATIVE_INFINITY;
@@ -144,14 +146,13 @@ final class GuardTerrainRecovery {
                 double score = alignment - candidateBlocks.size() * 0.25D - rise * 0.1D;
                 if (score > bestScore) {
                     bestScore = score;
-                    bestDirection = direction;
                     bestBlocks = candidateBlocks;
                     bestLanding = candidateLanding;
                 }
             }
         }
 
-        if (bestDirection == null || bestBlocks == null || bestLanding == null) {
+        if (bestBlocks == null || bestLanding == null) {
             return false;
         }
         pendingBlocks.addAll(bestBlocks);
@@ -198,8 +199,7 @@ final class GuardTerrainRecovery {
 
     private static boolean esEspacioLibre(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        return state.getCollisionShape(level, pos).isEmpty()
-                && (state.getFluidState().isEmpty() || state.getFluidState().is(FluidTags.WATER));
+        return state.getCollisionShape(level, pos).isEmpty() && state.getFluidState().isEmpty();
     }
 
     private void reset(long retryAt) {
