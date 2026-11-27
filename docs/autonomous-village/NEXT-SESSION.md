@@ -1,3 +1,21 @@
+# CHECKPOINT 27-nov-2026 — RESCATE DE GUARDIAS CON RECUPERACIÓN COMPARTIDA DE AGUA
+
+> Este checkpoint sustituye RUN 013 de diagnóstico de colocación: RUN 013 NO se ejecutó. El nuevo enfoque está implementado y pendiente de Harness.
+
+- **Rama:** \`feature/autonomous-village\`
+- **Base de implementación inspeccionada:** \`8b335d024b257bfbbe6bdcf87b67e84ce2e85e8e\`
+- **Último commit de código:** \`1203a4d54d91cdbc9501ba066f99bb9f1ab56be4\`
+- **Informe técnico:** \`docs/autonomous-village/2026-11-27-SHARED-WATER-ESCAPE-IMPLEMENTATION.md\`
+- **Cambio:** nuevo \`WaterEscapeController\` compartido; guardias lo usan desde el \`VillagerGuardGoal\` existente mediante \`VillageManager.caminarHacia\`/Brain WALK_TARGET. Zombies reutilizan la misma búsqueda, impulso, umbrales y presupuesto manteniendo \`NavExecutor\` y su recuperación de rotura.
+- **Validación:** pendiente. ChatGPT no ejecutó compile, tests, policyTest, lint ni runtime. La prueba nueva \`WaterEscapeControllerTest\` está añadida y registrada, no ejecutada.
+- **Prioridades:** combate/equipamiento/marcha cancelan el escape de guardias. La recuperación de terreno sigue como fallback y no se intercala si ya está activa.
+- **Seguridad:** búsqueda solo en chunks cargados; orilla seca, con soporte y AABB libre; el controlador de agua no coloca ni rompe bloques. Sin segundo goal MOVE, \`Navigation.moveTo\`, \`NavExecutor\` para guardias ni teletransporte.
+- **A2/C4:** no se modifican criterios ni reglas. El refactor zombie conserva predicado, orden de búsqueda, radio y valores físicos originales; requiere regresión focalizada.
+- **Siguiente acción única:** Harness valida el HEAD remoto que contiene el commit de código y el informe: compileJava, compileTestJava, test, policyTest, lint estricto y diff-check. Si STATIC PASS, escenario A en mundo NUEVO desechable + prueba focalizada de salida de agua de zombie. Capturar \`[GuardWaterEscape]\`, WALK_TARGET, posiciones y ticks. No ejecutar RUN 013 anterior, no tocar mundo original y no ampliar a campaña A2/C4.
+- Harness no modifica producción/tests/docs ni publica commits. Preservar RUN 012 y todos sus artefactos.
+
+---
+
 # CHECKPOINT 27-nov-2026 — DIAGNÓSTICO DE RECHAZO DE COLOCACIÓN (ACTUAL)
 
 > Este checkpoint supersede el handoff de diagnóstico previo. Se conserva íntegro el historial posterior.
