@@ -133,6 +133,8 @@ public final class SkillsServerHarness {
         powers.put(PowerEnum.POWER2, SkillEnum.WOLF_FROSTBITE);
         skills.setSkillsNameOfPowers(powers, player);
         boolean minionCrashed = false;
+        float manaAntesDeMinion = mana.getMana();
+        int nivelMinionAntes = skills.getSkillsPoints().getOrDefault(SkillEnum.WOLF_FROSTBITE, -1);
         try {
             skills.triggerAction(player, PowerEnum.POWER2);
         } catch (Throwable t) {
@@ -140,6 +142,9 @@ public final class SkillsServerHarness {
             FAILS.add("triggerAction de skill de minion lanzó " + t);
         }
         check(!minionCrashed, "skill activa de minion no crashea al no ser asignable");
+        check(mana.getMana() == manaAntesDeMinion, "skill de minion no consume maná");
+        check(skills.getSkillsPoints().getOrDefault(SkillEnum.WOLF_FROSTBITE, -1) == nivelMinionAntes,
+                "skill de minion no modifica su nivel");
 
         // Persistencia real (NBT de la capability) en el servidor.
         CompoundTag nbt = skills.serializeNBT(level.registryAccess());
