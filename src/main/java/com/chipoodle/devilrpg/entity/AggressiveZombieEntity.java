@@ -3730,41 +3730,14 @@ public class AggressiveZombieEntity extends Zombie {
          * el cuerpo a la orilla y lo eleva, para que el pathfinding pueda subir a la tierra.
          */
         private void jumpTowardShore() {
-            BlockPos zPos = zombie.blockPosition();
-            int sx = Integer.signum(shore.getX() - zPos.getX());
-            int sz = Integer.signum(shore.getZ() - zPos.getZ());
-            // Empuje horizontal hacia la orilla + empuje vertical para elevarse sobre el agua.
-            double vx = sx * 0.4D;
-            double vz = sz * 0.4D;
-            double vy = 0.5D;
-            zombie.setDeltaMovement(vx, vy, vz);
+            WaterEscapeController.applyShoreImpulse(zombie, shore);
         }
 
         /** Busca el bloque de tierra (no agua) más cercano dentro de un radio, escaneando en espiral. */
         private BlockPos findNearestShore() {
-            BlockPos pos = zombie.blockPosition();
-            int r = 0;
-            while (r <= 16) {
-                for (int x = -r; x <= r; x++) {
-                    for (int z = -r; z <= r; z++) {
-                        if (Math.abs(x) != r && Math.abs(z) != r) continue; // borde del cuadrado
-                        // Se mira el suelo a la altura de sus pies y también uno por encima: en las islas al
-                        // nivel del agua el bloque de tierra queda a la MISMA altura que el agua de al lado,
-                        // así que mirando solo por debajo no lo encontraría.
-                        for (int dy = -1; dy <= 0; dy++) {
-                            BlockPos ground = new BlockPos(pos.getX() + x, pos.getY() + dy, pos.getZ() + z);
-                            if (isLand(ground)) {
-                                BlockPos candidata = ground.above();
-                                if (!orillasIntentadas.contains(candidata)) {
-                                    return candidata;
-                                }
-                            }
-                        }
-                    }
-                }
-                r++;
-            }
-            return null;
+            // Se conserva el predicado original de tierra y la misma espiral/radio/orden de búsqueda.
+            return WaterEscapeController.findNearestShore(zombie.blockPosition(), 16, orillasIntentadas,
+                    this::isLand, candidate -> true);
         }
 
         private boolean isLand(BlockPos pos) {
