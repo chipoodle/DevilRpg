@@ -62,6 +62,9 @@ final class GuardTerrainRecovery {
                 nextActionAt = now + 100L;
                 return false;
             }
+            DevilRpg.LOGGER.info("[GuardTerrain] guard={} plan accepted origin={} target={} blocks={} landing={}",
+                    villager.getUUID(), villager.blockPosition().toShortString(), strategicTarget.toShortString(),
+                    pendingBlocks, landing.toShortString());
             active = true;
             startedAt = now;
             nextActionAt = now;
@@ -126,6 +129,11 @@ final class GuardTerrainRecovery {
         List<BlockPos> bestBlocks = null;
         BlockPos bestLanding = null;
         double bestScore = Double.NEGATIVE_INFINITY;
+        int alignedCandidates = 0;
+        int invalidLandings = 0;
+        int unsupportedColumns = 0;
+        int invalidPlacements = 0;
+        int overBudgetPlans = 0;
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             double alignment = direction.getStepX() * targetDx + direction.getStepZ() * targetDz;
@@ -133,9 +141,11 @@ final class GuardTerrainRecovery {
                 continue;
             }
             for (int rise = 1; rise <= MAX_RISE; rise++) {
+                alignedCandidates++;
                 BlockPos candidateLanding = origin.relative(direction, rise + 1).above(rise);
                 if (!esRellanoValido(level, candidateLanding)
                         || VillageManager.estaProtegida(level, candidateLanding)) {
+                    invalidLandings++;
                     continue;
                 }
                 List<BlockPos> candidateBlocks = new ArrayList<>();
@@ -145,6 +155,7 @@ final class GuardTerrainRecovery {
                     int supportY = buscarSuelo(level, column);
                     int topBlockY = origin.getY() + step - 1;
                     if (supportY == Integer.MIN_VALUE || supportY >= topBlockY) {
+                        unsupportedColumns++;
                         valid = false;
                         break;
                     }
@@ -155,6 +166,7 @@ final class GuardTerrainRecovery {
                         if (!celdaColocable(level, place) || VillageManager.estaProtegida(level, place)
                                 || !level.getBlockState(head).getCollisionShape(level, head).isEmpty()
                                 || !level.getBlockState(upperBody).getCollisionShape(level, upperBody).isEmpty()) {
+                            invalidPlacements++;
                             valid = false;
                             break;
                         }
@@ -162,6 +174,9 @@ final class GuardTerrainRecovery {
                     }
                 }
                 if (!valid || candidateBlocks.isEmpty() || candidateBlocks.size() > MAX_BLOCKS) {
+                    if (candidateBlocks.size() > MAX_BLOCKS) {
+                        overBudgetPlans++;
+                    }
                     continue;
                 }
                 double score = alignment - candidateBlocks.size() * 0.25D - rise * 0.1D;
@@ -174,6 +189,15 @@ final class GuardTerrainRecovery {
         }
 
         if (bestBlocks == null || bestLanding == null) {
+            BlockPos feet = villager.blockPosition();
+            BlockPos support = feet.below();
+            DevilRpg.LOGGER.warn("[GuardTerrain] guard={} plan rejected origin={} target={} aligned={} "
+                            + "invalidLandings={} unsupportedColumns={} invalidPlacements={} overBudget={} "
+                            + "feetFluid={} headFluid={} support={} supportFluid={} chunkLoaded={}",
+                    villager.getUUID(), feet.toShortString(), strategicTarget.toShortString(), alignedCandidates,
+                    invalidLandings, unsupportedColumns, invalidPlacements, overBudgetPlans,
+                    !level.getFluidState(feet).isEmpty(), !level.getFluidState(feet.above()).isEmpty(),
+                    level.getBlockState(support), !level.getFluidState(support).isEmpty(), level.hasChunkAt(feet));
             return false;
         }
         pendingBlocks.addAll(bestBlocks);

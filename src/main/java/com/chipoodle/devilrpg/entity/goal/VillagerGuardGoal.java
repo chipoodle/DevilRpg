@@ -542,15 +542,47 @@ public class VillagerGuardGoal extends Goal {
                 // dan RODEOS: el guardia se rendía en mitad de un rodeo de 32 nodos y el log, en ese mismo momento,
                 // decía `alcanza=SI` (había camino: lo que subía era la distancia en línea recta). Se pregunta UNA vez,
                 // cuando ya parece atasco, y si hay ruta que alcanza se sigue andando (medido, I115).
-                if (stuckTicks == TICKS_PARA_PREGUNTAR_SI_HAY_RUTA
-                        && VillageManager.hayRutaQueAlcanza(villager, destino)) {
-                    stuckTicks = 0;
+                if (stuckTicks == TICKS_PARA_PREGUNTAR_SI_HAY_RUTA) {
+                    boolean rutaNaturalAlcanza = VillageManager.hayRutaQueAlcanza(villager, destino);
+                    if (regresandoAlPueblo) {
+                        BlockPos brainTarget = villager.getBrain()
+                                .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                                .map(t -> t.getTarget().currentBlockPosition()).orElse(null);
+                        var navPath = villager.getNavigation().getPath();
+                        DevilRpg.LOGGER.info("[GuardReturnDiag] guard={} tick={} stuck={} target={} brainTarget={} "
+                                        + "brainMatches={} naturalRouteReachable={} navNodes={} navDone={} navReachable={}",
+                                villager.getUUID(), level.getGameTime(), stuckTicks, destino.toShortString(),
+                                brainTarget == null ? "none" : brainTarget.toShortString(),
+                                VillageManager.elCerebroVaA(villager, destino), rutaNaturalAlcanza,
+                                navPath == null ? -1 : navPath.getNodeCount(),
+                                navPath != null && navPath.isDone(), navPath != null && navPath.canReach());
+                    }
+                    if (rutaNaturalAlcanza) {
+                        stuckTicks = 0;
+                    }
                 }
                 // Solo construir después de la comprobación cara de ruta natural. Si hay camino,
                 // el guardia lo sigue sin modificar el terreno.
+                boolean cerebroApuntaAlDestino = stuckTicks >= GuardTerrainRecovery.STUCK_TRIGGER_TICKS
+                        && VillageManager.elCerebroVaA(villager, destino);
+                if (regresandoAlPueblo && stuckTicks >= GuardTerrainRecovery.STUCK_TRIGGER_TICKS
+                        && !cerebroApuntaAlDestino
+                        && (stuckTicks == GuardTerrainRecovery.STUCK_TRIGGER_TICKS || stuckTicks % 100 == 0)) {
+                    BlockPos brainTarget = villager.getBrain()
+                            .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                            .map(t -> t.getTarget().currentBlockPosition()).orElse(null);
+                    var navPath = villager.getNavigation().getPath();
+                    DevilRpg.LOGGER.warn("[GuardReturnDiag] recovery gate closed guard={} tick={} stuck={} target={} "
+                                    + "brainTarget={} brainMatches=false navNodes={} navDone={} navReachable={} "
+                                    + "distance={}",
+                            villager.getUUID(), level.getGameTime(), stuckTicks, destino.toShortString(),
+                            brainTarget == null ? "none" : brainTarget.toShortString(),
+                            navPath == null ? -1 : navPath.getNodeCount(),
+                            navPath != null && navPath.isDone(), navPath != null && navPath.canReach(),
+                            VillageManager.distanciaA(villager, destino));
+                }
                 if (stuckTicks >= GuardTerrainRecovery.STUCK_TRIGGER_TICKS
-                        && enemigo == null && !equipando && !marchando
-                        && VillageManager.elCerebroVaA(villager, destino)) {
+                        && enemigo == null && !equipando && !marchando && cerebroApuntaAlDestino) {
                     // Un puesto que no se alcanza deja de ser una asignación útil. En vez de construir hacia una
                     // patrulla inalcanzable, el guardia abandona temporalmente la milicia y vuelve a la calle.
                     // La misma instancia de goal conserva MOVE/LOOK; no aparece un segundo goal competidor.
