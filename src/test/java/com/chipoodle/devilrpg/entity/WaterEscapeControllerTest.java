@@ -49,6 +49,11 @@ public final class WaterEscapeControllerTest {
                 p -> p.equals(nearGround) || p.equals(farGround), feet -> true);
         check("devuelve null cuando no hay orillas nuevas", selected == null);
 
+        check("contador registra el tick transcurrido desde la selección",
+                WaterEscapeController.elapsedTicks(100L, 101L) == 1L);
+        check("contador nunca informa tiempo negativo",
+                WaterEscapeController.elapsedTicks(101L, 100L) == 0L);
+
         System.out.println("WATER_ESCAPE_CONTROLLER_TEST: OK (" + assertions + " assertions)");
     }
 
