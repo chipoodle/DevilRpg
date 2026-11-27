@@ -1,2 +1,11 @@
-{ "item.devilrpg.huevo_estrellado": "Huevo estrellado" }
-
+{
+    "item.devilrpg.huevo_estrellado": "Huevo estrellado",
+    "entity.devilrpg.aggressive_zombie": "Zombi agresivo",
+    "entity.devilrpg.aggressive_zombie.name": "Zombi agresivo",
+    "entity.devilrpg.frost_vex": "Vex agresivo",
+    "entity.devilrpg.frost_vex.name": "Vex agresivo",
+    "item.devilrpg.aggressive_zombie_spawn_egg": "Zombi agresivo",
+    "item.devilrpg.frost_vex_spawn_egg": "Vex agresivo",
+    "tooltip.item.devilrpg.aggressive_zombie_spawn_egg": "Invoca un Zombi agresivo. No arde bajo la luz del sol y se vuelve más fuerte cuanto más te alejas y más tiempo permaneces fuera.",
+    "tooltip.item.devilrpg.frost_vex_spawn_egg": "Invoca un Vex agresivo. Se lanza en picado para atacar y arroja bolas de hielo; se vuelve más fuerte cuanto más te alejas y más tiempo permaneces fuera."
+}
