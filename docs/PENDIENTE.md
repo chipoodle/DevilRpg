@@ -1,3 +1,13 @@
+# PENDIENTE ACTUAL — VALIDAR RESCATE DE AGUA COMPARTIDO (27-nov-2026)
+
+- **Implementación publicada:** \`1203a4d54d91cdbc9501ba066f99bb9f1ab56be4\`.
+- **Informe:** \`docs/autonomous-village/2026-11-27-SHARED-WATER-ESCAPE-IMPLEMENTATION.md\`.
+- **Estado:** implementación pendiente de compile/tests/policyTest/lint/runtime. RUN 013 diagnóstico anterior no se ejecutó y queda reemplazado.
+- **Acción:** Harness valida el HEAD actual; si STATIC PASS, prueba escenario A de guardia en mundo nuevo desechable, prioridades/negativos y regresión focalizada del escape de agua zombie. No tocar el mundo original ni cambiar A2/C4.
+- **Reglas:** ChatGPT implementa; Harness ejecuta y reporta. No teletransporte, no manipulación artificial de Brain/posición/tags, no weaken de soporte/protección/collision ni modificación de producción por Harness.
+
+---
+
 # CHECKPOINT 27-nov-2026 — DIAGNÓSTICO DE RECHAZO DE COLOCACIÓN (ACTUAL)
 
 > Este checkpoint supersede el handoff de diagnóstico previo. Se conserva íntegro el historial posterior.
