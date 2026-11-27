@@ -413,7 +413,7 @@ public class VillagerGuardGoal extends Goal {
         //    sus barracas"): en sus turnos de descanso impares, el guardia se va a la DIANA de la barraca, le pega
         //    (golpe cada 2 s, con su sonido y sus partículas) y suda la fuerza: cada 5 min de diana cuenta como una
         //    matanza (I62), así que entrena de verdad pero despacio.
-        if (!aldeaEnAsalto() && enemigo == null && leTocaEntrenar()) {
+        if (!regresandoAlPueblo && !aldeaEnAsalto() && enemigo == null && leTocaEntrenar()) {
             if (entrenar(level)) {
                 return;
             }
