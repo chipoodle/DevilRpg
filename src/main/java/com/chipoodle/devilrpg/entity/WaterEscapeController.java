@@ -25,6 +25,9 @@ public final class WaterEscapeController {
     public static final int RESELECT_STUCK_TICKS = 80;
     public static final int RECALCULATE_TICKS = 200;
     public static final int MAX_RADIUS = 16;
+    /** Rango vertical del suelo candidato para guardias: admite orillas hasta dos bloques sobre los pies. */
+    public static final int GUARD_MIN_GROUND_DY = -2;
+    public static final int GUARD_MAX_GROUND_DY = 1;
     public static final int MAX_ATTEMPTS = 4;
     public static final int JUMP_INTERVAL_TICKS = 6;
 
@@ -151,7 +154,8 @@ public final class WaterEscapeController {
             return false;
         }
 
-        BlockPos candidate = findNearestShore(entity.blockPosition(), MAX_RADIUS, attemptedShores,
+        BlockPos candidate = findNearestShore(entity.blockPosition(), MAX_RADIUS,
+                GUARD_MIN_GROUND_DY, GUARD_MAX_GROUND_DY, attemptedShores,
                 ground -> level.hasChunkAt(ground)
                         && level.getFluidState(ground).isEmpty()
                         && !level.getBlockState(ground).getCollisionShape(level, ground).isEmpty(),
@@ -214,13 +218,20 @@ public final class WaterEscapeController {
     public static BlockPos findNearestShore(BlockPos origin, int radius, Set<BlockPos> attempted,
                                              Predicate<BlockPos> isLand,
                                              Predicate<BlockPos> validLanding) {
+        // Compatibilidad exacta con el rango vertical histórico de EscapeWaterGoal.
+        return findNearestShore(origin, radius, -1, 0, attempted, isLand, validLanding);
+    }
+
+    public static BlockPos findNearestShore(BlockPos origin, int radius, int minGroundDy, int maxGroundDy,
+                                             Set<BlockPos> attempted, Predicate<BlockPos> isLand,
+                                             Predicate<BlockPos> validLanding) {
         for (int r = 0; r <= radius; r++) {
             for (int x = -r; x <= r; x++) {
                 for (int z = -r; z <= r; z++) {
                     if (Math.abs(x) != r && Math.abs(z) != r) {
                         continue;
                     }
-                    for (int dy = -1; dy <= 0; dy++) {
+                    for (int dy = minGroundDy; dy <= maxGroundDy; dy++) {
                         BlockPos ground = new BlockPos(origin.getX() + x, origin.getY() + dy,
                                 origin.getZ() + z);
                         if (!isLand.test(ground)) {
